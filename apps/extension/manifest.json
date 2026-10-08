@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Internet Navigator",
+  "version": "0.1.1",
+  "description": "Local-first, user-controlled semantic navigation coach. Controlled demo prototype.",
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "action": {
+    "default_title": "Open Internet Navigator"
+  },
+  "background": {
+    "service_worker": "worker.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"]
+}

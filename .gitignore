@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.log
+test-results/
+playwright-report/
+output/qa/

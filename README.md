@@ -1,0 +1,50 @@
+# Internet Navigator
+
+A local-first Chrome navigation coach. You click; Navigator observes semantic page state, guides the next step, verifies transitions, and stops before consequential actions.
+
+## Development
+
+Requires Node.js 20+ and Chrome 120+.
+
+1. Run npm install.
+2. Run npm run dev:demo. Open http://127.0.0.1:5173.
+3. Run npm run build:extension.
+4. Open chrome://extensions, enable Developer mode, and Load unpacked: dist/extension.
+5. On the demo tab, click the Internet Navigator toolbar icon. Choose Start navigation in the side panel.
+6. Click the highlighted site controls. At final confirmation, Navigator stops. It has not canceled anything.
+
+Run npm run check for type checking, core/browser fixture tests and production builds. Run npx playwright install chromium once, then npm run test:e2e for the headless extension integration suite. The harness uses the production manifest unchanged. This development build has host access only to 127.0.0.1 and localhost; route execution is still restricted to port 5173 and begins only after Start. dist/demo is a static demo build; the bundled route currently allows only localhost/127.0.0.1:5173.
+
+## Prototype scope
+
+This first build supports one controlled fictional subscription route. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
+
+The navigation core contains no DOM/Chrome calls. The browser adapter supplies normalized UI state and semantic targets. Routes are declarative, validated and bundled. No backend, accounts, cookie permission, all-sites permission, model calls or automatic clicks. Development host access is restricted to 127.0.0.1 and localhost.
+
+Full document navigation/reload stops the session; restart explicitly on the new screen. SPA updates are observed within the started session. Login pauses observation; complete demo sign-in manually and Resume.
+
+## Demo scenarios
+
+Use Demo scenarios at the bottom left. Retention modal defaults on. Try:
+
+- Normal path: Account → Billing → Manage subscription → Cancel subscription → Continue cancellation → final hard stop.
+- Wrong turn: open Profile during guidance; Navigator routes back to Account.
+- Alternate label: enable Alternate label before the billing screen.
+- Delayed render: next screen appears after 1.2 seconds; no blind step advancement.
+- Login checkpoint: enable before starting from Home. Complete sign-in manually, then Resume.
+- Ambiguous duplicate: enable at Billing; guidance stops instead of guessing.
+- Unknown screen: navigator stops; reset and Start to begin again.
+
+Local route issue reports export a JSON file with category/route/version/state/status and no page field values. The debug panel currently exposes session confidence and history, not a full candidate inspector.
+
+## Structure
+
+- apps/extension: MV3 service worker, isolated content script and React side panel.
+- apps/demo-saas: controlled subscription demo.
+- packages/route-schema, route-engine, shared-types: platform-neutral route/state contracts.
+- packages/browser-adapter, semantic-locator, state-localizer: semantic observations/scoring.
+- packages/safety-policy, privacy-redaction, overlay-ui: boundaries and passive guidance.
+- routes/demo: authored demo route.
+- tests: safety and navigation fixtures.
+
+Build plan and remaining work: https://github.com/Sammieblz/web-navigator/issues/1.
