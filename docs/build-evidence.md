@@ -12,7 +12,7 @@ Browser scenarios cover explicit start, normal route, verified step count, reten
 
 The initial harness used an added localhost permission, which masked the missing-access failure in regular Chrome. Version 0.1.1 declares access to the two local development hosts and tests the production manifest without modifications. Start resolves the active tab in the last focused Chrome window and distinguishes withheld access from an unsupported site. Native side-panel presentation still requires manual smoke testing.
 
-Artifacts: dist/extension (Load unpacked), dist/demo, and output/qa screenshots. Source and changes currently reside in the local workspace; no commit or push has been made.
+Artifacts: dist/extension (Load unpacked), dist/demo, and output/qa screenshots. This checkpoint was followed by the first user-created commit. Subsequent milestone changes remain in the local workspace.
 
 ## Remaining MVP work
 
@@ -23,3 +23,11 @@ Run npm run check and npm run test:e2e to reproduce. Read README.md for installa
 ## Version 0.1.1 reload
 
 The development extension was rebuilt after fixing local host access and last-focused-window tab lookup. Reload Internet Navigator at chrome://extensions, reopen the panel on the demo tab, and Start. Both localhost aliases passed the regression without a toolbar activeTab grant.
+
+## Version 0.2.0 — task selection and pinned sessions
+
+Added a validated bundled route registry and an active-site task chooser. Northstar now offers cancellation guidance and a separate read-only billing-details route. Previews, milestones and terminal instructions come from route metadata. Sessions pin a route ID, exact version, tab and unique session token; switching while active is rejected, and stale content updates cannot overwrite a newer session. Unsupported tabs offer no tasks. Stored sessions with unavailable versions or invalid route state are discarded.
+
+Validation: TypeScript, 27/27 unit tests, production builds and 18/18 Chromium extension checks passed. Browser coverage includes the actual chooser/Start button, both task outcomes, session switching restrictions, stale-update rejection and unsupported tabs at desktop and narrow widths. The production manifest remains restricted to local development hosts. Native Chrome side-panel presentation still needs a manual smoke test.
+
+Reload the extension and refresh the demo tab before trying this version. No live-site coverage or AI was added.

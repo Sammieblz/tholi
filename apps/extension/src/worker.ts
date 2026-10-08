@@ -1,117 +1,199 @@
-import { z } from "zod";
 import { messageSchema } from "../../../packages/route-schema";
-import { demoRoute } from "../../../routes/demo/cancellation";
+import { routeRegistry, previewRoute } from "../../../packages/route-registry";
+import {
+  restoreSession,
+  validPinnedView,
+  sessionLocked,
+  type PinnedSession,
+} from "../../../packages/route-registry/session";
 import { allowedOrigin } from "../../../packages/safety-policy";
-import type { SessionView } from "../../../packages/shared-types";
-const viewSchema = z
-  .object({
-    status: z.enum([
-      "idle",
-      "running",
-      "waiting",
-      "paused",
-      "checkpoint",
-      "rerouting",
-      "stopped",
-      "boundary",
-      "completed",
-    ]),
-    stateId: z.string().optional(),
-    instruction: z.string().max(500),
-    verifiedSteps: z.number().int().nonnegative(),
-    confidence: z.number().min(0).max(1),
-    reason: z.string().max(500).optional(),
-    routeId: z.literal(demoRoute.id),
-    routeVersion: z.literal(demoRoute.version),
-    history: z.array(z.string().max(100)).max(30),
-  })
-  .strict();
-let session: { tabId?: number; view?: SessionView } = {};
+let session: PinnedSession | undefined;
 const ready = chrome.storage.session.get("navigatorSession").then((data) => {
-  session = data.navigatorSession || {};
+  session = restoreSession(data.navigatorSession);
 });
 const save = async () => {
-  await chrome.storage.session.set({ navigatorSession: session });
+  if (session) await chrome.storage.session.set({ navigatorSession: session });
+  else await chrome.storage.session.remove("navigatorSession");
+};
+const activeTab = async () =>
+  (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+const originOf = (url?: string) => {
+  try {
+    return url ? new URL(url).origin : undefined;
+  } catch {
+    return undefined;
+  }
 };
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch(() => {});
+// Serialize mutations. Content responses are synchronous; publications never await the worker.
+let queue: Promise<unknown> = ready;
+function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+  const next = queue.then(operation);
+  queue = next.catch(() => {});
+  return next;
+}
 chrome.runtime.onMessage.addListener((raw, sender, respond) => {
-  (async () => {
-    await ready;
+  enqueue(async () => {
     if (sender.id !== chrome.runtime.id) return { error: "Invalid sender." };
     if (raw?.type === "SESSION_UPDATE") {
-      const parsed = viewSchema.safeParse(raw.view);
+      const route =
+        session && routeRegistry.get(session.routeId, session.routeVersion);
+      const view = session && validPinnedView(session, raw.view);
       if (
-        !parsed.success ||
+        !session ||
+        !route ||
+        !view ||
+        raw.sessionId !== session.sessionId ||
         sender.tab?.id !== session.tabId ||
-        !sender.url ||
-        !allowedOrigin(demoRoute, new URL(sender.url).origin)
+        !allowedOrigin(route, originOf(sender.url) || "")
       )
-        return { error: "Invalid session update." };
-      session.view = parsed.data;
+        return { error: "Stale or invalid session update." };
+      session.view = view;
       await save();
       return { ok: true };
     }
-    if (!sender.url?.startsWith(chrome.runtime.getURL("")))
+    if (sender.url !== chrome.runtime.getURL("sidepanel.html"))
       return { error: "Extension panel required." };
     const parsed = messageSchema.safeParse(raw);
     if (!parsed.success) return { error: "Invalid command." };
-    if (parsed.data.type === "GET_SESSION") return session;
-    if (parsed.data.type === "START") {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        lastFocusedWindow: true,
-      });
+    const command = parsed.data;
+    if (command.type === "GET_SESSION") return session || {};
+    if (command.type === "GET_CONTEXT") {
+      const tab = await activeTab(),
+        origin = originOf(tab?.url);
+      const routes = origin
+        ? routeRegistry.forOrigin(origin).map(previewRoute)
+        : [];
+      return {
+        tabId: tab?.id,
+        origin: routes.length ? origin : undefined,
+        routes,
+        reason: routes.length
+          ? undefined
+          : "No supported tasks on this tab. Open a supported website to choose a task.",
+        session: session || null,
+        sessionRoute: session
+          ? routeRegistry.get(session.routeId, session.routeVersion) &&
+            previewRoute(
+              routeRegistry.get(session.routeId, session.routeVersion)!,
+            )
+          : undefined,
+      };
+    }
+    if (command.type === "START") {
+      const route = routeRegistry.get(command.routeId, command.routeVersion);
+      if (!route)
+        return {
+          error: "This route version is unavailable. Choose a task again.",
+        };
+      const tab = await activeTab();
       if (tab?.id === undefined)
         return {
           error:
-            "No active website tab was found. Select the Northstar tab and try again.",
+            "No active website tab was found. Select the website tab and try again.",
         };
       if (!tab.url)
         return {
           error:
-            "Chrome has not granted access to this tab. Reload Internet Navigator in chrome://extensions, then reopen it on the demo tab.",
+            "Chrome has not granted access to this tab. Reload the extension and reopen it on the supported website.",
         };
-      if (!allowedOrigin(demoRoute, new URL(tab.url).origin))
+      if (!allowedOrigin(route, originOf(tab.url) || ""))
         return {
           error:
-            "This tab is not supported. Select the Northstar demo at http://127.0.0.1:5173 or http://localhost:5173.",
+            "The selected task is not supported on this tab. Select the website tab and choose a task again.",
         };
-      if (session.tabId) {
+      if (sessionLocked(session))
+        return {
+          error: "Stop the current navigation before starting another task.",
+        };
+      if (session) {
         try {
-          await chrome.tabs.sendMessage(session.tabId, { type: "STOP" });
+          await chrome.tabs.sendMessage(session.tabId, {
+            type: "CONTROL_SESSION",
+            sessionId: session.sessionId,
+            action: "STOP",
+          });
         } catch {}
       }
-      session = { tabId: tab.id };
+      session = {
+        sessionId: crypto.randomUUID(),
+        tabId: tab.id,
+        routeId: route.id,
+        routeVersion: route.version,
+      };
       await save();
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ["content.js"],
-      });
-    }
-    if (!session.tabId) return { error: "Start navigation first." };
-    try {
-      const reply = await chrome.tabs.sendMessage(session.tabId, parsed.data);
-      if (reply?.view) {
-        const view = viewSchema.parse(reply.view);
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["content.js"],
+        });
+        const reply = await chrome.tabs.sendMessage(tab.id, {
+          type: "BEGIN_SESSION",
+          sessionId: session.sessionId,
+          routeId: route.id,
+          routeVersion: route.version,
+        });
+        const view = validPinnedView(session, reply?.view);
+        if (!view)
+          throw new Error(
+            reply?.error || "The website did not return a valid route session.",
+          );
         session.view = view;
         await save();
+        return session;
+      } catch (error) {
+        session = undefined;
+        await save();
+        return {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Navigation could not start.",
+        };
       }
+    }
+    if (!session)
+      return command.type === "STOP"
+        ? {}
+        : { error: "Start navigation first." };
+    const tab = await activeTab();
+    if (command.type === "RESUME" && tab?.id !== session.tabId)
+      return {
+        error: "Return to the tab where this task started before resuming.",
+      };
+    try {
+      const reply = await chrome.tabs.sendMessage(session.tabId, {
+        type: "CONTROL_SESSION",
+        sessionId: session.sessionId,
+        action: command.type,
+      });
+      const view = validPinnedView(session, reply?.view);
+      if (!view) throw new Error("Invalid session response.");
+      session.view = view;
+      await save();
       return session;
     } catch {
-      session.view = session.view
-        ? {
-            ...session.view,
-            status: "stopped",
-            instruction:
-              "Page reloaded or unavailable. Start navigation again.",
-          }
-        : undefined;
-      await save();
-      return { error: "Page unavailable. Open the demo and Start again." };
+      if (session.view) {
+        session.view = {
+          ...session.view,
+          status: "stopped",
+          instruction: "Page reloaded or unavailable. Start navigation again.",
+        };
+        await save();
+      } else {
+        session = undefined;
+        await save();
+      }
+      return command.type === "STOP"
+        ? session || {}
+        : {
+            error:
+              "Page unavailable. Select the supported tab and start again.",
+          };
     }
-  })()
+  })
     .then(respond)
     .catch((error) =>
       respond({
@@ -122,21 +204,17 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
   return true;
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
-  void ready.then(async () => {
-    if (session.tabId === tabId) {
-      session = {};
+  void enqueue(async () => {
+    if (session?.tabId === tabId) {
+      session = undefined;
       await save();
     }
   });
 });
 chrome.tabs.onUpdated.addListener((tabId, change) => {
   if (change.status === "loading")
-    void ready.then(async () => {
-      if (
-        session.tabId === tabId &&
-        session.view &&
-        !["boundary", "completed", "stopped"].includes(session.view.status)
-      ) {
+    void enqueue(async () => {
+      if (session?.tabId === tabId && session.view && sessionLocked(session)) {
         session.view = {
           ...session.view,
           status: "stopped",

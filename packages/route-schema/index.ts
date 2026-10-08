@@ -53,6 +53,20 @@ export const routeSchema = z
     id: z.string(),
     taskId: z.string(),
     title: z.string(),
+    siteName: z.string().default("Supported website"),
+    description: z.string().default(""),
+    safetyNote: z
+      .string()
+      .default("You make every click. Navigator never submits for you."),
+    completionInstruction: z
+      .string()
+      .default(
+        "You reached your destination. Visible route evidence verified.",
+      ),
+    boundaryInstruction: z
+      .string()
+      .default("Navigator stops here. The final action is yours to decide."),
+    milestoneStates: z.record(z.number().int().nonnegative()).default({}),
     version: z.string(),
     lastVerified: z.string(),
     origins: z.array(z.string().url()).min(1),
@@ -65,6 +79,13 @@ export const routeSchema = z
   .strict()
   .superRefine((route, ctx) => {
     const ids = route.states.map((s) => s.id);
+    for (const [id, index] of Object.entries(route.milestoneStates)) {
+      if (!ids.includes(id) || index >= route.milestones.length)
+        ctx.addIssue({
+          code: "custom",
+          message: "Invalid milestone mapping: " + id,
+        });
+    }
     if (new Set(ids).size !== ids.length)
       ctx.addIssue({ code: "custom", message: "Duplicate state IDs" });
     if (
@@ -98,8 +119,56 @@ export type RouteState = Route["states"][number];
 export type Transition = Route["transitions"][number];
 export const messageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("GET_SESSION") }).strict(),
-  z.object({ type: z.literal("START") }).strict(),
+  z.object({ type: z.literal("GET_CONTEXT") }).strict(),
+  z
+    .object({
+      type: z.literal("START"),
+      routeId: z.string().min(1),
+      routeVersion: z.string().min(1),
+    })
+    .strict(),
   z.object({ type: z.literal("PAUSE") }).strict(),
   z.object({ type: z.literal("RESUME") }).strict(),
   z.object({ type: z.literal("STOP") }).strict(),
 ]);
+
+export const contentMessageSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("BEGIN_SESSION"),
+      sessionId: z.string().uuid(),
+      routeId: z.string().min(1),
+      routeVersion: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("CONTROL_SESSION"),
+      sessionId: z.string().uuid(),
+      action: z.enum(["PAUSE", "RESUME", "STOP"]),
+    })
+    .strict(),
+]);
+export const sessionViewSchema = z
+  .object({
+    status: z.enum([
+      "idle",
+      "running",
+      "waiting",
+      "paused",
+      "checkpoint",
+      "rerouting",
+      "stopped",
+      "boundary",
+      "completed",
+    ]),
+    stateId: z.string().max(100).optional(),
+    instruction: z.string().max(500),
+    verifiedSteps: z.number().int().nonnegative(),
+    confidence: z.number().min(0).max(1),
+    reason: z.string().max(500).optional(),
+    routeId: z.string().min(1),
+    routeVersion: z.string().min(1),
+    history: z.array(z.string().max(100)).max(30),
+  })
+  .strict();

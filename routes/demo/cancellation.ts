@@ -40,6 +40,24 @@ export const demoRoute = routeSchema.parse({
   id: "demo.subscription.cancel",
   taskId: "subscription.cancel",
   title: "Reach cancellation confirmation",
+  siteName: "Northstar demo",
+  description: "Account → billing → plan → final confirmation",
+  safetyNote:
+    "Navigator stops before the final cancellation. It never clicks or submits for you.",
+  completionInstruction:
+    "Visible confirmation verified. Your demo subscription is canceled.",
+  boundaryInstruction:
+    "You reached the cancellation confirmation. Navigator stops here. Only you can confirm cancellation.",
+  milestoneStates: {
+    home: 0,
+    profile: 0,
+    account: 0,
+    billing: 1,
+    plan: 2,
+    retention: 2,
+    confirmation: 3,
+    success: 3,
+  },
   version: "0.1.0",
   lastVerified: "Unverified development route",
   origins: ["http://127.0.0.1:5173", "http://localhost:5173"],

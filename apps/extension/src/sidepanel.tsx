@@ -1,19 +1,30 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { demoRoute } from "../../../routes/demo/cancellation";
+import type { RoutePreview } from "../../../packages/route-registry";
 import type { SessionView } from "../../../packages/shared-types";
 import "./sidepanel.css";
 function App() {
   const [view, setView] = useState<SessionView>();
+  const [context, setContext] = useState<{
+    tabId?: number;
+    routes: RoutePreview[];
+    reason?: string;
+    sessionRoute?: RoutePreview;
+    session?: { tabId: number; view?: SessionView };
+  }>();
+  const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [debug, setDebug] = useState(false);
   useEffect(() => {
     const refresh = () => {
       chrome.runtime
-        .sendMessage({ type: "GET_SESSION" })
+        .sendMessage({ type: "GET_CONTEXT" })
         .then((r) => {
-          setView(r?.view);
+          if (r?.routes) {
+            setContext(r);
+            setView(r.session?.view);
+          }
         })
         .catch(() => {});
     };
@@ -25,7 +36,11 @@ function App() {
     setBusy(true);
     setError("");
     try {
-      const r = await chrome.runtime.sendMessage({ type });
+      const r = await chrome.runtime.sendMessage(
+        type === "START"
+          ? { type, routeId: route?.id, routeVersion: route?.version }
+          : { type },
+      );
       if (r?.error) setError(r.error);
       if (r?.view) setView(r.view);
     } catch (e) {
@@ -37,21 +52,24 @@ function App() {
   const active =
     !!view && ["running", "waiting", "rerouting"].includes(view.status);
   const paused = !!view && ["paused", "checkpoint"].includes(view.status);
-  const milestones: Record<string, number> = {
-    home: 0,
-    profile: 0,
-    account: 0,
-    billing: 1,
-    plan: 2,
-    retention: 2,
-    confirmation: 3,
-    success: 3,
-  };
+  const locked = active || paused || busy;
+  const preview =
+    context?.routes.find((r) => r.id === selectedId) || context?.routes[0];
+  const route = active || paused ? context?.sessionRoute : preview;
+  const displayedView =
+    view &&
+    (!route ||
+      (route.id === view.routeId && route.version === view.routeVersion))
+      ? view
+      : undefined;
+  const milestones = route?.milestoneStates || {};
+  const otherTab =
+    (active || paused) && context?.tabId !== context?.session?.tabId;
   const downloadReport = (category: string) => {
     const report = {
       category,
-      routeId: demoRoute.id,
-      routeVersion: demoRoute.version,
+      routeId: view?.routeId || route?.id,
+      routeVersion: view?.routeVersion || route?.version,
       stateId: view?.stateId,
       status: view?.status,
       verifiedSteps: view?.verifiedSteps,
@@ -90,61 +108,102 @@ function App() {
         <br />
         We help you find your way.
       </p>
-      <section className="route-card">
-        <div className="route-top">
-          <span className="site-icon">✦</span>
-          <div>
-            <strong>Northstar demo</strong>
-            <small>Local controlled environment</small>
-          </div>
-          <span className="tag">COACH</span>
-        </div>
-        <h2>{demoRoute.title}</h2>
-        <p>Account → billing → plan → final confirmation</p>
-        <ol className="milestones">
-          {demoRoute.milestones.map((m, i) => (
-            <li
-              key={m}
-              className={
-                view?.stateId && milestones[view.stateId] >= i ? "reached" : ""
-              }
-            >
-              <span>{i + 1}</span>
-              {m}
-            </li>
-          ))}
-        </ol>
-        <div className="freshness">
-          Route {demoRoute.version} · Development fixture
-          <br />
-          Live-site coverage has not been verified.
-        </div>
-      </section>
-      <section className="notice">
-        <span>◇</span>
-        <p>
-          Navigator stops before the final cancellation. It never clicks or
-          submits for you.
+      {context?.routes.length ? (
+        <label className="task-choice">
+          Choose a task
+          <select
+            aria-label="Choose a task"
+            value={route?.id || ""}
+            disabled={locked}
+            onChange={(e) => {
+              setSelectedId(e.target.value);
+              setError("");
+            }}
+          >
+            {context.routes.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <section className="unsupported" role="status">
+          <h2>No supported tasks</h2>
+          <p>{context?.reason || "Checking the current website…"}</p>
+        </section>
+      )}
+      {otherTab && (
+        <p role="status" className="tab-warning">
+          This task is running on another tab. Return to that tab to continue,
+          or Stop before choosing a new task.
         </p>
-      </section>
+      )}
+      {route && (
+        <section className="route-card">
+          <div className="route-top">
+            <span className="site-icon">✦</span>
+            <div>
+              <strong>{route.siteName}</strong>
+              <small>Supported task · Coach mode</small>
+            </div>
+            <span className="tag">COACH</span>
+          </div>
+          <h2>{route.title}</h2>
+          <p>{route.description}</p>
+          <ol className="milestones">
+            {route.milestones.map((m, i) => (
+              <li
+                key={m}
+                className={
+                  displayedView?.stateId &&
+                  milestones[displayedView.stateId] >= i
+                    ? "reached"
+                    : ""
+                }
+              >
+                <span>{i + 1}</span>
+                {m}
+              </li>
+            ))}
+          </ol>
+          <div className="freshness">
+            Route {route.version} · {route.lastVerified}
+            <br />
+            Live-site coverage has not been verified.
+          </div>
+        </section>
+      )}
+      {route && (
+        <section className="notice">
+          <span>◇</span>
+          <p>{route.safetyNote}</p>
+        </section>
+      )}
       <section
-        className={"current " + (view?.status === "boundary" ? "boundary" : "")}
+        className={
+          "current " + (displayedView?.status === "boundary" ? "boundary" : "")
+        }
         aria-live="polite"
         aria-atomic="true"
       >
         <div className="eyebrow">
-          {view
-            ? view.status.replace("-", " ").toUpperCase()
+          {displayedView
+            ? displayedView.status.replace("-", " ").toUpperCase()
             : "READY WHEN YOU ARE"}
         </div>
         <p>
-          {view?.instruction ||
-            "Open the local demo, choose your goal, then start."}
+          {displayedView?.instruction ||
+            (route
+              ? "Choose this task and Start when you are ready."
+              : "Open a supported website to choose a task.")}
         </p>
-        {view && (
+        {displayedView && (
           <div className="evidence">
-            <span>{view.verifiedSteps} verified transitions</span>
-            <span>{Math.round(view.confidence * 100)}% state evidence</span>
+            <span>{displayedView.verifiedSteps} verified transitions</span>
+            <span>
+              {Math.round(displayedView.confidence * 100)}% state evidence
+            </span>
           </div>
         )}
       </section>
@@ -157,7 +216,9 @@ function App() {
         {!active && !paused && (
           <button
             className="primary"
-            disabled={busy}
+            disabled={
+              busy || !route || !context?.routes.some((r) => r.id === route.id)
+            }
             onClick={() => command("START")}
           >
             {busy ? "Starting…" : "Start navigation"} <span>↗</span>
@@ -175,7 +236,7 @@ function App() {
         {paused && (
           <button
             className="primary"
-            disabled={busy}
+            disabled={busy || otherTab}
             onClick={() => command("RESUME")}
           >
             Resume navigation
@@ -239,7 +300,7 @@ function App() {
       </details>
       <footer>
         <span>LOCAL FIRST</span>
-        <span>PROTOTYPE 0.1</span>
+        <span>PROTOTYPE 0.2</span>
       </footer>
     </main>
   );

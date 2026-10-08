@@ -10,14 +10,14 @@ Requires Node.js 20+ and Chrome 120+.
 2. Run npm run dev:demo. Open http://127.0.0.1:5173.
 3. Run npm run build:extension.
 4. Open chrome://extensions, enable Developer mode, and Load unpacked: dist/extension.
-5. On the demo tab, click the Internet Navigator toolbar icon. Choose Start navigation in the side panel.
-6. Click the highlighted site controls. At final confirmation, Navigator stops. It has not canceled anything.
+5. On the demo tab, click the Internet Navigator toolbar icon. Choose a task in the side panel, then Start navigation.
+6. Click the highlighted site controls. The cancellation task stops at final confirmation; the billing task completes when billing details are visible.
 
 Run npm run check for type checking, core/browser fixture tests and production builds. Run npx playwright install chromium once, then npm run test:e2e for the headless extension integration suite. The harness uses the production manifest unchanged. This development build has host access only to 127.0.0.1 and localhost; route execution is still restricted to port 5173 and begins only after Start. dist/demo is a static demo build; the bundled route currently allows only localhost/127.0.0.1:5173.
 
 ## Prototype scope
 
-This first build supports one controlled fictional subscription route. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
+Version 0.2.0 supports two tasks on the controlled Northstar demo: reach cancellation confirmation and find billing details. The task chooser shows routes for the active website, previews their steps, and locks the chosen route/version for the session. Stop before switching tasks. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
 
 The navigation core contains no DOM/Chrome calls. The browser adapter supplies normalized UI state and semantic targets. Routes are declarative, validated and bundled. No backend, accounts, cookie permission, all-sites permission, model calls or automatic clicks. Development host access is restricted to 127.0.0.1 and localhost.
 
@@ -44,7 +44,12 @@ Local route issue reports export a JSON file with category/route/version/state/s
 - packages/route-schema, route-engine, shared-types: platform-neutral route/state contracts.
 - packages/browser-adapter, semantic-locator, state-localizer: semantic observations/scoring.
 - packages/safety-policy, privacy-redaction, overlay-ui: boundaries and passive guidance.
-- routes/demo: authored demo route.
+- packages/route-registry: validated route lookup and pinned-session restoration.
+- routes/demo: authored cancellation and billing routes.
 - tests: safety and navigation fixtures.
 
 Build plan and remaining work: https://github.com/Sammieblz/web-navigator/issues/1.
+
+## Reload after updating
+
+Reload Internet Navigator at chrome://extensions, then refresh the Northstar demo tab to replace its content script. Reopen the extension panel and choose a task. Route authoring notes: [docs/route-registry.md](docs/route-registry.md).

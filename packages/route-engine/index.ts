@@ -103,8 +103,7 @@ export class RouteEngine {
     const state = this.route.states.find((s) => s.id === result.stateId)!;
     if (state.behavior === "boundary") {
       this.view.status = "boundary";
-      this.view.instruction =
-        "You reached the cancellation confirmation. Navigator stops here. Only you can confirm cancellation.";
+      this.view.instruction = this.route.boundaryInstruction;
       this.started = false;
       return;
     }
@@ -117,8 +116,7 @@ export class RouteEngine {
     if (state.behavior === "success") {
       if (this.route.successStates.includes(state.id)) {
         this.view.status = "completed";
-        this.view.instruction =
-          "Visible confirmation verified. Your demo subscription is canceled.";
+        this.view.instruction = this.route.completionInstruction;
         this.started = false;
       } else this.stop("Success evidence is not configured.");
       return;

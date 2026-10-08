@@ -57,13 +57,20 @@ test.afterAll(async () => {
     await rm(target, { recursive: true, force: true });
   }
 });
-async function start() {
+async function start(routeId = "demo.subscription.cancel") {
   await page.bringToFront();
-  const result = await panel.evaluate(
-    async () => await chrome.runtime.sendMessage({ type: "START" }),
-  );
-  expect(result?.error, JSON.stringify(result)).toBeUndefined();
+  const chooser = panel.getByRole("combobox", { name: "Choose a task" });
+  await expect(chooser).toBeEnabled();
+  await chooser.selectOption(routeId);
+  await page.bringToFront();
+  // In headless tests the panel is an extension tab. Dispatch its actual button
+  // handler without foregrounding that tab; the real side panel leaves the website active.
+  await panel
+    .getByRole("button", { name: "Start navigation" })
+    .evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("#internet-navigator-overlay")).toBeVisible();
+  await expect(panel.locator(".indicator")).toHaveText("ON");
+  await expect(panel.locator(".error")).toHaveCount(0);
 }
 async function status(value: string) {
   await expect(panel.locator(".current .eyebrow")).toHaveText(value);
@@ -249,4 +256,135 @@ test("production localhost access is available without a toolbar grant", async (
   await expect(panel.locator(".error")).toHaveCount(0);
   await panel.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
+});
+
+test("two origin-filtered tasks have independent previews and billing completion", async () => {
+  await reset();
+  await page.bringToFront();
+  const choice = panel.getByRole("combobox", { name: "Choose a task" });
+  await expect(choice.locator("option")).toHaveCount(2);
+  await choice.selectOption("demo.billing.overview");
+  await expect(panel.locator(".route-card h2")).toHaveText(
+    "Find billing details",
+  );
+  await expect(panel.locator(".notice")).toContainText("read-only route");
+  await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
+  await start("demo.billing.overview");
+  await expect(choice).toBeDisabled();
+  await next("Account", "Account overview");
+  await next("Billing", "Billing & subscription");
+  await status("COMPLETED");
+  await expect(panel.locator(".current")).toContainText("You reached Billing");
+  await expect(panel.locator(".current")).not.toContainText("canceled");
+  await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
+  await expect(panel.locator(".evidence")).toContainText(
+    "2 verified transitions",
+  );
+  const pin = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(pin.routeId).toBe("demo.billing.overview");
+  expect(pin.routeVersion).toBe("0.1.0");
+  await panel.screenshot({
+    path:
+      "output/qa/panel-billing-completed-" + test.info().project.name + ".png",
+  });
+});
+test("active sessions reject switching and delayed updates from a previous route", async () => {
+  await reset();
+  await start();
+  const previous = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  const blocked = await panel.evaluate(
+    async () =>
+      await chrome.runtime.sendMessage({
+        type: "START",
+        routeId: "demo.billing.overview",
+        routeVersion: "0.1.0",
+      }),
+  );
+  expect(blocked.error).toContain("Stop the current navigation");
+  await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "STOP" }),
+  );
+  await start("demo.billing.overview");
+  const pin = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(pin.sessionId).not.toBe(previous.sessionId);
+  const replies = await worker.evaluate(
+    async ({ tabId, previous }) =>
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async (token, view) =>
+          await chrome.runtime.sendMessage({
+            type: "SESSION_UPDATE",
+            sessionId: token,
+            view,
+          }),
+        args: [previous.sessionId, previous.view],
+      }),
+    { tabId: pin.tabId, previous },
+  );
+  expect(replies[0].result.error).toContain("Stale");
+  const stored = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(stored.sessionId).toBe(pin.sessionId);
+  expect(stored.view.routeId).toBe("demo.billing.overview");
+  const staleStop = await worker.evaluate(
+    async ({ tabId, sessionId }) =>
+      await chrome.tabs.sendMessage(tabId, {
+        type: "CONTROL_SESSION",
+        sessionId,
+        action: "STOP",
+      }),
+    { tabId: pin.tabId, sessionId: previous.sessionId },
+  );
+  expect(staleStop.error).toContain("Stale");
+  await expect(page.locator("#internet-navigator-overlay")).toBeVisible();
+  const unavailable = await panel.evaluate(
+    async () =>
+      await chrome.runtime.sendMessage({
+        type: "START",
+        routeId: "demo.billing.overview",
+        routeVersion: "9.9.9",
+      }),
+  );
+  expect(unavailable.error).toContain("unavailable");
+});
+test("unsupported tabs offer no tasks and cannot replace a pinned session", async () => {
+  await reset();
+  await start("demo.billing.overview");
+  const pin = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  const unsupported = await context.newPage();
+  await unsupported.goto("about:blank");
+  await unsupported.bringToFront();
+  const current = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_CONTEXT" }),
+  );
+  expect(current.routes).toEqual([]);
+  await expect(
+    panel.getByRole("heading", { name: "No supported tasks" }),
+  ).toBeVisible();
+  await expect(panel.locator(".tab-warning")).toContainText("another tab");
+  const rejected = await panel.evaluate(
+    async () =>
+      await chrome.runtime.sendMessage({
+        type: "START",
+        routeId: "demo.subscription.cancel",
+        routeVersion: "0.1.0",
+      }),
+  );
+  expect(rejected.error).toBeTruthy();
+  const stillPinned = await panel.evaluate(
+    async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(stillPinned.sessionId).toBe(pin.sessionId);
+  expect(stillPinned.routeId).toBe("demo.billing.overview");
+  await unsupported.close();
+  await page.bringToFront();
 });
