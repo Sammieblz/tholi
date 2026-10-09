@@ -74,6 +74,9 @@ function App() {
       status: view?.status,
       verifiedSteps: view?.verifiedSteps,
       reportedAt: new Date().toISOString(),
+      ...(category === "diagnostics"
+        ? { diagnostics: view?.diagnostics, history: view?.history }
+        : {}),
     };
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
@@ -260,23 +263,90 @@ function App() {
             checked={debug}
             onChange={(e) => setDebug(e.target.checked)}
           />
-          Show session evidence
+          Show route debug inspector
         </label>
         {debug && (
-          <pre>
-            {JSON.stringify(
-              view
-                ? {
-                    stateId: view.stateId,
-                    confidence: view.confidence,
-                    history: view.history,
-                    routeVersion: view.routeVersion,
-                  }
-                : { status: "No active session" },
-              null,
-              2,
+          <section className="inspector" aria-label="Route debug inspector">
+            <h2>Route debug inspector</h2>
+            <p>
+              {view
+                ? view.routeId + " · " + view.routeVersion
+                : "Start a task to collect evidence."}
+            </p>
+            {view?.diagnostics && (
+              <>
+                <h3>Detected state</h3>
+                <p>
+                  {view.diagnostics.localization?.stateId || "Unknown"} ·{" "}
+                  {Math.round(view.confidence * 100)}%
+                </p>
+                <p>{view.diagnostics.localization?.reason}</p>
+                <table>
+                  <caption>State candidates</caption>
+                  <thead>
+                    <tr>
+                      <th>State</th>
+                      <th>Score</th>
+                      <th>Evidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.diagnostics.localization?.scores.map((s) => (
+                      <tr key={s.id}>
+                        <td>{s.id}</td>
+                        <td>{Math.round(s.score * 100)}%</td>
+                        <td>{s.reasons.join(", ") || "Matched"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <h3>Target candidates</h3>
+                <p>
+                  {view.diagnostics.target?.reason ||
+                    "No target evaluated yet."}
+                </p>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Control ID</th>
+                      <th>Score</th>
+                      <th>Evidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.diagnostics.target?.candidates.map((c) => (
+                      <tr key={c.id}>
+                        <td>{c.id}</td>
+                        <td>{Math.round(c.score * 100)}%</td>
+                        <td>{c.reasons.join(", ") || "Matched"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <h3>Expected next states</h3>
+                <p>{view.diagnostics.expected.join(", ") || "None"}</p>
+                <h3>Transition history</h3>
+                <ol>
+                  {view.diagnostics.transitions.map((t, i) => (
+                    <li key={i}>
+                      {t.transitionId}: {t.from} → {t.expected.join(" / ")} ·
+                      observed {t.observed || "pending"} · {t.outcome}
+                    </li>
+                  ))}
+                </ol>
+                <h3>Session history</h3>
+                <p>{view.history.join(" → ") || "None"}</p>
+                <button onClick={() => downloadReport("diagnostics")}>
+                  Export diagnostics
+                </button>
+                <p className="small">
+                  Control IDs are temporary. No page text, URLs or field values
+                  are exported. Up to 50 target candidates and 30 transitions
+                  are retained.
+                </p>
+              </>
             )}
-          </pre>
+          </section>
         )}
         <label>
           Report a route issue
@@ -300,7 +370,7 @@ function App() {
       </details>
       <footer>
         <span>LOCAL FIRST</span>
-        <span>PROTOTYPE 0.2</span>
+        <span>PROTOTYPE 0.3</span>
       </footer>
     </main>
   );

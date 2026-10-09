@@ -17,7 +17,7 @@ Run npm run check for type checking, core/browser fixture tests and production b
 
 ## Prototype scope
 
-Version 0.2.0 supports two tasks on the controlled Northstar demo: reach cancellation confirmation and find billing details. The task chooser shows routes for the active website, previews their steps, and locks the chosen route/version for the session. Stop before switching tasks. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
+Version 0.3.0 supports two tasks on the controlled Northstar demo: reach cancellation confirmation and find billing details. The task chooser shows routes for the active website, previews their steps, and locks the chosen route/version for the session. Stop before switching tasks. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
 
 The navigation core contains no DOM/Chrome calls. The browser adapter supplies normalized UI state and semantic targets. Routes are declarative, validated and bundled. No backend, accounts, cookie permission, all-sites permission, model calls or automatic clicks. Development host access is restricted to 127.0.0.1 and localhost.
 
@@ -35,7 +35,7 @@ Use Demo scenarios at the bottom left. Retention modal defaults on. Try:
 - Ambiguous duplicate: enable at Billing; guidance stops instead of guessing.
 - Unknown screen: navigator stops; reset and Start to begin again.
 
-Local route issue reports export a JSON file with category/route/version/state/status and no page field values. The debug panel currently exposes session confidence and history, not a full candidate inspector.
+Local route issue reports export a JSON file with category/route/version/state/status and no page field values. Under Local route tools, enable Show route debug inspector to inspect detected states, candidate scores and rejection reasons, expected/observed transitions and session history. Export diagnostics downloads a local JSON report containing fixed evidence labels and temporary control IDs, without page text, URLs or field values. Candidate output is capped at 50 controls and transition history at 30 entries.
 
 ## Structure
 

@@ -31,3 +31,9 @@ Added a validated bundled route registry and an active-site task chooser. Norths
 Validation: TypeScript, 27/27 unit tests, production builds and 18/18 Chromium extension checks passed. Browser coverage includes the actual chooser/Start button, both task outcomes, session switching restrictions, stale-update rejection and unsupported tabs at desktop and narrow widths. The production manifest remains restricted to local development hosts. Native Chrome side-panel presentation still needs a manual smoke test.
 
 Reload the extension and refresh the demo tab before trying this version. No live-site coverage or AI was added.
+
+## Version 0.3.0 — route debug inspector
+
+Added state candidate confidence/rejection reasons, target candidate scores with temporary control IDs, expected next states, expected/observed transition outcomes and bounded session history. The panel exports diagnostic JSON locally. Strict message validation accepts only fixed evidence labels and known route state/transition IDs; target diagnostic payloads exclude page names, context, URLs and field values. State candidates are capped at 100, controls at 50 and transition records at 30. The browser adapter excludes hidden and sensitive elements before ranking, so hidden page elements are not enumerated by this inspector.
+
+Validation: TypeScript, production builds and 30 unit tests passed. All 18 existing extension integration checks passed; the two new inspector/download cases passed after correcting test download activation and checking export keys rather than fixed landmark wording. QA screenshots were inspected. Native Chrome side-panel presentation still requires a manual smoke test. Reload the extension and refresh Northstar; expand Local route tools and enable Show route debug inspector.

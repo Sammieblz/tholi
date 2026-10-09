@@ -388,3 +388,34 @@ test("unsupported tabs offer no tasks and cannot replace a pinned session", asyn
   await unsupported.close();
   await page.bringToFront();
 });
+
+test("debug inspector renders scoring and exports bounded diagnostics", async () => {
+  await reset();
+  await start();
+  await panel.locator("summary").evaluate((e) => (e as HTMLElement).click());
+  await panel.getByLabel("Show route debug inspector").evaluate((e) => {
+    (e as HTMLInputElement).click();
+  });
+  const inspector = panel.getByRole("region", {
+    name: "Route debug inspector",
+  });
+  await expect(
+    inspector.getByRole("heading", { name: "Detected state" }),
+  ).toBeVisible();
+  await expect(inspector.locator("table").first()).toContainText("home");
+  await next("Account", "Account overview");
+  await expect(inspector).toContainText("observed account · verified");
+  const downloadPromise = panel.waitForEvent("download");
+  await inspector.getByRole("button", { name: "Export diagnostics" }).click();
+  const download = await downloadPromise;
+  const report = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(report.category).toBe("diagnostics");
+  expect(report.diagnostics.transitions[0].outcome).toBe("verified");
+  expect(JSON.stringify(report)).not.toMatch(
+    /127\.0\.0\.1|"landmarks":|"pathname":/,
+  );
+  await page.bringToFront();
+  await panel.screenshot({
+    path: "output/qa/debug-inspector-" + test.info().project.name + ".png",
+  });
+});

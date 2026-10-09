@@ -149,8 +149,85 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     })
     .strict(),
 ]);
+const diagnosticReason = z.enum([
+  "modal-mismatch",
+  "required-landmark-missing",
+  "path-mismatch",
+  "below-threshold",
+  "hidden",
+  "disabled",
+  "role-mismatch",
+  "name-mismatch",
+  "context-mismatch",
+  "contradiction",
+]);
+const scoreSchema = z
+  .object({
+    id: z.string().max(100),
+    score: z.number().min(0).max(1),
+    rejected: z.boolean(),
+    reasons: z.array(diagnosticReason).max(10),
+  })
+  .strict();
+const diagnosticsSchema = z
+  .object({
+    localization: z
+      .object({
+        stateId: z.string().max(100).optional(),
+        confidence: z.number().min(0).max(1),
+        reason: z.enum([
+          "Unknown screen. No supported state has enough evidence.",
+          "Ambiguous screen. More than one state matches.",
+          "Verified semantic landmarks and URL.",
+        ]),
+        scores: z
+          .array(
+            scoreSchema.extend({ minimum: z.number().min(0).max(1) }).strict(),
+          )
+          .max(100),
+      })
+      .strict()
+      .optional(),
+    target: z
+      .object({
+        id: z
+          .string()
+          .regex(/^c[0-9]+$/)
+          .optional(),
+        confidence: z.number().min(0).max(1),
+        reason: z.enum([
+          "Target not found with enough confidence.",
+          "Multiple controls match. Navigator will not guess.",
+          "Role, accessible name and context verified.",
+        ]),
+        candidates: z
+          .array(
+            scoreSchema.extend({ id: z.string().regex(/^c[0-9]+$/) }).strict(),
+          )
+          .max(50),
+      })
+      .strict()
+      .optional(),
+    transitionId: z.string().max(100).optional(),
+    expected: z.array(z.string().max(100)).max(100),
+    transitions: z
+      .array(
+        z
+          .object({
+            transitionId: z.string().max(100),
+            from: z.string().max(100),
+            expected: z.array(z.string().max(100)).max(100),
+            observed: z.string().max(100).optional(),
+            outcome: z.enum(["waiting", "verified", "deviated", "timeout"]),
+          })
+          .strict(),
+      )
+      .max(30),
+  })
+  .strict();
 export const sessionViewSchema = z
   .object({
+    diagnostics: diagnosticsSchema.optional(),
     status: z.enum([
       "idle",
       "running",

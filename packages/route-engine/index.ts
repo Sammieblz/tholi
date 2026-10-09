@@ -16,6 +16,7 @@ export class RouteEngine {
       routeId: route.id,
       routeVersion: route.version,
       history: [],
+      diagnostics: { expected: [], transitions: [] },
     };
   }
   start(ui: UIState) {
@@ -48,15 +49,29 @@ export class RouteEngine {
     if (this.view.status !== "running" && this.view.status !== "rerouting")
       return;
     this.pending = transition;
+    const d = this.view.diagnostics!;
+    d.expected = [...transition.to];
+    d.transitions = [
+      ...d.transitions,
+      {
+        transitionId: transition.id,
+        from: transition.from,
+        expected: [...transition.to],
+        outcome: "waiting" as const,
+      },
+    ].slice(-30);
     this.view.status = "waiting";
     this.view.instruction = "Checking the next screen…";
   }
   timeout(ui: UIState) {
     if (!this.pending) return;
     const from = this.pending.from;
+    const entry = this.view.diagnostics!.transitions.at(-1);
+    if (entry) entry.outcome = "timeout";
     this.pending = undefined;
     this.view.status = "running";
     const next = this.update(ui);
+    if (entry) entry.observed = this.lastLocalization?.stateId;
     if (this.view.stateId === from && this.view.status === "running")
       this.stop(
         "The expected change did not happen. Start again when the page is ready.",
@@ -77,6 +92,10 @@ export class RouteEngine {
     }
     const result = localize(this.route, ui, this.view.stateId);
     this.lastLocalization = result;
+    this.view.diagnostics!.localization = {
+      ...result,
+      scores: result.scores.slice(0, 100),
+    };
     this.view.confidence = result.confidence;
     if (!result.stateId) {
       if (this.pending) return;
@@ -94,10 +113,21 @@ export class RouteEngine {
         result.stateId !== previous &&
         (!this.pending || !this.pending.to.includes(result.stateId))) ||
       (this.view.status === "rerouting" && previous === result.stateId);
+    if (this.pending) {
+      const entry = this.view.diagnostics!.transitions.at(-1);
+      if (entry) {
+        entry.observed = result.stateId;
+        entry.outcome = this.pending.to.includes(result.stateId)
+          ? "verified"
+          : "deviated";
+      }
+    }
     if (this.pending && this.pending.to.includes(result.stateId))
       this.view.verifiedSteps++;
     this.pending = undefined;
     this.view.stateId = result.stateId;
+    this.view.diagnostics!.expected = [];
+    this.view.diagnostics!.transitionId = undefined;
     if (this.view.history.at(-1) !== result.stateId)
       this.view.history = [...this.view.history, result.stateId].slice(-30);
     const state = this.route.states.find((s) => s.id === result.stateId)!;
@@ -126,6 +156,8 @@ export class RouteEngine {
       this.stop("No verified next step is available.");
       return;
     }
+    this.view.diagnostics!.transitionId = transition.id;
+    this.view.diagnostics!.expected = [...transition.to];
     const policy = guidancePolicy(transition);
     if (!policy.allowed) {
       this.stop(policy.reason);

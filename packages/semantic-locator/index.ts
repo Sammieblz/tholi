@@ -7,7 +7,6 @@ export function rankTargets(
 ): LocatedTarget {
   const names = [...target.names, ...target.synonyms].map(normalize);
   const candidates = landmarks
-    .filter((l) => l.visible && l.enabled && l.role === target.role)
     .map((l) => {
       const exact = names.includes(normalize(l.name));
       const context =
@@ -16,17 +15,33 @@ export function rankTargets(
       const contradiction = target.disallowedNearbyText.some((t) =>
         normalize(l.name + " " + l.context).includes(normalize(t)),
       );
-      const score = contradiction
-        ? 0
-        : (exact ? 0.65 : 0) + 0.2 + (context ? 0.15 : 0);
-      return { id: l.id, score };
+      const ineligible = !l.visible || !l.enabled || l.role !== target.role;
+      const score =
+        contradiction || ineligible
+          ? 0
+          : (exact ? 0.65 : 0) + 0.2 + (context ? 0.15 : 0);
+      const reasons = [
+        ...(!l.visible ? ["hidden"] : []),
+        ...(!l.enabled ? ["disabled"] : []),
+        ...(l.role !== target.role ? ["role-mismatch"] : []),
+        ...(!exact ? ["name-mismatch"] : []),
+        ...(!context ? ["context-mismatch"] : []),
+        ...(contradiction ? ["contradiction"] : []),
+        ...(score < target.minimumConfidence ? ["below-threshold"] : []),
+      ];
+      return {
+        id: l.id,
+        score,
+        rejected:
+          ineligible || contradiction || score < target.minimumConfidence,
+        reasons,
+      };
     })
-    .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score);
   const best = candidates[0];
-  if (!best || best.score < target.minimumConfidence)
+  if (!best || best.rejected || best.score < target.minimumConfidence)
     return {
-      confidence: best?.score || 0,
+      confidence: candidates[0]?.score || 0,
       reason: "Target not found with enough confidence.",
       candidates,
     };

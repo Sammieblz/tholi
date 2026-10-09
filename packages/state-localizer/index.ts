@@ -12,7 +12,10 @@ export function localize(
 ): Localization {
   const scores = route.states
     .map((state) => {
-      let rejected = state.modal !== undefined && state.modal !== ui.modal;
+      const reasons: string[] = [];
+      if (state.modal !== undefined && state.modal !== ui.modal)
+        reasons.push("modal-mismatch");
+      let rejected = reasons.length > 0;
       const matched = state.landmarks.map((p) =>
         ui.landmarks.some(
           (l) =>
@@ -21,12 +24,17 @@ export function localize(
             p.names.some((n) => normalize(n) === normalize(l.name)),
         ),
       );
-      if (state.landmarks.some((p, i) => p.required && !matched[i]))
+      if (state.landmarks.some((p, i) => p.required && !matched[i])) {
         rejected = true;
+        reasons.push("required-landmark-missing");
+      }
       const urlMatches =
         !state.urlPatterns.length ||
         state.urlPatterns.some((p) => ui.pathname === p);
-      if (!urlMatches) rejected = true;
+      if (!urlMatches) {
+        rejected = true;
+        reasons.push("path-mismatch");
+      }
       const evidence = matched.filter(Boolean).length / state.landmarks.length;
       const score = rejected
         ? 0
@@ -40,6 +48,10 @@ export function localize(
         id: state.id,
         score,
         rejected,
+        reasons: [
+          ...reasons,
+          ...(score < state.minimumConfidence ? ["below-threshold"] : []),
+        ],
         minimum: state.minimumConfidence,
       };
     })

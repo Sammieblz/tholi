@@ -41,6 +41,10 @@ if (!host[marker]) {
     clear();
     if (transition) {
       const result = adapter.locate(transition.target);
+      engine.view.diagnostics!.target = {
+        ...result,
+        candidates: result.candidates.slice(0, 50),
+      };
       if (!result.id) {
         engine.stop(result.reason);
       } else {
@@ -82,6 +86,10 @@ if (!host[marker]) {
     )
       return;
     const fresh = adapter.locate(current.target);
+    engine.view.diagnostics!.target = {
+      ...fresh,
+      candidates: fresh.candidates.slice(0, 50),
+    };
     if (!fresh.id || adapter.elements.get(fresh.id) !== target) {
       engine.stop("The target changed. Start again after checking the page.");
       teardown();

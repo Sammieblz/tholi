@@ -18,13 +18,18 @@ export interface Localization {
   stateId?: string;
   confidence: number;
   reason: string;
-  scores: { id: string; score: number; rejected: boolean }[];
+  scores: { id: string; score: number; rejected: boolean; reasons: string[] }[];
 }
 export interface LocatedTarget {
   id?: string;
   confidence: number;
   reason: string;
-  candidates: { id: string; score: number }[];
+  candidates: {
+    id: string;
+    score: number;
+    rejected: boolean;
+    reasons: string[];
+  }[];
 }
 export type SessionStatus =
   | "idle"
@@ -36,7 +41,21 @@ export type SessionStatus =
   | "stopped"
   | "boundary"
   | "completed";
+export interface Diagnostics {
+  localization?: Localization;
+  target?: LocatedTarget;
+  transitionId?: string;
+  expected: string[];
+  transitions: {
+    transitionId: string;
+    from: string;
+    expected: string[];
+    observed?: string;
+    outcome: "waiting" | "verified" | "deviated" | "timeout";
+  }[];
+}
 export interface SessionView {
+  diagnostics?: Diagnostics;
   status: SessionStatus;
   stateId?: string;
   instruction: string;

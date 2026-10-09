@@ -27,6 +27,23 @@ export function validPinnedView(session: PinnedSession, view: unknown) {
     parsed.data.history.some((id) => !ids.has(id))
   )
     return undefined;
+  const d = parsed.data.diagnostics;
+  const transitions = new Set(route.transitions.map((t) => t.id));
+  if (
+    d &&
+    ((d.localization?.stateId && !ids.has(d.localization.stateId)) ||
+      d.localization?.scores.some((s) => !ids.has(s.id)) ||
+      (d.transitionId && !transitions.has(d.transitionId)) ||
+      d.expected.some((id) => !ids.has(id)) ||
+      d.transitions.some(
+        (t) =>
+          !transitions.has(t.transitionId) ||
+          !ids.has(t.from) ||
+          t.expected.some((id) => !ids.has(id)) ||
+          (t.observed && !ids.has(t.observed)),
+      ))
+  )
+    return undefined;
   return parsed.data;
 }
 export function restoreSession(value: unknown): PinnedSession | undefined {
@@ -38,7 +55,10 @@ export function restoreSession(value: unknown): PinnedSession | undefined {
     return undefined;
   return parsed.data;
 }
-export function sessionLocked(session?: PinnedSession): boolean {
+export function sessionLocked(session?: {
+  sessionId: string;
+  view?: { status: string };
+}): boolean {
   return (
     !!session &&
     (!session.view ||
