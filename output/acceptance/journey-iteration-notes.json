@@ -1,0 +1,98 @@
+{
+  "candidate": "0.6.8",
+  "iterations": [
+    {
+      "stage": "initial task browser cases",
+      "result": "4 passed, 6 failed across two widths",
+      "cause": "Visible declared menu ownership was discarded, blocking a real intermediate Language preferences link. A saved-route test clicked a disabled button before UI polling enabled it. Spanish fixture text lacked UTF-8 charset and could not match its intended accessible name.",
+      "correction": "Preserve explicit ownership on visible controls without inferring broad visible ancestry. Wait for the saved-route button's real enabled state. Declare fixture charset UTF-8. Destination and state assertions remain.",
+      "traces": "output/qa/journey-initial-browser-failures",
+      "note": "A diagnostic run overlapped the initial run's shared test-results directory, producing an additional trace-file ENOENT in one narrow failure. Subsequent runs use separate output directories."
+    },
+    {
+      "stage": "task contract regressions",
+      "result": "10/10 then 18/18 passed",
+      "scope": "New task cases, then new task cases plus existing page-context contracts; deterministic model fake, not Nano quality.",
+      "traces": "output/qa/journey-second-tests and output/qa/journey-contract-tests"
+    },
+    {
+      "stage": "first full browser and accuracy gates",
+      "result": "78/78 browser passed; accuracy 13/14 tests passed, full gate failed",
+      "cause": "Casino Royale narrow test exceeded 180 seconds; trace ends waiting for GET_PAGE/SET_GOAL extension-message evaluation after Appearance setup. It is not established to be a Wikipedia page-load failure. Root cause is unknown.",
+      "correction": "Retain failed report and trace. Rerun the complete matrix separately with unchanged cases, assertions and timeout after final storage fixes.",
+      "reports": "journey-initial-results.json and journey-before-storage-e2e-regressions.json",
+      "traces": "output/qa/journey-initial-acceptance-failure"
+    },
+    {
+      "stage": "storage and lifecycle review",
+      "finding": "Saved plans could lag verified progress because observation deduplication omitted plan changes; cached routes also needed task identity checks. Reattaching twice risked an earlier coach publication overwriting navigation progress.",
+      "correction": "Include the plan fingerprint in observation deduplication, restrict cached routes to matching task identity, replace cached memory on updates, and deliver navigation evidence to a single new coach. A browser assertion now checks the saved final estimate is zero; current UI progress is checked before screenshots. All final production gates must bind to the rebuilt corrected bytes."
+    },
+    {
+      "stage": "first full live task gate",
+      "result": "9/12 passed; full gate failed",
+      "cause": "Both Spanish journeys reached the actual article but stopped because Chrome withheld tab.url outside granted hosts. A separate desktop geometry case timed out in GET_PAGE/SET_GOAL after zoom; root cause is unknown. Diagnostic worker listeners confirmed the correct clicked navigation evidence, valid schema and an absent destination URL in tab events.",
+      "correction": "Preserve the clicked link expected origin while URL access is unavailable. Require host access first, then validate the actual destination URL and originating tab before observing. Keep pending link evidence when its picker closes; clear expired unresolved navigation. Strengthen the allowed-host fixture with delayed menu removal and a redirect refusal. Keep all live cases/assertions/timeouts.",
+      "report": "journey-initial-live-regressions.json",
+      "traces": "output/qa/journey-initial-live-failures",
+      "priorPassingBytes": "journey-before-navigation-results.json and journey-before-navigation-e2e-regressions.json",
+      "note": "Both full-page task panel screenshots replace a clipped narrow locator capture. Generic boolean preference and unavailable-value units remain in the final 105-test suite."
+    },
+    {
+      "stage": "permission panel and zoom investigation",
+      "result": "9/12 full live cases passed; full gate failed. Targeted untraced geometry also timed out. Standalone traced/untraced diagnostics passed, while test-runner instrumentation varied between pass and message timeout.",
+      "finding": "The retained Spanish journey correctly paused after the worker fix, but the panel still disabled Continue because the ungranted origin was unreadable. Worker diagnostics showed GET_PAGE content responses arriving before the stalled panel request. The exact zoom stall mechanism is not established. A separate estimate audit found an already-planned hidden destination duplicated as a predicted step.",
+      "correction": "Enable continuation using pinned/opener tab identity and the expected destination, retaining exact actual-URL checks after the grant. Remove unused full site-memory loading/transfer from GET_PAGE; the coach already receives learned memory. Prevent adding a predicted value when the live plan already contains that option. Existing unit coverage checks the two-interaction estimate. Keep full cases/oracles/timeouts unchanged and rerun all reports against corrected bytes.",
+      "report": "journey-permission-live-regressions.json",
+      "traces": [
+        "output/qa/journey-permission-live-failures",
+        "output/qa/journey-geometry-untraced",
+        "output/qa/geometry-diagnostic-results",
+        "output/qa/geometry-diagnostic-queue",
+        "output/qa/geometry-diagnostic-storage",
+        "output/qa/journey-geometry-diagnostic-trace.zip"
+      ],
+      "diagnosticNote": "An initial generated standalone diagnostic contained untranspiled TypeScript; it was transformed with esbuild before rerunning. Diagnostic scripts and worker listeners are isolated test instrumentation, not production code."
+    },
+    {
+      "stage": "full-suite polling review",
+      "result": "Targeted four live geometry/Spanish checks passed; full live suite passed 11/12, with desktop zoom timeout retained. Both actual Spanish journeys passed unchanged assertions.",
+      "finding": "Panel polling launched overlapping requests without waiting for replies. This could build a queue and let old responses replace newer state. The exact isolated Chrome zoom timeout mechanism remains unproven.",
+      "correction": "Allow only one outstanding context and saved-task poll per current feed, ignore responses after teardown, and strengthen the existing stable-polling browser case with delayed replies for both feeds. No live case/assertion/timeout changes. Fresh complete gates are required.",
+      "report": "journey-before-polling-live-regressions.json",
+      "traces": "output/qa/journey-before-polling-live-failures",
+      "targeted": "output/qa/journey-final-live-targeted",
+      "implementationValidation": "TypeScript, all 105 units and builds pass after polling changes. The unchanged full live suite passes 12/12 against corrected bytes at 2026-10-11T19:35:39.837Z. Prior failures stay archived; final full accuracy and browser gates are still required."
+    }
+  ],
+  "final": {
+    "candidate": "0.6.8",
+    "units": 105,
+    "typecheck": "passed",
+    "builds": "passed",
+    "browserCases": 78,
+    "liveCases": 12,
+    "benchmarkTests": 14,
+    "declaredCases": 116,
+    "matrixEvaluatedAt": "2026-10-11T19:41:27.403Z",
+    "regressions": {
+      "e2e": {
+        "passed": true,
+        "count": 78,
+        "evaluatedAt": "2026-10-11T19:47:24.373Z"
+      },
+      "live": {
+        "passed": true,
+        "count": 12,
+        "evaluatedAt": "2026-10-11T19:35:39.837Z"
+      }
+    },
+    "allThreeReportsMatchBuild": true,
+    "archiveBytes": 696505,
+    "archiveSha256": "0eb1e66b6f79d01d3705bedd5d836943d58e1dc15378a398965a2a6e67a33156",
+    "allTenArchiveMembersVerified": true,
+    "nativeHandoff": "pending",
+    "realModelQuality": "not evaluated",
+    "githubTrackersUpdated": [1, 17, 18]
+  }
+}

@@ -16,6 +16,7 @@ import {
   transitionEvidenceSchema,
   hash,
 } from "../../../packages/page-model";
+import { saveTask, taskKey } from "../../../packages/goal-planner/task-journey";
 import {
   IndexedDBSiteMemory,
   memorySummary,
@@ -55,7 +56,20 @@ async function remember(observed?: unknown) {
   if (!session?.view?.page || !live()) return;
   const page = session.view.page,
     evidence = transitionEvidenceSchema.safeParse(observed);
-  const key = session.documentId + ":" + page.stateKey;
+  const key =
+    session.documentId +
+    ":" +
+    page.stateKey +
+    ":" +
+    (session.view.journey
+      ? session.view.journey.id +
+        ":" +
+        session.view.journey.progress.length +
+        ":" +
+        session.view.journey.status
+      : "") +
+    ":" +
+    hash(JSON.stringify(session.view.goalPlan) || "");
   if (lastObservation === key && !evidence.success) return;
   try {
     const site = await memory.observe(
@@ -64,12 +78,26 @@ async function remember(observed?: unknown) {
     );
     session.view.memory = memorySummary(site);
     session.view.memoryError = undefined;
+    const journey = session.view.journey;
+    let savedTask;
+    if (journey) {
+      savedTask = (await memory.tasks(journey.origin)).find(
+        (t) => t.id === (journey.savedRouteId || taskKey(journey)),
+      );
+      // A draft does not replace a previously successful route's observations.
+      if (
+        !session.forgottenTaskIds?.includes(taskKey(journey)) &&
+        (!savedTask?.completed || journey.status === "completed")
+      )
+        await memory.saveTask(saveTask(journey, page, session.view.goalPlan));
+    }
     lastObservation = key;
     await chrome.tabs
       .sendMessage(session.tabId, {
         type: "UPDATE_MEMORY",
         sessionId: session.sessionId,
         memory: site,
+        savedTask,
       })
       .catch(() => {});
   } catch {
@@ -116,12 +144,13 @@ async function attachSession() {
   const verified = !!(
     navigation &&
     url &&
-    navigation.origin === session.origin &&
+    navigation.origin === url.origin &&
     hash(url.origin + url.pathname + url.search) === navigation.navigationKey
   );
   if (verified && session.view) {
     session.view.verifiedSteps++;
     if (
+      !session.view.journey?.objective.value &&
       session.view.goalPlan?.status === "guiding" &&
       session.view.goalPlan.steps.length <= 1 &&
       session.view.goalPlan.source !== "memory"
@@ -144,8 +173,18 @@ async function attachSession() {
       ? {
           memory: await memory.get(session.origin!).catch(() => undefined),
           goalPlan: session.view?.goalPlan,
+          journey: session.view?.journey,
+          savedTask: session.view?.journey
+            ? (await memory.tasks(session.view.journey.origin)).find(
+                (t) =>
+                  t.id ===
+                  (session!.view!.journey!.savedRouteId ||
+                    taskKey(session!.view!.journey!)),
+              )
+            : undefined,
           liveDiagnostics: session.view?.liveDiagnostics,
           navigationVerified: verified,
+          navigationEvidence: verified ? navigation : undefined,
         }
       : {}),
   });
@@ -156,6 +195,7 @@ async function attachSession() {
       to: session.view.page.stateKey,
       signature: navigation.signature,
       label: navigation.label,
+      durationMs: navigation.durationMs,
     });
   else await remember();
   await save();
@@ -233,7 +273,12 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         return { ok: true };
       }
       await acceptView(incoming);
-      if (!incoming.selectedControlId && incoming.stateId === "verified")
+      if (
+        !incoming.selectedControlId &&
+        (incoming.stateId === "verified" ||
+          (incoming.status === "running" &&
+            incoming.goalPlan?.status === "unresolved"))
+      )
         session.pendingNavigation = undefined;
       await remember(raw.observed);
       await save();
@@ -245,10 +290,31 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     if (!parsed.success) return { error: "Invalid command." };
     const command = parsed.data;
     if (command.type === "GET_SESSION") return session || {};
+    if (command.type === "GET_TASKS" || command.type === "DELETE_TASK") {
+      const tab = await activeTab(),
+        origin = originOf(tab?.url);
+      if (!origin) return { tasks: [] };
+      if (command.type === "DELETE_TASK") {
+        if ((await memory.tasks(origin)).some((t) => t.id === command.id)) {
+          await memory.deleteTask(command.id);
+          if (session) {
+            session.forgottenTaskIds = [
+              ...new Set([...(session.forgottenTaskIds || []), command.id]),
+            ].slice(-100);
+            await save();
+          }
+        }
+      }
+      return { tasks: await memory.tasks(origin) };
+    }
     if (command.type === "GET_CONTEXT") {
       const tab = await activeTab(),
         origin = originOf(tab?.url),
-        available = supportsLiveUrl(tab?.url || "");
+        available = supportsLiveUrl(tab?.url || ""),
+        continuation = session?.view?.continuationOrigin
+          ? session.pendingNavigation
+          : undefined,
+        currentURL = tab?.url && new URL(tab.url);
       const routes = available
         ? [
             ...routeRegistry.forUrl(tab.url!).map(previewRoute),
@@ -258,6 +324,17 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       return {
         tabId: tab?.id,
         origin: available ? origin : undefined,
+        canContinueTask: !!(
+          continuation &&
+          session &&
+          tab?.id &&
+          (tab.id === session.tabId || tab.openerTabId === session.tabId) &&
+          (!currentURL ||
+            (origin === continuation.origin &&
+              hash(
+                currentURL.origin + currentURL.pathname + currentURL.search,
+              ) === continuation.navigationKey))
+        ),
         routes,
         reason: available
           ? undefined
@@ -294,6 +371,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         if (session?.view && live()) {
           session.view.memory = memorySummary();
           session.view.goalPlan = undefined;
+          session.view.journey = undefined;
           await save();
         }
       }
@@ -354,6 +432,49 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       return session;
     }
     const tab = await activeTab();
+    if (
+      command.type === "CONTINUE_TASK" &&
+      session.pendingNavigation &&
+      session.view?.journey?.objective.value
+    ) {
+      const nav = session.pendingNavigation;
+      if (
+        !tab?.id ||
+        (tab.id !== session.tabId && tab.openerTabId !== session.tabId)
+      )
+        return {
+          error:
+            "Return to the expected destination tab to continue this task.",
+        };
+      // Chrome withholds a destination tab's URL until its host access is
+      // granted. Request only the clicked link's origin; validate the actual
+      // destination after that grant, before observing or advancing the task.
+      const expected = new URL(nav.origin);
+      const granted = await chrome.permissions.contains({
+        origins: [expected.protocol + "//" + expected.hostname + "/*"],
+      });
+      if (!granted)
+        return {
+          error:
+            "Allow access to this destination website to continue your task.",
+        };
+      const url = tab.url && new URL(tab.url);
+      if (
+        !url ||
+        hash(url.origin + url.pathname + url.search) !== nav.navigationKey ||
+        url.origin !== nav.origin
+      )
+        return {
+          error:
+            "Return to the expected destination tab to continue this task.",
+        };
+      session.tabId = tab.id;
+      session.origin = url.origin;
+      session.documentId = undefined;
+      session.view.continuationOrigin = undefined;
+      session.view.status = "running";
+      return await attachSession();
+    }
     if (command.type !== "PAUSE" && tab?.id !== session.tabId)
       return { error: "Return to the tab where this task started." };
     if (command.type === "RESUME" && session.navigationPending && live()) {
@@ -387,10 +508,18 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       if (command.type === "GET_PAGE")
         return {
           page: reply.page,
-          memory: await memory.get(session.origin!).catch(() => undefined),
           sessionId: session.sessionId,
           documentId: session.documentId,
+          journey: session.view?.journey,
         };
+      if (
+        command.type === "SET_GOAL" &&
+        !command.journeyId &&
+        session.view?.journey
+      )
+        session.forgottenTaskIds = session.forgottenTaskIds?.filter(
+          (id) => id !== taskKey(session!.view!.journey!),
+        );
       await acceptView(reply?.view);
       await remember();
       await save();
@@ -422,6 +551,43 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.status !== "loading" && change.status !== "complete") return;
   void enqueue(async () => {
+    if (
+      session &&
+      tabId !== session.tabId &&
+      change.status === "complete" &&
+      tab.openerTabId === session.tabId &&
+      session.view?.journey?.objective.value &&
+      session.pendingNavigation
+    ) {
+      const url = tab.url && new URL(tab.url),
+        nav = session.pendingNavigation;
+      if (
+        !url ||
+        (url.origin === nav.origin &&
+          hash(url.origin + url.pathname + url.search) === nav.navigationKey)
+      ) {
+        await chrome.tabs
+          .sendMessage(session.tabId, {
+            type: "CONTROL_SESSION",
+            sessionId: session.sessionId,
+            action: "PAUSE",
+          })
+          .catch(() => {});
+        session.view = {
+          ...session.view,
+          status: "paused",
+          continuationOrigin: nav.origin,
+          controls: [],
+          selectedControlId: undefined,
+          page: undefined,
+          instruction:
+            "The expected destination opened in a new tab. Switch to that tab and continue your task.",
+        };
+        session.navigationPending = true;
+        await save();
+      }
+      return;
+    }
     if (session?.tabId !== tabId || !session?.view || !sessionLocked(session))
       return;
     if (!live()) {
@@ -473,6 +639,22 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     }
     if (!session.navigationPending) return;
     if (!inScope(tab.url || "")) {
+      const nav = session.pendingNavigation,
+        url = tab.url && new URL(tab.url);
+      if (
+        session.view.journey?.objective.value &&
+        nav &&
+        (!url ||
+          (nav.origin === url.origin &&
+            hash(url.origin + url.pathname + url.search) === nav.navigationKey))
+      ) {
+        session.view.status = "paused";
+        session.view.continuationOrigin = nav.origin;
+        session.view.instruction =
+          "Allow access to the expected destination website to check it and continue your task.";
+        await save();
+        return;
+      }
       await stopSession(
         "You moved to another website. Click the extension icon there and start a new session.",
       );

@@ -4,9 +4,11 @@ import {
   type GoalPlan,
   type ModelProposal,
   type SiteMemory,
+  type GoalIntent,
   hash,
 } from "../page-model";
 import { sanitizeText } from "../privacy-redaction";
+import { shortestRoute } from "./route-graph";
 import {
   memoryDiagnostics,
   type MatchEvidence,
@@ -52,13 +54,19 @@ export function goalMatch(
   goal: string,
   control: Pick<
     PageControl,
-    "label" | "description" | "context" | "kind" | "scope"
+    "label" | "description" | "context" | "kind" | "scope" | "structure"
   >,
 ): MatchEvidence & { score: number } {
   const requested = [...new Set(tokens(goal))],
     label = tokens(control.label),
     description = tokens(control.description || ""),
-    context = tokens(control.context);
+    context = tokens(
+      [
+        control.context,
+        ...(control.structure?.headings.map((h) => h.label) || []),
+        ...(control.structure?.regions.map((r) => r.name) || []),
+      ].join(" "),
+    );
   const evidence: MatchEvidence = {
     requested: requested.length,
     label: 0,
@@ -138,7 +146,20 @@ export function goalMatch(
         (t) => !/^\d+$/.test(t) && !vocabulary.some((v) => matches(v, [t])),
       )
     : [];
-  const specificity = Math.min(0.4, extras.length * 0.12);
+  const contextual = wanted.filter(
+    (t) =>
+      !matches(t, label) && !(aliases[t] || []).some((v) => matches(v, label)),
+  );
+  const nearestContext = tokens(
+    control.structure?.headings.at(-1)?.label || control.context,
+  );
+  const contextExtras = contextual.some((t) => matches(t, nearestContext))
+    ? nearestContext.filter((t) => !vocabulary.some((v) => matches(v, [t])))
+        .length
+    : contextual.length && control.structure?.headings.length
+      ? 1
+      : 0;
+  const specificity = Math.min(0.4, (extras.length + contextExtras) * 0.12);
   evidence.specificity = specificity;
   evidence.adjustment =
     (requested.includes("search")
@@ -169,7 +190,7 @@ export function goalScore(
   goal: string,
   control: Pick<
     PageControl,
-    "label" | "description" | "context" | "kind" | "scope"
+    "label" | "description" | "context" | "kind" | "scope" | "structure"
   >,
 ) {
   return goalMatch(goal, control).score;
@@ -231,12 +252,46 @@ export function actionBoundary(
       : "consequential",
   );
 }
+function intentQuery(intent: GoalIntent) {
+  return [
+    sanitizeText(intent.target).slice(0, 80),
+    sanitizeText(intent.context).slice(0, 80),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+function inScope(
+  control: Pick<PageControl, "scope">,
+  scope?: GoalIntent["scope"],
+) {
+  return (
+    !scope ||
+    scope === "any" ||
+    (scope === "page"
+      ? control.scope !== "section"
+      : control.scope === "section")
+  );
+}
+function operationMatches(intent: GoalIntent, control: PageControl) {
+  return (
+    intent.operation === "locate" ||
+    (
+      {
+        focus: ["focus"],
+        reveal: ["expand"],
+        choose: ["choice", "toggle", "select"],
+        navigate: ["navigation", "section"],
+      } as Record<string, string[]>
+    )[intent.operation]?.includes(control.kind)
+  );
+}
 function planGoalInternal(
   page: PageSnapshot,
   rawGoal: string,
   memory?: SiteMemory,
   proposal?: ModelProposal,
   trace: { path?: SiteMemory["transitions"] } = {},
+  targetScope?: GoalIntent["scope"],
 ): GoalPlan {
   const goal = sanitizeText(rawGoal);
   if (!goal)
@@ -261,6 +316,14 @@ function planGoalInternal(
     source: GoalPlan["source"] = "semantics",
     confidence = 0;
   if (proposal) {
+    const grounded = planGoalInternal(page, goal, memory, undefined, trace);
+    const fallback = (reason: string): GoalPlan =>
+      grounded.issue !== "no-match"
+        ? grounded
+        : unresolved(goal, reason, "invalid-model");
+    // A paraphrase is interpretation, never authority to cross an action boundary.
+    if (["consequential", "unknown-effect"].includes(grounded.issue || ""))
+      return grounded;
     const proposed = proposal.controlIds.map((id) =>
       usable.find((c) => c.id === id),
     );
@@ -269,17 +332,13 @@ function planGoalInternal(
       proposed.some((c) => !c) ||
       proposal.confidence < 0.6
     )
-      return unresolved(
-        goal,
-        "The model did not identify a valid, safe control. Choose a control or clarify your goal.",
-        "invalid-model",
+      return fallback(
+        "The model did not identify a grounded control. Choose a control or clarify your goal.",
       );
     const first = proposed[0]!;
     if (!first.visible)
-      return unresolved(
-        goal,
-        "The model selected a hidden control. Open its menu first.",
-        "hidden",
+      return fallback(
+        "The model selected a hidden control without its opening step.",
       );
     if (
       new Set(proposal.controlIds).size !== proposal.controlIds.length ||
@@ -288,12 +347,9 @@ function planGoalInternal(
           !c!.visible && !c!.revealIds.includes(proposed[i - 1]?.id || ""),
       )
     )
-      return unresolved(
-        goal,
-        "The model's steps do not form a valid route through the discovered controls.",
-        "invalid-model",
+      return fallback(
+        "The model's steps do not form a route through the discovered controls.",
       );
-    const grounded = planGoalInternal(page, goal, memory, undefined, trace);
     const groundedTarget = page.controls.find(
       (c) => c.id === grounded.steps.at(-1)?.controlId,
     );
@@ -304,10 +360,10 @@ function planGoalInternal(
       return grounded;
     if (
       grounded.status === "guiding" &&
-      grounded.confidence >= 0.85 &&
       groundedTarget &&
-      (goalScore(goal, groundedTarget) - goalScore(goal, proposed.at(-1)!) >
-        0.08 ||
+      (groundedTarget.id !== proposed.at(-1)!.id ||
+        goalScore(goal, groundedTarget) - goalScore(goal, proposed.at(-1)!) >
+          0.08 ||
         (grounded.steps.length === 1 &&
           proposed[0]!.id !== groundedTarget.id &&
           goalScore(goal, groundedTarget) - goalScore(goal, proposed[0]!) >
@@ -318,7 +374,60 @@ function planGoalInternal(
         reason:
           "The model's suggestion conflicted with a clearer live control match. Using the page's labels and accessibility evidence.",
       };
-    // The model may choose controls, but outcomes and eligibility always come from live observations.
+    const intent = proposal.intent;
+    if (intent) {
+      // Context qualifiers must come from the user's request. The model may
+      // translate a task into a control purpose, but cannot invent a section.
+      const contextTerms = tokens(intent.context);
+      if (
+        contextTerms.some((t) => !matches(t, tokens(goal))) ||
+        (intent.scope === "section" && !contextTerms.length) ||
+        !operationMatches(intent, proposed.at(-1)!)
+      )
+        return fallback(
+          "The model's interpretation did not preserve the requested context or control effect.",
+        );
+      const interpreted = planGoalInternal(
+        page,
+        intentQuery(intent),
+        memory,
+        undefined,
+        trace,
+        intent.scope,
+      );
+      const targetId = interpreted.steps.at(-1)?.controlId;
+      if (
+        interpreted.status !== "guiding" ||
+        targetId !== proposed.at(-1)!.id ||
+        interpreted.steps.length !== proposed.length ||
+        interpreted.steps.some((s, i) => s.controlId !== proposed[i]!.id)
+      )
+        return fallback(
+          "The model's intent was not supported by an unambiguous live route.",
+        );
+      return {
+        ...interpreted,
+        goal,
+        source: "on-device",
+        confidence: Math.min(interpreted.confidence, proposal.confidence),
+        interpretation: {
+          ...intent,
+          target: sanitizeText(intent.target).slice(0, 80),
+          context: sanitizeText(intent.context).slice(0, 80),
+        },
+        reason:
+          "Interpreted your goal using the current page structure; each control result is checked on the website.",
+      };
+    }
+    if (
+      grounded.status !== "guiding" ||
+      grounded.steps.length !== proposed.length ||
+      grounded.steps.some((s, i) => s.controlId !== proposed[i]!.id)
+    )
+      return fallback(
+        "The model selected controls without a grounded interpretation of the goal.",
+      );
+    // Outcomes and eligibility always come from live observations.
     return {
       goal,
       source: "on-device",
@@ -334,6 +443,7 @@ function planGoalInternal(
     };
   }
   const ranked = usable
+    .filter((c) => inScope(c, targetScope))
     // Unreachable responsive/sticky duplicates cannot displace a usable control.
     .filter((c) => c.visible || revealersFor(c).length === 1)
     .map((c) => ({ c, score: goalScore(goal, c) - (c.visible ? 0 : 0.06) }))
@@ -360,44 +470,34 @@ function planGoalInternal(
       c.visible &&
       c.enabled &&
       c.risk !== "ordinary" &&
+      inScope(c, targetScope) &&
       goalScore(goal, c) >= 0.6,
   );
   if (!target && blocked) return actionBoundary(blocked, goal);
   if (!target && memory) {
     const desired = new Set(
-      memory.pages.flatMap((p) =>
+      (memory.states || memory.pages).flatMap((p) =>
         p.controls
           .filter(
             (c) =>
-              c.active && c.risk === "ordinary" && goalScore(goal, c) >= 0.7,
+              c.active &&
+              c.risk === "ordinary" &&
+              inScope(c, targetScope) &&
+              goalScore(goal, c) >= 0.7,
           )
           .map((c) => p.stateKey),
       ),
     );
-    const queue = [
-        { state: page.stateKey, path: [] as typeof memory.transitions },
-      ],
-      seen = new Set<string>();
-    while (queue.length) {
-      const current = queue.shift()!;
-      if (seen.has(current.state) || current.path.length > 8) continue;
-      seen.add(current.state);
-      if (desired.has(current.state) && current.path.length) {
-        target = usable.find(
-          (c) => c.visible && c.signature === current.path[0].signature,
-        );
-        if (target) {
-          source = "memory";
-          trace.path = current.path;
-          confidence = 0.85;
-          break;
-        }
+    const path = shortestRoute(page, memory, desired);
+    if (path?.length) {
+      target = usable.find(
+        (c) => c.visible && c.signature === path[0].signature,
+      );
+      if (target) {
+        source = "memory";
+        trace.path = path;
+        confidence = 0.85;
       }
-      for (const edge of memory.transitions.filter(
-        (t) =>
-          t.active && t.evidence === "observed" && t.from === current.state,
-      ))
-        queue.push({ state: edge.to, path: [...current.path, edge] });
     }
   }
   if (!target)
@@ -467,9 +567,13 @@ export function inspectGoal(
   rawGoal: string,
   memory?: SiteMemory,
   proposal?: ModelProposal,
+  interpretation?: GoalIntent,
 ) {
   const trace: { path?: SiteMemory["transitions"] } = {};
-  const plan = planGoalInternal(page, rawGoal, memory, proposal, trace);
+  const plan =
+    proposal || !interpretation
+      ? planGoalInternal(page, rawGoal, memory, proposal, trace)
+      : replanIntent(page, rawGoal, interpretation, memory, trace);
   const goal = sanitizeText(rawGoal);
   const selected = new Set(plan.steps.map((s) => s.controlId));
   const roles = new Set([
@@ -574,4 +678,34 @@ export function planGoal(
   proposal?: ModelProposal,
 ) {
   return planGoalInternal(page, rawGoal, memory, proposal);
+}
+function replanIntent(
+  page: PageSnapshot,
+  rawGoal: string,
+  intent: GoalIntent,
+  memory?: SiteMemory,
+  trace: { path?: SiteMemory["transitions"] } = {},
+): GoalPlan {
+  const original = planGoalInternal(page, rawGoal, memory, undefined, trace);
+  if (original.status !== "unresolved" || original.issue !== "no-match")
+    return original;
+  const plan = planGoalInternal(
+    page,
+    intentQuery(intent),
+    memory,
+    undefined,
+    trace,
+    intent.scope,
+  );
+  const target = page.controls.find(
+    (c) => c.id === plan.steps.at(-1)?.controlId,
+  );
+  if (plan.status === "guiding" && target && !operationMatches(intent, target))
+    return original;
+  return {
+    ...plan,
+    goal: sanitizeText(rawGoal),
+    source: "on-device",
+    interpretation: intent,
+  };
 }

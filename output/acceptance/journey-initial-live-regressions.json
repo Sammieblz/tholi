@@ -1,0 +1,73 @@
+{
+  "format": "navigator-regression-v1",
+  "scope": "live",
+  "artifactFiles": {
+    "content.js": "9ce6c9a5460a6e36107450214b12c454043d7dab8967c707045649a903c4b8bd",
+    "content.js.map": "f0abd28cacdb914a3a2912c2d5099ef17d527797694a750d937b71d0d5d65c0b",
+    "manifest.json": "4035a4c2b6e4a47e041348b774856b3c631f891b7523c09d64ba9742bd8cbb43",
+    "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
+    "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
+    "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
+    "sidepanel.js": "7019ee13faee84be715963d355b5a95bbb96fe36c4aa374c3f51e8781b903294",
+    "sidepanel.js.map": "7172ac7d1183209ac14016acf6ee1e9a39f904809aa8b11a9cffc5ea8790b074",
+    "worker.js": "9a0b4acb1a1393c73d5ebf108e8110c26a216c6b86c3fa40b7928cc7359cdb38",
+    "worker.js.map": "6fed30a0ae05eff8197c5819fe4eaee13cc0e8072c7d87f4ece7748f741d4411"
+  },
+  "extensionVersion": "0.6.8",
+  "evaluatedAt": "2026-10-11T19:05:40.219Z",
+  "expected": 12,
+  "configuredCount": 12,
+  "sourceRevision": "1aec0785d13cc03f322e0b7212000b70e264b5a3",
+  "workingTreeDirty": true,
+  "passed": false,
+  "cases": [
+    {
+      "id": " / desktop / edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "timedOut"
+    },
+    {
+      "id": " / desktop / language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
+      "status": "failed"
+    },
+    {
+      "id": " / desktop / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
+      "status": "failed"
+    },
+    {
+      "id": " / narrow / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    }
+  ]
+}

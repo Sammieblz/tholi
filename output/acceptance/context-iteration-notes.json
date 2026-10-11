@@ -1,0 +1,50 @@
+{
+  "candidate": "0.6.7",
+  "iterations": [
+    {
+      "stage": "unit table setup",
+      "result": "90 passed, 2 failed",
+      "cause": "Vitest each() treated the arrays as positional arguments rather than a controlIds array.",
+      "correction": "Pass table entries as objects containing ids; all assertions and test cases remain."
+    },
+    {
+      "stage": "initial browser contract tests",
+      "result": "0 passed, 4 timed out",
+      "cause": "The new test looked for the goal input's visible prompt text; its accessible name is Navigation goal.",
+      "correction": "Use the real accessible name and wait for the submit button's enabled state.",
+      "traces": "output/qa/context-initial-browser-failures"
+    },
+    {
+      "stage": "rerendered menu fixture",
+      "result": "2 passed, 2 failed",
+      "cause": "An inline test handler had incorrectly escaped nested quotes and raised Unexpected string before opening its menu.",
+      "correction": "Use an event listener and DOM construction in the fixture; preserve the rerender and independent destination assertions.",
+      "traces": "output/qa/context-menu-fixture-failures"
+    },
+    {
+      "stage": "live section Edit coverage",
+      "result": "2 failed",
+      "cause": "The product ranked Plot and Plot inspirations equally for Edit Plot. The narrow attempt separately rejected a revision changed during scrolling.",
+      "correction": "Add a generic nearest-context specificity penalty and a unit regression. Observe a stable snapshot revision after scrolling before submitting the live test goal. Preserve both target and halo checks.",
+      "traces": "output/qa/context-live-section-failures"
+    },
+    {
+      "stage": "concurrent full regression suites",
+      "result": "9 live tests passed, 1 desktop browser startup timed out",
+      "cause": "The trace stalled at navigation to the isolated extension sidepanel.html, before the Wikipedia visit. The exact environment cause is unknown.",
+      "correction": "Retain the full failed report and trace. A subsequent scope fix required a new frozen build and all full checks; the final live suite runs after the other suites finish.",
+      "report": "output/acceptance/context-concurrent-live-regressions.json",
+      "traces": "output/qa/context-concurrent-live-failures"
+    },
+    {
+      "stage": "scope relationship review",
+      "result": "A section target could lose its page-level opener during intent scope filtering.",
+      "correction": "Apply scope only to target eligibility, retain all live reveal relationships, add a unit regression, rebuild and repeat all artifact-bound checks.",
+      "priorReports": [
+        "output/acceptance/context-before-scope-results.json",
+        "output/acceptance/context-before-scope-e2e-regressions.json"
+      ]
+    }
+  ],
+  "evaluationScope": "Semantic-mode accuracy gates plus deterministic model adapter contracts; no actual Gemini Nano quality measurement."
+}

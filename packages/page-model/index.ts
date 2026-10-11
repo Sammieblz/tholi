@@ -2,6 +2,35 @@ import { z } from "zod";
 export const LIVE_ROUTE_ID = "navigator.live";
 export const LIVE_VERSION = "1.0.0";
 export const controlId = z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/);
+export const structureSchema = z
+  .object({
+    regions: z
+      .array(
+        z
+          .object({ role: z.string().max(40), name: z.string().max(160) })
+          .strict(),
+      )
+      .max(4),
+    headings: z
+      .array(
+        z
+          .object({
+            level: z.number().int().min(1).max(6),
+            label: z.string().max(160),
+          })
+          .strict(),
+      )
+      .max(6),
+  })
+  .strict();
+export const intentSchema = z
+  .object({
+    target: z.string().min(1).max(80),
+    context: z.string().max(80),
+    scope: z.enum(["page", "section", "any"]),
+    operation: z.enum(["focus", "reveal", "choose", "navigate", "locate"]),
+  })
+  .strict();
 export const destinationSchema = z
   .object({
     origin: z.string().max(300),
@@ -19,6 +48,10 @@ export const controlSchema = z
     context: z.string().max(160),
     group: z.string().max(160),
     scope: z.enum(["page", "section"]).optional(),
+    structure: structureSchema.optional(),
+    placement: z
+      .enum(["viewport", "above", "below", "left", "right"])
+      .optional(),
     kind: z.enum([
       "focus",
       "toggle",
@@ -41,6 +74,19 @@ export const controlSchema = z
     revealIds: z.array(controlId).max(10),
     destination: destinationSchema.optional(),
     navigationKey: z.string().max(100).optional(),
+    targetLanguage: z.string().max(20).optional(),
+    options: z
+      .array(
+        z
+          .object({
+            label: z.string().max(160),
+            selected: z.boolean(),
+            enabled: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
     risk: z.enum(["ordinary", "consequential"]),
     riskReason: z
       .enum(["commit", "form-submit", "unknown-edit-effect"])
@@ -80,6 +126,28 @@ export const goalPlanSchema = z
         "invalid-model",
       ])
       .optional(),
+    interpretation: intentSchema.optional(),
+    route: z
+      .object({
+        strategy: z.enum(["fastest", "fewest-clicks"]),
+        clicks: z.number().int().nonnegative(),
+        minSeconds: z.number().nonnegative(),
+        maxSeconds: z.number().nonnegative(),
+        complete: z.boolean(),
+        basis: z.enum(["estimated", "observed", "mixed"]),
+        predictions: z
+          .array(
+            z
+              .object({
+                label: z.string().max(160),
+                evidence: z.enum(["observed", "predicted"]),
+              })
+              .strict(),
+          )
+          .max(12),
+      })
+      .strict()
+      .optional(),
     steps: z
       .array(
         z
@@ -97,15 +165,94 @@ export const modelProposalSchema = z
   .object({
     controlIds: z.array(controlId).max(12),
     confidence: z.number().min(0).max(1),
+    intent: intentSchema.optional(),
   })
   .strict();
 export type PageControl = z.infer<typeof controlSchema>;
 export type PageSnapshot = z.infer<typeof pageSnapshotSchema>;
 export type GoalPlan = z.infer<typeof goalPlanSchema>;
 export type ModelProposal = z.infer<typeof modelProposalSchema>;
+export type GoalIntent = z.infer<typeof intentSchema>;
+export const strategySchema = z.enum(["fastest", "fewest-clicks"]);
+export const objectiveSchema = z
+  .object({
+    purpose: z.string().min(1).max(160),
+    value: z.string().max(80).optional(),
+    language: z.string().max(20).optional(),
+  })
+  .strict();
+export const progressSchema = z
+  .object({
+    origin: z.string().max(300),
+    from: z.string().max(100),
+    to: z.string().max(100),
+    signature: z.string().max(100),
+    label: z.string().max(160),
+    kind: controlSchema.shape.kind,
+    durationMs: z.number().nonnegative().max(300000),
+    at: z.number().nonnegative(),
+  })
+  .strict();
+export const journeySchema = z
+  .object({
+    id: z.string().uuid(),
+    goal: z.string().min(1).max(160),
+    objective: objectiveSchema,
+    origin: z.string().max(300),
+    strategy: strategySchema,
+    startedAt: z.number().nonnegative(),
+    updatedAt: z.number().nonnegative(),
+    status: z.enum(["active", "completed"]),
+    progress: z.array(progressSchema).max(30),
+    reroutes: z.number().int().nonnegative(),
+    savedRouteId: z.string().max(100).optional(),
+  })
+  .strict();
+export const savedTaskSchema = z
+  .object({
+    id: z.string().max(100),
+    goal: z.string().min(1).max(160),
+    objective: objectiveSchema,
+    origin: z.string().max(300),
+    strategy: strategySchema,
+    updatedAt: z.number().nonnegative(),
+    completed: z.boolean(),
+    progress: z.array(progressSchema).max(30),
+    planned: z
+      .array(
+        z
+          .object({
+            label: z.string().max(160),
+            signature: z.string().max(100).optional(),
+            evidence: z.enum(["live", "observed", "predicted"]),
+          })
+          .strict(),
+      )
+      .max(24)
+      .optional(),
+    estimate: goalPlanSchema.shape.route,
+  })
+  .strict();
+export type TaskJourney = z.infer<typeof journeySchema>;
+export type SavedTask = z.infer<typeof savedTaskSchema>;
+export type RouteStrategy = z.infer<typeof strategySchema>;
+export const pendingNavigationSchema = z
+  .object({
+    from: z.string().max(100),
+    signature: z.string().max(100),
+    label: z.string().max(160),
+    destinationKey: z.string().max(100),
+    navigationKey: z.string().max(100),
+    origin: z.string().max(300),
+    durationMs: z.number().nonnegative().max(300000).optional(),
+    kind: z.literal("navigation").optional(),
+    fromOrigin: z.string().max(300).optional(),
+  })
+  .strict();
+export type PendingNavigation = z.infer<typeof pendingNavigationSchema>;
 export interface MemoryControl extends Omit<
   PageControl,
-  "id" | "revealIds" | "inViewport" | "navigationKey"
+  "id" | "revealIds" | "inViewport" | "placement" | "navigationKey"
 > {
   lastSeen: number;
   active: boolean;
@@ -119,6 +266,7 @@ export interface MemoryPage {
   lastSeen: number;
   controls: MemoryControl[];
   stateKey: string;
+  language?: string;
 }
 export interface MemoryTransition {
   from: string;
@@ -128,6 +276,8 @@ export interface MemoryTransition {
   evidence: "observed" | "inferred";
   lastVerified: number;
   active: boolean;
+  samples?: number;
+  meanMs?: number;
 }
 export interface SiteMemory {
   schemaVersion: 1;
@@ -142,12 +292,14 @@ export interface SiteMemory {
     lastSeen: number;
   }[];
   transitions: MemoryTransition[];
+  states?: MemoryPage[];
 }
 export interface ObservedTransition {
   from: string;
   to: string;
   signature: string;
   label: string;
+  durationMs?: number;
 }
 export const transitionEvidenceSchema = z
   .object({
@@ -155,6 +307,7 @@ export const transitionEvidenceSchema = z
     to: z.string().max(100),
     signature: z.string().max(100),
     label: z.string().max(160),
+    durationMs: z.number().nonnegative().max(300000).optional(),
   })
   .strict();
 export function hash(value: string): string {

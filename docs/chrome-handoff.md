@@ -1,4 +1,4 @@
-# Native Chrome handoff — candidate 0.6.6
+# Native Chrome handoff — candidate 0.6.8
 
 This candidate is for the dynamic Wikipedia proof of concept. It has not been published or committed. The versioned archive, SHA256 and evaluation provenance are generated in `output/releases` by `npm run package:extension`. Packaging requires a complete passing benchmark and byte-for-byte agreement with its evaluated build. The archive contains the production extension; extract it to a new folder and load that folder, or reload the evaluated `dist/extension` folder.
 
@@ -6,7 +6,7 @@ The native computer-use helper is unavailable in this work session (Windows nati
 
 | Native check                                                                                                                                                                        | Result / details |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| Chrome version, extension version 0.6.6, date                                                                                                                                       | Pending          |
+| Chrome version, extension version 0.6.8, date                                                                                                                                       | Pending          |
 | `chrome://extensions`: Reload or Load unpacked; toolbar icon opens native panel without starting observation                                                                        | Pending          |
 | Refresh existing Wikipedia tab to replace its old injected script; Start/Pause/Resume/Stop use the new build                                                                        | Pending          |
 | Keyboard only: choose task, Start, enter goal, Find a route, Pause, Resume, Stop; visible focus, usable order and no trap                                                           | Pending          |
@@ -16,6 +16,9 @@ The native computer-use helper is unavailable in this work session (Windows nati
 | Ordinary HTTPS site without a prior grant: decline per-site access, see recovery text, retry granting only that origin; no all-sites grant needed                                   | Pending          |
 | Restricted page (for example `chrome://extensions`): unsupported explanation and usable recovery                                                                                    | Pending          |
 | English Wikipedia → explicit Français link: correct French article arrives, old-origin session stops, toolbar invocation/Start enables fresh destination observation                | Pending          |
+| One **Change language to Spanish** task: correct opener/option, retained context at Spanish origin, Continue task here grant/denial/retry, actual Spanish document verification     | Pending          |
+| Saved routes: visible estimates/progress, reuse after reload/site change, per-route Forget, fastest/fewest-click preference and keyboard use                                        | Pending          |
+| A task link opening a popup tab: continue only in its expected tab, retain goal and observe destination after permission                                                            | Pending          |
 | Stop clears guidance; Disable at `chrome://extensions` followed by website refresh removes injected content                                                                         | Pending          |
 
 ## Repeatable demo
@@ -23,11 +26,15 @@ The native computer-use helper is unavailable in this work session (Windows nati
 1. Open `https://en.wikipedia.org/wiki/Casino_Royale_(novel)`, click the Navigator toolbar icon and Start **Navigate this website**. Keep optional AI off.
 2. Enter **Make text larger**. Click the highlighted Appearance opener if needed, then Large. Confirm the website's selected option and Navigator's verified result agree.
 3. Try **Switch to dark mode**, **Set width to wide**, **Find references**, and **Show search**. Search completion means the field is focused; you type and submit yourself.
-4. Enter **Show languages**. Click the actual language button. Navigator should ask you to choose an option, with one verified menu-opening interaction. An open picker does not establish a completed language change.
-5. Enter **Français** while the picker is open and click the highlighted link yourself. Independently check the French destination. Moving to its new origin ends the original session; click the extension icon there and Start again. Chrome may ask for access to that origin.
+4. Enter **Change language to Spanish** once. Click the actual language button. Navigator must retain Spanish and guide the actual Español option when it appears. Opening the picker is intermediate progress.
+5. Click the highlighted Spanish link. On the Spanish destination, choose **Continue task here** and allow only that site's access. Denial must preserve context for retry. After the grant, Navigator must observe the actual Spanish document and verify the same task. Check **Saved routes**, return to an English article and reuse the task; its controls must be discovered afresh.
 6. Pause/Resume and Stop. Inspect **Local site memory and AI**, and use Forget this website to stop observation and delete its learned structure.
 
 The declared measured matrix is five English Wikipedia articles × six goal families × two layouts. Its URLs/oracles are test data, not product routes. The navigator uses the live page's semantic labels, descriptions and relationships and refreshes bounded IndexedDB knowledge. The Northstar cancellation/billing tasks remain controlled demo regression cases (`npm run dev:demo`, `http://127.0.0.1:5173`).
+
+Candidate 0.6.7 adds heading/region context and grounded optional model intent. Retest **Edit Plot** as well as **Edit**; the section goal should highlight Plot's own edit link, not Plot inspirations. On compatible hardware, enable on-device AI and try paraphrased goals independently of the semantic-mode matrix. Verify the intended control and actual website result yourself and record incorrect interpretations; the automated model adapter uses deterministic responses and does not establish real Gemini Nano accuracy. See [page-context.md](page-context.md).
+
+Candidate 0.6.8 adds persistent destination journeys, model follow-up task context, weighted observed routing, provisional estimates/predictions, saved task routes and guarded origin/popup continuation. Automated fixtures verify permitted-origin continuation and popup tabs. Live Wikipedia independently reaches Spanish but leaves Navigator verification pending its actual native host-permission grant. See [task-routing.md](task-routing.md). Fastest routing optimizes known observations, with broad time estimates; it is not a guarantee over unseen screens.
 
 Reported Edit regression: enter **Edit** or **How do I edit this page?** on the article. The highlight should target the article toolbar's Edit link, rather than a section's edit link or an action-boundary refusal. A section-specific request uses its heading context. Opening an editor is distinct from publishing changes; committing controls still require the user to review the website. An opaque Edit button without declared navigation/popup behavior should say **Control effect unclear**. The live test verifies target/geometry; complete native editor behavior remains a hands-on check. Do not publish an edit as part of the handoff.
 

@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { sessionViewSchema } from "../route-schema";
 import { routeRegistry } from "./index";
-import { LIVE_ROUTE_ID, LIVE_VERSION, supportsLiveUrl } from "../page-model";
+import {
+  LIVE_ROUTE_ID,
+  LIVE_VERSION,
+  supportsLiveUrl,
+  pendingNavigationSchema,
+} from "../page-model";
 export const sessionSchema = z
   .object({
     sessionId: z.string().uuid(),
@@ -11,17 +16,8 @@ export const sessionSchema = z
     documentId: z.string().optional(),
     navigationPending: z.boolean().optional(),
     origin: z.string().optional(),
-    pendingNavigation: z
-      .object({
-        from: z.string().max(100),
-        signature: z.string().max(100),
-        label: z.string().max(160),
-        destinationKey: z.string().max(100),
-        navigationKey: z.string().max(100),
-        origin: z.string().max(300),
-      })
-      .strict()
-      .optional(),
+    forgottenTaskIds: z.array(z.string().max(100)).max(100).optional(),
+    pendingNavigation: pendingNavigationSchema.optional(),
     view: sessionViewSchema.optional(),
   })
   .strict();
@@ -88,6 +84,8 @@ export function validPinnedView(session: PinnedSession, view: unknown) {
     parsed.data.selectedControlId ||
     parsed.data.page ||
     parsed.data.goalPlan ||
+    parsed.data.journey ||
+    parsed.data.continuationOrigin ||
     parsed.data.liveDiagnostics
   )
     return undefined;

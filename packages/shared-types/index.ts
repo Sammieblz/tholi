@@ -62,6 +62,8 @@ export interface SessionView {
   controls?: import("../page-model").PageControl[];
   page?: import("../page-model").PageSnapshot;
   goalPlan?: import("../page-model").GoalPlan;
+  journey?: import("../page-model").TaskJourney;
+  continuationOrigin?: string;
   memory?: {
     pages: number;
     templates: number;

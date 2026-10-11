@@ -1,14 +1,42 @@
 # Build verification — October 11, 2026
 
-Production extension candidate: **0.6.6**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed. Source baseline is `9388fcbe85d69cdede430446376e3eab22d9b8db`; this work is local and has not been committed or pushed. Evaluation reports identify the actual build-file hashes and dirty working tree.
+Production extension candidate: **0.6.8**. Protocol: **navigator.live 1.0.0**. The source baseline is the user's commit `1aec0785d13cc03f322e0b7212000b70e264b5a3`; these changes remain local, uncommitted and unpublished.
 
-| Check                                                                           | Result       |
-| ------------------------------------------------------------------------------- | ------------ |
-| TypeScript                                                                      | Passed       |
-| Core, discovery, planning, memory, privacy, lifecycle and model-contract tests  | 83/83 passed |
-| Production-extension browser integration at 1280×900 and 720×900                | 60/60 passed |
-| Live Wikipedia goals, explicit language destination and geometry at both widths | 10/10 passed |
-| Whitespace/diff validation                                                      | Passed       |
+| Check                                                                        | Result                      |
+| ---------------------------------------------------------------------------- | --------------------------- |
+| TypeScript and both production builds                                        | Passed                      |
+| Core, discovery, context, task planning, memory, privacy and lifecycle units | 105/105 passed              |
+| Full extension browser regressions at both website widths                    | 78/78 passed                |
+| Full live Wikipedia regressions at both widths                               | 12/12 passed                |
+| Unchanged declared accuracy matrix                                           | 14 tests / 116 cases passed |
+| Formatting and diff validation                                               | Passed                      |
+
+Persistent task journeys retain the original destination and verified progress through menus, modals, intermediate documents and linked popup tabs. Optional on-device model follow-ups receive the destination and bounded verified history. Weighted observed routing compares fastest/fewest-interaction paths; provisional estimates distinguish observed and predicted upcoming steps. Saved tasks persist in browser-owned IndexedDB and rebind current controls after website changes. Shared navigation schemas replace duplicated contracts; unused full-memory transfer on fresh-page requests is removed. Panel feeds allow one outstanding poll and ignore replies after teardown. See [task-routing.md](task-routing.md).
+
+The browser fixtures verify one Spanish destination through three interactions, a wrong selected value, completed-state revalidation, changed-site route reuse after a complete browser restart, individual route deletion, stale replacement, a picker that removes its clicked link while loading, redirect rejection, cross-origin continuation, popup tabs and model task-context contracts. The existing accessibility case now delays both panel feeds and verifies that requests cannot overlap. Desktop and narrow task-panel PNGs were inspected; both contain the same valid 380×1720 rendered panel with three verified steps. Their identical bytes reflect the fixed test-panel width; website viewports remain 1280×900 and 720×900. Actual native panel presentation remains separate.
+
+Live Spanish regressions independently open the correct picker, guide Español, reach the actual Spanish article and retain the same task at its permission boundary. Chrome withholds an ungranted host's tab URL. Navigator offers access to the clicked link's expected origin, then checks the actual URL and originating tab after permission, before observing or advancing. Without that grant it cannot claim task completion. Permitted local fixtures verify continuation/completion; actual Spanish-host permission prompts and denial/retry remain in [chrome-handoff.md](chrome-handoff.md). No Wikipedia product selector or fixed article route was added.
+
+The final semantic-mode matrix was evaluated at `2026-10-11T19:41:27.403Z`; its SHA256 remains `bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae`. Live: **60 attempts, 71/71 targets, 71/71 verification claims, 60/60 supported outcomes**. Generic: **30 cases (18 negative), 24/24 targets, 18/18 verification, 12/12 positives**, twelve intentional unresolved decisions. Authored: **26 cases, 12/12 targets, 18/18 verification, 26/26 state conformance**, eight expected stops. All measured suites report zero false success, Navigator automation, known sentinel leakage and model calls. Missing/unexpected cases are zero. These measurements apply to the declared cases, not universal website or real-model accuracy.
+
+Final live report: `2026-10-11T19:35:39.837Z`. Final browser report: `2026-10-11T19:47:24.373Z`. All three complete reports match the same ten production build files. `npm run package:extension` read back every archive member and matched the evaluated bytes. Verified candidate: `output/releases/internet-navigator-0.6.8.zip` (**696,505 bytes**), SHA256 **0eb1e66b6f79d01d3705bedd5d836943d58e1dc15378a398965a2a6e67a33156**, packaged at `2026-10-11T19:47:36.979Z`. Adjacent SHA256/provenance files identify the baseline, dirty tree, metrics and pending native checks. Prior versioned archives remain intact.
+
+`output/acceptance/journey-iteration-notes.json` retains actual failures and corrections: discarded visible ownership, fixture charset and disabled-button timing, an earlier matrix timeout, saved-plan deduplication/cache identity, single-coach navigation evidence, ungranted-host URL handling, disabled continuation, duplicate predicted step counts and zoom/polling investigations. Failed full reports and traces remain archived. Some zoom/message stalls had no established precise root cause; targeted diagnostics varied. Full suites passed after redundant transfer removal and bounded polling, without changing live assertions, cases or timeouts. Earlier passing bytes are preserved separately rather than substituted for the final artifact.
+
+Fastest routing optimizes a bounded known graph, with broad guidance-to-result timing estimates. Unknown screens remain provisional. Actual Gemini Nano quality, native Chrome toolbar/reload/content replacement, screen-reader speech and permission dialogs remain unverified; model contracts use deterministic fakes. OCR, custom model training, remote providers and inaccessible-frame/canvas adapters were not introduced. Native handoff #10/#17/#18 stays open. Reload the extension at `chrome://extensions` and refresh the website before trying **Change language to Spanish** once and following **Continue task here** at the destination.
+
+## Archived build verification — v0.6.7
+
+Production extension candidate: **0.6.7**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed. Source baseline is the user's commit `1aec0785d13cc03f322e0b7212000b70e264b5a3`; the current follow-up is local and has not been committed or pushed. Evaluation reports identify the actual build-file hashes and dirty working tree.
+
+| Check                                                                           | Result                      |
+| ------------------------------------------------------------------------------- | --------------------------- |
+| TypeScript                                                                      | Passed                      |
+| Core, discovery, planning, memory, privacy, lifecycle and model-contract tests  | 94/94 passed                |
+| Production-extension browser integration at 1280×900 and 720×900                | 64/64 passed                |
+| Live Wikipedia goals, explicit language destination and geometry at both widths | 10/10 passed                |
+| Declared accuracy matrix                                                        | 14 tests / 116 cases passed |
+| Whitespace/diff validation                                                      | Passed                      |
 
 Reproduce with `npm run check`, `npm run test:e2e`, and `npm run test:live:wikipedia`. Browser harnesses use the production manifest unchanged. Local and live test artifacts are separate; both full regression reports record complete passing case sets and the same evaluated build bytes. The declared numerical benchmark is `npm run test:acceptance`; its results and denominators are recorded below.
 
@@ -28,7 +56,21 @@ Limits: the on-device API adapter is tested with mocked structured responses, no
 
 This implements the dynamic Wikipedia proof of concept and site-memory architecture. It does not establish the original MVP's multi-site beta acceptance metrics, remote route distribution or desktop adapters. Remaining acceptance work is tracked in the repository's existing issue plan.
 
-## Reported Edit regression — v0.6.6
+## Page context and grounded intent — v0.6.7
+
+The collector adds heading ancestry, named regions and transient viewport placement to actual controls. Generic matching incorporates nested context and penalizes extra nearest-section qualifiers, fixing the live Edit Plot versus Plot inspirations ambiguity. Structure changes invalidate signatures/revisions and refresh browser-local memory. Stored metadata omits transient placement. No website selector or URL route was added to product code.
+
+Optional model input uses goal-ranked bounded retrieval with opener relationships, states, destinations, layout and scan/omission counts rather than the first 180 controls. Each request clones a pristine system session, times out after 30 seconds and destroys its clone. Structured intent is validated against an unambiguous live route, original clear matches, requested context, target scope and declared control operation. Scope constrains targets while preserving openers. Empty/invalid/unsafe AI preserves semantic routes and boundaries. Accepted intent replans using fresh control IDs when a menu replaces its children. Details are in [page-context.md](page-context.md).
+
+The final semantic-mode matrix was evaluated at `2026-10-11T16:50:47.244Z`, with unchanged matrix SHA256 `bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae`. Live: 60 supported attempts, **72/72 targets**, **72/72 verification claims**, **60/60 outcomes**. Generic: 30 cases, **24/24 targets**, **18/18 verification**, **12/12 positives**, twelve intentional unresolved decisions. Authored: 26 cases, **12/12 targets**, **18/18 verification**, **26/26 state conformance**, eight expected stops. All report zero false success, Navigator automation, known sentinel leakage and model calls. The extra live interaction versus prior runs reflects actual revealed-control paths; case denominators did not change.
+
+The model browser contract uses deterministic responses for a paraphrase and a rerendered owned menu; it does not evaluate actual Gemini Nano quality. Native Chrome toolbar/permissions/speech and real-model interpretation remain pending. OCR, custom model training and remote providers were not introduced. Live Edit coverage independently checks both the article toolbar and Plot section links plus actual highlight geometry; no edit is published.
+
+Earlier v0.6.6 reports remain version-prefixed. Pre-scope-update passing reports and the failed concurrent live report remain in `context-before-scope-*.json` and `context-concurrent-live-regressions.json`; the final artifact requires fresh complete reports after that scope fix. `context-iteration-notes.json` records the test-accessible-name and fixture syntax errors, actual section-specificity bug, scrolling revision check and extension-page startup timeout. Trace directories are retained under `output/qa`.
+
+The final separate live suite passed **10/10** at `2026-10-11T16:53:24.343Z`, including both Edit target/geometry checks. Desktop and narrow Plot highlights were visually inspected. All three complete reports bind to the same ten production build files. Verified package: `output/releases/internet-navigator-0.6.7.zip` (**650,796 bytes**), SHA256 **602047419c2a6a46dc6748727836676276edd0f8d485f703b3e6951cad1eb0bc**. Every archive member was read back and matched. Previous archives remain intact. Native handoff #10/#17/#18 remains open; this follow-up is uncommitted and unpublished. Reload the extension and refresh the website before retesting.
+
+## Archived reported Edit regression — v0.6.6
 
 The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.
 

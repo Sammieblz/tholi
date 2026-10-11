@@ -155,6 +155,9 @@ if (!host[marker]) {
           message.goalPlan,
           message.liveDiagnostics,
           message.navigationVerified,
+          message.journey,
+          message.savedTask,
+          message.navigationEvidence,
         );
         respond({ view: coach.start() });
         return;
@@ -181,14 +184,19 @@ if (!host[marker]) {
         return;
       }
       if (message.type === "UPDATE_MEMORY") {
-        coach?.updateMemory(message.memory as SiteMemory);
+        coach?.updateMemory(message.memory as SiteMemory, message.savedTask);
         respond({ ok: true });
         return;
       }
       if (message.type === "SET_GOAL") {
         respond(
           coach
-            ? coach.goal(message.goal, message.revision, message.proposal)
+            ? coach.goal(
+                message.goal,
+                message.revision,
+                message.proposal,
+                message,
+              )
             : { error: "Start live navigation first." },
         );
         return;

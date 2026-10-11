@@ -6,7 +6,10 @@ import {
   LIVE_ROUTE_ID,
   pageSnapshotSchema,
   type GoalPlan,
+  type SavedTask,
+  type RouteStrategy,
 } from "../../../packages/page-model";
+import { beginJourney } from "../../../packages/goal-planner/task-journey";
 import { sanitizeText } from "../../../packages/privacy-redaction";
 import { LocalModel, modelAvailability } from "./local-model";
 import { memorySummary } from "../../../packages/site-memory";
@@ -32,6 +35,7 @@ function App() {
   const [context, setContext] = useState<{
     tabId?: number;
     origin?: string;
+    canContinueTask?: boolean;
     routes: RoutePreview[];
     reason?: string;
     sessionRoute?: RoutePreview;
@@ -43,6 +47,9 @@ function App() {
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
   const [goal, setGoal] = useState("");
+  const [strategy, setStrategy] = useState<RouteStrategy>("fastest");
+  const [savedTasks, setSavedTasks] = useState<SavedTask[]>([]);
+  const automaticAttempts = useRef(new Set<string>());
   const [aiAvailability, setAiAvailability] = useState("checking");
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiProgress, setAiProgress] = useState<number>();
@@ -62,6 +69,29 @@ function App() {
       current = false;
     };
   }, [context?.origin]);
+  useEffect(() => {
+    let current = true;
+    let reading = false;
+    const refresh = () => {
+      if (reading) return;
+      reading = true;
+      void chrome.runtime
+        .sendMessage({ type: "GET_TASKS" })
+        .then((r) => {
+          if (current) setSavedTasks(r.tasks || []);
+        })
+        .catch(() => {})
+        .finally(() => {
+          reading = false;
+        });
+    };
+    refresh();
+    const timer = setInterval(refresh, 2000);
+    return () => {
+      current = false;
+      clearInterval(timer);
+    };
+  }, [context?.origin]);
   const model = useRef(new LocalModel());
   const planning = useRef<AbortController | undefined>(undefined);
   useEffect(() => {
@@ -72,28 +102,45 @@ function App() {
     };
   }, []);
   useEffect(() => {
+    let current = true;
+    let reading = false;
     const refresh = () => {
+      if (reading) return;
+      reading = true;
       chrome.runtime
         .sendMessage({ type: "GET_CONTEXT" })
         .then((r) => {
-          if (r?.routes) {
+          if (current && r?.routes) {
             setContext(r);
             setView(r.session?.view);
           }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          reading = false;
+        });
     };
     refresh();
     const interval = setInterval(refresh, 500);
-    return () => clearInterval(interval);
+    return () => {
+      current = false;
+      clearInterval(interval);
+    };
   }, []);
   const command = async (type: string) => {
     planning.current?.abort();
     setBusy(true);
     setError("");
     try {
-      if (type === "START" && route?.id === LIVE_ROUTE_ID && context?.origin) {
-        const url = new URL(context.origin);
+      if (
+        (type === "START" && route?.id === LIVE_ROUTE_ID && context?.origin) ||
+        (type === "CONTINUE_TASK" && view?.continuationOrigin)
+      ) {
+        const url = new URL(
+          type === "CONTINUE_TASK"
+            ? view!.continuationOrigin!
+            : context!.origin!,
+        );
         const granted = await chrome.permissions.request({
           origins: [url.protocol + "//" + url.hostname + "/*"],
         });
@@ -188,8 +235,8 @@ function App() {
     context?.sessionRoute?.origins.includes(context.origin || "")
       ? view?.memory || storedMemory
       : storedMemory;
-  const submitGoal = async () => {
-    const safeGoal = sanitizeText(goal);
+  const submitGoal = async (saved?: SavedTask) => {
+    const safeGoal = sanitizeText(saved?.goal || goal);
     if (!safeGoal) return;
     planning.current?.abort();
     const controller = new AbortController();
@@ -207,6 +254,7 @@ function App() {
             page,
             safeGoal,
             controller.signal,
+            beginJourney(safeGoal, page.origin, saved?.strategy || strategy),
           );
         } catch (error) {
           if (controller.signal.aborted) return;
@@ -228,6 +276,8 @@ function App() {
         type: "SET_GOAL",
         goal: safeGoal,
         revision: page.revision,
+        strategy: saved?.strategy || strategy,
+        ...(saved ? { savedRouteId: saved.id } : {}),
         ...(proposal ? { proposal } : {}),
       });
       if (reply.error) throw new Error(reply.error);
@@ -244,6 +294,73 @@ function App() {
       }
     }
   };
+  useEffect(() => {
+    const task = view?.journey,
+      page = view?.page;
+    if (
+      !aiEnabled ||
+      busy ||
+      otherTab ||
+      view?.status !== "running" ||
+      !task ||
+      task.status !== "active" ||
+      !page
+    )
+      return;
+    const key = task.id + ":" + page.stateKey + ":" + task.progress.length;
+    if (automaticAttempts.current.has(key)) return;
+    automaticAttempts.current.add(key);
+    if (automaticAttempts.current.size > 50)
+      automaticAttempts.current.delete(
+        automaticAttempts.current.values().next().value!,
+      );
+    const controller = new AbortController();
+    planning.current = controller;
+    void (async () => {
+      try {
+        const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
+        if (current.error || current.journey?.id !== task.id) return;
+        const fresh = pageSnapshotSchema.parse(current.page);
+        const proposal = await model.current.propose(
+          fresh,
+          task.goal,
+          controller.signal,
+          current.journey,
+        );
+        if (controller.signal.aborted) return;
+        const latest = await chrome.runtime.sendMessage({
+          type: "GET_SESSION",
+        });
+        if (
+          latest.sessionId !== current.sessionId ||
+          latest.documentId !== current.documentId ||
+          latest.view?.journey?.id !== task.id
+        )
+          return;
+        const reply = await chrome.runtime.sendMessage({
+          type: "SET_GOAL",
+          goal: task.goal,
+          revision: fresh.revision,
+          journeyId: task.id,
+          proposal,
+        });
+        if (reply.view) setView(reply.view);
+      } catch {
+        /* Live planning continues if the optional model fails. */
+      } finally {
+        if (planning.current === controller) planning.current = undefined;
+      }
+    })();
+    return () => controller.abort();
+  }, [
+    aiEnabled,
+    busy,
+    otherTab,
+    view?.status,
+    view?.journey?.id,
+    view?.journey?.progress.length,
+    view?.page?.stateKey,
+  ]);
   const enableAI = async () => {
     setError("");
     setAiProgress(0);
@@ -457,6 +574,15 @@ function App() {
         </p>
       )}
       <div className="actions">
+        {view?.continuationOrigin && (
+          <button
+            className="primary"
+            disabled={busy || !context?.canContinueTask}
+            onClick={() => command("CONTINUE_TASK")}
+          >
+            Continue task here
+          </button>
+        )}
         {!active && !paused && (
           <button
             className="primary"
@@ -480,7 +606,7 @@ function App() {
             Pause navigation
           </button>
         )}
-        {paused && (
+        {paused && !view?.continuationOrigin && (
           <button
             className="primary"
             ref={sessionAction}
@@ -500,6 +626,91 @@ function App() {
           </button>
         )}
       </div>
+      {controlsMode && view?.journey && (
+        <section className="goal-plan" aria-label="Task journey">
+          <h2>{view.journey.goal}</h2>
+          <p>
+            {view.journey.progress.length} verified steps ·{" "}
+            {view.journey.reroutes} route recalculations
+          </p>
+          {view.goalPlan?.route && (
+            <p aria-label="Route estimate">
+              {view.goalPlan.route.clicks}{" "}
+              {view.goalPlan.route.complete
+                ? "remaining"
+                : "currently estimated"}{" "}
+              clicks · about {view.goalPlan.route.minSeconds}–
+              {view.goalPlan.route.maxSeconds} seconds (
+              {view.goalPlan.route.basis}).
+              {!view.goalPlan.route.complete &&
+                " Further screens may add steps."}
+            </p>
+          )}
+          {!!view.goalPlan?.route?.predictions.length && (
+            <details>
+              <summary>Upcoming steps</summary>
+              <ol>
+                {view.goalPlan.route.predictions.map((p, i) => (
+                  <li key={i}>
+                    {p.label}{" "}
+                    <small>
+                      {p.evidence === "observed"
+                        ? "Previously observed; rechecked on arrival"
+                        : "Predicted; awaiting live evidence"}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+          <details>
+            <summary>Journey so far</summary>
+            <ol>
+              {view.journey.progress.map((p, i) => (
+                <li key={i}>{p.label} · verified</li>
+              ))}
+            </ol>
+          </details>
+        </section>
+      )}
+      {controlsMode && !!savedTasks.length && (
+        <section aria-label="Saved routes">
+          <h2>Saved routes</h2>
+          <p className="small">
+            Routes are checked against the current website before reuse.
+          </p>
+          {savedTasks.map((task) => (
+            <div key={task.id}>
+              <button
+                disabled={
+                  !active || busy || otherTab || view?.status === "waiting"
+                }
+                onClick={() => {
+                  setGoal(task.goal);
+                  setStrategy(task.strategy);
+                  void submitGoal(task);
+                }}
+              >
+                {task.goal} ·{" "}
+                {task.completed ? "Reached before" : "Learning route"}
+              </button>
+              <button
+                aria-label={"Forget route: " + task.goal}
+                disabled={busy}
+                onClick={async () => {
+                  const r = await chrome.runtime.sendMessage({
+                    type: "DELETE_TASK",
+                    id: task.id,
+                  });
+                  setSavedTasks(r.tasks || []);
+                }}
+              >
+                Forget
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
       {controlsMode && (
         <details>
           <summary>Local site memory and AI</summary>
@@ -570,6 +781,18 @@ function App() {
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="Make the text larger, find references…"
               />
+            </label>
+            <label>
+              Route preference
+              <select
+                aria-label="Route preference"
+                value={strategy}
+                disabled={busy || otherTab}
+                onChange={(e) => setStrategy(e.target.value as RouteStrategy)}
+              >
+                <option value="fastest">Fastest known route</option>
+                <option value="fewest-clicks">Fewest clicks</option>
+              </select>
             </label>
             <button
               className="primary"

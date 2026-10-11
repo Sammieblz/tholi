@@ -98,6 +98,50 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await app.panel.screenshot({
       path: `output/qa/accessible-panel-${info.project.name}.png`,
     });
+    // Slow replies must not accumulate or overwrite newer panel state.
+    await app.panel.evaluate(() => {
+      const win = window as any;
+      win.__polling = {
+        GET_CONTEXT: { calls: 0, active: 0, max: 0 },
+        GET_TASKS: { calls: 0, active: 0, max: 0 },
+      };
+      const original = chrome.runtime.sendMessage.bind(chrome.runtime);
+      win.__restorePolling = () => (chrome.runtime.sendMessage = original);
+      chrome.runtime.sendMessage = ((...args: any[]) => {
+        const counter = win.__polling[args[0]?.type];
+        if (!counter) return (original as any)(...args);
+        counter.calls++;
+        counter.active++;
+        counter.max = Math.max(counter.max, counter.active);
+        return (original as any)(...args)
+          .then(async (reply: any) => {
+            await new Promise((resolve) =>
+              setTimeout(resolve, args[0].type === "GET_CONTEXT" ? 1500 : 3000),
+            );
+            return reply;
+          })
+          .finally(() => counter.active--);
+      }) as typeof chrome.runtime.sendMessage;
+    });
+    await expect
+      .poll(
+        () =>
+          app.panel.evaluate(() => {
+            const polling = (window as any).__polling;
+            return (
+              polling.GET_CONTEXT.calls >= 2 && polling.GET_TASKS.calls >= 2
+            );
+          }),
+        { timeout: 9000 },
+      )
+      .toBe(true);
+    const pending = await app.panel.evaluate(() => {
+      const win = window as any;
+      win.__restorePolling();
+      return Object.values(win.__polling).map((c: any) => c.max);
+    });
+    expect(pending).toEqual([1, 1]);
+    await expect(status).toContainText("stopped.");
   } finally {
     await app.close();
   }

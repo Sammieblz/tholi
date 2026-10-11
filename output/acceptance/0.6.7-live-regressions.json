@@ -1,0 +1,65 @@
+{
+  "format": "navigator-regression-v1",
+  "scope": "live",
+  "artifactFiles": {
+    "content.js": "778c7682317aec1ad16164620309670b2dc1583a6efab59a25fb7291e4aea1a2",
+    "content.js.map": "cf7a1482095135b43501eb97aa6010954bd2f9fb8f083b28b8ea56938b38cd54",
+    "manifest.json": "c1c416c985605d2923201e83a75a77a7ad46dcc157d6af037446c794b4897b8a",
+    "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
+    "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
+    "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
+    "sidepanel.js": "3af83cc3baa2479b6c778fbb59f950ca3249f05ffa4a2ff8692e9051c53a750b",
+    "sidepanel.js.map": "71f61e15ea12204b5dfc84aaef4bf6fc14f9119d6b124363ffef3ef494b1b22b",
+    "worker.js": "f336661ff6e271952324e96b47d5b9e53beab63a76d72a21e1660ea2d1f36893",
+    "worker.js.map": "68cb771ef615e7606281b172d3b5150a5b197ceacad32e4489a14183c7a1ae46"
+  },
+  "extensionVersion": "0.6.7",
+  "evaluatedAt": "2026-10-11T16:53:24.343Z",
+  "expected": 10,
+  "configuredCount": 10,
+  "sourceRevision": "1aec0785d13cc03f322e0b7212000b70e264b5a3",
+  "workingTreeDirty": true,
+  "passed": true,
+  "cases": [
+    {
+      "id": " / desktop / edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    }
+  ]
+}

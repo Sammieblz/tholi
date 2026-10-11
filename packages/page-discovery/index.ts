@@ -6,6 +6,7 @@ import {
 import { visible } from "../browser-adapter";
 import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
+import { StructureIndex } from "./structure";
 import { interactionRisk } from "./interaction-risk";
 export interface BoundControl {
   control: PageControl;
@@ -256,7 +257,9 @@ export class PageDiscovery {
     this.bindings.clear();
     const elements: HTMLElement[] = [];
     const popups: HTMLElement[] = [];
+    const roots: (Document | ShadowRoot)[] = [];
     const scan = (root: Document | ShadowRoot) => {
+      roots.push(root);
       elements.push(...root.querySelectorAll<HTMLElement>(candidates));
       popups.push(
         ...root.querySelectorAll<HTMLElement>(
@@ -267,6 +270,7 @@ export class PageDiscovery {
         if (node.shadowRoot) scan(node.shadowRoot);
     };
     scan(document);
+    const structureIndex = new StructureIndex(roots);
     // Keep interface controls and section structure ahead of dense article link lists.
     const priority = (e: HTMLElement) =>
       e.matches("a[href]")
@@ -416,7 +420,29 @@ export class PageDiscovery {
           )
         : undefined;
       const risk = interactionRisk(e, kind, rawLabel, description);
-      const scope = scopeOf(e);
+      const structure = structureIndex.of(e);
+      const scope =
+        structure.headings.some((h) => h.level > 1) &&
+        e.closest("section nav,section [role=navigation]")
+          ? "section"
+          : scopeOf(e);
+      const targetLanguage = e
+        .getAttribute("hreflang")
+        ?.match(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)?.[0]
+        .slice(0, 20);
+      const options =
+        e instanceof HTMLSelectElement
+          ? [...e.options].slice(0, 100).map((o) => ({
+              label: sanitizeText(o.label),
+              selected: o.selected,
+              enabled:
+                !o.disabled &&
+                !(
+                  o.parentElement instanceof HTMLOptGroupElement &&
+                  o.parentElement.disabled
+                ),
+            }))
+          : undefined;
       const control: PageControl = {
         id,
         role,
@@ -426,6 +452,7 @@ export class PageDiscovery {
         context,
         group: groupOf(e, kind, context),
         scope,
+        structure,
         signature: hash(
           [
             role,
@@ -435,11 +462,16 @@ export class PageDiscovery {
             popup,
             context,
             scope,
+            JSON.stringify(structure),
             risk.risk,
             risk.riskReason,
             link?.origin,
             link?.key,
             navigationKey,
+            targetLanguage,
+            JSON.stringify(
+              options?.map(({ label, enabled }) => ({ label, enabled })),
+            ),
           ].join("|"),
         ),
         visible: !!geometry,
@@ -453,6 +485,17 @@ export class PageDiscovery {
           rect.bottom <= innerHeight &&
           rect.left >= 0 &&
           rect.right <= innerWidth,
+        placement: geometry
+          ? rect.bottom <= 0
+            ? "above"
+            : rect.top >= innerHeight
+              ? "below"
+              : rect.right <= 0
+                ? "left"
+                : rect.left >= innerWidth
+                  ? "right"
+                  : "viewport"
+          : undefined,
         checked,
         expanded,
         popup,
@@ -470,6 +513,8 @@ export class PageDiscovery {
         revealIds: [],
         destination: link,
         navigationKey,
+        targetLanguage,
+        options,
         ...risk,
       };
       controls.push(control);
@@ -604,7 +649,6 @@ export class PageDiscovery {
       (b) => ["expand", "toggle"].includes(b.control.kind) && b.control.visible,
     );
     for (const binding of this.bindings.values()) {
-      if (binding.control.visible) continue;
       if (binding.control.revealIds.length) continue;
       const ranked = revealers
         .map((revealer) => {
@@ -632,6 +676,7 @@ export class PageDiscovery {
           // Without an explicit relationship, infer only the local widget. Broad
           // toolbar/header ancestry says nothing about which sibling a menu reveals.
           if (
+            !binding.control.visible &&
             parent &&
             !parent.matches("main,article,body") &&
             parent.contains(binding.element) &&
@@ -658,6 +703,7 @@ export class PageDiscovery {
           c.checked,
           c.expanded,
           c.selected,
+          c.options?.map((o) => o.selected).join(","),
         ].join(":"),
       )
       .sort()

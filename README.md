@@ -7,12 +7,16 @@ A local-first Chrome navigation coach. It discovers the live page, builds routes
 1. Run `npm install`, then `npm run build:extension`.
 2. Open `chrome://extensions`, enable Developer mode, and load unpacked `dist/extension`. After an update, Reload the extension and refresh the website tab.
 3. Open a website and click the Navigator toolbar icon. Choose **Navigate this website**, then **Start navigation**. Chrome may request access to this specific website.
-4. Describe a goal, such as **make text larger**, **switch to dark mode**, **find references**, or **Edit**, and choose **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
+4. Describe a goal, such as **change language to Spanish**, **make text larger**, **find references**, or **Edit**, choose fastest/fewest clicks, then **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
 5. Follow the highlight yourself. Navigator rescans after changes and verifies each expected result. Pause suspends observation; Stop ends it.
 
-Wikipedia is the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. Moving to a different origin ends the session; start there explicitly.
+Wikipedia is the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. An expected task destination on another origin/tab retains context and offers **Continue task here** with site-specific access. Unrelated navigation ends the session.
 
 **Local site memory and AI** shows stored page/layout/transition counts, provides Forget this website and Clear all site memory, and offers optional on-device AI. Chrome's Prompt API requires a compatible Chrome installation, hardware and model download. The navigator works with semantic matching when AI is unavailable. No remote model endpoint or API key is required.
+
+Controls now carry nested heading and region context. Optional AI interprets paraphrases into a structured intent grounded in fresh controls, uses goal-ranked context instead of a flat prefix, and replans after menu rerenders. See [page context and intent](docs/page-context.md) for behavior, limits and evaluation scope. OCR remains deferred.
+
+Tasks now retain their destination through menus and screens. The panel shows route estimates, verified progress, predicted upcoming steps and reusable **Saved routes**. Weighted observed-state routing compares fastest and fewest-interaction paths; every saved route revalidates against the current website. See [persistent task routing](docs/task-routing.md). Estimates cover known/predicted steps and are not a guaranteed whole-site shortest path.
 
 For the controlled Northstar demo, run `npm run dev:demo` and open `http://127.0.0.1:5173`. Its two authored regression tasks remain available: cancellation confirmation (final hard stop) and read-only billing details.
 

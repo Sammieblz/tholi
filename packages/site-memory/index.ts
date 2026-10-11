@@ -4,6 +4,8 @@ import {
   type ObservedTransition,
   type MemoryTransition,
   hash,
+  savedTaskSchema,
+  type SavedTask,
 } from "../page-model";
 const MAX_AGE = 90 * 86400000;
 export function mergeObservation(
@@ -27,7 +29,7 @@ export function mergeObservation(
   const changed = !old || old.fingerprint !== page.fingerprint;
   const currentSignatures = new Set(page.controls.map((c) => c.signature));
   const controls = page.controls.map(
-    ({ id, revealIds, inViewport, navigationKey, ...c }) => ({
+    ({ id, revealIds, inViewport, placement, navigationKey, ...c }) => ({
       ...c,
       lastSeen: now,
       active: true,
@@ -47,12 +49,28 @@ export function mergeObservation(
     key: page.pageKey,
     path: page.path,
     stateKey: page.stateKey,
+    language: page.language,
     templateKey: page.templateKey,
     fingerprint: page.fingerprint,
     version: (old?.version || 0) + Number(changed),
     lastSeen: now,
     controls: controls.slice(0, 800),
   });
+  // Keep bounded state snapshots as well as the latest view of each page.
+  // Menus and SPA screens share a pathname but form different graph vertices.
+  site.states = [
+    ...(site.states || []).filter(
+      (p) => p.stateKey !== page.stateKey && now - p.lastSeen < MAX_AGE,
+    ),
+    structuredClone(site.pages.at(-1)!),
+  ]
+    .sort((a, b) => b.lastSeen - a.lastSeen)
+    .slice(0, 120);
+  let stateBudget = 8000;
+  for (const state of site.states) {
+    state.controls = state.controls.slice(0, stateBudget);
+    stateBudget -= state.controls.length;
+  }
   site.pages = site.pages.sort((a, b) => b.lastSeen - a.lastSeen).slice(0, 100);
   let controlBudget = 5000;
   for (const saved of site.pages) {
@@ -97,8 +115,16 @@ export function mergeObservation(
         t.signature === edge.signature,
     );
     if (existing) {
-      if (edge.evidence === "observed" || existing.evidence !== "observed")
+      if (edge.evidence === "observed" || existing.evidence !== "observed") {
+        const samples = existing.samples || 0,
+          mean = existing.meanMs;
         Object.assign(existing, edge);
+        if (edge.evidence === "observed" && edge.meanMs !== undefined) {
+          existing.samples = samples + 1;
+          existing.meanMs =
+            ((mean || 0) * samples + edge.meanMs) / existing.samples;
+        }
+      }
     } else site.transitions.push(edge);
   };
   for (const c of page.controls)
@@ -122,6 +148,8 @@ export function mergeObservation(
       evidence: "observed",
       lastVerified: now,
       active: true,
+      samples: observed.durationMs === undefined ? undefined : 1,
+      meanMs: observed.durationMs,
     });
   site.transitions = site.transitions
     .filter((t) => now - t.lastVerified < MAX_AGE)
@@ -159,9 +187,13 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   private database?: Promise<IDBDatabase>;
   private open() {
     return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("navigator-site-memory", 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore("sites", { keyPath: "origin" });
+      const request = indexedDB.open("navigator-site-memory", 2);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains("sites"))
+          request.result.createObjectStore("sites", { keyPath: "origin" });
+        if (!request.result.objectStoreNames.contains("tasks"))
+          request.result.createObjectStore("tasks", { keyPath: "id" });
+      };
       request.onsuccess = () => {
         const db = request.result;
         db.onversionchange = () => {
@@ -212,6 +244,12 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
         site.transitions = site.transitions.filter(
           (t) => now - t.lastVerified < MAX_AGE,
         );
+        site.states = site.states
+          ?.filter((p) => now - p.lastSeen < MAX_AGE)
+          .map((p) => ({
+            ...p,
+            controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
+          }));
         if (serialized !== JSON.stringify(site)) store.put(site);
         result = site;
       };
@@ -254,12 +292,76 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   async clear() {
     await this.remove();
   }
+  async tasks(origin: string): Promise<SavedTask[]> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("tasks", "readwrite"),
+        store = tx.objectStore("tasks"),
+        request = store.getAll();
+      let result: SavedTask[] = [];
+      request.onsuccess = () => {
+        for (const raw of request.result) {
+          const parsed = savedTaskSchema.safeParse(raw);
+          if (!parsed.success || Date.now() - parsed.data.updatedAt > MAX_AGE) {
+            store.delete(raw.id);
+            continue;
+          }
+          if (parsed.data.origin === origin) result.push(parsed.data);
+        }
+        result.sort((a, b) => b.updatedAt - a.updatedAt);
+      };
+      tx.oncomplete = () => resolve(result);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+  async saveTask(task: SavedTask) {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("tasks", "readwrite"),
+        store = tx.objectStore("tasks");
+      store.put(savedTaskSchema.parse(task));
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const tasks = (request.result as SavedTask[]).sort(
+          (a, b) => b.updatedAt - a.updatedAt,
+        );
+        for (const old of tasks.slice(100)) store.delete(old.id);
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+  async deleteTask(id: string) {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("tasks", "readwrite");
+      tx.objectStore("tasks").delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
   private async remove(origin?: string) {
     const db = await this.open();
     await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction("sites", "readwrite");
+      const transaction = db.transaction(["sites", "tasks"], "readwrite");
       const store = transaction.objectStore("sites");
       origin ? store.delete(origin) : store.clear();
+      const tasks = transaction.objectStore("tasks");
+      if (!origin) tasks.clear();
+      else {
+        const request = tasks.getAll();
+        request.onsuccess = () => {
+          for (const task of request.result as SavedTask[])
+            if (
+              task.origin === origin ||
+              task.progress.some((p) => p.origin === origin)
+            )
+              tasks.delete(task.id);
+        };
+      }
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);

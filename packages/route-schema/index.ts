@@ -5,6 +5,10 @@ import {
   pageSnapshotSchema,
   goalPlanSchema,
   modelProposalSchema,
+  journeySchema,
+  savedTaskSchema,
+  strategySchema,
+  pendingNavigationSchema,
 } from "../page-model";
 const risk = z.enum([
   "navigation",
@@ -152,12 +156,20 @@ export const messageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("GET_MEMORY") }).strict(),
   z.object({ type: z.literal("FORGET_SITE") }).strict(),
   z.object({ type: z.literal("CLEAR_MEMORY") }).strict(),
+  z.object({ type: z.literal("GET_TASKS") }).strict(),
+  z
+    .object({ type: z.literal("DELETE_TASK"), id: z.string().max(100) })
+    .strict(),
+  z.object({ type: z.literal("CONTINUE_TASK") }).strict(),
   z
     .object({
       type: z.literal("SET_GOAL"),
       goal: z.string().min(1).max(160),
       revision: z.number().int().nonnegative(),
       proposal: modelProposalSchema.optional(),
+      strategy: strategySchema.optional(),
+      journeyId: z.string().uuid().optional(),
+      savedRouteId: z.string().max(100).optional(),
     })
     .strict(),
   z.object({ type: z.literal("GET_SESSION") }).strict(),
@@ -186,6 +198,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       type: z.literal("UPDATE_MEMORY"),
       sessionId: z.string().uuid(),
       memory: z.unknown(),
+      savedTask: savedTaskSchema.optional(),
     })
     .strict(),
   z
@@ -198,6 +211,9 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       goal: z.string().min(1).max(160),
       revision: z.number().int().nonnegative(),
       proposal: modelProposalSchema.optional(),
+      strategy: strategySchema.optional(),
+      journeyId: z.string().uuid().optional(),
+      savedRouteId: z.string().max(100).optional(),
     })
     .strict(),
   z
@@ -209,8 +225,11 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       verifiedSteps: z.number().int().nonnegative().optional(),
       memory: z.unknown().optional(),
       goalPlan: goalPlanSchema.optional(),
+      journey: journeySchema.optional(),
+      savedTask: savedTaskSchema.optional(),
       liveDiagnostics: liveDiagnosticsSchema.optional(),
       navigationVerified: z.boolean().optional(),
+      navigationEvidence: pendingNavigationSchema.optional(),
     })
     .strict(),
   z
@@ -312,6 +331,8 @@ export const sessionViewSchema = z
     controls: z.array(controlSchema).max(600).optional(),
     page: pageSnapshotSchema.optional(),
     goalPlan: goalPlanSchema.optional(),
+    journey: journeySchema.optional(),
+    continuationOrigin: z.string().max(300).optional(),
     liveDiagnostics: liveDiagnosticsSchema.optional(),
     memory: z
       .object({
