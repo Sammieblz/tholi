@@ -1,9 +1,10 @@
 import type { PageControl } from "../page-model";
+import { taskWords } from "../goal-planner/task-intent";
 
 const commits =
-  /\b(delete|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|confirm cancellation|submit|save(?: changes)?|log ?in|sign ?in)\b/i;
+  /\b(delete|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|confirm cancellation|submit|save(?: changes)?)\b/i;
 const commitOperation =
-  /^(delete|remove|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|submit|save|login|signin)$/i;
+  /^(delete|remove|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|submit|save)$/i;
 
 function committingEndpoint(href: string) {
   try {
@@ -31,6 +32,15 @@ export function interactionRisk(
   if (kind === "focus" || kind === "section") return { risk: "ordinary" };
   const purpose = label + " " + description;
   if (commits.test(purpose))
+    return { risk: "consequential", riskReason: "commit" };
+
+  // Reaching an authentication page/menu is different from submitting credentials
+  // or creating an account. Only declared navigation/reveal effects are entry points.
+  if (
+    /\b(login|register)\b/.test(taskWords(purpose)) &&
+    kind !== "navigation" &&
+    kind !== "expand"
+  )
     return { risk: "consequential", riskReason: "commit" };
 
   if (

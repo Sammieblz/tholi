@@ -2,27 +2,43 @@
   "format": "navigator-regression-v1",
   "scope": "e2e",
   "artifactFiles": {
-    "content.js": "8dcfd1d67756f8eb5ce03883f21deee2a2bddafdf695e9ff1d16c58f7826fbff",
-    "content.js.map": "4325ea90ee618d0543fe047166442757637f70393cfdab1240ed8b75c00c9423",
-    "manifest.json": "4035a4c2b6e4a47e041348b774856b3c631f891b7523c09d64ba9742bd8cbb43",
+    "content.js": "25af3033f5f76ac48662d13c10a004ad43c3520073c8f925cab4fdbfb33f237a",
+    "content.js.map": "18a33d6778b81cf7d226eff2978b394826a486dd02b25f18ffa09adc706ad1cf",
+    "manifest.json": "013a76a85d0482f1cc5c1d86ab3e861e9d64293cdea9bc2a45623efad80c3546",
     "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
     "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
     "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
-    "sidepanel.js": "a372e14536646e2140495ac5c90d10a8b0c91764d8bb3ed5982b4c8dfde3d684",
-    "sidepanel.js.map": "2d74d18bf45bb596dbb4e3d0d2f65b0c16f725c444ece90e1f70febfcb2f7529",
-    "worker.js": "6ba46877fe0450cf71b93a69ea6dc6889d5f2b7dabd9a5329d9087bd3285bb82",
-    "worker.js.map": "f271ab8912a7b577a9313521ed8f85503a002d8dbfe98e0f511d617722f0d4e1"
+    "sidepanel.js": "f84d5facd3929a939c35ff803d13e7a771f78d4bbba90f47c18f51dd1538bad8",
+    "sidepanel.js.map": "a74710c2123dc039c6587c44239152e4b3319cb24bbf79f35cdcef03e4136886",
+    "worker.js": "b8309548c44a17d41a6b02db87402066dc9d5677223e66edff9ccbea8b68bc21",
+    "worker.js.map": "44dcd767915c83660db1c27838bfc5ae79049c7b0ad55fbbed5196606f05d44e"
   },
-  "extensionVersion": "0.6.8",
-  "evaluatedAt": "2026-10-11T19:47:24.373Z",
-  "expected": 78,
-  "configuredCount": 78,
-  "sourceRevision": "1aec0785d13cc03f322e0b7212000b70e264b5a3",
+  "extensionVersion": "0.6.9",
+  "evaluatedAt": "2026-10-11T21:26:10.084Z",
+  "expected": 86,
+  "configuredCount": 86,
+  "sourceRevision": "1b9d7f06a7fd2caf19ed1bdc933db3a72fb94e3d",
   "workingTreeDirty": true,
   "passed": true,
   "cases": [
     {
       "id": " / desktop / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
       "status": "passed"
     },
     {
@@ -179,6 +195,22 @@
     },
     {
       "id": " / narrow / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
       "status": "passed"
     },
     {

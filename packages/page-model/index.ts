@@ -49,6 +49,13 @@ export const controlSchema = z
     group: z.string().max(160),
     scope: z.enum(["page", "section"]).optional(),
     structure: structureSchema.optional(),
+    form: z
+      .object({
+        key: z.string().max(100),
+        authentication: z.enum(["login", "register", "credentials"]).optional(),
+      })
+      .strict()
+      .optional(),
     placement: z
       .enum(["viewport", "above", "below", "left", "right"])
       .optional(),
@@ -134,6 +141,7 @@ export const goalPlanSchema = z
         minSeconds: z.number().nonnegative(),
         maxSeconds: z.number().nonnegative(),
         complete: z.boolean(),
+        available: z.boolean().optional(),
         basis: z.enum(["estimated", "observed", "mixed"]),
         predictions: z
           .array(
@@ -179,6 +187,7 @@ export const objectiveSchema = z
     purpose: z.string().min(1).max(160),
     value: z.string().max(80).optional(),
     language: z.string().max(20).optional(),
+    workflow: z.enum(["login", "register"]).optional(),
   })
   .strict();
 export const progressSchema = z
@@ -247,6 +256,7 @@ export const pendingNavigationSchema = z
     durationMs: z.number().nonnegative().max(300000).optional(),
     kind: z.literal("navigation").optional(),
     fromOrigin: z.string().max(300).optional(),
+    redirected: z.boolean().optional(),
   })
   .strict();
 export type PendingNavigation = z.infer<typeof pendingNavigationSchema>;

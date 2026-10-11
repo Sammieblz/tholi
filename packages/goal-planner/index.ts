@@ -9,6 +9,7 @@ import {
 } from "../page-model";
 import { sanitizeText } from "../privacy-redaction";
 import { shortestRoute } from "./route-graph";
+import { taskWords } from "./task-intent";
 import {
   memoryDiagnostics,
   type MatchEvidence,
@@ -20,8 +21,7 @@ const stop = new Set(
   ),
 );
 function tokens(text: string) {
-  return text
-    .toLowerCase()
+  return taskWords(text)
     .replace(/\bhelp\s+me\b/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .split(" ")

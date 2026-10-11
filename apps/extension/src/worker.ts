@@ -16,7 +16,12 @@ import {
   transitionEvidenceSchema,
   hash,
 } from "../../../packages/page-model";
-import { saveTask, taskKey } from "../../../packages/goal-planner/task-journey";
+import {
+  saveTask,
+  taskKey,
+  contextualTask,
+  resumeJourney,
+} from "../../../packages/goal-planner/task-journey";
 import {
   IndexedDBSiteMemory,
   memorySummary,
@@ -24,8 +29,14 @@ import {
 let session: PinnedSession | undefined;
 const memory = new IndexedDBSiteMemory();
 let lastObservation = "";
+const navigationStarts = new Map<
+  number,
+  { sessionId: string; journeyId: string; key: string; at: number }
+>();
 const ready = chrome.storage.session.get("navigatorSession").then((data) => {
   session = restoreSession(data.navigatorSession);
+  if (session?.view?.journey)
+    session.view.journey = resumeJourney(session.view.journey);
 });
 const save = async () => {
   if (session) await chrome.storage.session.set({ navigatorSession: session });
@@ -150,7 +161,7 @@ async function attachSession() {
   if (verified && session.view) {
     session.view.verifiedSteps++;
     if (
-      !session.view.journey?.objective.value &&
+      !contextualTask(session.view.journey) &&
       session.view.goalPlan?.status === "guiding" &&
       session.view.goalPlan.steps.length <= 1 &&
       session.view.goalPlan.source !== "memory"
@@ -202,6 +213,7 @@ async function attachSession() {
   return session;
 }
 async function stopSession(reason = "Navigation stopped.") {
+  navigationStarts.clear();
   if (!session) return;
   try {
     const reply = await chrome.tabs.sendMessage(session.tabId, {
@@ -434,8 +446,9 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     const tab = await activeTab();
     if (
       command.type === "CONTINUE_TASK" &&
+      session.view &&
       session.pendingNavigation &&
-      session.view?.journey?.objective.value
+      contextualTask(session.view?.journey)
     ) {
       const nav = session.pendingNavigation;
       if (
@@ -548,6 +561,91 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
   });
 });
+// Follow browser-confirmed server redirects only for the active authentication
+// task. This permission supplies navigation metadata, not access to the new DOM.
+// Ignore unrelated tabs/subframes before parsing URLs; never persist raw queries.
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  if (details.frameId !== 0) return;
+  void enqueue(async () => {
+    if (
+      !session?.view?.journey?.objective.workflow ||
+      !sessionLocked(session) ||
+      !["running", "waiting"].includes(session.view.status)
+    )
+      return;
+    if (details.tabId !== session.tabId) {
+      const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
+      if (tab?.openerTabId !== session.tabId) return;
+    }
+    if (!supportsLiveUrl(details.url)) return;
+    const url = new URL(details.url),
+      key = hash(url.origin + url.pathname + url.search);
+    const existing = navigationStarts.get(details.tabId);
+    if (
+      existing?.sessionId === session.sessionId &&
+      existing.journeyId === session.view.journey.id &&
+      details.timeStamp - existing.at < 15000 &&
+      session.pendingNavigation?.navigationKey === existing.key
+    )
+      return;
+    navigationStarts.clear();
+    navigationStarts.set(details.tabId, {
+      sessionId: session.sessionId,
+      journeyId: session.view.journey.id,
+      key,
+      at: details.timeStamp,
+    });
+  });
+});
+chrome.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return;
+  void enqueue(async () => {
+    const start = navigationStarts.get(details.tabId);
+    navigationStarts.delete(details.tabId);
+    const nav = session?.pendingNavigation;
+    if (
+      !session?.view?.journey?.objective.workflow ||
+      !nav ||
+      !start ||
+      !sessionLocked(session) ||
+      start.sessionId !== session.sessionId ||
+      start.journeyId !== session.view.journey.id ||
+      start.key !== nav.navigationKey ||
+      details.timeStamp - start.at > 15000 ||
+      details.transitionType !== "link" ||
+      !details.transitionQualifiers.includes("server_redirect") ||
+      details.transitionQualifiers.includes("from_address_bar") ||
+      !supportsLiveUrl(details.url)
+    )
+      return;
+    if (details.tabId !== session.tabId) {
+      const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
+      if (tab?.openerTabId !== session.tabId) return;
+    }
+    const url = new URL(details.url);
+    session.pendingNavigation = {
+      ...nav,
+      origin: url.origin,
+      destinationKey: hash(url.origin + url.pathname),
+      navigationKey: hash(url.origin + url.pathname + url.search),
+      redirected: true,
+    };
+    session.navigationPending = true;
+    if (url.origin !== session.origin || details.tabId !== session.tabId) {
+      session.view = {
+        ...session.view,
+        status: "paused",
+        page: undefined,
+        controls: [],
+        selectedControlId: undefined,
+        continuationOrigin: url.origin,
+        instruction:
+          "The account task redirected to another website. Review its address, then allow access to continue the same task.",
+      };
+    }
+    await save();
+  });
+});
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.status !== "loading" && change.status !== "complete") return;
   void enqueue(async () => {
@@ -556,7 +654,8 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       tabId !== session.tabId &&
       change.status === "complete" &&
       tab.openerTabId === session.tabId &&
-      session.view?.journey?.objective.value &&
+      session.view &&
+      contextualTask(session.view?.journey) &&
       session.pendingNavigation
     ) {
       const url = tab.url && new URL(tab.url),
@@ -642,7 +741,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       const nav = session.pendingNavigation,
         url = tab.url && new URL(tab.url);
       if (
-        session.view.journey?.objective.value &&
+        contextualTask(session.view.journey) &&
         nav &&
         (!url ||
           (nav.origin === url.origin &&

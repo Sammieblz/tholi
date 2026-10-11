@@ -49,6 +49,7 @@ export function modelContext(
       context: c.context,
       scope: c.scope,
       structure: c.structure,
+      form: c.form,
       kind: c.kind,
       popup: c.popup,
       visible: c.visible,

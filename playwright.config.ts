@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 30000,
   reporter: [
     ["list"],
-    ["./tests/support/regression-reporter.ts", { scope: "e2e", expected: 78 }],
+    ["./tests/support/regression-reporter.ts", { scope: "e2e", expected: 86 }],
   ],
   use: { trace: "retain-on-failure" },
   webServer: {

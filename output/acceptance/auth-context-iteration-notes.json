@@ -1,0 +1,135 @@
+{
+  "extensionVersion": "0.6.9",
+  "reportedCase": "Wikipedia create account / login / How to log in lose context or show zero-click estimates",
+  "iterations": [
+    {
+      "stage": "initial fixtures",
+      "passed": 4,
+      "failed": 2,
+      "finding": "Popup click-intent publication still checked destination.value; changed it to the same contextual-task predicate used by continuation."
+    },
+    {
+      "stage": "initial live authentication cases",
+      "passed": 0,
+      "failed": 4,
+      "finding": "Wikipedia entry links server-redirect to a different authentication origin. The prior expected URL/origin never represented that final destination."
+    },
+    {
+      "stage": "live form semantics",
+      "finding": "An authentication page heading was incorrectly inherited by unrelated appearance forms, producing multiple candidate forms. Form-local evidence or password/input-type and submit metadata are now required."
+    },
+    {
+      "stage": "redirect fixture",
+      "passed": 6,
+      "failed": 2,
+      "finding": "Playwright's fulfilled redirect did not route the follow-up to the intended fixture; the Vite demo was observed instead. Replaced this fixture with an actual local HTTP server and retained the assertions."
+    },
+    {
+      "stage": "isolated redirect retry",
+      "finding": "A reported 49.3-minute timeout occurred despite the 30-second test timeout. Its precise timing cause was not established; subsequent normal-duration runs remained subject to the unchanged timeout."
+    },
+    {
+      "stage": "focused corrected checks",
+      "finding": "Real server redirect/continuation and unrelated-navigation refusal passed. All four live login/account entry and independent form-semantics checks passed at both widths. Native permission grant and live coach activation beyond that grant remain manual checks."
+    },
+    {
+      "stage": "first complete live suite",
+      "passed": 15,
+      "failed": 1,
+      "finding": "The existing narrow geometry test had no selected control at its first guide call. A targeted rerun passed with unchanged assertions/timeouts; the precise transient cause was not established. Failed report and trace are archived as auth-before-geometry-live-regressions.json and output/qa/auth-before-geometry-live."
+    }
+  ],
+  "final": {
+    "version": "0.6.9",
+    "sha256": "f17989358e15c7b313dbff5499f981e2cbbd7a6885bba80b6bef5da0a9cbfe85",
+    "bytes": 706157,
+    "packagedAt": "2026-10-11T21:39:52.688Z",
+    "matrixAt": "2026-10-11T21:39:17.574Z",
+    "e2eAt": "2026-10-11T21:26:10.084Z",
+    "liveAt": "2026-10-11T21:33:00.117Z",
+    "sourceRevision": "1b9d7f06a7fd2caf19ed1bdc933db3a72fb94e3d",
+    "matrixSha256": "bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae",
+    "summaries": {
+      "live": {
+        "attempts": 60,
+        "targetPrecision": {
+          "correct": 71,
+          "total": 71,
+          "rate": 1
+        },
+        "verificationPrecision": {
+          "correct": 71,
+          "total": 71,
+          "rate": 1
+        },
+        "supportedCompletion": {
+          "correct": 60,
+          "total": 60,
+          "rate": 1
+        },
+        "unresolved": 0,
+        "stopped": 0,
+        "falseSuccess": 0,
+        "automation": 0,
+        "secretLeaks": 0,
+        "modelCalls": 0
+      },
+      "fixture": {
+        "attempts": 30,
+        "targetPrecision": {
+          "correct": 24,
+          "total": 24,
+          "rate": 1
+        },
+        "verificationPrecision": {
+          "correct": 18,
+          "total": 18,
+          "rate": 1
+        },
+        "supportedCompletion": {
+          "correct": 12,
+          "total": 12,
+          "rate": 1
+        },
+        "unresolved": 12,
+        "stopped": 0,
+        "falseSuccess": 0,
+        "automation": 0,
+        "secretLeaks": 0,
+        "modelCalls": 0
+      },
+      "authored": {
+        "attempts": 26,
+        "targetPrecision": {
+          "correct": 12,
+          "total": 12,
+          "rate": 1
+        },
+        "verificationPrecision": {
+          "correct": 18,
+          "total": 18,
+          "rate": 1
+        },
+        "supportedCompletion": {
+          "correct": 26,
+          "total": 26,
+          "rate": 1
+        },
+        "unresolved": 0,
+        "stopped": 8,
+        "falseSuccess": 0,
+        "automation": 0,
+        "secretLeaks": 0,
+        "modelCalls": 0
+      }
+    },
+    "passed": true,
+    "sameFiles": true,
+    "files": 10,
+    "counts": {
+      "units": 117,
+      "browser": 86,
+      "live": 16
+    }
+  }
+}

@@ -12,6 +12,8 @@ import { hash } from "../page-model";
 import { sanitizeText } from "../privacy-redaction";
 import { planGoal, goalScore, targetIdentity } from "./index";
 import { shortestRoute, edgeCost } from "./route-graph";
+import { authenticationIntent } from "./task-intent";
+import { planAuthentication } from "./authentication";
 
 const normalize = (v: string) =>
   v
@@ -69,7 +71,7 @@ export function beginJourney(
           ? languageCode(split[2])
           : undefined,
       }
-    : { purpose: goal };
+    : { purpose: goal, workflow: authenticationIntent(goal) };
   return {
     id: crypto.randomUUID(),
     goal,
@@ -82,6 +84,16 @@ export function beginJourney(
     progress: [],
     reroutes: 0,
   };
+}
+export function contextualTask(task?: TaskJourney) {
+  return !!(task?.objective.value || task?.objective.workflow);
+}
+export function resumeJourney(task: TaskJourney): TaskJourney {
+  if (task.objective.value || task.objective.workflow) return task;
+  const workflow = authenticationIntent(task.goal);
+  return workflow
+    ? { ...task, objective: { ...task.objective, workflow }, status: "active" }
+    : task;
 }
 export function taskKey(
   task: Pick<TaskJourney, "origin" | "goal" | "strategy">,
@@ -247,12 +259,13 @@ export function planTask(
   saved?: SavedTask,
   base?: GoalPlan,
 ): GoalPlan {
+  task = resumeJourney(task);
   if (saved && taskKey(saved) !== taskKey(task)) saved = undefined;
   let plan: GoalPlan;
   let path: SiteMemory["transitions"] | undefined;
   let pathEndsAtDestination = false;
   if (
-    (!task.objective.value && task.status === "completed") ||
+    (!contextualTask(task) && task.status === "completed") ||
     objectiveReached(task, page)
   ) {
     plan = {
@@ -263,6 +276,8 @@ export function planTask(
       steps: [],
       reason: "The requested destination state was observed.",
     };
+  } else if (task.objective.workflow) {
+    plan = planAuthentication(page, task, memory, proposal, base);
   } else if (!task.objective.value) {
     plan = base || planGoal(page, task.goal, memory, proposal);
     if (memory && plan.source === "memory") {
@@ -541,10 +556,12 @@ export function planTask(
     pathEndsAtDestination ||
     !!savedSteps.length ||
     (!!plan.steps.length &&
-      ((!task.objective.value && plan.source !== "memory") ||
+      ((!contextualTask(task) && plan.source !== "memory") ||
         !!page.controls.find(
           (c) =>
-            c.id === plan.steps.at(-1)?.controlId && valueScore(task, c) >= 0.9,
+            task.objective.value &&
+            c.id === plan.steps.at(-1)?.controlId &&
+            valueScore(task, c) >= 0.9,
         )));
   const timings = observations.length
     ? observations.map((e) => e.meanMs || 5000)
@@ -559,6 +576,9 @@ export function planTask(
     minSeconds: Math.floor((ms * 0.5) / 1000),
     maxSeconds: Math.ceil((ms * 2) / 1000),
     complete,
+    available:
+      plan.status === "completed" ||
+      (plan.status === "guiding" && !!plan.steps.length),
     basis: timings.length
       ? timings.length >= clicks
         ? "observed"

@@ -8,6 +8,7 @@ import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
 import { StructureIndex } from "./structure";
 import { interactionRisk } from "./interaction-risk";
+import { formContext } from "./form-context";
 export interface BoundControl {
   control: PageControl;
   element: HTMLElement;
@@ -302,6 +303,7 @@ export class PageDiscovery {
     let partial = false;
     const controls: PageControl[] = [];
     const base = new URL(location.href);
+    const forms = new Map<HTMLFormElement, PageControl["form"]>();
     for (const { element: e } of ranked) {
       if (controls.length >= 600) {
         partial = true;
@@ -421,6 +423,7 @@ export class PageDiscovery {
         : undefined;
       const risk = interactionRisk(e, kind, rawLabel, description);
       const structure = structureIndex.of(e);
+      const form = formContext(e, forms);
       const scope =
         structure.headings.some((h) => h.level > 1) &&
         e.closest("section nav,section [role=navigation]")
@@ -463,6 +466,7 @@ export class PageDiscovery {
             context,
             scope,
             JSON.stringify(structure),
+            JSON.stringify(form),
             risk.risk,
             risk.riskReason,
             link?.origin,
@@ -515,6 +519,7 @@ export class PageDiscovery {
         navigationKey,
         targetLanguage,
         options,
+        form,
         ...risk,
       };
       controls.push(control);

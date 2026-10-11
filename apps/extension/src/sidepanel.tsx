@@ -633,18 +633,28 @@ function App() {
             {view.journey.progress.length} verified steps ·{" "}
             {view.journey.reroutes} route recalculations
           </p>
-          {view.goalPlan?.route && (
-            <p aria-label="Route estimate">
-              {view.goalPlan.route.clicks}{" "}
-              {view.goalPlan.route.complete
-                ? "remaining"
-                : "currently estimated"}{" "}
-              clicks · about {view.goalPlan.route.minSeconds}–
-              {view.goalPlan.route.maxSeconds} seconds (
-              {view.goalPlan.route.basis}).
-              {!view.goalPlan.route.complete &&
-                " Further screens may add steps."}
-            </p>
+          {view.goalPlan?.route &&
+            (view.goalPlan.route.available !== false &&
+            (view.goalPlan.route.clicks > 0 ||
+              view.goalPlan.status === "completed") ? (
+              <p aria-label="Route estimate">
+                {view.goalPlan.route.clicks}{" "}
+                {view.goalPlan.route.complete
+                  ? "remaining"
+                  : "currently estimated"}{" "}
+                clicks · about {view.goalPlan.route.minSeconds}–
+                {view.goalPlan.route.maxSeconds} seconds (
+                {view.goalPlan.route.basis}).
+                {!view.goalPlan.route.complete &&
+                  " Further screens may add steps."}
+              </p>
+            ) : (
+              <p aria-label="Route estimate">
+                Route estimate unavailable until a usable next step is found.
+              </p>
+            ))}
+          {view.goalPlan?.status === "unresolved" && (
+            <p role="status">{view.goalPlan.reason}</p>
           )}
           {!!view.goalPlan?.route?.predictions.length && (
             <details>

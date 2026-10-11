@@ -1,9 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Internet Navigator",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "Live page discovery, goal-based guidance, and private local site memory. You make every click.",
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "webNavigation"
+  ],
   "action": {
     "default_title": "Open Internet Navigator"
   },

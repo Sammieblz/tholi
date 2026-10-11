@@ -24,6 +24,8 @@ import {
   advanceJourney,
   planTask,
   objectiveReached,
+  contextualTask,
+  resumeJourney,
 } from "../../../packages/goal-planner/task-journey";
 import { inspectGoal, actionBoundary } from "../../../packages/goal-planner";
 import {
@@ -76,7 +78,7 @@ export class PageCoach {
       history: ["choosing"],
       controls: [],
       goalPlan: restoredPlan,
-      journey: restoredJourney,
+      journey: restoredJourney && resumeJourney(restoredJourney),
       liveDiagnostics: restoredDiagnostics,
     };
   }
@@ -87,7 +89,8 @@ export class PageCoach {
         "Goal reached. The expected destination was verified.";
     this.refresh();
     if (
-      this.view.journey?.objective.value &&
+      this.view.journey &&
+      contextualTask(this.view.journey) &&
       !objectiveReached(this.view.journey, this.view.page!)
     )
       this.view.journey.status = "active";
@@ -365,7 +368,7 @@ export class PageCoach {
         before.stateKey,
         Date.now() - this.selectedAt,
       );
-      if (this.view.journey.objective.value) {
+      if (contextualTask(this.view.journey)) {
         this.view.verifiedSteps++;
         this.clearTarget();
         this.publish(this.view, evidence);
@@ -502,7 +505,7 @@ export class PageCoach {
       this.savedTask,
       result.plan,
     );
-    if (this.view.journey.objective.value && plan.steps.length) {
+    if (contextualTask(this.view.journey) && plan.steps.length) {
       const target = this.view.page!.controls.find(
         (c) => c.id === plan.steps.at(-1)?.controlId,
       );
@@ -668,7 +671,7 @@ export class PageCoach {
       if (
         !(this.selected.element as HTMLAnchorElement).target ||
         (this.selected.element as HTMLAnchorElement).target === "_self" ||
-        (this.view.journey?.objective.value &&
+        (contextualTask(this.view.journey) &&
           (this.selected.element as HTMLAnchorElement).target === "_blank")
       )
         navigation = {
