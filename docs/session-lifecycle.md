@@ -1,0 +1,11 @@
+# Session lifecycle verification
+
+Live sessions pin the session token, browser tab, document ID, protocol and origin. Back/Forward and same-document history changes rescan live bindings. Verified progress advances only for an observed expected result; revisiting a page does not repeat a completed step.
+
+A user interaction enters `waiting` until the expected focus, selection, expansion, section arrival or destination is observed. Arbitrary action buttons declare no verifiable outcome: their result must be reviewed by the user and is never counted as success. Pause and Stop cancel the pending verification deadline, DOM/open-shadow observers, URL polling, event subscriptions and guidance. Resume reconnects observation once and plans against the current document.
+
+The MV3 worker restores its pinned state from `chrome.storage.session`. Its content-script coach continues independently through worker suspension. Tests force `ServiceWorker.stopWorker` during running, waiting and paused sessions. A changed test-only global epoch in the worker proves that the execution context restarted; Playwright keeps its Worker wrapper across MV3 restarts, so a wrapper close event is not used as evidence. No production restart hook or mock storage is used.
+
+The integration suite separately switches away from and closes the pinned tab in all three states. Guide/Get Page/Resume commands from another active tab are rejected, the other page receives no guidance, and closing the pinned tab removes the active session. Stop and Pause can still clear the pinned task from the panel. Persistent site knowledge is independent of active-session storage.
+
+Reproduce with `npx playwright test tests/e2e/lifecycle.spec.ts` (seven cases at each of 1280×900 and 720×900) and `npx vitest run tests/lifecycle.test.ts` (two observer/timer cleanup cases). The existing full extension suite also covers authored terminal-state teardown, unexpected origin changes, stale documents, and browser restart persistence. These are automated production-manifest Chromium checks; native Chrome permission and accessibility checks remain separate release work.

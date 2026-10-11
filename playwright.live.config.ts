@@ -8,6 +8,9 @@ export default defineConfig({
   ],
   workers: 1,
   timeout: 60000,
-  reporter: [["list"]],
+  reporter: [
+    ["list"],
+    ["./tests/support/regression-reporter.ts", { scope: "live", expected: 10 }],
+  ],
   use: { trace: "retain-on-failure" },
 });

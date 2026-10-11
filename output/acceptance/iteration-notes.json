@@ -1,0 +1,26 @@
+{
+  "purpose": "Retain pre-release regression failures alongside measured benchmark iterations",
+  "extensionVersion": "0.6.5",
+  "iterations": [
+    {
+      "suite": "extension-regressions-before-final-panel-label-fix",
+      "passed": 52,
+      "failed": 6,
+      "failures": "Three Northstar assertions at both layouts expected BOUNDARY, WAITING and RUNNING. The panel displayed REVIEW REQUIRED, WAITING FOR THE WEBSITE and READY TO GUIDE.",
+      "resolution": "Update assertions for the human-readable states; show Guiding for active authored guidance. Rerun the complete suite on the final build."
+    },
+    {
+      "suite": "live-regressions-before-scroll-anchoring-test-fix",
+      "passed": 7,
+      "failed": 1,
+      "failures": "Desktop language-control geometry after resizing to 600px was outside the viewport due to browser scroll anchoring; the test incorrectly required a visible halo.",
+      "resolution": "The test explicitly scrolls the website control into view after reflow before measuring alignment. Navigator still performs no scrolling. Rerun the complete live suite."
+    },
+    {
+      "suite": "accuracy-matrix-before-final-authored-guidance-label",
+      "report": "panel-matrix.json",
+      "passed": true,
+      "resolution": "Preserve this complete passing matrix; rerun against the final artifact so its hashes match packaging and full regressions."
+    }
+  ]
+}

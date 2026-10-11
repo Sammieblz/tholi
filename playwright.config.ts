@@ -7,7 +7,10 @@ export default defineConfig({
   ],
   workers: 1,
   timeout: 30000,
-  reporter: [["list"]],
+  reporter: [
+    ["list"],
+    ["./tests/support/regression-reporter.ts", { scope: "e2e", expected: 60 }],
+  ],
   use: { trace: "retain-on-failure" },
   webServer: {
     command: "npm run dev:demo",

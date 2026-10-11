@@ -88,6 +88,34 @@ it("does not invent reveal routes across sibling menus or native details boundar
     planGoal(page, "Change language variant").steps.map((s) => s.label),
   ).toEqual(["More controls", "Change language variant"]);
 });
+it("keeps identical buttons ambiguous while coalescing links to the same section", () => {
+  fixture("<section><button>Help</button><button>Help</button></section>");
+  expect(planGoal(new PageDiscovery().snapshot(), "Help").status).toBe(
+    "unresolved",
+  );
+  fixture(
+    '<nav><a href="#references">References</a><a href="#references">References</a></nav><h2 id="references">References</h2>',
+  );
+  expect(
+    planGoal(new PageDiscovery().snapshot(), "Find references").status,
+  ).toBe("completed");
+});
+it("grounds a collapsed search field in its local search landmark without site selectors", () => {
+  fixture(
+    '<div role="search"><a href="/search">Search</a><form><input type="search" aria-label="Search catalogue" hidden><button hidden>Search</button></form></div><input type="search" aria-label="Search catalogue" hidden>',
+  );
+  const page = new PageDiscovery().snapshot();
+  const plan = planGoal(page, "Show search");
+  expect(plan.steps.map((s) => s.label)).toEqual([
+    "Search",
+    "Search catalogue",
+  ]);
+  expect(
+    page.controls
+      .filter((c) => c.kind === "focus")
+      .map((c) => c.revealIds.length),
+  ).toEqual([1, 0]);
+});
 it("does not select the opposite preference when the requested value is unavailable", () => {
   fixture(
     '<fieldset><legend>Text</legend><input type="radio" id="small"><label for="small">Small</label><input type="radio" id="large" disabled><label for="large">Large</label></fieldset>',
@@ -246,6 +274,133 @@ it("applies consequential-action checks to accessibility descriptions", () => {
   const page = new PageDiscovery().snapshot();
   expect(page.controls[0].risk).toBe("consequential");
   expect(planGoal(page, "Delete account").status).toBe("unresolved");
+  expect(planGoal(page, "Delete account").issue).toBe("consequential");
+});
+it.each([
+  ['<a href="/document?action=edit">Edit</a>', "ordinary", undefined],
+  [
+    '<a href="/editor" title="Edit this document">Edit</a>',
+    "ordinary",
+    undefined,
+  ],
+  [
+    '<button type="button" aria-haspopup="dialog" aria-controls="editor">Edit</button><div id="editor" hidden></div>',
+    "ordinary",
+    undefined,
+  ],
+  [
+    '<button type="button">Edit</button>',
+    "consequential",
+    "unknown-edit-effect",
+  ],
+  [
+    '<button type="button" aria-description="Edit and immediately save changes">Edit</button>',
+    "consequential",
+    "commit",
+  ],
+  [
+    '<a href="/document?action=publish">Continue</a>',
+    "consequential",
+    "commit",
+  ],
+  ['<a href="/delete/record">Continue</a>', "consequential", "commit"],
+  [
+    '<a href="/document?action=edit">Publish changes</a>',
+    "consequential",
+    "commit",
+  ],
+  [
+    '<form method="post" action="/edit"><button>Continue</button></form>',
+    "consequential",
+    "form-submit",
+  ],
+  [
+    '<form id="editor" method="post" action="/edit"></form><button form="editor">Continue</button>',
+    "consequential",
+    "form-submit",
+  ],
+  [
+    '<form method="post" action="/edit"><button type="button" aria-haspopup="dialog">Edit</button></form>',
+    "ordinary",
+    undefined,
+  ],
+  [
+    '<form method="post" action="/edit"><button formmethod="get">Preview</button></form>',
+    "ordinary",
+    undefined,
+  ],
+  [
+    '<form method="get" action="/publish"><button>Continue</button></form>',
+    "consequential",
+    "commit",
+  ],
+  [
+    '<form method="get" action="/preview"><button formaction="/submit">Continue</button></form>',
+    "consequential",
+    "commit",
+  ],
+  [
+    '<form method="get" action="/publish"><button type="button" aria-haspopup="dialog">Preview</button></form>',
+    "ordinary",
+    undefined,
+  ],
+])(
+  "classifies the individual interaction from declared structure: %s",
+  (html, risk, riskReason) => {
+    fixture(html);
+    const control = new PageDiscovery().snapshot().controls[0];
+    expect(control.risk).toBe(risk);
+    expect(control.riskReason).toBe(riskReason);
+  },
+);
+it("keeps editor fields and section navigation usable despite committing siblings or form endpoints", () => {
+  fixture(
+    '<form method="post" action="/edit"><h2>Publish document</h2><input aria-label="Draft title"><button type="submit">Publish changes</button></form><nav aria-label="Delete history"><a href="#help">Help</a></nav><h2 id="help">Delete history</h2>',
+  );
+  const page = new PageDiscovery().snapshot();
+  expect(page.controls.find((c) => c.label === "Draft title")?.risk).toBe(
+    "ordinary",
+  );
+  expect(page.controls.find((c) => c.label === "Help")?.risk).toBe("ordinary");
+  expect(page.controls.find((c) => c.label === "Delete history")?.risk).toBe(
+    "ordinary",
+  );
+  expect(page.controls.find((c) => c.label === "Publish changes")?.risk).toBe(
+    "consequential",
+  );
+  expect(planGoal(page, "Draft title").status).toBe("guiding");
+});
+it("uses page scope for an unqualified edit goal and heading context for a specified section", () => {
+  fixture(
+    '<nav><a href="/editor">Edit</a></nav><main><div><h2>Plot</h2><span><a href="/editor?section=1">edit</a></span></div><div><h2>Background</h2><span><a href="/editor?section=2">edit</a></span></div></main>',
+  );
+  const page = new PageDiscovery().snapshot();
+  const primary = page.controls.find((c) => c.label === "Edit")!;
+  const plot = page.controls.find(
+    (c) => c.label === "edit" && c.context === "Plot",
+  )!;
+  expect(primary.scope).toBe("page");
+  expect(plot.scope).toBe("section");
+  for (const goal of ["Edit", "How do I edit this page?"])
+    expect(planGoal(page, goal).steps.map((s) => s.controlId)).toEqual([
+      primary.id,
+    ]);
+  expect(
+    planGoal(page, "Edit section Plot").steps.map((s) => s.controlId),
+  ).toEqual([plot.id]);
+  const proposal = { controlIds: [primary.id], confidence: 0.9 };
+  expect(planGoal(page, "Edit", undefined, proposal).source).toBe("on-device");
+});
+it("reports an opaque edit effect honestly and rescans when a form changes to POST", () => {
+  fixture("<form><button>Edit</button></form>");
+  const discovery = new PageDiscovery();
+  const before = discovery.snapshot();
+  expect(planGoal(before, "Edit").issue).toBe("unknown-effect");
+  document.querySelector("form")!.method = "post";
+  const after = discovery.snapshot();
+  expect(after.revision).toBeGreaterThan(before.revision);
+  expect(after.controls[0].riskReason).toBe("form-submit");
+  expect(planGoal(after, "Edit").issue).toBe("consequential");
 });
 it("discovers semantic fields, labels, menus, preferences, and open shadow roots without site selectors", () => {
   fixture(

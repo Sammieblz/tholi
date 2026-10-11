@@ -4,10 +4,16 @@ import {
   type GoalPlan,
   type ModelProposal,
   type SiteMemory,
+  hash,
 } from "../page-model";
 import { sanitizeText } from "../privacy-redaction";
+import {
+  memoryDiagnostics,
+  type MatchEvidence,
+  type PlanningDiagnostics,
+} from "../live-diagnostics";
 const stop = new Set(
-  "a an the to of on in this that my me please find go navigate show open make change switch set turn use get article page mode website it i want can you for into how do does would could like choose select".split(
+  "a an the to of on in this that my me please find go navigate show open make change switch set turn use get article page section mode website it i want can you for into how do does would could like choose select".split(
     " ",
   ),
 );
@@ -42,21 +48,41 @@ const aliases: Record<string, string[]> = {
   contents: ["contents", "sections"],
   search: ["search", "find"],
 };
-export function goalScore(
+export function goalMatch(
   goal: string,
-  control: Pick<PageControl, "label" | "description" | "context" | "kind">,
-) {
+  control: Pick<
+    PageControl,
+    "label" | "description" | "context" | "kind" | "scope"
+  >,
+): MatchEvidence & { score: number } {
   const requested = [...new Set(tokens(goal))],
     label = tokens(control.label),
     description = tokens(control.description || ""),
     context = tokens(control.context);
-  if (!requested.length) return 0;
+  const evidence: MatchEvidence = {
+    requested: requested.length,
+    label: 0,
+    description: 0,
+    context: 0,
+    weighted: 0,
+    specificity: 0,
+    adjustment: 0,
+    qualified: true,
+    preference: true,
+  };
+  if (!requested.length) return { ...evidence, score: 0 };
   let score = 0;
   for (const term of requested) {
     const equivalents = aliases[term] || [term];
     const direct =
       matches(term, label) ||
       (equivalents[0] && matches(equivalents[0], label));
+    const labelAlias = equivalents.some((t) => matches(t, label));
+    const descriptionMatch = equivalents.some((t) => matches(t, description));
+    const contextMatch = equivalents.some((t) => matches(t, context));
+    if (direct || labelAlias) evidence.label++;
+    else if (descriptionMatch) evidence.description++;
+    else if (contextMatch) evidence.context++;
     score += direct
       ? 1
       : equivalents.some((t) => matches(t, label))
@@ -67,6 +93,7 @@ export function goalScore(
             ? 0.45
             : 0;
   }
+  evidence.weighted = score;
   const wanted = requested.filter(
     (t) =>
       ![
@@ -93,14 +120,14 @@ export function goalScore(
         ),
       ))
   )
-    return 0;
+    return { ...evidence, qualified: false, score: 0 };
   if (
     (requested.some((t) => ["larger", "bigger"].includes(t)) &&
       !label.some((t) => ["large", "larger", "bigger"].includes(t))) ||
     (requested.includes("smaller") &&
       !label.some((t) => ["small", "smaller"].includes(t)))
   )
-    return 0;
+    return { ...evidence, preference: false, score: 0 };
   const vocabulary = requested.flatMap((t) => [t, ...(aliases[t] || [])]);
   // Decorative counts and section numbering are not semantic qualifiers.
   const extras = requested.some(
@@ -112,23 +139,40 @@ export function goalScore(
       )
     : [];
   const specificity = Math.min(0.4, extras.length * 0.12);
-  return Math.max(
-    0,
-    Math.min(
-      1,
-      score / requested.length -
-        specificity +
-        (requested.includes("search")
-          ? control.kind === "focus"
-            ? 0.2
-            : -0.2
-          : 0) -
-        (/\b(change|switch|set|select|choose)\b/i.test(goal) &&
-        ["section", "navigation"].includes(control.kind)
-          ? 0.12
-          : 0),
+  evidence.specificity = specificity;
+  evidence.adjustment =
+    (requested.includes("search")
+      ? control.kind === "focus"
+        ? 0.2
+        : -0.2
+      : 0) -
+    (/\b(change|switch|set|select|choose)\b/i.test(goal) &&
+    ["section", "navigation"].includes(control.kind)
+      ? 0.12
+      : 0);
+  // An unqualified goal addresses the page-level control before a repeated
+  // section control. Explicit context (e.g. "Edit Plot") keeps that section eligible.
+  if (
+    control.scope === "section" &&
+    !requested.some((t) => !matches(t, label) && matches(t, context))
+  )
+    evidence.adjustment -= 0.12;
+  return {
+    ...evidence,
+    score: Math.max(
+      0,
+      Math.min(1, score / requested.length - specificity + evidence.adjustment),
     ),
-  );
+  };
+}
+export function goalScore(
+  goal: string,
+  control: Pick<
+    PageControl,
+    "label" | "description" | "context" | "kind" | "scope"
+  >,
+) {
+  return goalMatch(goal, control).score;
 }
 export function expectedOutcome(control: PageControl) {
   switch (control.kind) {
@@ -147,30 +191,59 @@ export function expectedOutcome(control: PageControl) {
     case "expand":
       return "The expanded state or available controls change.";
     default:
-      return "A related page state or available controls change.";
+      return "Review the website's result yourself; this control declares no verifiable outcome.";
   }
 }
-function unresolved(goal: string, reason: string): GoalPlan {
+export function targetIdentity(control: PageControl) {
+  if (control.kind === "section")
+    return "section:" + (control.sectionKey || control.id);
+  if (control.kind === "navigation" && control.navigationKey)
+    return "navigation:" + control.navigationKey;
+  // Equal labels/signatures do not prove that two distinct buttons have the same effect.
+  return "control:" + control.id;
+}
+function unresolved(
+  goal: string,
+  reason: string,
+  issue: GoalPlan["issue"] = "no-match",
+): GoalPlan {
   return {
     goal,
     source: "semantics",
     status: "unresolved",
     confidence: 0,
     reason,
+    issue,
     steps: [],
   };
 }
-export function planGoal(
+export function actionBoundary(
+  control: PageControl,
+  goal = control.label,
+): GoalPlan {
+  return unresolved(
+    goal,
+    control.riskReason === "unknown-edit-effect"
+      ? "This edit control does not declare whether it opens an editor or changes data immediately. Review its effect on the website before continuing."
+      : "The matching control may submit or commit a change. Navigator stops before this consequential action; review it on the website.",
+    control.riskReason === "unknown-edit-effect"
+      ? "unknown-effect"
+      : "consequential",
+  );
+}
+function planGoalInternal(
   page: PageSnapshot,
   rawGoal: string,
   memory?: SiteMemory,
   proposal?: ModelProposal,
+  trace: { path?: SiteMemory["transitions"] } = {},
 ): GoalPlan {
   const goal = sanitizeText(rawGoal);
   if (!goal)
     return unresolved(
       "Choose a goal",
       "Describe what you want to find or change.",
+      "missing-goal",
     );
   const usable = page.controls.filter(
     (c) => c.enabled && c.risk === "ordinary",
@@ -199,12 +272,14 @@ export function planGoal(
       return unresolved(
         goal,
         "The model did not identify a valid, safe control. Choose a control or clarify your goal.",
+        "invalid-model",
       );
     const first = proposed[0]!;
     if (!first.visible)
       return unresolved(
         goal,
         "The model selected a hidden control. Open its menu first.",
+        "hidden",
       );
     if (
       new Set(proposal.controlIds).size !== proposal.controlIds.length ||
@@ -216,8 +291,9 @@ export function planGoal(
       return unresolved(
         goal,
         "The model's steps do not form a valid route through the discovered controls.",
+        "invalid-model",
       );
-    const grounded = planGoal(page, goal, memory);
+    const grounded = planGoalInternal(page, goal, memory, undefined, trace);
     const groundedTarget = page.controls.find(
       (c) => c.id === grounded.steps.at(-1)?.controlId,
     );
@@ -269,23 +345,24 @@ export function planGoal(
     const best = ranked[0];
     const tied = ranked.filter((r) => best.score - r.score < 0.08);
     // Duplicate links are interchangeable only if their actual destination is identical.
-    const identities = new Set(
-      tied.map((r) =>
-        r.c.kind === "section"
-          ? "section:" + (r.c.sectionKey || r.c.signature)
-          : r.c.kind === "navigation" && r.c.navigationKey
-            ? "navigation:" + r.c.navigationKey
-            : r.c.signature,
-      ),
-    );
+    const identities = new Set(tied.map((r) => targetIdentity(r.c)));
     if (identities.size > 1)
       return unresolved(
         goal,
         "Several controls match this goal. Add context or choose one explicitly.",
+        "ambiguous",
       );
     target = tied.find((r) => r.c.visible)?.c || best.c;
     confidence = Math.min(0.95, best.score);
   }
+  const blocked = page.controls.find(
+    (c) =>
+      c.visible &&
+      c.enabled &&
+      c.risk !== "ordinary" &&
+      goalScore(goal, c) >= 0.6,
+  );
+  if (!target && blocked) return actionBoundary(blocked, goal);
   if (!target && memory) {
     const desired = new Set(
       memory.pages.flatMap((p) =>
@@ -311,6 +388,7 @@ export function planGoal(
         );
         if (target) {
           source = "memory";
+          trace.path = current.path;
           confidence = 0.85;
           break;
         }
@@ -358,6 +436,7 @@ export function planGoal(
       return unresolved(
         goal,
         "The target is hidden and its opening control is uncertain. Open the relevant menu and try again.",
+        "hidden",
       );
     steps.push({
       controlId: revealers[0].id,
@@ -381,4 +460,118 @@ export function planGoal(
         : "Matched live control labels, accessibility descriptions, roles, and context. The page is checked after every step.",
     steps,
   };
+}
+
+export function inspectGoal(
+  page: PageSnapshot,
+  rawGoal: string,
+  memory?: SiteMemory,
+  proposal?: ModelProposal,
+) {
+  const trace: { path?: SiteMemory["transitions"] } = {};
+  const plan = planGoalInternal(page, rawGoal, memory, proposal, trace);
+  const goal = sanitizeText(rawGoal);
+  const selected = new Set(plan.steps.map((s) => s.controlId));
+  const roles = new Set([
+    "button",
+    "link",
+    "heading",
+    "checkbox",
+    "radio",
+    "textbox",
+    "searchbox",
+    "combobox",
+    "menuitem",
+    "switch",
+    "tab",
+    "option",
+  ]);
+  const candidates: PlanningDiagnostics["candidates"] = page.controls
+    .map((c) => {
+      const { score: semanticScore, ...evidence } = goalMatch(goal, c);
+      const revealers = c.revealIds.filter((id) =>
+        page.controls.some(
+          (r) =>
+            r.id === id &&
+            r.visible &&
+            r.enabled &&
+            r.risk === "ordinary" &&
+            ["expand", "toggle"].includes(r.kind),
+        ),
+      );
+      const score = Math.max(0, semanticScore - (c.visible ? 0 : 0.06));
+      const reasons: PlanningDiagnostics["candidates"][number]["reasons"] = [];
+      if (evidence.label) reasons.push("label-match");
+      if (evidence.description) reasons.push("description-match");
+      if (evidence.context) reasons.push("context-match");
+      if (!evidence.qualified) reasons.push("qualifier-mismatch");
+      if (!evidence.preference) reasons.push("opposite-preference");
+      if (!c.enabled) reasons.push("disabled");
+      if (c.risk !== "ordinary") reasons.push("consequential");
+      if (!c.visible && !revealers.length) reasons.push("hidden-unreachable");
+      if (!c.visible && revealers.length > 1) reasons.push("reveal-ambiguous");
+      if (score < 0.6) reasons.push("below-threshold");
+      if (selected.has(c.id))
+        reasons.push(
+          plan.steps.at(-1)?.controlId === c.id ? "selected" : "reveal-step",
+        );
+      return {
+        id: c.id,
+        signature: hash(c.signature),
+        identity: hash(targetIdentity(c)),
+        role: (roles.has(c.role)
+          ? c.role
+          : "unknown") as PlanningDiagnostics["candidates"][number]["role"],
+        kind: c.kind,
+        score,
+        visible: c.visible,
+        enabled: c.enabled,
+        eligible:
+          c.enabled &&
+          c.risk === "ordinary" &&
+          (c.visible || revealers.length === 1) &&
+          score >= 0.6,
+        revealIds: c.revealIds,
+        reasons,
+        evidence,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(selected.has(b.id)) - Number(selected.has(a.id)) ||
+        b.score - a.score,
+    );
+  const eligible = candidates.filter((c) => c.eligible);
+  const best = Math.max(...eligible.map((c) => c.score), 0);
+  const tied = eligible.filter((c) => best - c.score < 0.08);
+  for (const c of tied)
+    if (tied.length > 1)
+      c.reasons.push(
+        plan.status === "unresolved" ? "tied" : "equivalent-destination",
+      );
+  const diagnostics: PlanningDiagnostics = {
+    goalKey: hash(goal),
+    revision: page.revision,
+    source: plan.source,
+    decision: plan.status,
+    totalCandidates: page.controls.length,
+    truncated: candidates.length > 50,
+    candidates: candidates.slice(0, 50),
+    memory: memory
+      ? memoryDiagnostics(
+          memory,
+          page,
+          plan.source === "memory" ? trace.path : [],
+        )
+      : undefined,
+  };
+  return { plan, diagnostics };
+}
+export function planGoal(
+  page: PageSnapshot,
+  rawGoal: string,
+  memory?: SiteMemory,
+  proposal?: ModelProposal,
+) {
+  return planGoalInternal(page, rawGoal, memory, proposal);
 }

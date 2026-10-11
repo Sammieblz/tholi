@@ -153,6 +153,8 @@ if (!host[marker]) {
           message.verifiedSteps,
           message.memory as SiteMemory | undefined,
           message.goalPlan,
+          message.liveDiagnostics,
+          message.navigationVerified,
         );
         respond({ view: coach.start() });
         return;

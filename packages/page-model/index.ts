@@ -18,6 +18,7 @@ export const controlSchema = z
     description: z.string().max(160).optional(),
     context: z.string().max(160),
     group: z.string().max(160),
+    scope: z.enum(["page", "section"]).optional(),
     kind: z.enum([
       "focus",
       "toggle",
@@ -41,6 +42,9 @@ export const controlSchema = z
     destination: destinationSchema.optional(),
     navigationKey: z.string().max(100).optional(),
     risk: z.enum(["ordinary", "consequential"]),
+    riskReason: z
+      .enum(["commit", "form-submit", "unknown-edit-effect"])
+      .optional(),
   })
   .strict();
 export const pageSnapshotSchema = z
@@ -65,6 +69,17 @@ export const goalPlanSchema = z
     status: z.enum(["guiding", "completed", "unresolved", "awaiting-choice"]),
     confidence: z.number().min(0).max(1),
     reason: z.string().max(500),
+    issue: z
+      .enum([
+        "missing-goal",
+        "ambiguous",
+        "consequential",
+        "unknown-effect",
+        "hidden",
+        "no-match",
+        "invalid-model",
+      ])
+      .optional(),
     steps: z
       .array(
         z

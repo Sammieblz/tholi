@@ -87,7 +87,8 @@ export function validPinnedView(session: PinnedSession, view: unknown) {
     parsed.data.controls ||
     parsed.data.selectedControlId ||
     parsed.data.page ||
-    parsed.data.goalPlan
+    parsed.data.goalPlan ||
+    parsed.data.liveDiagnostics
   )
     return undefined;
   if (

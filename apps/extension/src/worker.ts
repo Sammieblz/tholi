@@ -144,6 +144,8 @@ async function attachSession() {
       ? {
           memory: await memory.get(session.origin!).catch(() => undefined),
           goalPlan: session.view?.goalPlan,
+          liveDiagnostics: session.view?.liveDiagnostics,
+          navigationVerified: verified,
         }
       : {}),
   });
@@ -339,9 +341,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         await save();
         return {
           error:
-            error instanceof Error
-              ? error.message
-              : "Navigation could not start. Click the extension icon on this website first.",
+            "Navigator could not access this page. Click the extension icon on the website, refresh the page, then Start again. If Chrome asks for this site's access, allow it to continue. Browser pages and documents without HTML controls are unsupported.",
         };
       }
     }

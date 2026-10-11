@@ -1,0 +1,57 @@
+{
+  "format": "navigator-regression-v1",
+  "scope": "live",
+  "artifactFiles": {
+    "content.js": "dc0cb53edcde62814be3ecb9d3cf629c19a85fa2c1aa57b13edc27bd9f335c90",
+    "content.js.map": "470dbfe62efece4a397d7172980cb621bd89d2b2c7d360bac8fb58a39d385cd8",
+    "manifest.json": "000c49a3c1efa255b0b0bcdc54ed8f34f5a7c6ab11c57bfaa269d8c665894b73",
+    "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
+    "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
+    "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
+    "sidepanel.js": "18105c823e44fbdb592ccdf0dcf006c559e18be093baebd206395243b156f354",
+    "sidepanel.js.map": "a3f5b9758deb6b1d2f08b8f5970d65fa0f1cb88da5c9fa1491c5caa7dba821de",
+    "worker.js": "090d381cb08d312e9a8ed2945b36ba32c428915b125cc115e2a7606c1069bd4c",
+    "worker.js.map": "dc448eebd4a9a0e8acf83be7d558ab35016a137987252e14d993dac6d260533a"
+  },
+  "extensionVersion": "0.6.5",
+  "evaluatedAt": "2026-10-11T06:24:46.452Z",
+  "expected": 8,
+  "configuredCount": 8,
+  "sourceRevision": "9388fcbe85d69cdede430446376e3eab22d9b8db",
+  "workingTreeDirty": true,
+  "passed": true,
+  "cases": [
+    {
+      "id": " / desktop / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / language.spec.ts / change language highlights the live language selector, not the tools menu",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: Ada_Lovelace",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / wikipedia.spec.ts / generic goals on live Wikipedia: List_of_James_Bond_novels_and_short_stories",
+      "status": "passed"
+    }
+  ]
+}

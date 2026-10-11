@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "articles": [
+    "Ada_Lovelace",
+    "List_of_James_Bond_novels_and_short_stories",
+    "Casino_Royale_(novel)",
+    "Earth",
+    "Mathematics"
+  ],
+  "goals": [
+    {
+      "id": "text-size",
+      "goal": "Make text larger",
+      "expected": "large-selected"
+    },
+    {
+      "id": "theme",
+      "goal": "Switch to dark mode",
+      "expected": "dark-selected"
+    },
+    { "id": "width", "goal": "Set width to wide", "expected": "wide-selected" },
+    {
+      "id": "section",
+      "goal": "Find references",
+      "expected": "references-arrived"
+    },
+    { "id": "search", "goal": "Show search", "expected": "search-focused" },
+    {
+      "id": "language-picker",
+      "goal": "Show languages",
+      "expected": "language-picker-open"
+    }
+  ],
+  "viewports": [
+    { "name": "desktop", "width": 1280, "height": 900 },
+    { "name": "narrow", "width": 720, "height": 900 }
+  ],
+  "negativeCases": [
+    "missing",
+    "ambiguous-context",
+    "duplicate-controls",
+    "consequential",
+    "unknown-edit-effect",
+    "implicit-submit",
+    "unrelated-popup",
+    "unrelated-action",
+    "stale-target"
+  ],
+  "authoredStates": [
+    "home",
+    "account",
+    "billing",
+    "plan",
+    "profile",
+    "retention",
+    "login",
+    "confirmation",
+    "success",
+    "unknown",
+    "conflicting",
+    "ambiguous",
+    "origin-change"
+  ],
+  "gates": {
+    "targetPrecision": 0.98,
+    "verificationPrecision": 0.95,
+    "supportedCompletion": 0.9,
+    "falseSuccess": 0,
+    "automation": 0,
+    "secretLeaks": 0
+  },
+  "scope": "Public English Wikipedia control goals. Opening the language picker must await a choice; focus does not claim a search was submitted. Explicit language destination coverage is an additional #18 boundary workflow."
+}

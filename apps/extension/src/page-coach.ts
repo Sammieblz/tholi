@@ -15,7 +15,13 @@ import {
   type ObservedTransition,
   hash,
 } from "../../../packages/page-model";
-import { planGoal } from "../../../packages/goal-planner";
+import { inspectGoal, actionBoundary } from "../../../packages/goal-planner";
+import {
+  updateObservation,
+  appendVerification,
+  type LiveDiagnostics,
+  type VerificationEvent,
+} from "../../../packages/live-diagnostics";
 import type { SessionView } from "../../../packages/shared-types";
 export interface PendingNavigation {
   from: string;
@@ -38,8 +44,7 @@ export class PageCoach {
   private expectedChecked?: boolean;
   private initialSelection?: number;
   private eventTick?: ReturnType<typeof setTimeout>;
-  private related?: HTMLElement;
-  private relatedSignatures = new Set<string>();
+  private ownedRegions: { element: HTMLElement; visible: boolean }[] = [];
   private expectedNavigation?: string;
   private beforeUrl?: string;
   constructor(
@@ -51,6 +56,8 @@ export class PageCoach {
     verifiedSteps = 0,
     private memory?: SiteMemory,
     restoredPlan?: GoalPlan,
+    restoredDiagnostics?: LiveDiagnostics,
+    private navigationVerified = false,
   ) {
     this.view = {
       routeId: LIVE_ROUTE_ID,
@@ -63,6 +70,7 @@ export class PageCoach {
       history: ["choosing"],
       controls: [],
       goalPlan: restoredPlan,
+      liveDiagnostics: restoredDiagnostics,
     };
   }
   start() {
@@ -81,8 +89,10 @@ export class PageCoach {
     document.addEventListener("change", this.changed, true);
   }
   private clearTarget() {
+    if (this.view.status === "waiting") this.view.status = "running";
     this.selected = undefined;
     this.before = undefined;
+    this.ownedRegions = [];
     this.pending = false;
     clearTimeout(this.deadline);
     this.deadline = undefined;
@@ -104,9 +114,28 @@ export class PageCoach {
       this.view.history = [...this.view.history, id].slice(-30);
   }
   private refresh() {
-    if (this.view.status !== "running") return;
+    if (!["running", "waiting"].includes(this.view.status)) return;
     const page = this.discovery.snapshot();
     this.view.page = page;
+    this.view.liveDiagnostics = updateObservation(
+      page,
+      this.view.liveDiagnostics,
+    );
+    if (this.navigationVerified) {
+      this.navigationVerified = false;
+      const last = this.view.liveDiagnostics.events.at(-1);
+      if (last?.kind === "navigation" && last.outcome === "waiting")
+        this.view.liveDiagnostics = appendVerification(
+          this.view.liveDiagnostics,
+          {
+            ...last,
+            revision: page.revision,
+            to: hash(page.stateKey),
+            outcome: "verified",
+            evidence: "destination-arrival",
+          },
+        );
+    }
     this.view.controls = page.controls.filter((c) => c.visible && c.enabled);
     this.view.confidence = page.controls.length ? 1 : 0;
     if (this.selected && this.before) {
@@ -126,18 +155,17 @@ export class PageCoach {
       const added = page.controls.some(
         (current) =>
           current.visible &&
-          !this.before!.controls.some(
-            (old) => old.signature === current.signature && old.visible,
-          ) &&
-          (this.related?.contains(
-            this.discovery.bindings.get(current.id)?.element || null,
-          ) ||
-            this.discovery.bindings.get(current.id)?.element.matches("h1")),
+          this.before!.controls.some(
+            (old) =>
+              old.signature === current.signature &&
+              !old.visible &&
+              old.revealIds.includes(c.id),
+          ),
       );
       const removed = this.before.controls.some(
         (old) =>
           old.visible &&
-          this.relatedSignatures.has(old.signature) &&
+          old.revealIds.includes(c.id) &&
           !page.controls.some(
             (current) => current.signature === old.signature && current.visible,
           ),
@@ -160,11 +188,18 @@ export class PageCoach {
                 ? (chosen.element as HTMLSelectElement).selectedIndex !==
                   this.initialSelection
                 : c.kind === "expand"
-                  ? (!!fresh && fresh.control.expanded !== c.expanded) ||
+                  ? (!!fresh &&
+                      typeof fresh.control.expanded === "boolean" &&
+                      fresh.control.expanded !== c.expanded) ||
                     added ||
-                    removed
+                    removed ||
+                    this.ownedRegions.some(
+                      (region) =>
+                        region.element.isConnected &&
+                        !!presented(region.element) !== region.visible,
+                    )
                   : c.kind === "action"
-                    ? added || removed
+                    ? false
                     : c.kind === "navigation"
                       ? this.expectedNavigation ===
                           hash(
@@ -180,6 +215,28 @@ export class PageCoach {
           c.kind === "action" ||
           c.kind === "navigation")
       ) {
+        this.record(
+          "verified",
+          c.kind === "choice" || c.kind === "toggle"
+            ? "checked-change"
+            : c.kind === "focus"
+              ? "field-focus"
+              : c.kind === "section"
+                ? "section-arrival"
+                : c.kind === "select"
+                  ? "selection-change"
+                  : c.kind === "navigation"
+                    ? "destination-arrival"
+                    : fresh &&
+                        typeof fresh.control.expanded === "boolean" &&
+                        fresh.control.expanded !== c.expanded
+                      ? "expanded-change"
+                      : added
+                        ? "related-controls-added"
+                        : removed
+                          ? "related-controls-removed"
+                          : "owned-region-visibility",
+        );
         this.verified(page);
         return;
       }
@@ -195,6 +252,7 @@ export class PageCoach {
         fresh.control.context !== c.context ||
         fresh.control.description !== c.description
       ) {
+        this.record("stale", "target-changed");
         this.clearTarget();
         this.state("choosing");
         this.view.instruction =
@@ -206,7 +264,7 @@ export class PageCoach {
       } else if (!this.pending)
         this.overlay.show(fresh.geometry, this.view.instruction);
     } else if (this.view.goalPlan?.status === "unresolved") {
-      const plan = planGoal(page, this.view.goalPlan.goal, this.memory);
+      const plan = this.plan(this.view.goalPlan.goal);
       if (plan.status !== "unresolved") {
         this.installPlan(plan);
         return;
@@ -260,6 +318,8 @@ export class PageCoach {
             "Menu opened. Choose an option on the website, or describe the option you want.",
         };
         this.view.instruction = this.view.goalPlan.reason;
+        if (this.view.liveDiagnostics?.planning)
+          this.view.liveDiagnostics.planning.decision = "awaiting-choice";
         this.publish(this.view, evidence);
         return;
       }
@@ -271,6 +331,8 @@ export class PageCoach {
       };
       this.view.instruction =
         "Goal reached. The expected control result was verified.";
+      if (this.view.liveDiagnostics?.planning)
+        this.view.liveDiagnostics.planning.decision = "completed";
     }
     this.publish(this.view, evidence);
   }
@@ -286,14 +348,34 @@ export class PageCoach {
           "The page changed while planning. Try the goal again using the current controls.",
       };
     this.clearTarget();
-    this.installPlan(planGoal(this.view.page, goal, this.memory, proposal));
+    this.installPlan(this.plan(goal, proposal));
     return { view: this.view };
   }
   private replan() {
     if (this.view.page && this.view.goalPlan)
-      this.installPlan(
-        planGoal(this.view.page, this.view.goalPlan.goal, this.memory),
-      );
+      this.installPlan(this.plan(this.view.goalPlan.goal));
+  }
+  private plan(goal: string, proposal?: ModelProposal) {
+    const result = inspectGoal(this.view.page!, goal, this.memory, proposal);
+    this.view.liveDiagnostics!.planning = result.diagnostics;
+    return result.plan;
+  }
+  private record(
+    outcome: VerificationEvent["outcome"],
+    evidence: VerificationEvent["evidence"],
+  ) {
+    if (!this.selected || !this.before || !this.view.liveDiagnostics) return;
+    const page = this.view.page || this.before;
+    this.view.liveDiagnostics = appendVerification(this.view.liveDiagnostics, {
+      signature: hash(this.selected.control.signature),
+      kind: this.selected.control.kind,
+      beforeRevision: this.before.revision,
+      revision: page.revision,
+      from: hash(this.before.stateKey),
+      to: hash(page.stateKey),
+      outcome,
+      evidence,
+    });
   }
   private installPlan(plan: GoalPlan) {
     this.view.goalPlan = plan;
@@ -307,6 +389,8 @@ export class PageCoach {
   }
   guide(id: string) {
     this.view.goalPlan = undefined;
+    if (this.view.liveDiagnostics)
+      this.view.liveDiagnostics.planning = undefined;
     this.refresh();
     return this.select(id);
   }
@@ -326,9 +410,8 @@ export class PageCoach {
       };
     this.clearTarget();
     if (target.control.risk === "consequential") {
-      this.view.goalPlan = undefined;
-      this.view.instruction =
-        "Navigator stops before this consequential action. Review it and decide yourself.";
+      this.view.goalPlan = actionBoundary(target.control);
+      this.view.instruction = this.view.goalPlan.reason;
       this.state("choosing");
       this.publish(this.view);
       return { view: this.view };
@@ -344,18 +427,17 @@ export class PageCoach {
     } else this.expectedNavigation = undefined;
     this.view.selectedControlId = id;
     this.state("guiding");
-    this.related =
-      target.element.closest<HTMLElement>(
-        'form,section,nav,dialog,[role="dialog"],[role="navigation"],[role="menu"],header,aside,details',
-      ) ||
-      target.element.parentElement ||
-      undefined;
-    if (this.related?.matches("body,html")) this.related = undefined;
-    this.relatedSignatures = new Set(
-      [...this.discovery.bindings.values()]
-        .filter((b) => this.related?.contains(b.element))
-        .map((b) => b.control.signature),
-    );
+    const root = target.element.getRootNode() as Document | ShadowRoot;
+    this.ownedRegions = ["aria-controls", "aria-owns", "popovertarget"]
+      .flatMap((attribute) =>
+        (target.element.getAttribute(attribute) || "").split(/\s+/),
+      )
+      .filter(Boolean)
+      .map((id) => root.getElementById(id))
+      .filter(
+        (element): element is HTMLElement => element instanceof HTMLElement,
+      )
+      .map((element) => ({ element, visible: !!presented(element) }));
     this.expectedChecked =
       target.control.kind === "choice" ? true : !target.control.checked;
     if (target.control.kind === "select")
@@ -370,9 +452,15 @@ export class PageCoach {
         : target.control.kind === "section" &&
             target.destination === target.element
           ? "Scroll to the highlighted “" + target.control.label + "” section."
-          : "Use the highlighted “" +
-            target.control.label +
-            "” control. Scroll within its menu if needed.";
+          : target.control.kind === "navigation"
+            ? "Follow the highlighted “" +
+              target.control.label +
+              "” link to open its destination."
+            : target.control.kind === "expand"
+              ? "Open the highlighted “" +
+                target.control.label +
+                "” control, then choose an option on the website."
+              : "Use the highlighted “" + target.control.label + "” control.";
     this.overlay.show(target.geometry, this.view.instruction);
     this.publish(this.view);
     return { view: this.view };
@@ -380,7 +468,25 @@ export class PageCoach {
   private interacted() {
     if (!this.selected || this.pending) return;
     this.pending = true;
+    this.record("waiting", "user-interaction");
     this.overlay.clear();
+    if (this.selected.control.kind === "action") {
+      this.clearTarget();
+      this.state("choosing");
+      this.view.instruction =
+        "Review the website's result yourself. This control does not declare an outcome Navigator can verify.";
+      if (this.view.goalPlan)
+        this.view.goalPlan = {
+          ...this.view.goalPlan,
+          status: "unresolved",
+          steps: [],
+          reason: this.view.instruction,
+        };
+      this.publish(this.view);
+      return;
+    }
+    this.view.status = "waiting";
+    this.view.instruction = "Waiting for the website's expected result…";
     let navigation: PendingNavigation | undefined;
     if (
       this.selected.control.kind === "navigation" &&
@@ -405,6 +511,7 @@ export class PageCoach {
     }
     this.publish(this.view, undefined, navigation);
     this.deadline = setTimeout(() => {
+      this.record("timeout", "deadline-expired");
       this.clearTarget();
       this.state("choosing");
       this.view.instruction =
@@ -450,6 +557,7 @@ export class PageCoach {
     this.memory = memory;
   }
   pause() {
+    this.record("canceled", "guidance-cleared");
     this.teardown();
     this.view.status = "paused";
     this.view.controls = [];
@@ -466,6 +574,7 @@ export class PageCoach {
     if (this.view.goalPlan?.status === "guiding") this.replan();
   }
   stop(reason = "Navigation stopped.") {
+    this.record("canceled", "guidance-cleared");
     this.teardown();
     this.view.status = "stopped";
     this.view.controls = [];

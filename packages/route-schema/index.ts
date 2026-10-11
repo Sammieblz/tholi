@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { liveDiagnosticsSchema } from "../live-diagnostics";
 import {
   controlSchema,
   pageSnapshotSchema,
@@ -208,6 +209,8 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       verifiedSteps: z.number().int().nonnegative().optional(),
       memory: z.unknown().optional(),
       goalPlan: goalPlanSchema.optional(),
+      liveDiagnostics: liveDiagnosticsSchema.optional(),
+      navigationVerified: z.boolean().optional(),
     })
     .strict(),
   z
@@ -309,6 +312,7 @@ export const sessionViewSchema = z
     controls: z.array(controlSchema).max(600).optional(),
     page: pageSnapshotSchema.optional(),
     goalPlan: goalPlanSchema.optional(),
+    liveDiagnostics: liveDiagnosticsSchema.optional(),
     memory: z
       .object({
         pages: z.number().int().nonnegative(),

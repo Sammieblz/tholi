@@ -1,20 +1,20 @@
-# Build verification — October 10, 2026
+# Build verification — October 11, 2026
 
-Production extension: **0.6.1**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed.
+Production extension candidate: **0.6.6**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed. Source baseline is `9388fcbe85d69cdede430446376e3eab22d9b8db`; this work is local and has not been committed or pushed. Evaluation reports identify the actual build-file hashes and dirty working tree.
 
-| Check                                                               | Result       |
-| ------------------------------------------------------------------- | ------------ |
-| TypeScript                                                          | Passed       |
-| Core, discovery, planning, memory, privacy and model-contract tests | 56/56 passed |
-| Production-extension browser integration at 1280×900 and 720×900    | 38/38 passed |
-| Live Wikipedia goals on three articles at both widths               | 6/6 passed   |
-| Whitespace/diff validation                                          | Passed       |
+| Check                                                                           | Result       |
+| ------------------------------------------------------------------------------- | ------------ |
+| TypeScript                                                                      | Passed       |
+| Core, discovery, planning, memory, privacy, lifecycle and model-contract tests  | 83/83 passed |
+| Production-extension browser integration at 1280×900 and 720×900                | 60/60 passed |
+| Live Wikipedia goals, explicit language destination and geometry at both widths | 10/10 passed |
+| Whitespace/diff validation                                                      | Passed       |
 
-Reproduce with `npm run check`, `npm run test:e2e`, and `npm run test:live:wikipedia`. Browser harnesses use the production manifest unchanged. Local and live test artifacts are separate; `.last-run.json` reports passed for both suites.
+Reproduce with `npm run check`, `npm run test:e2e`, and `npm run test:live:wikipedia`. Browser harnesses use the production manifest unchanged. Local and live test artifacts are separate; both full regression reports record complete passing case sets and the same evaluated build bytes. The declared numerical benchmark is `npm run test:acceptance`; its results and denominators are recorded below.
 
 Generic fixtures have no Wikipedia IDs/classes. They exercise menu reveal plus preference changes, section arrival versus visible Contents links, semantic goal entry, unsafe/ambiguous/model-invented controls, stale revisions, changed labels and invalidation, focus without field-value capture, full-page and same-document navigation, pause/stop across loads, open-shadow-root updates and interactions, and memory persistence after closing and relaunching Chromium with the same profile. Forget/Clear stop observation before deleting stored knowledge.
 
-Live checks use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression now highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.
+Live regressions use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. The test then clicks that link and independently verifies the actual French document. Navigator correctly stops at the new origin and does not claim a completed language goal there; fresh toolbar invocation/Start is required. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.
 
 Accuracy regressions cover regular plurals and decorative counts, explicit qualifiers, contextual ambiguity, hidden responsive duplicates, local versus shared-toolbar reveal relationships, accessibility description precedence and changes, shadow-root ownership, popup button roles, unrelated dialogs, equivalent navigation destinations versus distinct queries, opposite preference values, ordinary Help controls, and misleading or unnecessarily indirect model proposals. Descriptions participate in consequential-action checks and preserve field-value exclusions. Verified menu opening enters awaiting-choice; it does not claim a language preference changed. Match strength is displayed qualitatively rather than as a measured accuracy percentage.
 
@@ -24,6 +24,46 @@ The prior Wikipedia-specific coach, route packs, sample allowlist, URL policy, s
 
 QA screenshots are under `output/qa/generic-panel-*.png`, `output/qa/live-generic-*.png` and `output/qa/language-*.png`; panel layouts and the actual languages highlight were inspected at both widths. Load `dist/extension`, Reload at `chrome://extensions`, and refresh the website to replace an older injected script.
 
-Limits: the on-device API adapter is tested with mocked structured responses, not evaluated for real Gemini Nano accuracy on this device. Live checks run semantic planning. Arbitrary-site permission prompts and native Chrome side-panel presentation still need manual smoke testing. Top-document/open-shadow-root semantics are supported; cross-origin frames, closed roots, canvas-only controls and universal website workflow coverage remain outside this adapter. Large scans are capped and disclosed; risk classification is heuristic.
+Limits: the on-device API adapter is tested with mocked structured responses, not evaluated for real Gemini Nano accuracy on this device. Live checks run semantic planning with optional AI disabled. Actual native Chrome toolbar/panel, keyboard/screen-reader speech and per-site permission denial/recovery remain pending in [chrome-handoff.md](chrome-handoff.md). The native computer-use helper failed to connect to its Windows pipe after retry/reset; the browser UI inventory exposes no surfaces. Automated extension-page checks do not establish native speech or permission-dialog behavior. Top-document/open-shadow-root semantics are supported; cross-origin frames, closed roots, canvas-only controls and universal website workflow coverage remain outside this adapter. Large scans are capped and disclosed; risk classification is heuristic.
 
 This implements the dynamic Wikipedia proof of concept and site-memory architecture. It does not establish the original MVP's multi-site beta acceptance metrics, remote route distribution or desktop adapters. Remaining acceptance work is tracked in the repository's existing issue plan.
+
+## Reported Edit regression — v0.6.6
+
+The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.
+
+The panel distinguishes absent routes, ambiguous controls, unknown effects and consequential boundaries. Ordinary link guidance no longer calls the link a menu. Optional model input includes discovered scope; real model accuracy remains unevaluated. This is a rule/context improvement, not a trained website-understanding or OCR model.
+
+Final validation: TypeScript and **83/83 unit tests**, **60/60 extension browser regressions**, **10/10 live regressions**, and **14 benchmark tests / 116 declared cases** passed. The live Edit regression independently checks the article toolbar link and its halo geometry at both widths. Generic editor fixtures verify entry navigation, field access and committing/unknown-effect boundaries. No live edit is published and a complete Wikipedia editing workflow is not established by these tests.
+
+The six-family live matrix remains **60 supported attempts**, with **71/71 targets**, **71/71 verification claims**, and **60/60 supported outcomes**. Generic fixtures now contain **30 cases (18 negative)**: targets **24/24**, verification **18/18**, positives **12/12**, and twelve intentional unresolved decisions. Authored cases remain **26**, targets **12/12**, verification **18/18**, state conformance **26/26**, and eight expected stops. All suites record zero false success, Navigator automation, known synthetic secret leakage or model calls. Matrix SHA256: `bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae`; evaluated at `2026-10-11T15:52:29.674Z`.
+
+Earlier reports and failures remain version/iteration-prefixed in `output/acceptance`; `edit-iteration-notes.json` explains the scope assertion correction, diagnostics-export enable-state race and live fundraising-banner geometry oracle. The banner could put the language control below the fold at document top; the live oracle now checks a direction cue offscreen and halo alignment onscreen rather than requiring a halo unconditionally. These corrections preserve independent website/geometry assertions and all case denominators. The complete final reports bind to identical production build bytes.
+
+Verified package: `output/releases/internet-navigator-0.6.6.zip` (**632,434 bytes**), SHA256 **a18f4ce9916d93fe95e26aee92f33eaa7fc52d1576856492a57f3bba56fb6a09**. All ten archive members were read back and matched. Previous archives remain intact. Candidate is local and uncommitted/unpublished; native handoff #10/#17/#18 stays open. Reload the extension and refresh the website tab before retesting Edit.
+
+## Archived checkpoint — v0.6.5
+
+The predeclared `tests/acceptance/matrix.json` contains five structurally different articles × six goal families × two layouts = **60 supported live attempts**. Final evaluation (2026-10-11T06:27:52.090Z) passed all 14 benchmark tests and all 112 declared attached cases, with no missing or unexpected cases. Windows, Node v24.19.0, Chromium 156.0.8078.4; optional AI disabled. Matrix SHA256: `a9519448312c3d465e2bd4d5cb1282cc6471964a68c67d0f1174f11c147dce29`.
+
+| Suite                             | Cases                           | Correct targets / highlights | Correct verification / claims | Supported case outcomes            |
+| --------------------------------- | ------------------------------- | ---------------------------- | ----------------------------- | ---------------------------------- |
+| Live Wikipedia                    | 60                              | 71/71 (100%)                 | 71/71 (100%)                  | 60/60 (100%)                       |
+| Generic fixtures                  | 26, including 14 negative cases | 24/24                        | 18/18                         | 12/12 supported positives          |
+| Authored Northstar state fixtures | 26                              | 12/12                        | 18/18                         | 26/26 expected state-case outcomes |
+
+Live unresolved/stopped: 0/60. Generic fixtures include eight intentional unresolved decisions; authored fixtures include eight expected stops. All suites recorded zero false-success claims, Navigator automation, known synthetic secret leakage and model calls in these tested cases. These are sample measurements with actual denominators, not universal website percentages or model accuracy. Language-picker completion means awaiting a choice; focus means the field is focused, not that a search was submitted. Authored state-case conformance is separate from live supported-goal completion.
+
+Reports: `output/acceptance/results.json`, `e2e-regressions.json` (58 cases) and `live-regressions.json` (8 cases). They record every case and bind the evaluation to identical extension-file SHA256s. Missing/duplicate cases, failed tests, incomplete suites or artifact changes fail the gate. Earlier iterations remain in the same directory, including actual bugs corrected in distinct-control ambiguity and overly broad unrelated-effect verification, responsive search reveal, old status-label assertions and a verification assertion shorter than the runtime deadline. See [accuracy-benchmark.md](accuracy-benchmark.md) and `iteration-notes.json`.
+
+`npm run package:extension` passed after all three complete reports matched the production build. The ZIP was read back and all ten members matched the evaluated bytes. Candidate: `output/releases/internet-navigator-0.6.5.zip`; SHA256 **f54b3c99d146b18f7d98d7dfd67ea5329e60c8bcd81742344ef0ba8f5067fbd3**. Adjacent SHA256/provenance files identify the baseline commit, dirty tree, metrics and pending checks. Packaging refuses overwriting the archive.
+
+Completed this work session: #13 diagnostics, #9 lifecycle, #11 passive geometry and #14 measured/regression gates. Board totals: **10 completed, 4 retired, 3 work tickets open (#10/#17/#18), plus #1 tracker**. The candidate is not published. Native Chrome keyboard/screen-reader/permission/reload and fresh destination-origin handoff remain pending in [chrome-handoff.md](chrome-handoff.md). That limitation keeps the handoff/milestone tickets open; automated results do not substitute for those checks.
+
+## Ticket #13 — dynamic diagnostic evidence
+
+Implemented and verified in the local workspace after baseline commit `9388fcbe85d69cdede430446376e3eab22d9b8db`. Changes have not been committed or pushed by this work session.
+
+The live inspector records observation revisions, candidate feature scores and rejection reasons, reveal ownership, actual observed memory paths/freshness, and bounded waiting/verified/stale/timeout/canceled evidence. Its strict local export omits page text, goals, paths, field values and model output. Three new unit tests cover score replay, report bounds/injection/privacy and memory provenance. Browser tests at both widths cover rendering/export, unchanged navigation when debug toggles, and verification history across a document load. Screenshots `output/qa/live-inspector-desktop.png` and `output/qa/live-inspector-narrow.png` were inspected.
+
+Audit commands passed: `npm run check` (59 unit tests, TypeScript and builds), `npm run test:e2e` (40 checks), and `npm run test:live:wikipedia` (6 checks). These counts are regression evidence; measured acceptance is tracked in #14/#18. Usage and scoring replay are documented in [live-diagnostics.md](live-diagnostics.md).

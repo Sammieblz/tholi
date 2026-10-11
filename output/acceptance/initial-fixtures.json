@@ -1,0 +1,979 @@
+{
+  "format": "navigator-acceptance-v1",
+  "matrixSha256": "a9519448312c3d465e2bd4d5cb1282cc6471964a68c67d0f1174f11c147dce29",
+  "extensionVersion": "0.6.2",
+  "protocolVersion": "1.0.0",
+  "sourceRevision": "9388fcbe85d69cdede430446376e3eab22d9b8db",
+  "workingTreeDirty": true,
+  "environment": {
+    "platform": "win32",
+    "node": "v24.19.0",
+    "viewports": [
+      {
+        "name": "desktop",
+        "width": 1280,
+        "height": 900
+      },
+      {
+        "name": "narrow",
+        "width": 720,
+        "height": 900
+      }
+    ]
+  },
+  "liveExpected": 60,
+  "summaries": {
+    "live": {
+      "attempts": 0,
+      "targetPrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": 0
+      },
+      "verificationPrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": 0
+      },
+      "supportedCompletion": {
+        "correct": 0,
+        "total": 0,
+        "rate": 0
+      },
+      "unresolved": 0,
+      "stopped": 0,
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    "fixture": {
+      "attempts": 26,
+      "targetPrecision": {
+        "correct": 24,
+        "total": 26,
+        "rate": 0.9230769230769231
+      },
+      "verificationPrecision": {
+        "correct": 18,
+        "total": 22,
+        "rate": 0.8181818181818182
+      },
+      "supportedCompletion": {
+        "correct": 12,
+        "total": 12,
+        "rate": 1
+      },
+      "unresolved": 6,
+      "stopped": 0,
+      "falseSuccess": 6,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    "authored": {
+      "attempts": 26,
+      "targetPrecision": {
+        "correct": 12,
+        "total": 12,
+        "rate": 1
+      },
+      "verificationPrecision": {
+        "correct": 18,
+        "total": 18,
+        "rate": 1
+      },
+      "supportedCompletion": {
+        "correct": 26,
+        "total": 26,
+        "rate": 1
+      },
+      "unresolved": 0,
+      "stopped": 8,
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    }
+  },
+  "missing": [],
+  "failures": [
+    " / desktop / fixture.spec.ts / declared generic positive and negative cases",
+    " / narrow / fixture.spec.ts / declared generic positive and negative cases"
+  ],
+  "passed": false,
+  "cases": [
+    {
+      "id": "desktop/authored/home",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/account",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/billing",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/plan",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/profile",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/retention",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/login",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/confirmation",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/success",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/unknown",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/conflicting",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/ambiguous",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/authored/origin-change",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/text-size",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/theme",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/width",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/section",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/search",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/language-picker",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/missing",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/ambiguous-context",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/duplicate-controls",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        false
+      ],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/consequential",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/unrelated-popup",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        false
+      ],
+      "falseSuccess": 1,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/unrelated-action",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        false
+      ],
+      "falseSuccess": 2,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "desktop/fixture/stale-target",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/home",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/account",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/billing",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/plan",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/profile",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/retention",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/login",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/confirmation",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/success",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/unknown",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/conflicting",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/ambiguous",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/authored/origin-change",
+      "suite": "authored",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": true,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/text-size",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/theme",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/width",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true,
+        true
+      ],
+      "verifications": [
+        true,
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/section",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/search",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/language-picker",
+      "suite": "fixture",
+      "supported": true,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/missing",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/ambiguous-context",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/duplicate-controls",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        false
+      ],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/consequential",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": true,
+      "stopped": false,
+      "targets": [],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/unrelated-popup",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        false
+      ],
+      "falseSuccess": 1,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/unrelated-action",
+      "suite": "fixture",
+      "supported": false,
+      "completed": false,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [
+        false
+      ],
+      "falseSuccess": 2,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "narrow/fixture/stale-target",
+      "suite": "fixture",
+      "supported": false,
+      "completed": true,
+      "unresolved": false,
+      "stopped": false,
+      "targets": [
+        true
+      ],
+      "verifications": [],
+      "falseSuccess": 0,
+      "automation": 0,
+      "secretLeaks": 0,
+      "modelCalls": 0
+    }
+  ]
+}

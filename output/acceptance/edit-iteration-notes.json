@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-11",
+  "extensionVersion": "0.6.6",
+  "scope": "Reported Edit entry-point regression and generic effect boundaries; no OCR adapter or model training added.",
+  "retainedReports": [
+    "0.6.5-results.json",
+    "0.6.5-e2e-regressions.json",
+    "0.6.5-live-regressions.json",
+    "edit-before-instructions-results.json",
+    "edit-before-instructions-e2e-regressions.json",
+    "edit-before-instructions-live-regressions.json",
+    "edit-instructions-results.json",
+    "edit-instructions-e2e-regressions.json",
+    "edit-instructions-live-regressions.json"
+  ],
+  "findings": [
+    "The original classifier rejected Edit navigation links before semantic or optional model interpretation.",
+    "Form URLs and surrounding headings could incorrectly mark neighboring fields as consequential.",
+    "Page/section context distinguishes a general Edit entry point from repeated section links.",
+    "A first live-test assertion incorrectly required explicit page-scope metadata where the site's DOM did not declare a navigation landmark. The oracle now checks the independently identified article Edit target and actual halo geometry; unknown scope remains unknown.",
+    "Visual inspection found a generic menu-scroll instruction on ordinary links. Guidance now uses the declared navigation or popup behavior.",
+    "One pre-final browser regression timed out waiting for a diagnostics download. The test used a programmatic click without waiting for the export button to become enabled after tab activation. The harness now checks that state before clicking; the failed full-suite report and trace are retained.",
+    "GET submits are checked against their own effective action endpoint, including a submitter override. A non-submitting popup button and form fields do not inherit that endpoint risk. Attribute-based extraction also works in the unit-test DOM where the button formAction property is not implemented.",
+    "A final live geometry run encountered a tall Wikipedia fundraising banner. Returning to the document top put the article language control below the viewport; the test incorrectly required a halo for that offscreen target. The live oracle now independently checks the target rectangle: a direction cue offscreen and halo alignment onscreen. The failed full live report/trace are retained. Product bytes were not changed for this oracle correction."
+  ],
+  "limits": [
+    "Risk classification and semantic fallback remain heuristics rather than complete website understanding.",
+    "The six live accuracy goal families do not cover editing; Edit target/geometry and generic editor-arrival/commit-boundary tests are separate regression evidence.",
+    "Native Chrome panel and screen-reader/permission handoff remain pending.",
+    "Optional on-device model output is contract-tested with mocks; real model accuracy is not evaluated."
+  ]
+}

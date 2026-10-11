@@ -13,7 +13,9 @@
     "check": "npm run typecheck && npm test && npm run build",
     "test:e2e": "playwright test",
     "format": "prettier --write apps packages routes tests scripts docs *.ts *.json README.md",
-    "test:live:wikipedia": "playwright test --config playwright.live.config.ts"
+    "test:live:wikipedia": "playwright test --config playwright.live.config.ts",
+    "test:acceptance": "playwright test --config playwright.acceptance.config.ts",
+    "package:extension": "node scripts/package-extension.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

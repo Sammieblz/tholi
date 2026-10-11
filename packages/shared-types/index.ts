@@ -71,6 +71,7 @@ export interface SessionView {
   memoryError?: string;
   selectedControlId?: string;
   diagnostics?: Diagnostics;
+  liveDiagnostics?: import("../live-diagnostics").LiveDiagnostics;
   status: SessionStatus;
   stateId?: string;
   instruction: string;

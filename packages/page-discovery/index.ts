@@ -6,6 +6,7 @@ import {
 import { visible } from "../browser-adapter";
 import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
+import { interactionRisk } from "./interaction-risk";
 export interface BoundControl {
   control: PageControl;
   element: HTMLElement;
@@ -201,6 +202,28 @@ function roleOf(e: HTMLElement): string {
                 : "button")
   );
 }
+function scopeOf(element: HTMLElement): PageControl["scope"] {
+  // Local heading ownership distinguishes repeated section controls from the
+  // page toolbar without relying on a site's class names or IDs.
+  let parent: HTMLElement | null = element;
+  for (
+    let depth = 0;
+    parent && depth < 5;
+    depth++, parent = parent.parentElement
+  ) {
+    if (parent.matches("nav,header,[role=navigation]")) return "page";
+    if (parent.matches("main,article,body")) break;
+    const heading = parent.matches(headingSelector)
+      ? parent
+      : [...parent.children].find((child) => child.matches(headingSelector));
+    if (heading) {
+      if (heading.matches("legend")) return;
+      return heading.matches("h1,[role=heading][aria-level='1']")
+        ? "page"
+        : "section";
+    }
+  }
+}
 function groupOf(e: HTMLElement, kind: PageControl["kind"], context: string) {
   if (
     kind === "focus" &&
@@ -253,26 +276,29 @@ export class PageDiscovery {
         : e.matches(headingSelector)
           ? 2
           : 0;
-    elements.sort(
-      (a, b) =>
-        priority(a) - priority(b) ||
-        (priority(a) === 3
-          ? Number(
-              presented(b) &&
-                b.getBoundingClientRect().top >= 0 &&
-                b.getBoundingClientRect().bottom <= innerHeight,
-            ) -
-            Number(
-              presented(a) &&
-                a.getBoundingClientRect().top >= 0 &&
-                a.getBoundingClientRect().bottom <= innerHeight,
-            )
-          : 0),
-    );
+    // Compute geometry once per candidate, rather than repeating style/layout reads
+    // inside every sort comparison on a dense article.
+    const ranked = elements
+      .map((e) => {
+        const rank = priority(e);
+        const rect =
+          rank === 3 && presented(e) ? e.getBoundingClientRect() : undefined;
+        return {
+          element: e,
+          rank,
+          inViewport: Number(
+            !!rect && rect.top >= 0 && rect.bottom <= innerHeight,
+          ),
+        };
+      })
+      .sort(
+        (a, b) =>
+          a.rank - b.rank || (a.rank === 3 ? b.inViewport - a.inViewport : 0),
+      );
     let partial = false;
     const controls: PageControl[] = [];
     const base = new URL(location.href);
-    for (const e of elements) {
+    for (const { element: e } of ranked) {
       if (controls.length >= 600) {
         partial = true;
         break;
@@ -389,24 +415,8 @@ export class PageDiscovery {
                 ),
           )
         : undefined;
-      const riskText =
-        rawLabel +
-        " " +
-        description +
-        " " +
-        context +
-        " " +
-        (e.closest("form")?.getAttribute("action") || "") +
-        " " +
-        (e.getAttribute("href") || "");
-      const risk: PageControl["risk"] =
-        /\b(delete|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|confirm cancellation|submit|save changes|edit|log ?in|sign ?in)\b/i.test(
-          riskText,
-        ) ||
-        (e.matches("input[type=submit],button[type=submit]") &&
-          e.closest("form")?.getAttribute("method")?.toLowerCase() === "post")
-          ? "consequential"
-          : "ordinary";
+      const risk = interactionRisk(e, kind, rawLabel, description);
+      const scope = scopeOf(e);
       const control: PageControl = {
         id,
         role,
@@ -415,6 +425,7 @@ export class PageDiscovery {
         description,
         context,
         group: groupOf(e, kind, context),
+        scope,
         signature: hash(
           [
             role,
@@ -423,6 +434,9 @@ export class PageDiscovery {
             description,
             popup,
             context,
+            scope,
+            risk.risk,
+            risk.riskReason,
             link?.origin,
             link?.key,
             navigationKey,
@@ -456,7 +470,7 @@ export class PageDiscovery {
         revealIds: [],
         destination: link,
         navigationKey,
-        risk,
+        ...risk,
       };
       controls.push(control);
       this.bindings.set(id, {
@@ -470,6 +484,49 @@ export class PageDiscovery {
     while (active?.shadowRoot?.activeElement)
       active = active.shadowRoot.activeElement;
     const visiblePopups = popups.filter((p) => presented(p));
+    // Search landmarks sometimes use a fallback link beside a collapsed search field,
+    // without aria-controls. Treat only one ordinary link outside the form and one
+    // purpose-matched field in that local landmark as a reveal hypothesis. The coach
+    // must observe that exact field becoming visible before counting the step.
+    for (const binding of this.bindings.values()) {
+      const trigger = binding.control;
+      if (
+        trigger.kind !== "navigation" ||
+        trigger.risk !== "ordinary" ||
+        !trigger.visible ||
+        binding.element.closest("form")
+      )
+        continue;
+      const region = binding.element.closest('search,[role="search"]');
+      if (!region) continue;
+      const fields = [...this.bindings.values()].filter(
+        (b) =>
+          region.contains(b.element) &&
+          b.control.kind === "focus" &&
+          b.element.matches('input[type="search"],[role="searchbox"]'),
+      );
+      const links = [...this.bindings.values()].filter(
+        (b) =>
+          region.contains(b.element) &&
+          b.control.visible &&
+          b.control.kind === "navigation" &&
+          !b.element.closest("form"),
+      );
+      if (
+        fields.length !== 1 ||
+        links.length !== 1 ||
+        goalScore(trigger.label, fields[0].control) < 0.6
+      )
+        continue;
+      trigger.kind = "expand";
+      trigger.group = "Menus";
+      trigger.signature = hash(trigger.signature + "|field-reveal");
+      trigger.expanded = fields[0].control.visible;
+      trigger.destination = undefined;
+      trigger.navigationKey = undefined;
+      if (!fields[0].control.visible)
+        fields[0].control.revealIds = [trigger.id];
+    }
     for (const binding of this.bindings.values()) {
       const control = binding.control;
       if (!control.visible || control.kind !== "expand" || !control.popup)
@@ -548,6 +605,7 @@ export class PageDiscovery {
     );
     for (const binding of this.bindings.values()) {
       if (binding.control.visible) continue;
+      if (binding.control.revealIds.length) continue;
       const ranked = revealers
         .map((revealer) => {
           const ids = [

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { openNavigatorExtension } from "../support/navigator-extension";
+import { readFile } from "node:fs/promises";
+import { liveReportSchema } from "../../packages/live-diagnostics";
 function fixture(compact: boolean, suffix = "one") {
   return `<!doctype html><html lang="en"><head><style>body{font:16px sans-serif;margin:24px}label{display:inline-block;padding:10px}input[type=radio]{width:20px;height:20px}.spacer{height:1800px}h2{scroll-margin-top:30px}</style></head><body>
 <h1>A completely unseen library</h1><form role="search"><label for="field-${suffix}">Search library</label><input type="search" id="field-${suffix}"><button>Search</button></form>
@@ -22,6 +24,64 @@ async function prepare(info: any) {
   await app.start();
   return app;
 }
+
+test("live inspector explains goal candidates and exports private verification evidence without changing navigation", async ({}, info) => {
+  const app = await prepare(info);
+  try {
+    await app.page.locator("input[type=search]").fill("SENTINEL_QUERY");
+    await goal(app, "make text larger");
+    const before = await app.view();
+    await app.panel
+      .getByText("Local route tools", { exact: true })
+      .evaluate((e) => (e as HTMLElement).click());
+    await app.panel
+      .getByLabel("Show route debug inspector")
+      .evaluate((e) => (e as HTMLInputElement).click());
+    const inspector = app.panel.getByRole("region", {
+      name: "Route debug inspector",
+    });
+    await expect(inspector).toContainText("Live observation");
+    await expect(
+      inspector.getByRole("table", { name: "Live target candidates" }),
+    ).toContainText("selected");
+    expect((await app.view()).selectedControlId).toBe(before.selectedControlId);
+    if (info.project.name === "narrow")
+      await app.page.getByText("Appearance", { exact: true }).click();
+    await app.page.getByLabel("Large", { exact: true }).check();
+    await expect
+      .poll(async () => (await app.view()).goalPlan?.status)
+      .toBe("completed");
+    await expect(inspector).toContainText("checked-change");
+    const download = app.panel.waitForEvent("download");
+    await inspector
+      .getByRole("button", { name: "Export diagnostics" })
+      .evaluate((e) => (e as HTMLButtonElement).click());
+    const report = liveReportSchema.parse(
+      JSON.parse(await readFile((await (await download).path())!, "utf8")),
+    );
+    expect(
+      report.diagnostics!.events.some(
+        (e) => e.outcome === "verified" && e.evidence === "checked-change",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(report)).not.toMatch(
+      /SENTINEL|localhost|\/library|"goal":"|"label":"/,
+    );
+    const selected = (await app.view()).selectedControlId;
+    await app.panel
+      .getByLabel("Show route debug inspector")
+      .evaluate((e) => (e as HTMLInputElement).click());
+    expect((await app.view()).selectedControlId).toBe(selected);
+    await app.panel
+      .getByLabel("Show route debug inspector")
+      .evaluate((e) => (e as HTMLInputElement).click());
+    await inspector.screenshot({
+      path: `output/qa/live-inspector-${info.project.name}.png`,
+    });
+  } finally {
+    await app.close();
+  }
+});
 test("open shadow roots refresh and verify controls without reading field values", async ({}, info) => {
   const app = await prepare(info);
   try {
@@ -145,6 +205,72 @@ async function guide(app: Awaited<ReturnType<typeof prepare>>, label: string) {
   expect(reply.error).toBeUndefined();
 }
 
+test("edit entry points use page and section context, then stop at publishing or an undeclared edit effect", async ({}, info) => {
+  const app = await prepare(info);
+  try {
+    await app.context.route("http://localhost:5173/document-editor**", (r) =>
+      r.fulfill({
+        contentType: "text/html",
+        body: '<html><body><h1>Document editor</h1><form method="post" action="/edit"><input aria-label="Draft title"><button>Publish changes</button><button type="button">Edit</button></form></body></html>',
+      }),
+    );
+    await app.page.evaluate(() => {
+      const nav = document.createElement("nav");
+      nav.innerHTML = '<a href="/document-editor">Edit</a>';
+      document.body.prepend(nav);
+      const sections = document.createElement("main");
+      sections.innerHTML =
+        '<div><h2>Abstract</h2><span><a href="/document-editor?section=1">edit</a></span></div><div><h2>Background</h2><span><a href="/document-editor?section=2">edit</a></span></div>';
+      document.body.append(sections);
+    });
+    for (const text of ["Edit", "How do I edit this page?"]) {
+      expect((await goal(app, text)).status).toBe("guiding");
+      const view = await app.view();
+      expect(view.instruction).toContain("link to open its destination");
+      expect(view.instruction).not.toContain("menu");
+      expect(
+        view.page.controls.find((c: any) => c.id === view.selectedControlId),
+      ).toMatchObject({ label: "Edit", scope: "page", risk: "ordinary" });
+    }
+    const sectionPlan = await goal(app, "Edit section Abstract");
+    expect(sectionPlan.status).toBe("guiding");
+    const section = await app.view();
+    expect(
+      section.page.controls.find(
+        (c: any) => c.id === section.selectedControlId,
+      ),
+    ).toMatchObject({ label: "edit", context: "Abstract", scope: "section" });
+    await goal(app, "Edit");
+    await app.page.getByRole("link", { name: "Edit", exact: true }).click();
+    await expect(
+      app.page.getByRole("heading", { name: "Document editor" }),
+    ).toBeVisible();
+    await expect
+      .poll(async () => (await app.view()).goalPlan?.status, { timeout: 10000 })
+      .toBe("completed");
+    expect((await app.view()).verifiedSteps).toBe(1);
+    expect((await goal(app, "Draft title")).status).toBe("guiding");
+    expect((await goal(app, "Publish changes")).issue).toBe("consequential");
+    const plan = app.panel.getByRole("region", { name: "Goal plan" });
+    await expect(plan.getByRole("heading")).toHaveText("Review required");
+    await expect(plan).toContainText("Action boundary");
+    await expect(plan).not.toContainText("Uncertain match");
+    await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
+      0,
+    );
+    expect((await goal(app, "Edit")).issue).toBe("unknown-effect");
+    await expect(plan.getByRole("heading")).toHaveText(
+      "Control effect unclear",
+    );
+    await expect(plan).not.toContainText("performs a consequential action");
+    await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
+      0,
+    );
+  } finally {
+    await app.close();
+  }
+});
+
 test("language intent selects the primary popup, awaits a choice, then verifies the chosen destination", async ({}, info) => {
   const app = await prepare(info);
   try {
@@ -200,6 +326,16 @@ test("language intent selects the primary popup, awaits a choice, then verifies 
       .toBe("completed");
     expect((await app.view()).page.language).toBe("fr");
     expect((await app.view()).verifiedSteps).toBe(2);
+    const events = (await app.view()).liveDiagnostics.events;
+    expect(
+      events.some((e: any) => e.outcome === "verified" && e.kind === "expand"),
+    ).toBe(true);
+    expect(
+      events.some(
+        (e: any) =>
+          e.outcome === "verified" && e.evidence === "destination-arrival",
+      ),
+    ).toBe(true);
   } finally {
     await app.close();
   }

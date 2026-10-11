@@ -7,7 +7,7 @@ A local-first Chrome navigation coach. It discovers the live page, builds routes
 1. Run `npm install`, then `npm run build:extension`.
 2. Open `chrome://extensions`, enable Developer mode, and load unpacked `dist/extension`. After an update, Reload the extension and refresh the website tab.
 3. Open a website and click the Navigator toolbar icon. Choose **Navigate this website**, then **Start navigation**. Chrome may request access to this specific website.
-4. Describe a goal, such as **make text larger**, **switch to dark mode**, or **find references**, and choose **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
+4. Describe a goal, such as **make text larger**, **switch to dark mode**, **find references**, or **Edit**, and choose **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
 5. Follow the highlight yourself. Navigator rescans after changes and verifies each expected result. Pause suspends observation; Stop ends it.
 
 Wikipedia is the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. Moving to a different origin ends the session; start there explicitly.
@@ -34,4 +34,6 @@ Run `npm run check` for TypeScript, unit tests and builds; `npm run test:e2e` fo
 
 The scanner retains up to 600 controls per observation and reports partial scans on larger pages. It prioritizes interface controls, navigation and sections over dense body links. Discovery covers the top document and open shadow roots; cross-origin frames, closed shadow roots and canvas-only controls require further adapters. Unlabeled controls and uncertain goals need manual selection or a model interpretation. Semantic fallback currently targets English goal phrasing. Unknown workflows are learned progressively through user navigation; a scan does not establish every route on the entire site. Risk classification is heuristic and is not a security audit.
 
-See [architecture](docs/live-navigation.md), [privacy](docs/privacy.md), [security](docs/security.md), and [build evidence](docs/build-evidence.md). Remaining MVP acceptance work: https://github.com/Sammieblz/web-navigator/issues/1.
+Run `npm run test:acceptance` for the predeclared accuracy matrix and denominator report. After a complete passing evaluation, `npm run package:extension` packages and verifies those exact build bytes, with a SHA256 and provenance file in `output/releases`. Native Chrome handoff remains a separate checklist.
+
+See [architecture](docs/live-navigation.md), [diagnostics](docs/live-diagnostics.md), [lifecycle](docs/session-lifecycle.md), [guidance/accessibility](docs/passive-guidance.md), [accuracy benchmark](docs/accuracy-benchmark.md), [Chrome handoff](docs/chrome-handoff.md), [privacy](docs/privacy.md), [security](docs/security.md), and [build evidence](docs/build-evidence.md). Current Wikipedia POC tracker: https://github.com/Sammieblz/web-navigator/issues/1.

@@ -5,11 +5,28 @@ import type { SessionView } from "../../../packages/shared-types";
 import {
   LIVE_ROUTE_ID,
   pageSnapshotSchema,
+  type GoalPlan,
 } from "../../../packages/page-model";
 import { sanitizeText } from "../../../packages/privacy-redaction";
 import { LocalModel, modelAvailability } from "./local-model";
 import { memorySummary } from "../../../packages/site-memory";
+import { liveReport } from "../../../packages/live-diagnostics";
+import { LiveInspector } from "./live-inspector";
 import "./sidepanel.css";
+function unresolvedTitle(plan: GoalPlan) {
+  switch (plan.issue) {
+    case "consequential":
+      return "Review required";
+    case "unknown-effect":
+      return "Control effect unclear";
+    case "ambiguous":
+      return "Choose a matching control";
+    case "no-match":
+      return "No clear route found";
+    default:
+      return "More context needed";
+  }
+}
 function App() {
   const [view, setView] = useState<SessionView>();
   const [context, setContext] = useState<{
@@ -30,6 +47,9 @@ function App() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiProgress, setAiProgress] = useState<number>();
   const [storedMemory, setStoredMemory] = useState(memorySummary());
+  const goalField = useRef<HTMLInputElement>(null);
+  const sessionAction = useRef<HTMLButtonElement>(null);
+  const previousStatus = useRef<string | undefined>(undefined);
   useEffect(() => {
     let current = true;
     void chrome.runtime
@@ -112,7 +132,9 @@ function App() {
     context.sessionRoute.origins.includes(context.origin || "") &&
     (!selectedId || selectedId === view.routeId);
   const route =
-    active || paused || keepEndedRoute ? context?.sessionRoute : preview;
+    active || paused || keepEndedRoute
+      ? context?.sessionRoute || preview
+      : preview;
   const displayedView =
     view &&
     (!route ||
@@ -128,6 +150,38 @@ function App() {
   const otherTab =
     (active || paused) && context?.tabId !== context?.session?.tabId;
   const controlsMode = route?.id === LIVE_ROUTE_ID;
+  const statusLabel =
+    displayedView?.status === "running"
+      ? !controlsMode
+        ? "Guiding"
+        : displayedView.goalPlan?.status === "completed"
+          ? "Goal verified"
+          : displayedView.goalPlan?.status === "awaiting-choice"
+            ? "Choose an option"
+            : displayedView.goalPlan?.status === "unresolved"
+              ? unresolvedTitle(displayedView.goalPlan)
+              : displayedView.selectedControlId
+                ? "Guiding"
+                : "Ready to guide"
+      : displayedView?.status === "waiting"
+        ? "Waiting for the website"
+        : displayedView?.status === "boundary"
+          ? "Review required"
+          : displayedView?.status || "Ready when you are";
+  useEffect(() => {
+    const status = displayedView?.status,
+      previous = previousStatus.current;
+    if (otherTab || busy) return;
+    previousStatus.current = status;
+    if (status === previous) return;
+    if (
+      status === "running" &&
+      !["running", "waiting"].includes(previous || "")
+    )
+      (controlsMode ? goalField.current : sessionAction.current)?.focus();
+    else if (status === "paused" || status === "stopped")
+      sessionAction.current?.focus();
+  }, [displayedView?.status, otherTab, controlsMode, busy]);
   const memoryStats =
     active ||
     paused ||
@@ -226,18 +280,21 @@ function App() {
     }
   };
   const downloadReport = (category: string) => {
-    const report = {
-      category,
-      routeId: view?.routeId || route?.id,
-      routeVersion: view?.routeVersion || route?.version,
-      stateId: view?.stateId,
-      status: view?.status,
-      verifiedSteps: view?.verifiedSteps,
-      reportedAt: new Date().toISOString(),
-      ...(category === "diagnostics"
-        ? { diagnostics: view?.diagnostics, history: view?.history }
-        : {}),
-    };
+    const report =
+      controlsMode && view
+        ? liveReport(view, category)
+        : {
+            category,
+            routeId: view?.routeId || route?.id,
+            routeVersion: view?.routeVersion || route?.version,
+            stateId: view?.stateId,
+            status: view?.status,
+            verifiedSteps: view?.verifiedSteps,
+            reportedAt: new Date().toISOString(),
+            ...(category === "diagnostics"
+              ? { diagnostics: view?.diagnostics, history: view?.history }
+              : {}),
+          };
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
     );
@@ -359,19 +416,26 @@ function App() {
         className={
           "current " + (displayedView?.status === "boundary" ? "boundary" : "")
         }
-        aria-live="polite"
-        aria-atomic="true"
       >
-        <div className="eyebrow">
-          {displayedView
-            ? displayedView.status.replace("-", " ").toUpperCase()
-            : "READY WHEN YOU ARE"}
-        </div>
-        <p>
+        <div className="eyebrow">{statusLabel.toUpperCase()}</div>
+        <p
+          role="status"
+          aria-label="Navigation status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <span className="sr-only">{statusLabel}. </span>
           {displayedView?.instruction ||
             (route
               ? "Choose this task and Start when you are ready."
               : "Open a supported website to choose a task.")}
+          {displayedView && (
+            <span className="sr-only">
+              {" "}
+              {displayedView.verifiedSteps} verified{" "}
+              {controlsMode ? "control interactions" : "transitions"}.
+            </span>
+          )}
         </p>
         {displayedView && (
           <div className="evidence">
@@ -380,7 +444,9 @@ function App() {
               {controlsMode ? "control interactions" : "transitions"}
             </span>
             <span>
-              {Math.round(displayedView.confidence * 100)}% state evidence
+              {controlsMode
+                ? "Live page observation"
+                : "Page landmarks checked"}
             </span>
           </div>
         )}
@@ -394,17 +460,20 @@ function App() {
         {!active && !paused && (
           <button
             className="primary"
+            ref={sessionAction}
             disabled={
               busy || !route || !context?.routes.some((r) => r.id === route.id)
             }
             onClick={() => command("START")}
           >
-            {busy ? "Starting…" : "Start navigation"} <span>↗</span>
+            {busy ? "Starting…" : "Start navigation"}{" "}
+            <span aria-hidden="true">↗</span>
           </button>
         )}
         {active && (
           <button
             className="primary"
+            ref={sessionAction}
             disabled={busy}
             onClick={() => command("PAUSE")}
           >
@@ -414,6 +483,7 @@ function App() {
         {paused && (
           <button
             className="primary"
+            ref={sessionAction}
             disabled={busy || otherTab}
             onClick={() => command("RESUME")}
           >
@@ -493,6 +563,8 @@ function App() {
               What would you like to do?
               <input
                 aria-label="Navigation goal"
+                ref={goalField}
+                disabled={otherTab || view?.status === "waiting"}
                 value={goal}
                 maxLength={160}
                 onChange={(e) => setGoal(e.target.value)}
@@ -501,7 +573,9 @@ function App() {
             </label>
             <button
               className="primary"
-              disabled={busy || otherTab || !goal.trim()}
+              disabled={
+                busy || otherTab || view?.status === "waiting" || !goal.trim()
+              }
               type="submit"
             >
               Find a route
@@ -526,7 +600,7 @@ function App() {
                   : view.goalPlan.status === "awaiting-choice"
                     ? "Choose your next option"
                     : view.goalPlan.status === "unresolved"
-                      ? "More context needed"
+                      ? unresolvedTitle(view.goalPlan)
                       : "Your route"}
               </h2>
               <p>{view.goalPlan.reason}</p>
@@ -545,11 +619,15 @@ function App() {
                     ? "Verified site memory"
                     : "Live page semantics"}{" "}
                 ·{" "}
-                {view.goalPlan.confidence >= 0.85
-                  ? "Strong match"
-                  : view.goalPlan.confidence >= 0.6
-                    ? "Moderate match"
-                    : "Uncertain match"}
+                {view.goalPlan.issue === "consequential"
+                  ? "Action boundary"
+                  : view.goalPlan.issue === "unknown-effect"
+                    ? "Effect not declared"
+                    : view.goalPlan.confidence >= 0.85
+                      ? "Strong match"
+                      : view.goalPlan.confidence >= 0.6
+                        ? "Moderate match"
+                        : "Uncertain match"}
               </p>
             </section>
           )}
@@ -602,11 +680,20 @@ function App() {
                             ? "control-selected"
                             : ""
                         }
-                        disabled={busy || otherTab}
+                        disabled={
+                          busy || otherTab || view?.status === "waiting"
+                        }
                         onClick={() => guideControl(c.id)}
                       >
                         <span>
                           {c.label}
+                          {c.risk === "consequential" && (
+                            <small>
+                              {c.riskReason === "unknown-edit-effect"
+                                ? "Effect unclear · Review this control on the website"
+                                : "Review required · Navigator stops before this action"}
+                            </small>
+                          )}
                           {c.kind === "navigation" && c.destination && (
                             <small className="control-destination">
                               {c.destination.path}
@@ -717,6 +804,12 @@ function App() {
                   are retained.
                 </p>
               </>
+            )}
+            {view?.liveDiagnostics && (
+              <LiveInspector
+                view={view}
+                download={() => downloadReport("diagnostics")}
+              />
             )}
           </section>
         )}

@@ -65,6 +65,32 @@ test("change language highlights the live language selector, not the tools menu"
     );
     expect(choice.label).toBe("Français");
     expect(choice.kind).toBe("navigation");
+    const french = app.page
+      .getByRole("link", { name: "Français", exact: true })
+      .filter({ visible: true })
+      .first();
+    const destination = await french.getAttribute("href");
+    expect(new URL(destination!, app.page.url()).hostname).toBe(
+      "fr.wikipedia.org",
+    );
+    await french.click();
+    await app.page.waitForURL((url) => url.hostname === "fr.wikipedia.org", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect
+      .poll(() => app.page.evaluate(() => document.documentElement.lang))
+      .toBe("fr");
+    await expect
+      .poll(async () => (await app.view()).status, { timeout: 10000 })
+      .toBe("stopped");
+    expect((await app.view()).instruction).toContain("another website");
+    expect((await app.view()).verifiedSteps).toBe(1);
+    expect((await app.view()).goalPlan?.status).not.toBe("completed");
+    await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
+      0,
+    );
+    // The independently checked destination is not reported as a verified goal:
+    // this new origin needs an explicit toolbar invocation and fresh Start.
   } finally {
     await app.close();
   }

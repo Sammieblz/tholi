@@ -24,6 +24,7 @@ const page: PageSnapshot = {
       description: "Find the documentation",
       popup: "dialog",
       context: "Navigation",
+      scope: "page",
       group: "Navigation",
       kind: "action",
       visible: true,
@@ -66,6 +67,7 @@ it("uses structured local output constrained to discovered IDs and treats labels
   expect(JSON.parse(prompt.mock.calls[0][0]).controls[0]).toMatchObject({
     description: "Find the documentation",
     popup: "dialog",
+    scope: "page",
   });
   expect(
     prompt.mock.calls[0][1].responseConstraint.properties.controlIds.items.enum,

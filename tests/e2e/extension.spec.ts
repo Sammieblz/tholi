@@ -128,7 +128,7 @@ test("explicit activation, verified steps, retention branch and final hard stop"
   await next("Manage subscription", "Manage your plan");
   await next("Cancel subscription", "Before you go");
   await next("Continue cancellation", "Confirm cancellation");
-  await status("BOUNDARY");
+  await status("REVIEW REQUIRED");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await expect(panel.locator(".evidence")).toContainText(
     "5 verified transitions",
@@ -139,7 +139,7 @@ test("explicit activation, verified steps, retention branch and final hard stop"
   await expect(
     page.getByRole("heading", { name: "Subscription canceled", exact: true }),
   ).toBeVisible();
-  await status("BOUNDARY");
+  await status("REVIEW REQUIRED");
   await mkdir("output/qa", { recursive: true });
   await page.screenshot({ path: "output/qa/demo-success.png" });
   await panel.screenshot({ path: "output/qa/panel-boundary.png" });
@@ -218,7 +218,7 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
       exact: true,
     }),
   ).toBeVisible();
-  await status("WAITING");
+  await status("WAITING FOR THE WEBSITE");
   await expect(panel.locator(".evidence")).toContainText(
     "0 verified transitions",
   );
@@ -254,7 +254,7 @@ test("production localhost access is available without a toolbar grant", async (
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await page.goto("http://localhost:5173");
   await start();
-  await status("RUNNING");
+  await status("GUIDING");
   await expect(panel.locator(".error")).toHaveCount(0);
   await panel.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
@@ -407,11 +407,13 @@ test("debug inspector renders scoring and exports bounded diagnostics", async ()
   await expect(inspector.locator("table").first()).toContainText("home");
   await next("Account", "Account overview");
   await expect(inspector).toContainText("observed account · verified");
-  const downloadPromise = panel.waitForEvent("download");
   await page.bringToFront();
-  await inspector
-    .getByRole("button", { name: "Export diagnostics" })
-    .evaluate((e) => (e as HTMLButtonElement).click());
+  const exportButton = inspector.getByRole("button", {
+    name: "Export diagnostics",
+  });
+  await expect(exportButton).toBeEnabled();
+  const downloadPromise = panel.waitForEvent("download");
+  await exportButton.evaluate((e) => (e as HTMLButtonElement).click());
   const download = await downloadPromise;
   const report = JSON.parse(await readFile((await download.path())!, "utf8"));
   expect(report.category).toBe("diagnostics");
