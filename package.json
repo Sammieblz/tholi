@@ -12,7 +12,8 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build",
     "test:e2e": "playwright test",
-    "format": "prettier --write apps packages routes tests scripts docs *.ts *.json README.md"
+    "format": "prettier --write apps packages routes tests scripts docs *.ts *.json README.md",
+    "test:live:wikipedia": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

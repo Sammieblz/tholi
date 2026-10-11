@@ -1,55 +1,37 @@
 # Internet Navigator
 
-A local-first Chrome navigation coach. You click; Navigator observes semantic page state, guides the next step, verifies transitions, and stops before consequential actions.
+A local-first Chrome navigation coach. It discovers the live page, builds routes from semantic controls and observed transitions, and remembers site structure in the user's browser. You make every click.
 
-## Development
+## Run it
 
-Requires Node.js 20+ and Chrome 120+.
+1. Run `npm install`, then `npm run build:extension`.
+2. Open `chrome://extensions`, enable Developer mode, and load unpacked `dist/extension`. After an update, Reload the extension and refresh the website tab.
+3. Open a website and click the Navigator toolbar icon. Choose **Navigate this website**, then **Start navigation**. Chrome may request access to this specific website.
+4. Describe a goal, such as **make text larger**, **switch to dark mode**, or **find references**, and choose **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
+5. Follow the highlight yourself. Navigator rescans after changes and verifies each expected result. Pause suspends observation; Stop ends it.
 
-1. Run npm install.
-2. Run npm run dev:demo. Open http://127.0.0.1:5173.
-3. Run npm run build:extension.
-4. Open chrome://extensions, enable Developer mode, and Load unpacked: dist/extension.
-5. On the demo tab, click the Internet Navigator toolbar icon. Choose a task in the side panel, then Start navigation.
-6. Click the highlighted site controls. The cancellation task stops at final confirmation; the billing task completes when billing details are visible.
+Wikipedia is the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. Moving to a different origin ends the session; start there explicitly.
 
-Run npm run check for type checking, core/browser fixture tests and production builds. Run npx playwright install chromium once, then npm run test:e2e for the headless extension integration suite. The harness uses the production manifest unchanged. This development build has host access only to 127.0.0.1 and localhost; route execution is still restricted to port 5173 and begins only after Start. dist/demo is a static demo build; the bundled route currently allows only localhost/127.0.0.1:5173.
+**Local site memory and AI** shows stored page/layout/transition counts, provides Forget this website and Clear all site memory, and offers optional on-device AI. Chrome's Prompt API requires a compatible Chrome installation, hardware and model download. The navigator works with semantic matching when AI is unavailable. No remote model endpoint or API key is required.
 
-## Prototype scope
+For the controlled Northstar demo, run `npm run dev:demo` and open `http://127.0.0.1:5173`. Its two authored regression tasks remain available: cancellation confirmation (final hard stop) and read-only billing details.
 
-Version 0.3.0 supports two tasks on the controlled Northstar demo: reach cancellation confirmation and find billing details. The task chooser shows routes for the active website, previews their steps, and locks the chosen route/version for the session. Stop before switching tasks. Live websites, beta acceptance metrics, optional AI, remote route packs and desktop adapters are not implemented or verified. Do not present this as the complete MVP.
+## Architecture
 
-The navigation core contains no DOM/Chrome calls. The browser adapter supplies normalized UI state and semantic targets. Routes are declarative, validated and bundled. No backend, accounts, cookie permission, all-sites permission, model calls or automatic clicks. Development host access is restricted to 127.0.0.1 and localhost.
+- `packages/page-discovery`: generic rendered DOM/open-shadow-root discovery, semantic labels and relationships, ephemeral control IDs, fresh element bindings.
+- `packages/page-model`: validated observations, goal plans and evidence contracts.
+- `packages/goal-planner`: goal matching, menu reveal steps, ambiguity rejection and routes through observed site transitions.
+- `packages/site-memory`: extension-owned IndexedDB persistence, versioned observations, invalidation, retention and a replaceable storage interface.
+- `apps/extension/src/page-coach.ts`: passive guidance and verification; no clicking, filling or automatic scrolling.
+- `apps/extension/src/local-model.ts`: optional Chrome on-device model, structured control-ID output, cancellation and validation.
+- Existing route engine/registry, browser adapter and demo routes support controlled authored regression cases.
 
-Full document navigation/reload stops the session; restart explicitly on the new screen. SPA updates are observed within the started session. Login pauses observation; complete demo sign-in manually and Resume.
+Memory stores sanitized control metadata, page/layout fingerprints and inferred/observed transitions. It excludes form values, raw HTML, coordinates and document control IDs. URL queries are excluded from stored paths. Limits: 50 sites, 100 pages and 30 layout templates per site, 5,000 control records and 400 transitions per site, 90-day retention checked during reads/writes. Closed menus are distinct from removed controls. Partial scans never prove removal.
 
-## Demo scenarios
+## Verification and current limits
 
-Use Demo scenarios at the bottom left. Retention modal defaults on. Try:
+Run `npm run check` for TypeScript, unit tests and builds; `npm run test:e2e` for production-extension browser fixtures and demo regressions; and `npm run test:live:wikipedia` for live Wikipedia goals at wide/compact widths. Install Chromium once with `npx playwright install chromium`. Tests use the production manifest unchanged. Exact article URLs belong to the test fixtures only. QA artifacts are written under `output/qa`.
 
-- Normal path: Account → Billing → Manage subscription → Cancel subscription → Continue cancellation → final hard stop.
-- Wrong turn: open Profile during guidance; Navigator routes back to Account.
-- Alternate label: enable Alternate label before the billing screen.
-- Delayed render: next screen appears after 1.2 seconds; no blind step advancement.
-- Login checkpoint: enable before starting from Home. Complete sign-in manually, then Resume.
-- Ambiguous duplicate: enable at Billing; guidance stops instead of guessing.
-- Unknown screen: navigator stops; reset and Start to begin again.
+The scanner retains up to 600 controls per observation and reports partial scans on larger pages. It prioritizes interface controls, navigation and sections over dense body links. Discovery covers the top document and open shadow roots; cross-origin frames, closed shadow roots and canvas-only controls require further adapters. Unlabeled controls and uncertain goals need manual selection or a model interpretation. Semantic fallback currently targets English goal phrasing. Unknown workflows are learned progressively through user navigation; a scan does not establish every route on the entire site. Risk classification is heuristic and is not a security audit.
 
-Local route issue reports export a JSON file with category/route/version/state/status and no page field values. Under Local route tools, enable Show route debug inspector to inspect detected states, candidate scores and rejection reasons, expected/observed transitions and session history. Export diagnostics downloads a local JSON report containing fixed evidence labels and temporary control IDs, without page text, URLs or field values. Candidate output is capped at 50 controls and transition history at 30 entries.
-
-## Structure
-
-- apps/extension: MV3 service worker, isolated content script and React side panel.
-- apps/demo-saas: controlled subscription demo.
-- packages/route-schema, route-engine, shared-types: platform-neutral route/state contracts.
-- packages/browser-adapter, semantic-locator, state-localizer: semantic observations/scoring.
-- packages/safety-policy, privacy-redaction, overlay-ui: boundaries and passive guidance.
-- packages/route-registry: validated route lookup and pinned-session restoration.
-- routes/demo: authored cancellation and billing routes.
-- tests: safety and navigation fixtures.
-
-Build plan and remaining work: https://github.com/Sammieblz/web-navigator/issues/1.
-
-## Reload after updating
-
-Reload Internet Navigator at chrome://extensions, then refresh the Northstar demo tab to replace its content script. Reopen the extension panel and choose a task. Route authoring notes: [docs/route-registry.md](docs/route-registry.md).
+See [architecture](docs/live-navigation.md), [privacy](docs/privacy.md), [security](docs/security.md), and [build evidence](docs/build-evidence.md). Remaining MVP acceptance work: https://github.com/Sammieblz/web-navigator/issues/1.

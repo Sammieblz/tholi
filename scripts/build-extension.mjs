@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdir, copyFile, rm } from "node:fs/promises";
+import { mkdir, copyFile } from "node:fs/promises";
 const out = "dist/extension";
 await mkdir(out, { recursive: true });
 await build({

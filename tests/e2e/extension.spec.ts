@@ -24,11 +24,13 @@ test.beforeAll(async ({}, testInfo) => {
   expect(manifest.host_permissions).toEqual([
     "http://127.0.0.1/*",
     "http://localhost/*",
+    "https://en.wikipedia.org/*",
   ]);
   expect(manifest.permissions).not.toContain("tabs");
   context = await chromium.launchPersistentContext(join(directory, "profile"), {
     channel: "chromium",
     headless: true,
+    acceptDownloads: true,
     args: [
       "--disable-extensions-except=" + extension,
       "--load-extension=" + extension,
@@ -262,7 +264,7 @@ test("two origin-filtered tasks have independent previews and billing completion
   await reset();
   await page.bringToFront();
   const choice = panel.getByRole("combobox", { name: "Choose a task" });
-  await expect(choice.locator("option")).toHaveCount(2);
+  await expect(choice.locator("option")).toHaveCount(3);
   await choice.selectOption("demo.billing.overview");
   await expect(panel.locator(".route-card h2")).toHaveText(
     "Find billing details",
@@ -406,7 +408,10 @@ test("debug inspector renders scoring and exports bounded diagnostics", async ()
   await next("Account", "Account overview");
   await expect(inspector).toContainText("observed account · verified");
   const downloadPromise = panel.waitForEvent("download");
-  await inspector.getByRole("button", { name: "Export diagnostics" }).click();
+  await page.bringToFront();
+  await inspector
+    .getByRole("button", { name: "Export diagnostics" })
+    .evaluate((e) => (e as HTMLButtonElement).click());
   const download = await downloadPromise;
   const report = JSON.parse(await readFile((await download.path())!, "utf8"));
   expect(report.category).toBe("diagnostics");

@@ -31,3 +31,36 @@ describe("sensitive field exclusion", () => {
     expect(s).not.toContain("https://");
   });
 });
+
+import { BrowserAdapter } from "../packages/browser-adapter";
+import { vi } from "vitest";
+it("observes checkbox-button metadata without reading its value or sensitive variants", () => {
+  document.body.innerHTML =
+    '<input type="checkbox" role="button" id="menu" aria-label="Contents" value="SENTINEL_VALUE" style="opacity:0"><label for="menu" aria-hidden="true">Menu</label><input type="checkbox" role="button" id="otp-menu" aria-label="Sensitive" value="SENTINEL_SECRET"><label for="otp-menu">Secret</label>';
+  const rectangle = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 40,
+    bottom: 40,
+    width: 40,
+    height: 40,
+    toJSON: () => ({}),
+  };
+  const input = document.querySelector<HTMLInputElement>("#menu")!;
+  const label = document.querySelector("label")!;
+  const getter = vi.spyOn(input, "value", "get").mockImplementation(() => {
+    throw new Error("Field value was read");
+  });
+  vi.spyOn(input, "getBoundingClientRect").mockReturnValue(rectangle);
+  vi.spyOn(label, "getBoundingClientRect").mockReturnValue(rectangle);
+  const snapshot = new BrowserAdapter().snapshot();
+  expect(snapshot.landmarks).toHaveLength(1);
+  expect(snapshot.landmarks[0].name).toBe("Contents");
+  expect(JSON.stringify(snapshot)).not.toContain("SENTINEL");
+  expect(getter).not.toHaveBeenCalled();
+  input.hidden = true;
+  expect(new BrowserAdapter().snapshot().landmarks).toHaveLength(0);
+  vi.restoreAllMocks();
+});

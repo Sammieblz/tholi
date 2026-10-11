@@ -4,10 +4,25 @@ import {
   restoreSession,
   validPinnedView,
   sessionLocked,
+  sessionSchema,
   type PinnedSession,
 } from "../../../packages/route-registry/session";
-import { allowedOrigin } from "../../../packages/safety-policy";
+import { routeSupportsUrl } from "../../../packages/safety-policy";
+import {
+  LIVE_ROUTE_ID,
+  LIVE_VERSION,
+  supportsLiveUrl,
+  livePreview,
+  transitionEvidenceSchema,
+  hash,
+} from "../../../packages/page-model";
+import {
+  IndexedDBSiteMemory,
+  memorySummary,
+} from "../../../packages/site-memory";
 let session: PinnedSession | undefined;
+const memory = new IndexedDBSiteMemory();
+let lastObservation = "";
 const ready = chrome.storage.session.get("navigatorSession").then((data) => {
   session = restoreSession(data.navigatorSession);
 });
@@ -15,6 +30,7 @@ const save = async () => {
   if (session) await chrome.storage.session.set({ navigatorSession: session });
   else await chrome.storage.session.remove("navigatorSession");
 };
+const live = () => session?.routeId === LIVE_ROUTE_ID;
 const activeTab = async () =>
   (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
 const originOf = (url?: string) => {
@@ -24,10 +40,151 @@ const originOf = (url?: string) => {
     return undefined;
   }
 };
+function inScope(url: string) {
+  return (
+    !!session &&
+    (live()
+      ? supportsLiveUrl(url) && originOf(url) === session.origin
+      : routeSupportsUrl(
+          routeRegistry.get(session.routeId, session.routeVersion)!,
+          url,
+        ))
+  );
+}
+async function remember(observed?: unknown) {
+  if (!session?.view?.page || !live()) return;
+  const page = session.view.page,
+    evidence = transitionEvidenceSchema.safeParse(observed);
+  const key = session.documentId + ":" + page.stateKey;
+  if (lastObservation === key && !evidence.success) return;
+  try {
+    const site = await memory.observe(
+      page,
+      evidence.success ? evidence.data : undefined,
+    );
+    session.view.memory = memorySummary(site);
+    session.view.memoryError = undefined;
+    lastObservation = key;
+    await chrome.tabs
+      .sendMessage(session.tabId, {
+        type: "UPDATE_MEMORY",
+        sessionId: session.sessionId,
+        memory: site,
+      })
+      .catch(() => {});
+  } catch {
+    session.view.memoryError =
+      "Site memory could not be saved. Live guidance remains available.";
+  }
+}
+async function acceptView(raw: unknown) {
+  if (!session) throw new Error("No active session.");
+  const view = validPinnedView(session, raw);
+  if (!view) throw new Error("The website did not return a valid session.");
+  view.memory = session.view?.memory;
+  view.memoryError = session.view?.memoryError;
+  session.view = view;
+}
+async function attachSession() {
+  if (!session) throw new Error("No pinned session.");
+  const previousDocument = session.documentId;
+  const injected = await chrome.scripting.executeScript({
+    target: { tabId: session.tabId },
+    files: ["content.js"],
+  });
+  session.documentId = injected[0]?.documentId;
+  session.navigationPending = false;
+  if (live() && previousDocument && previousDocument === session.documentId) {
+    await chrome.tabs.sendMessage(session.tabId, {
+      type: "CONTROL_SESSION",
+      sessionId: session.sessionId,
+      action: "RESUME",
+    });
+    const reply = await chrome.tabs.sendMessage(session.tabId, {
+      type: "GET_PAGE",
+      sessionId: session.sessionId,
+    });
+    await acceptView(reply.view);
+    session.pendingNavigation = undefined;
+    await remember();
+    await save();
+    return session;
+  }
+  const navigation = session.pendingNavigation;
+  const tab = navigation && (await chrome.tabs.get(session.tabId)),
+    url = tab?.url && new URL(tab.url);
+  const verified = !!(
+    navigation &&
+    url &&
+    navigation.origin === session.origin &&
+    hash(url.origin + url.pathname + url.search) === navigation.navigationKey
+  );
+  if (verified && session.view) {
+    session.view.verifiedSteps++;
+    if (
+      session.view.goalPlan?.status === "guiding" &&
+      session.view.goalPlan.steps.length <= 1 &&
+      session.view.goalPlan.source !== "memory"
+    )
+      session.view.goalPlan = {
+        ...session.view.goalPlan,
+        status: "completed",
+        steps: [],
+        reason: "The linked destination loaded and was observed.",
+      };
+  }
+  session.pendingNavigation = undefined;
+  const reply = await chrome.tabs.sendMessage(session.tabId, {
+    type: "BEGIN_SESSION",
+    sessionId: session.sessionId,
+    routeId: session.routeId,
+    routeVersion: session.routeVersion,
+    verifiedSteps: session.view?.verifiedSteps || 0,
+    ...(live()
+      ? {
+          memory: await memory.get(session.origin!).catch(() => undefined),
+          goalPlan: session.view?.goalPlan,
+        }
+      : {}),
+  });
+  await acceptView(reply?.view);
+  if (verified && navigation && session.view?.page)
+    await remember({
+      from: navigation.from,
+      to: session.view.page.stateKey,
+      signature: navigation.signature,
+      label: navigation.label,
+    });
+  else await remember();
+  await save();
+  return session;
+}
+async function stopSession(reason = "Navigation stopped.") {
+  if (!session) return;
+  try {
+    const reply = await chrome.tabs.sendMessage(session.tabId, {
+      type: "CONTROL_SESSION",
+      sessionId: session.sessionId,
+      action: "STOP",
+    });
+    if (reply?.view) await acceptView(reply.view);
+  } catch {}
+  if (session.view)
+    session.view = {
+      ...session.view,
+      status: "stopped",
+      controls: session.view.controls ? [] : undefined,
+      selectedControlId: undefined,
+      page: undefined,
+      instruction: reason,
+    };
+  session.navigationPending = false;
+  session.pendingNavigation = undefined;
+  await save();
+}
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch(() => {});
-// Serialize mutations. Content responses are synchronous; publications never await the worker.
 let queue: Promise<unknown> = ready;
 function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   const next = queue.then(operation);
@@ -38,19 +195,45 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
   enqueue(async () => {
     if (sender.id !== chrome.runtime.id) return { error: "Invalid sender." };
     if (raw?.type === "SESSION_UPDATE") {
-      const route =
-        session && routeRegistry.get(session.routeId, session.routeVersion);
-      const view = session && validPinnedView(session, raw.view);
       if (
         !session ||
-        !route ||
-        !view ||
         raw.sessionId !== session.sessionId ||
         sender.tab?.id !== session.tabId ||
-        !allowedOrigin(route, originOf(sender.url) || "")
+        sender.documentId !== session.documentId ||
+        !inScope(sender.url || "")
       )
         return { error: "Stale or invalid session update." };
-      session.view = view;
+      if (
+        session.view?.status === "stopped" ||
+        (session.view?.status === "paused" && raw.view?.status === "running")
+      )
+        return { error: "Inactive session update." };
+      const incoming = validPinnedView(session, raw.view);
+      if (!incoming) return { error: "Invalid page observation." };
+      if (raw.navigation) {
+        const nav = sessionSchema.shape.pendingNavigation.safeParse(
+            raw.navigation,
+          ),
+          selectedId = incoming.selectedControlId,
+          control = incoming.controls?.find((c) => c.id === selectedId);
+        if (
+          nav.success &&
+          control?.kind === "navigation" &&
+          nav.data?.signature === control.signature &&
+          nav.data.destinationKey === control.destination?.key
+        )
+          session.pendingNavigation = nav.data;
+      }
+      // A click publication may arrive after Chrome's loading event. Preserve its intent
+      // without restoring the previous document's running state or controls.
+      if (session.navigationPending) {
+        await save();
+        return { ok: true };
+      }
+      await acceptView(incoming);
+      if (!incoming.selectedControlId && incoming.stateId === "verified")
+        session.pendingNavigation = undefined;
+      await remember(raw.observed);
       await save();
       return { ok: true };
     }
@@ -62,87 +245,95 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     if (command.type === "GET_SESSION") return session || {};
     if (command.type === "GET_CONTEXT") {
       const tab = await activeTab(),
-        origin = originOf(tab?.url);
-      const routes = origin
-        ? routeRegistry.forOrigin(origin).map(previewRoute)
+        origin = originOf(tab?.url),
+        available = supportsLiveUrl(tab?.url || "");
+      const routes = available
+        ? [
+            ...routeRegistry.forUrl(tab.url!).map(previewRoute),
+            livePreview(origin!),
+          ]
         : [];
       return {
         tabId: tab?.id,
-        origin: routes.length ? origin : undefined,
+        origin: available ? origin : undefined,
         routes,
-        reason: routes.length
+        reason: available
           ? undefined
-          : "No supported tasks on this tab. Open a supported website to choose a task.",
+          : "Open an HTTP or HTTPS website and click the extension icon to grant access.",
         session: session || null,
         sessionRoute: session
-          ? routeRegistry.get(session.routeId, session.routeVersion) &&
-            previewRoute(
-              routeRegistry.get(session.routeId, session.routeVersion)!,
-            )
+          ? live()
+            ? livePreview(session.origin!)
+            : previewRoute(
+                routeRegistry.get(session.routeId, session.routeVersion)!,
+              )
           : undefined,
       };
     }
+    if (
+      command.type === "GET_MEMORY" ||
+      command.type === "FORGET_SITE" ||
+      command.type === "CLEAR_MEMORY"
+    ) {
+      const tab = await activeTab(),
+        origin = originOf(tab?.url) || session?.origin;
+      if (command.type !== "GET_MEMORY") {
+        if (
+          live() &&
+          (command.type === "CLEAR_MEMORY" || origin === session?.origin)
+        )
+          await stopSession(
+            "Site memory cleared. Start navigation to learn this page again.",
+          );
+        command.type === "CLEAR_MEMORY"
+          ? await memory.clear()
+          : origin && (await memory.forget(origin));
+        lastObservation = "";
+        if (session?.view && live()) {
+          session.view.memory = memorySummary();
+          session.view.goalPlan = undefined;
+          await save();
+        }
+      }
+      return {
+        origin,
+        memory: origin ? await memory.get(origin) : undefined,
+        view: session?.view,
+      };
+    }
     if (command.type === "START") {
-      const route = routeRegistry.get(command.routeId, command.routeVersion);
-      if (!route)
+      const dynamic =
+          command.routeId === LIVE_ROUTE_ID &&
+          command.routeVersion === LIVE_VERSION,
+        route = routeRegistry.get(command.routeId, command.routeVersion);
+      if (!dynamic && !route)
         return {
           error: "This route version is unavailable. Choose a task again.",
         };
       const tab = await activeTab();
-      if (tab?.id === undefined)
+      if (tab?.id === undefined || !supportsLiveUrl(tab.url || ""))
         return {
           error:
-            "No active website tab was found. Select the website tab and try again.",
+            "Select a website tab and click the extension icon to grant access.",
         };
-      if (!tab.url)
-        return {
-          error:
-            "Chrome has not granted access to this tab. Reload the extension and reopen it on the supported website.",
-        };
-      if (!allowedOrigin(route, originOf(tab.url) || ""))
-        return {
-          error:
-            "The selected task is not supported on this tab. Select the website tab and choose a task again.",
-        };
+      if (!dynamic && !routeSupportsUrl(route!, tab.url!))
+        return { error: "The selected task is unavailable on this website." };
       if (sessionLocked(session))
         return {
           error: "Stop the current navigation before starting another task.",
         };
-      if (session) {
-        try {
-          await chrome.tabs.sendMessage(session.tabId, {
-            type: "CONTROL_SESSION",
-            sessionId: session.sessionId,
-            action: "STOP",
-          });
-        } catch {}
-      }
+      await stopSession();
       session = {
         sessionId: crypto.randomUUID(),
         tabId: tab.id,
-        routeId: route.id,
-        routeVersion: route.version,
+        routeId: command.routeId,
+        routeVersion: command.routeVersion,
+        origin: originOf(tab.url),
       };
+      lastObservation = "";
       await save();
       try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ["content.js"],
-        });
-        const reply = await chrome.tabs.sendMessage(tab.id, {
-          type: "BEGIN_SESSION",
-          sessionId: session.sessionId,
-          routeId: route.id,
-          routeVersion: route.version,
-        });
-        const view = validPinnedView(session, reply?.view);
-        if (!view)
-          throw new Error(
-            reply?.error || "The website did not return a valid route session.",
-          );
-        session.view = view;
-        await save();
-        return session;
+        return await attachSession();
       } catch (error) {
         session = undefined;
         await save();
@@ -150,7 +341,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
           error:
             error instanceof Error
               ? error.message
-              : "Navigation could not start.",
+              : "Navigation could not start. Click the extension icon on this website first.",
         };
       }
     }
@@ -158,40 +349,57 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       return command.type === "STOP"
         ? {}
         : { error: "Start navigation first." };
+    if (command.type === "STOP") {
+      await stopSession();
+      return session;
+    }
     const tab = await activeTab();
-    if (command.type === "RESUME" && tab?.id !== session.tabId)
+    if (command.type !== "PAUSE" && tab?.id !== session.tabId)
+      return { error: "Return to the tab where this task started." };
+    if (command.type === "RESUME" && session.navigationPending && live()) {
+      if (!inScope(tab.url || ""))
+        return {
+          error:
+            "This page is outside the session's website. Start a new session here.",
+        };
+      return await attachSession();
+    }
+    if (
+      ["GUIDE_CONTROL", "GET_PAGE", "SET_GOAL"].includes(command.type) &&
+      (!live() ||
+        session.navigationPending ||
+        session.view?.status !== "running")
+    )
       return {
-        error: "Return to the tab where this task started before resuming.",
+        error: "Start or resume live navigation on the current page first.",
       };
+    const outgoing =
+      command.type === "PAUSE" || command.type === "RESUME"
+        ? {
+            type: "CONTROL_SESSION",
+            action: command.type,
+            sessionId: session.sessionId,
+          }
+        : { ...command, sessionId: session.sessionId };
     try {
-      const reply = await chrome.tabs.sendMessage(session.tabId, {
-        type: "CONTROL_SESSION",
-        sessionId: session.sessionId,
-        action: command.type,
-      });
-      const view = validPinnedView(session, reply?.view);
-      if (!view) throw new Error("Invalid session response.");
-      session.view = view;
+      const reply = await chrome.tabs.sendMessage(session.tabId, outgoing);
+      if (reply?.error) return reply;
+      if (command.type === "GET_PAGE")
+        return {
+          page: reply.page,
+          memory: await memory.get(session.origin!).catch(() => undefined),
+          sessionId: session.sessionId,
+          documentId: session.documentId,
+        };
+      await acceptView(reply?.view);
+      await remember();
       await save();
       return session;
     } catch {
-      if (session.view) {
-        session.view = {
-          ...session.view,
-          status: "stopped",
-          instruction: "Page reloaded or unavailable. Start navigation again.",
-        };
-        await save();
-      } else {
-        session = undefined;
-        await save();
-      }
-      return command.type === "STOP"
-        ? session || {}
-        : {
-            error:
-              "Page unavailable. Select the supported tab and start again.",
-          };
+      await stopSession(
+        "Page unavailable. Click the extension icon on the website and start again.",
+      );
+      return { error: "The website is unavailable. Start navigation again." };
     }
   })
     .then(respond)
@@ -211,16 +419,72 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
   });
 });
-chrome.tabs.onUpdated.addListener((tabId, change) => {
-  if (change.status === "loading")
-    void enqueue(async () => {
-      if (session?.tabId === tabId && session.view && sessionLocked(session)) {
-        session.view = {
-          ...session.view,
-          status: "stopped",
-          instruction: "Page navigation interrupted the session. Start again.",
-        };
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.status !== "loading" && change.status !== "complete") return;
+  void enqueue(async () => {
+    if (session?.tabId !== tabId || !session?.view || !sessionLocked(session))
+      return;
+    if (!live()) {
+      if (change.status === "loading") {
+        session.navigationPending = true;
         await save();
+        return;
       }
-    });
+      if (!session.navigationPending) return;
+      try {
+        const documents = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => location.origin,
+        });
+        if (
+          documents[0]?.documentId !== session.documentId ||
+          !inScope(tab.url || "")
+        ) {
+          await stopSession(
+            "Page navigation interrupted the session. Start again.",
+          );
+          return;
+        }
+        session.navigationPending = false;
+        const reply = await chrome.tabs.sendMessage(tabId, {
+          type: "CONTROL_SESSION",
+          sessionId: session.sessionId,
+          action: "RESUME",
+        });
+        await acceptView(reply.view);
+        await save();
+      } catch {
+        await stopSession("Page unavailable. Start navigation again.");
+      }
+      return;
+    }
+    if (change.status === "loading") {
+      session.navigationPending = true;
+      session.view = {
+        ...session.view,
+        status: session.view.status === "paused" ? "paused" : "waiting",
+        controls: [],
+        selectedControlId: undefined,
+        page: undefined,
+        instruction: "Loading the next page…",
+      };
+      await save();
+      return;
+    }
+    if (!session.navigationPending) return;
+    if (!inScope(tab.url || "")) {
+      await stopSession(
+        "You moved to another website. Click the extension icon there and start a new session.",
+      );
+      return;
+    }
+    if (session.view.status === "paused") return;
+    try {
+      await attachSession();
+    } catch {
+      await stopSession(
+        "The new page could not be observed. Click the extension icon and start again.",
+      );
+    }
+  });
 });

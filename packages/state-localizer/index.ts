@@ -1,5 +1,6 @@
 import type { Route } from "../route-schema";
 import type { UIState, Localization } from "../shared-types";
+import { statePathMatches } from "../safety-policy";
 export const normalize = (s: string) =>
   s
     .toLowerCase()
@@ -21,16 +22,33 @@ export function localize(
           (l) =>
             l.visible &&
             l.role === p.role &&
-            p.names.some((n) => normalize(n) === normalize(l.name)),
+            (p.anyName ||
+              p.names.some((n) => normalize(n) === normalize(l.name))) &&
+            (!p.selector || l.selectors?.includes(p.selector)) &&
+            (p.inViewport === undefined || l.inViewport === p.inViewport),
         ),
       );
       if (state.landmarks.some((p, i) => p.required && !matched[i])) {
         rejected = true;
         reasons.push("required-landmark-missing");
       }
-      const urlMatches =
-        !state.urlPatterns.length ||
-        state.urlPatterns.some((p) => ui.pathname === p);
+      if (
+        state.absentLandmarks.some((p) =>
+          ui.landmarks.some(
+            (l) =>
+              l.visible &&
+              l.role === p.role &&
+              (p.anyName ||
+                p.names.some((n) => normalize(n) === normalize(l.name))) &&
+              (!p.selector || l.selectors?.includes(p.selector)) &&
+              (p.inViewport === undefined || l.inViewport === p.inViewport),
+          ),
+        )
+      ) {
+        rejected = true;
+        reasons.push("forbidden-landmark-present");
+      }
+      const urlMatches = statePathMatches(state, ui.pathname);
       if (!urlMatches) {
         rejected = true;
         reasons.push("path-mismatch");

@@ -1,7 +1,7 @@
 import { routeSchema, type Route } from "../route-schema";
 import { demoRoute } from "../../routes/demo/cancellation";
 import { billingRoute } from "../../routes/demo/billing";
-import { allowedOrigin } from "../safety-policy";
+import { allowedOrigin, routeSupportsUrl } from "../safety-policy";
 export function createRegistry(packs: unknown[]) {
   const routes = packs.map((pack) => routeSchema.parse(pack));
   if (new Set(routes.map((r) => r.id)).size !== routes.length)
@@ -13,6 +13,15 @@ export function createRegistry(packs: unknown[]) {
         (r) => r.id === id && (!version || r.version === version),
       );
       return route ? routeSchema.parse(route) : undefined;
+    },
+    forUrl(url: string): Route[] {
+      try {
+        return routes
+          .filter((r) => routeSupportsUrl(r, url))
+          .map((r) => routeSchema.parse(r));
+      } catch {
+        return [];
+      }
     },
     forOrigin(origin: string): Route[] {
       return routes
@@ -28,6 +37,7 @@ export type RoutePreview = Pick<
   | "taskId"
   | "title"
   | "siteName"
+  | "origins"
   | "description"
   | "safetyNote"
   | "version"
@@ -41,6 +51,7 @@ export function previewRoute(route: Route): RoutePreview {
     taskId,
     title,
     siteName,
+    origins,
     description,
     safetyNote,
     version,
@@ -53,6 +64,7 @@ export function previewRoute(route: Route): RoutePreview {
     taskId,
     title,
     siteName,
+    origins,
     description,
     safetyNote,
     version,

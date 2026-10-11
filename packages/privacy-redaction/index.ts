@@ -35,12 +35,11 @@ export function safeName(element: Element): string {
     element.closest('[contenteditable], [data-sensitive="true"]')
   )
     return "";
-  const aria = element.getAttribute("aria-label");
-  if (aria) return sanitizeText(aria);
+  const root = element.getRootNode() as Document | ShadowRoot;
   const refs = element
     .getAttribute("aria-labelledby")
     ?.split(/\s+/)
-    .map((id) => element.ownerDocument.getElementById(id))
+    .map((id) => root.getElementById(id))
     .filter(
       (e): e is HTMLElement =>
         !!e &&
@@ -48,6 +47,8 @@ export function safeName(element: Element): string {
         !e.matches("input,textarea,[contenteditable]"),
     );
   if (refs?.length) return sanitizeText(refs.map((e) => safeText(e)).join(" "));
+  const aria = element.getAttribute("aria-label");
+  if (aria) return sanitizeText(aria);
   return sanitizeText(safeText(element));
 }
 function safeText(element: Element): string {
@@ -58,7 +59,7 @@ function safeText(element: Element): string {
       node instanceof Element &&
       !isSensitiveElement(node) &&
       !node.matches(
-        'input,textarea,script,style,[contenteditable],[hidden],[aria-hidden="true"]',
+        'input,select,option,textarea,script,style,[contenteditable],[role="textbox"],[hidden],[aria-hidden="true"]',
       )
     )
       chunks.push(safeText(node));

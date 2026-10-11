@@ -1,0 +1,268 @@
+import {
+  type PageSnapshot,
+  type SiteMemory,
+  type ObservedTransition,
+  type MemoryTransition,
+  hash,
+} from "../page-model";
+const MAX_AGE = 90 * 86400000;
+export function mergeObservation(
+  previous: SiteMemory | undefined,
+  page: PageSnapshot,
+  observed?: ObservedTransition,
+  now = Date.now(),
+): SiteMemory {
+  const site: SiteMemory = previous
+    ? structuredClone(previous)
+    : {
+        schemaVersion: 1,
+        origin: page.origin,
+        version: 0,
+        lastSeen: now,
+        pages: [],
+        templates: [],
+        transitions: [],
+      };
+  const old = site.pages.find((p) => p.key === page.pageKey);
+  const changed = !old || old.fingerprint !== page.fingerprint;
+  const currentSignatures = new Set(page.controls.map((c) => c.signature));
+  const controls = page.controls.map(
+    ({ id, revealIds, inViewport, navigationKey, ...c }) => ({
+      ...c,
+      lastSeen: now,
+      active: true,
+    }),
+  );
+  // A partial scan cannot prove that a control disappeared. Hidden controls are included in complete scans.
+  for (const control of old?.controls || [])
+    if (!currentSignatures.has(control.signature))
+      controls.push({
+        ...control,
+        active: page.partial ? control.active : false,
+      });
+  site.pages = site.pages.filter(
+    (p) => p.key !== page.pageKey && now - p.lastSeen < MAX_AGE,
+  );
+  site.pages.push({
+    key: page.pageKey,
+    path: page.path,
+    stateKey: page.stateKey,
+    templateKey: page.templateKey,
+    fingerprint: page.fingerprint,
+    version: (old?.version || 0) + Number(changed),
+    lastSeen: now,
+    controls: controls.slice(0, 800),
+  });
+  site.pages = site.pages.sort((a, b) => b.lastSeen - a.lastSeen).slice(0, 100);
+  let controlBudget = 5000;
+  for (const saved of site.pages) {
+    saved.controls = saved.controls.slice(0, controlBudget);
+    controlBudget -= saved.controls.length;
+  }
+  const template = site.templates.find((t) => t.key === page.templateKey);
+  const structure = hash(
+    page.controls
+      .filter((c) => c.kind !== "section" && c.group !== "Page links")
+      .map((c) => c.signature)
+      .sort()
+      .join("|"),
+  );
+  if (template) {
+    if (template.fingerprint !== structure) template.version++;
+    template.fingerprint = structure;
+    template.lastSeen = now;
+  } else
+    site.templates.push({
+      key: page.templateKey,
+      fingerprint: structure,
+      version: 1,
+      lastSeen: now,
+    });
+  site.templates = site.templates
+    .filter((t) => now - t.lastSeen < MAX_AGE)
+    .sort((a, b) => b.lastSeen - a.lastSeen)
+    .slice(0, 30);
+  if (!page.partial)
+    for (const edge of site.transitions)
+      if (
+        edge.from.startsWith(page.pageKey + ":") &&
+        !currentSignatures.has(edge.signature)
+      )
+        edge.active = false;
+  const upsert = (edge: MemoryTransition) => {
+    const existing = site.transitions.find(
+      (t) =>
+        t.from === edge.from &&
+        t.to === edge.to &&
+        t.signature === edge.signature,
+    );
+    if (existing) {
+      if (edge.evidence === "observed" || existing.evidence !== "observed")
+        Object.assign(existing, edge);
+    } else site.transitions.push(edge);
+  };
+  for (const c of page.controls)
+    if (
+      c.destination &&
+      c.kind === "navigation" &&
+      c.destination.origin === page.origin
+    )
+      upsert({
+        from: page.stateKey,
+        to: c.destination.key,
+        signature: c.signature,
+        label: c.label,
+        evidence: "inferred",
+        lastVerified: now,
+        active: true,
+      });
+  if (observed && observed.from !== observed.to)
+    upsert({
+      ...observed,
+      evidence: "observed",
+      lastVerified: now,
+      active: true,
+    });
+  site.transitions = site.transitions
+    .filter((t) => now - t.lastVerified < MAX_AGE)
+    .sort(
+      (a, b) =>
+        Number(b.evidence === "observed") - Number(a.evidence === "observed") ||
+        b.lastVerified - a.lastVerified,
+    )
+    .slice(0, 400);
+  site.version += Number(changed || !!observed);
+  site.lastSeen = now;
+  return site;
+}
+export function memorySummary(site?: SiteMemory) {
+  return {
+    pages: site?.pages.length || 0,
+    templates: site?.templates.length || 0,
+    observedTransitions:
+      site?.transitions.filter((t) => t.active && t.evidence === "observed")
+        .length || 0,
+    version: site?.version || 0,
+  };
+}
+export interface SiteMemoryStore {
+  get(origin: string): Promise<SiteMemory | undefined>;
+  observe(
+    page: PageSnapshot,
+    transition?: ObservedTransition,
+  ): Promise<SiteMemory>;
+  forget(origin: string): Promise<void>;
+  clear(): Promise<void>;
+}
+// This database belongs to the extension origin, never to a website content script.
+export class IndexedDBSiteMemory implements SiteMemoryStore {
+  private database?: Promise<IDBDatabase>;
+  private open() {
+    return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("navigator-site-memory", 1);
+      request.onupgradeneeded = () =>
+        request.result.createObjectStore("sites", { keyPath: "origin" });
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onversionchange = () => {
+          db.close();
+          this.database = undefined;
+        };
+        resolve(db);
+      };
+      request.onerror = () => {
+        this.database = undefined;
+        reject(request.error);
+      };
+      request.onblocked = () => {
+        this.database = undefined;
+        reject(
+          new Error(
+            "Site memory upgrade is blocked by another extension page.",
+          ),
+        );
+      };
+    }));
+  }
+  async get(origin: string): Promise<SiteMemory | undefined> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("sites", "readwrite"),
+        store = transaction.objectStore("sites"),
+        request = store.get(origin);
+      let result: SiteMemory | undefined;
+      request.onsuccess = () => {
+        const site = request.result as SiteMemory | undefined,
+          now = Date.now();
+        if (!site) return;
+        if (site.schemaVersion !== 1 || now - site.lastSeen > MAX_AGE) {
+          store.delete(origin);
+          return;
+        }
+        const serialized = JSON.stringify(site);
+        site.pages = site.pages
+          .filter((p) => now - p.lastSeen < MAX_AGE)
+          .map((p) => ({
+            ...p,
+            controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
+          }));
+        site.templates = site.templates.filter(
+          (t) => now - t.lastSeen < MAX_AGE,
+        );
+        site.transitions = site.transitions.filter(
+          (t) => now - t.lastVerified < MAX_AGE,
+        );
+        if (serialized !== JSON.stringify(site)) store.put(site);
+        result = site;
+      };
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+  async observe(page: PageSnapshot, transition?: ObservedTransition) {
+    const db = await this.open();
+    return new Promise<SiteMemory>((resolve, reject) => {
+      const transaction = db.transaction("sites", "readwrite"),
+        store = transaction.objectStore("sites");
+      let result: SiteMemory;
+      const request = store.get(page.origin);
+      request.onsuccess = () => {
+        result = mergeObservation(request.result, page, transition);
+        store.put(result);
+      };
+      const all = store.getAll();
+      all.onsuccess = () => {
+        const sites = (all.result as SiteMemory[])
+          .filter((s) => s.origin !== page.origin)
+          .sort((a, b) => b.lastSeen - a.lastSeen);
+        for (const site of sites.slice(49)) store.delete(site.origin);
+        for (const site of sites)
+          if (Date.now() - site.lastSeen > MAX_AGE) store.delete(site.origin);
+      };
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () =>
+        reject(
+          transaction.error || new Error("Site memory could not be saved."),
+        );
+    });
+  }
+  async forget(origin: string) {
+    await this.remove(origin);
+  }
+  async clear() {
+    await this.remove();
+  }
+  private async remove(origin?: string) {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction("sites", "readwrite");
+      const store = transaction.objectStore("sites");
+      origin ? store.delete(origin) : store.clear();
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+}

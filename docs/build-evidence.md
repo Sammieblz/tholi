@@ -1,39 +1,29 @@
-# Controlled demo verification — October 8, 2026
+# Build verification — October 10, 2026
 
-This is the first local prototype checkpoint, not the full MVP acceptance gate.
+Production extension: **0.6.1**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed.
 
-- TypeScript: passed.
-- Unit/fixture regression tests: 18/18 passed.
-- Chromium extension integration scenarios: 12/12 passed (six scenarios at 1280×900 and 720×900), using the unmodified version 0.1.1 production manifest.
-- Production demo and unpacked MV3 extension builds: passed.
-- QA screenshots inspected for demo guidance and side panel; no target-blocking overlay in the tested flow.
+| Check                                                               | Result       |
+| ------------------------------------------------------------------- | ------------ |
+| TypeScript                                                          | Passed       |
+| Core, discovery, planning, memory, privacy and model-contract tests | 56/56 passed |
+| Production-extension browser integration at 1280×900 and 720×900    | 38/38 passed |
+| Live Wikipedia goals on three articles at both widths               | 6/6 passed   |
+| Whitespace/diff validation                                          | Passed       |
 
-Browser scenarios cover explicit start, normal route, verified step count, retention modal, terminal hard stop, manual final action without auto-success, wrong-turn recovery, alternate labels, pause/resume/stop cleanup, login checkpoint/manual resume, synthetic secret exclusion from session storage, ambiguous duplicate stop, unknown-screen stop, delayed DOM with no blind progress, and full navigation interruption.
+Reproduce with `npm run check`, `npm run test:e2e`, and `npm run test:live:wikipedia`. Browser harnesses use the production manifest unchanged. Local and live test artifacts are separate; `.last-run.json` reports passed for both suites.
 
-The initial harness used an added localhost permission, which masked the missing-access failure in regular Chrome. Version 0.1.1 declares access to the two local development hosts and tests the production manifest without modifications. Start resolves the active tab in the last focused Chrome window and distinguishes withheld access from an unsupported site. Native side-panel presentation still requires manual smoke testing.
+Generic fixtures have no Wikipedia IDs/classes. They exercise menu reveal plus preference changes, section arrival versus visible Contents links, semantic goal entry, unsafe/ambiguous/model-invented controls, stale revisions, changed labels and invalidation, focus without field-value capture, full-page and same-document navigation, pause/stop across loads, open-shadow-root updates and interactions, and memory persistence after closing and relaunching Chromium with the same profile. Forget/Clear stop observation before deleting stored knowledge.
 
-Artifacts: dist/extension (Load unpacked), dist/demo, and output/qa screenshots. This checkpoint was followed by the first user-created commit. Subsequent milestone changes remain in the local workspace.
+Live checks use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression now highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.
 
-## Remaining MVP work
+Accuracy regressions cover regular plurals and decorative counts, explicit qualifiers, contextual ambiguity, hidden responsive duplicates, local versus shared-toolbar reveal relationships, accessibility description precedence and changes, shadow-root ownership, popup button roles, unrelated dialogs, equivalent navigation destinations versus distinct queries, opposite preference values, ordinary Help controls, and misleading or unnecessarily indirect model proposals. Descriptions participate in consequential-action checks and preserve field-value exclusions. Verified menu opening enters awaiting-choice; it does not claim a language preference changed. Match strength is displayed qualitatively rather than as a measured accuracy percentage.
 
-Three live websites/5–8 total routes; full target/state precision and completion-rate sample metrics; selector/context/history scoring extensions; full candidate debug inspector; broader malicious-page/security/accessibility tests; route issue operations and beta distribution. Optional AI remains disabled/unimplemented. Desktop adapters remain deferred.
+The retained Northstar regression cases cover normal cancellation guidance and final hard stop, billing completion, retention/wrong-turn branches, alternate labels, login/checkpoint privacy, ambiguity/unknown screens, delayed renders, full-document interruption, pinned versions/tokens, localhost access and local diagnostic exports. Same-document Chrome loading events are checked against document identity rather than terminating SPA guidance.
 
-Run npm run check and npm run test:e2e to reproduce. Read README.md for installation and scenario controls.
+The prior Wikipedia-specific coach, route packs, sample allowlist, URL policy, scope/continueOnNavigation schema fields, inspection helpers and superseded tests were removed. Shared authored-route functionality remains for controlled demo regression cases. Documentation reflects the new architecture and bounded extension-owned IndexedDB store.
 
-## Version 0.1.1 reload
+QA screenshots are under `output/qa/generic-panel-*.png`, `output/qa/live-generic-*.png` and `output/qa/language-*.png`; panel layouts and the actual languages highlight were inspected at both widths. Load `dist/extension`, Reload at `chrome://extensions`, and refresh the website to replace an older injected script.
 
-The development extension was rebuilt after fixing local host access and last-focused-window tab lookup. Reload Internet Navigator at chrome://extensions, reopen the panel on the demo tab, and Start. Both localhost aliases passed the regression without a toolbar activeTab grant.
+Limits: the on-device API adapter is tested with mocked structured responses, not evaluated for real Gemini Nano accuracy on this device. Live checks run semantic planning. Arbitrary-site permission prompts and native Chrome side-panel presentation still need manual smoke testing. Top-document/open-shadow-root semantics are supported; cross-origin frames, closed roots, canvas-only controls and universal website workflow coverage remain outside this adapter. Large scans are capped and disclosed; risk classification is heuristic.
 
-## Version 0.2.0 — task selection and pinned sessions
-
-Added a validated bundled route registry and an active-site task chooser. Northstar now offers cancellation guidance and a separate read-only billing-details route. Previews, milestones and terminal instructions come from route metadata. Sessions pin a route ID, exact version, tab and unique session token; switching while active is rejected, and stale content updates cannot overwrite a newer session. Unsupported tabs offer no tasks. Stored sessions with unavailable versions or invalid route state are discarded.
-
-Validation: TypeScript, 27/27 unit tests, production builds and 18/18 Chromium extension checks passed. Browser coverage includes the actual chooser/Start button, both task outcomes, session switching restrictions, stale-update rejection and unsupported tabs at desktop and narrow widths. The production manifest remains restricted to local development hosts. Native Chrome side-panel presentation still needs a manual smoke test.
-
-Reload the extension and refresh the demo tab before trying this version. No live-site coverage or AI was added.
-
-## Version 0.3.0 — route debug inspector
-
-Added state candidate confidence/rejection reasons, target candidate scores with temporary control IDs, expected next states, expected/observed transition outcomes and bounded session history. The panel exports diagnostic JSON locally. Strict message validation accepts only fixed evidence labels and known route state/transition IDs; target diagnostic payloads exclude page names, context, URLs and field values. State candidates are capped at 100, controls at 50 and transition records at 30. The browser adapter excludes hidden and sensitive elements before ranking, so hidden page elements are not enumerated by this inspector.
-
-Validation: TypeScript, production builds and 30 unit tests passed. All 18 existing extension integration checks passed; the two new inspector/download cases passed after correcting test download activation and checking export keys rather than fixed landmark wording. QA screenshots were inspected. Native Chrome side-panel presentation still requires a manual smoke test. Reload the extension and refresh Northstar; expand Local route tools and enable Show route debug inspector.
+This implements the dynamic Wikipedia proof of concept and site-memory architecture. It does not establish the original MVP's multi-site beta acceptance metrics, remote route distribution or desktop adapters. Remaining acceptance work is tracked in the repository's existing issue plan.

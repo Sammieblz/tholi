@@ -15,12 +15,24 @@ export function rankTargets(
       const contradiction = target.disallowedNearbyText.some((t) =>
         normalize(l.name + " " + l.context).includes(normalize(t)),
       );
-      const ineligible = !l.visible || !l.enabled || l.role !== target.role;
+      const selectorMismatch =
+        !!(target.stableSelector || target.selector) &&
+        !l.selectors?.includes(target.stableSelector || target.selector!);
+      const viewportMismatch =
+        target.inViewport !== undefined && l.inViewport !== target.inViewport;
+      const ineligible =
+        !l.visible ||
+        !l.enabled ||
+        l.role !== target.role ||
+        selectorMismatch ||
+        viewportMismatch;
       const score =
         contradiction || ineligible
           ? 0
           : (exact ? 0.65 : 0) + 0.2 + (context ? 0.15 : 0);
       const reasons = [
+        ...(selectorMismatch ? ["selector-mismatch"] : []),
+        ...(viewportMismatch ? ["viewport-mismatch"] : []),
         ...(!l.visible ? ["hidden"] : []),
         ...(!l.enabled ? ["disabled"] : []),
         ...(l.role !== target.role ? ["role-mismatch"] : []),

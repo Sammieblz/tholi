@@ -1,0 +1,479 @@
+import { BrowserAdapter } from "../../../packages/browser-adapter";
+import { GuidanceOverlay } from "../../../packages/overlay-ui";
+import {
+  PageDiscovery,
+  type BoundControl,
+  presented,
+} from "../../../packages/page-discovery";
+import {
+  LIVE_ROUTE_ID,
+  LIVE_VERSION,
+  type PageSnapshot,
+  type GoalPlan,
+  type SiteMemory,
+  type ModelProposal,
+  type ObservedTransition,
+  hash,
+} from "../../../packages/page-model";
+import { planGoal } from "../../../packages/goal-planner";
+import type { SessionView } from "../../../packages/shared-types";
+export interface PendingNavigation {
+  from: string;
+  signature: string;
+  label: string;
+  destinationKey: string;
+  navigationKey: string;
+  origin: string;
+}
+export class PageCoach {
+  view: SessionView;
+  private discovery = new PageDiscovery();
+  private overlay = new GuidanceOverlay();
+  private adapter = new BrowserAdapter();
+  private cleanup?: () => void;
+  private selected?: BoundControl;
+  private before?: PageSnapshot;
+  private pending = false;
+  private deadline?: ReturnType<typeof setTimeout>;
+  private expectedChecked?: boolean;
+  private initialSelection?: number;
+  private eventTick?: ReturnType<typeof setTimeout>;
+  private related?: HTMLElement;
+  private relatedSignatures = new Set<string>();
+  private expectedNavigation?: string;
+  private beforeUrl?: string;
+  constructor(
+    private publish: (
+      view: SessionView,
+      observed?: ObservedTransition,
+      navigation?: PendingNavigation,
+    ) => void,
+    verifiedSteps = 0,
+    private memory?: SiteMemory,
+    restoredPlan?: GoalPlan,
+  ) {
+    this.view = {
+      routeId: LIVE_ROUTE_ID,
+      routeVersion: LIVE_VERSION,
+      status: "running",
+      stateId: "choosing",
+      instruction: "Describe your goal or choose a page control to highlight.",
+      verifiedSteps,
+      confidence: 0,
+      history: ["choosing"],
+      controls: [],
+      goalPlan: restoredPlan,
+    };
+  }
+  start() {
+    this.observe();
+    if (this.view.goalPlan?.status === "completed")
+      this.view.instruction =
+        "Goal reached. The expected destination was verified.";
+    this.refresh();
+    if (this.view.goalPlan?.status === "guiding") this.replan();
+    return this.view;
+  }
+  private observe() {
+    this.cleanup = this.adapter.observe(() => this.refresh());
+    document.addEventListener("click", this.clicked, true);
+    document.addEventListener("focusin", this.focused, true);
+    document.addEventListener("change", this.changed, true);
+  }
+  private clearTarget() {
+    this.selected = undefined;
+    this.before = undefined;
+    this.pending = false;
+    clearTimeout(this.deadline);
+    this.deadline = undefined;
+    this.view.selectedControlId = undefined;
+    this.overlay.clear();
+  }
+  private teardown() {
+    this.cleanup?.();
+    this.cleanup = undefined;
+    document.removeEventListener("click", this.clicked, true);
+    document.removeEventListener("focusin", this.focused, true);
+    document.removeEventListener("change", this.changed, true);
+    clearTimeout(this.eventTick);
+    this.clearTarget();
+  }
+  private state(id: "choosing" | "guiding" | "verified") {
+    this.view.stateId = id;
+    if (this.view.history.at(-1) !== id)
+      this.view.history = [...this.view.history, id].slice(-30);
+  }
+  private refresh() {
+    if (this.view.status !== "running") return;
+    const page = this.discovery.snapshot();
+    this.view.page = page;
+    this.view.controls = page.controls.filter((c) => c.visible && c.enabled);
+    this.view.confidence = page.controls.length ? 1 : 0;
+    if (this.selected && this.before) {
+      const chosen = this.selected,
+        c = chosen.control,
+        fresh = this.discovery.bindings.get(c.id);
+      const destination =
+        chosen.destination &&
+        presented(chosen.destination) &&
+        chosen.destination.getBoundingClientRect();
+      const sectionVisible =
+        !!destination &&
+        destination.top >= 0 &&
+        destination.bottom <= innerHeight &&
+        destination.left >= 0 &&
+        destination.right <= innerWidth;
+      const added = page.controls.some(
+        (current) =>
+          current.visible &&
+          !this.before!.controls.some(
+            (old) => old.signature === current.signature && old.visible,
+          ) &&
+          (this.related?.contains(
+            this.discovery.bindings.get(current.id)?.element || null,
+          ) ||
+            this.discovery.bindings.get(current.id)?.element.matches("h1")),
+      );
+      const removed = this.before.controls.some(
+        (old) =>
+          old.visible &&
+          this.relatedSignatures.has(old.signature) &&
+          !page.controls.some(
+            (current) => current.signature === old.signature && current.visible,
+          ),
+      );
+      const changed =
+        c.kind === "choice" || c.kind === "toggle"
+          ? !!fresh &&
+            fresh.control.checked === this.expectedChecked &&
+            fresh.control.checked !== c.checked
+          : c.kind === "focus"
+            ? (() => {
+                let active = document.activeElement;
+                while (active?.shadowRoot?.activeElement)
+                  active = active.shadowRoot.activeElement;
+                return active === chosen.element;
+              })()
+            : c.kind === "section"
+              ? sectionVisible
+              : c.kind === "select"
+                ? (chosen.element as HTMLSelectElement).selectedIndex !==
+                  this.initialSelection
+                : c.kind === "expand"
+                  ? (!!fresh && fresh.control.expanded !== c.expanded) ||
+                    added ||
+                    removed
+                  : c.kind === "action"
+                    ? added || removed
+                    : c.kind === "navigation"
+                      ? this.expectedNavigation ===
+                          hash(
+                            location.origin +
+                              location.pathname +
+                              location.search,
+                          ) && this.expectedNavigation !== this.beforeUrl
+                      : false;
+      if (
+        (this.pending || c.kind === "section") &&
+        changed &&
+        (chosen.element.isConnected ||
+          c.kind === "action" ||
+          c.kind === "navigation")
+      ) {
+        this.verified(page);
+        return;
+      }
+      if (
+        !fresh ||
+        !fresh.control.visible ||
+        !fresh.control.enabled ||
+        fresh.control.signature !== c.signature ||
+        fresh.control.label !== c.label ||
+        fresh.control.role !== c.role ||
+        fresh.control.kind !== c.kind ||
+        fresh.control.risk !== c.risk ||
+        fresh.control.context !== c.context ||
+        fresh.control.description !== c.description
+      ) {
+        this.clearTarget();
+        this.state("choosing");
+        this.view.instruction =
+          "The control changed or is hidden. The page was rescanned; choose a current control.";
+        if (this.view.goalPlan?.status === "guiding") {
+          this.replan();
+          return;
+        }
+      } else if (!this.pending)
+        this.overlay.show(fresh.geometry, this.view.instruction);
+    } else if (this.view.goalPlan?.status === "unresolved") {
+      const plan = planGoal(page, this.view.goalPlan.goal, this.memory);
+      if (plan.status !== "unresolved") {
+        this.installPlan(plan);
+        return;
+      }
+    }
+    this.publish(this.view);
+  }
+  private verified(page: PageSnapshot) {
+    const selected = this.selected!,
+      before = this.before!;
+    const evidence =
+      before.stateKey !== page.stateKey
+        ? {
+            from: before.stateKey,
+            to: page.stateKey,
+            signature: selected.control.signature,
+            label: selected.control.label,
+          }
+        : undefined;
+    const plan = this.view.goalPlan;
+    this.view.verifiedSteps++;
+    this.clearTarget();
+    this.state("verified");
+    this.view.instruction =
+      "Control interaction verified. Choose another control or goal.";
+    if (plan?.status === "guiding") {
+      const remaining = plan.steps.slice(1);
+      if (
+        remaining.length &&
+        remaining.every((step) =>
+          page.controls.some((c) => c.id === step.controlId && c.enabled),
+        ) &&
+        page.controls.some((c) => c.id === remaining[0].controlId && c.visible)
+      ) {
+        this.view.goalPlan = { ...plan, steps: remaining };
+        this.publish(this.view, evidence);
+        this.select(remaining[0].controlId);
+        return;
+      }
+      if (remaining.length || plan.source === "memory") {
+        this.publish(this.view, evidence);
+        this.replan();
+        return;
+      }
+      if (selected.control.kind === "expand") {
+        this.view.goalPlan = {
+          ...plan,
+          status: "awaiting-choice",
+          steps: [],
+          reason:
+            "Menu opened. Choose an option on the website, or describe the option you want.",
+        };
+        this.view.instruction = this.view.goalPlan.reason;
+        this.publish(this.view, evidence);
+        return;
+      }
+      this.view.goalPlan = {
+        ...plan,
+        status: "completed",
+        steps: [],
+        reason: "The final step's expected result was observed.",
+      };
+      this.view.instruction =
+        "Goal reached. The expected control result was verified.";
+    }
+    this.publish(this.view, evidence);
+  }
+  getPage() {
+    this.refresh();
+    return this.view.page;
+  }
+  goal(goal: string, revision: number, proposal?: ModelProposal) {
+    this.refresh();
+    if (this.view.status !== "running" || this.view.page?.revision !== revision)
+      return {
+        error:
+          "The page changed while planning. Try the goal again using the current controls.",
+      };
+    this.clearTarget();
+    this.installPlan(planGoal(this.view.page, goal, this.memory, proposal));
+    return { view: this.view };
+  }
+  private replan() {
+    if (this.view.page && this.view.goalPlan)
+      this.installPlan(
+        planGoal(this.view.page, this.view.goalPlan.goal, this.memory),
+      );
+  }
+  private installPlan(plan: GoalPlan) {
+    this.view.goalPlan = plan;
+    this.view.instruction = plan.reason;
+    if (plan.status === "guiding") this.select(plan.steps[0].controlId);
+    else {
+      this.clearTarget();
+      this.state(plan.status === "completed" ? "verified" : "choosing");
+      this.publish(this.view);
+    }
+  }
+  guide(id: string) {
+    this.view.goalPlan = undefined;
+    this.refresh();
+    return this.select(id);
+  }
+  private select(id: string) {
+    if (this.view.status !== "running")
+      return { error: "Resume navigation before choosing a control." };
+    const target = this.discovery.bindings.get(id);
+    if (
+      !target ||
+      !target.control.visible ||
+      !target.control.enabled ||
+      !presented(target.element)
+    )
+      return {
+        error:
+          "This control is stale or hidden. Choose a current page control.",
+      };
+    this.clearTarget();
+    if (target.control.risk === "consequential") {
+      this.view.goalPlan = undefined;
+      this.view.instruction =
+        "Navigator stops before this consequential action. Review it and decide yourself.";
+      this.state("choosing");
+      this.publish(this.view);
+      return { view: this.view };
+    }
+    this.selected = target;
+    this.before = this.view.page;
+    this.beforeUrl = hash(
+      location.origin + location.pathname + location.search,
+    );
+    if (target.control.kind === "navigation") {
+      const url = new URL(target.element.getAttribute("href")!, location.href);
+      this.expectedNavigation = hash(url.origin + url.pathname + url.search);
+    } else this.expectedNavigation = undefined;
+    this.view.selectedControlId = id;
+    this.state("guiding");
+    this.related =
+      target.element.closest<HTMLElement>(
+        'form,section,nav,dialog,[role="dialog"],[role="navigation"],[role="menu"],header,aside,details',
+      ) ||
+      target.element.parentElement ||
+      undefined;
+    if (this.related?.matches("body,html")) this.related = undefined;
+    this.relatedSignatures = new Set(
+      [...this.discovery.bindings.values()]
+        .filter((b) => this.related?.contains(b.element))
+        .map((b) => b.control.signature),
+    );
+    this.expectedChecked =
+      target.control.kind === "choice" ? true : !target.control.checked;
+    if (target.control.kind === "select")
+      this.initialSelection = (
+        target.element as HTMLSelectElement
+      ).selectedIndex;
+    this.view.instruction =
+      target.control.kind === "focus"
+        ? "Click the highlighted “" +
+          target.control.label +
+          "” field. Enter text yourself, then use the website's controls."
+        : target.control.kind === "section" &&
+            target.destination === target.element
+          ? "Scroll to the highlighted “" + target.control.label + "” section."
+          : "Use the highlighted “" +
+            target.control.label +
+            "” control. Scroll within its menu if needed.";
+    this.overlay.show(target.geometry, this.view.instruction);
+    this.publish(this.view);
+    return { view: this.view };
+  }
+  private interacted() {
+    if (!this.selected || this.pending) return;
+    this.pending = true;
+    this.overlay.clear();
+    let navigation: PendingNavigation | undefined;
+    if (
+      this.selected.control.kind === "navigation" &&
+      this.selected.control.destination
+    ) {
+      const url = new URL(
+        this.selected.element.getAttribute("href")!,
+        location.href,
+      );
+      if (
+        !(this.selected.element as HTMLAnchorElement).target ||
+        (this.selected.element as HTMLAnchorElement).target === "_self"
+      )
+        navigation = {
+          from: this.before!.stateKey,
+          signature: this.selected.control.signature,
+          label: this.selected.control.label,
+          destinationKey: this.selected.control.destination.key,
+          navigationKey: hash(url.origin + url.pathname + url.search),
+          origin: url.origin,
+        };
+    }
+    this.publish(this.view, undefined, navigation);
+    this.deadline = setTimeout(() => {
+      this.clearTarget();
+      this.state("choosing");
+      this.view.instruction =
+        "The expected result was not observed. Check the page and choose a control again.";
+      if (this.view.goalPlan)
+        this.view.goalPlan = {
+          ...this.view.goalPlan,
+          status: "unresolved",
+          reason: this.view.instruction,
+          steps: [],
+        };
+      this.publish(this.view);
+    }, 8000);
+    this.eventTick = setTimeout(() => this.refresh(), 0);
+  }
+  private clicked = (event: MouseEvent) => {
+    if (
+      this.selected &&
+      (event.composedPath().includes(this.selected.element) ||
+        event.composedPath().includes(this.selected.geometry) ||
+        (event.target instanceof Node &&
+          (this.selected.element.contains(event.target) ||
+            this.selected.geometry.contains(event.target))))
+    )
+      this.interacted();
+  };
+  private focused = (event: FocusEvent) => {
+    if (
+      this.selected &&
+      ["focus", "select"].includes(this.selected.control.kind) &&
+      (event.target === this.selected.element ||
+        event.composedPath().includes(this.selected.element))
+    )
+      this.interacted();
+  };
+  private changed = (event: Event) => {
+    if (this.selected && event.target === this.selected.element) {
+      this.interacted();
+      this.refresh();
+    }
+  };
+  updateMemory(memory: SiteMemory) {
+    this.memory = memory;
+  }
+  pause() {
+    this.teardown();
+    this.view.status = "paused";
+    this.view.controls = [];
+    this.view.page = undefined;
+    this.view.instruction =
+      "Navigation paused. Resume to discover the current page.";
+    this.publish(this.view);
+  }
+  resume() {
+    if (this.view.status !== "paused") return;
+    this.view.status = "running";
+    this.observe();
+    this.refresh();
+    if (this.view.goalPlan?.status === "guiding") this.replan();
+  }
+  stop(reason = "Navigation stopped.") {
+    this.teardown();
+    this.view.status = "stopped";
+    this.view.controls = [];
+    this.view.page = undefined;
+    this.view.instruction = reason;
+    this.publish(this.view);
+  }
+  unload() {
+    this.teardown();
+  }
+}

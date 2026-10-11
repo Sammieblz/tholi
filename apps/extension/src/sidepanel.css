@@ -355,3 +355,80 @@ select:disabled {
   white-space: nowrap;
   overflow-wrap: normal;
 }
+.controls-heading {
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 24px 0;
+}
+.page-controls {
+  margin: 24px 0;
+}
+.page-controls h2 {
+  font-size: 18px;
+}
+.page-controls input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dce3d7;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.control-group {
+  margin: 14px 0;
+  padding: 0;
+  border-top: 1px solid #dce3d7;
+}
+.control-group summary {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.control-group > div {
+  max-height: 300px;
+  overflow: auto;
+}
+.control-group button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  margin-bottom: 6px;
+  background: #fff;
+  border: 1px solid #dce3d7;
+  border-radius: 8px;
+}
+.control-group button.control-selected {
+  background: #e9f2df;
+  border-color: #235c45;
+}
+.goal-plan {
+  margin: 20px 0;
+  padding: 16px;
+  background: #edf2e5;
+  border-radius: 12px;
+}
+.goal-plan p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.goal-plan li {
+  margin: 12px 0;
+}
+.goal-plan small {
+  display: block;
+  margin-top: 4px;
+}
+.page-controls form .primary {
+  margin-top: 12px;
+  width: 100%;
+}
+.control-destination {
+  display: block;
+  font-size: 10px;
+  margin-top: 4px;
+  color: #64765d;
+  overflow-wrap: anywhere;
+}

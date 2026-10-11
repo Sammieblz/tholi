@@ -5,12 +5,16 @@ export interface Landmark {
   context: string;
   visible: boolean;
   enabled: boolean;
+  selectors?: string[];
+  inViewport?: boolean;
 }
 export interface UIState {
   platform: "web" | "windows" | "macos" | "linux";
   application: string;
   origin: string;
   pathname: string;
+  hasQuery?: boolean;
+  routeUrlAllowed?: boolean;
   landmarks: Landmark[];
   modal: boolean;
 }
@@ -55,6 +59,17 @@ export interface Diagnostics {
   }[];
 }
 export interface SessionView {
+  controls?: import("../page-model").PageControl[];
+  page?: import("../page-model").PageSnapshot;
+  goalPlan?: import("../page-model").GoalPlan;
+  memory?: {
+    pages: number;
+    templates: number;
+    observedTransitions: number;
+    version: number;
+  };
+  memoryError?: string;
+  selectedControlId?: string;
   diagnostics?: Diagnostics;
   status: SessionStatus;
   stateId?: string;

@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  controlSchema,
+  pageSnapshotSchema,
+  goalPlanSchema,
+  modelProposalSchema,
+} from "../page-model";
 const risk = z.enum([
   "navigation",
   "preference",
@@ -10,7 +16,10 @@ const landmark = z
   .object({
     role: z.string().min(1),
     names: z.array(z.string().min(1)).min(1),
+    anyName: z.boolean().default(false),
     required: z.boolean().default(true),
+    selector: z.string().min(1).max(200).optional(),
+    inViewport: z.boolean().optional(),
   })
   .strict();
 export const targetSchema = landmark
@@ -26,7 +35,9 @@ const stateSchema = z
   .object({
     id: z.string().min(1),
     urlPatterns: z.array(z.string()).default([]),
+    urlPrefixes: z.array(z.string().startsWith("/")).default([]),
     landmarks: z.array(landmark).min(1),
+    absentLandmarks: z.array(landmark).default([]),
     modal: z.boolean().optional(),
     minimumConfidence: z.number().min(0).max(1).default(0.8),
     behavior: z
@@ -70,6 +81,7 @@ export const routeSchema = z
     version: z.string(),
     lastVerified: z.string(),
     origins: z.array(z.string().url()).min(1),
+    allowQuery: z.boolean().default(true),
     startStates: z.array(z.string()).min(1),
     states: z.array(stateSchema).min(1),
     transitions: z.array(transitionSchema),
@@ -78,6 +90,23 @@ export const routeSchema = z
   })
   .strict()
   .superRefine((route, ctx) => {
+    for (const predicate of route.states.flatMap((s) => [
+      ...s.landmarks,
+      ...s.absentLandmarks,
+    ]))
+      if (
+        predicate.anyName &&
+        (predicate.role !== "heading" || !predicate.selector)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Any-name predicates require a heading role and selector",
+        });
+    if (route.transitions.some((t) => t.target.anyName))
+      ctx.addIssue({
+        code: "custom",
+        message: "Targets require explicit semantic names",
+      });
     const ids = route.states.map((s) => s.id);
     for (const [id, index] of Object.entries(route.milestoneStates)) {
       if (!ids.includes(id) || index >= route.milestones.length)
@@ -118,6 +147,18 @@ export type Target = z.infer<typeof targetSchema>;
 export type RouteState = Route["states"][number];
 export type Transition = Route["transitions"][number];
 export const messageSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("GET_PAGE") }).strict(),
+  z.object({ type: z.literal("GET_MEMORY") }).strict(),
+  z.object({ type: z.literal("FORGET_SITE") }).strict(),
+  z.object({ type: z.literal("CLEAR_MEMORY") }).strict(),
+  z
+    .object({
+      type: z.literal("SET_GOAL"),
+      goal: z.string().min(1).max(160),
+      revision: z.number().int().nonnegative(),
+      proposal: modelProposalSchema.optional(),
+    })
+    .strict(),
   z.object({ type: z.literal("GET_SESSION") }).strict(),
   z.object({ type: z.literal("GET_CONTEXT") }).strict(),
   z
@@ -130,15 +171,43 @@ export const messageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PAUSE") }).strict(),
   z.object({ type: z.literal("RESUME") }).strict(),
   z.object({ type: z.literal("STOP") }).strict(),
+  z
+    .object({
+      type: z.literal("GUIDE_CONTROL"),
+      controlId: z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/),
+    })
+    .strict(),
 ]);
 
 export const contentMessageSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("UPDATE_MEMORY"),
+      sessionId: z.string().uuid(),
+      memory: z.unknown(),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("GET_PAGE"), sessionId: z.string().uuid() })
+    .strict(),
+  z
+    .object({
+      type: z.literal("SET_GOAL"),
+      sessionId: z.string().uuid(),
+      goal: z.string().min(1).max(160),
+      revision: z.number().int().nonnegative(),
+      proposal: modelProposalSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("BEGIN_SESSION"),
       sessionId: z.string().uuid(),
       routeId: z.string().min(1),
       routeVersion: z.string().min(1),
+      verifiedSteps: z.number().int().nonnegative().optional(),
+      memory: z.unknown().optional(),
+      goalPlan: goalPlanSchema.optional(),
     })
     .strict(),
   z
@@ -148,11 +217,21 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       action: z.enum(["PAUSE", "RESUME", "STOP"]),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("GUIDE_CONTROL"),
+      sessionId: z.string().uuid(),
+      controlId: z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/),
+    })
+    .strict(),
 ]);
 const diagnosticReason = z.enum([
   "modal-mismatch",
   "required-landmark-missing",
   "path-mismatch",
+  "forbidden-landmark-present",
+  "selector-mismatch",
+  "viewport-mismatch",
   "below-threshold",
   "hidden",
   "disabled",
@@ -227,6 +306,23 @@ const diagnosticsSchema = z
   .strict();
 export const sessionViewSchema = z
   .object({
+    controls: z.array(controlSchema).max(600).optional(),
+    page: pageSnapshotSchema.optional(),
+    goalPlan: goalPlanSchema.optional(),
+    memory: z
+      .object({
+        pages: z.number().int().nonnegative(),
+        templates: z.number().int().nonnegative(),
+        observedTransitions: z.number().int().nonnegative(),
+        version: z.number().int().nonnegative(),
+      })
+      .strict()
+      .optional(),
+    memoryError: z.string().max(300).optional(),
+    selectedControlId: z
+      .string()
+      .regex(/^w[0-9a-f]{16}-[0-9]+$/)
+      .optional(),
     diagnostics: diagnosticsSchema.optional(),
     status: z.enum([
       "idle",

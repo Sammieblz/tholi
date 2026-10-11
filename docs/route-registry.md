@@ -1,9 +1,9 @@
-# Bundled route registry
+# Authored routes and live sessions
 
-Add declarative route packs under routes and register them in packages/route-registry/index.ts. Each route needs a unique ID, an exact version, allowed origins, states, transitions and safety boundaries. The registry validates every pack at startup and returns copies so callers cannot mutate its stored definitions. Unknown versions fail lookup; they never fall back to another version.
+The bundled registry contains the two controlled Northstar regression routes. Add authored packs under routes and register them in packages/route-registry/index.ts. Packs require unique IDs, pinned versions, exact allowed origins, states, transitions and explicit safety boundaries. Validated copies prevent accidental mutation. Missing versions never fall back silently.
 
-Supply siteName, description, milestones, milestoneStates, safetyNote, completionInstruction and boundaryInstruction for task previews and guidance. Milestone mappings must reference declared states and valid milestone indexes. Terminal instructions belong to the route, so a read-only task can finish without cancellation-specific wording.
+The worker also exposes navigator.live version 1.0.0 dynamically for HTTP/HTTPS pages. This is a live navigation mode, not a fabricated authored route graph. Its observations and goal plans use packages/page-model contracts. Generic discovery, user-observed transitions and persistent memory supply its route knowledge.
 
-The worker filters previews by the active tab’s exact origin. START selects a route ID/version and pins it with a tab ID and unique session token. Active or paused sessions must be stopped before selecting another task. The content script accepts only matching control tokens, and the worker checks updates against the pinned route, version, tab, origin and known state/history IDs. Restoration rejects malformed sessions and missing route versions.
+START pins the origin, tab, session UUID and document ID. Active/paused sessions must be stopped before changing mode. Generic views must contain valid, unique control IDs; selected IDs must belong to the visible enabled control list, which must match the current observation. Authored views reject generic page/control/goal payloads. Both modes reject route/version substitution and malformed restoration.
 
-Keep safety boundaries in the route definition. Adding a registry entry does not grant host access or authorize live-site coverage. Add meaningful route fixtures and browser scenarios before presenting a new route as verified.
+Live sessions reattach across same-origin documents with fresh control IDs. Loading clears controls, Pause survives navigation, and Stop prevents reattachment. Authored demo tasks stop on full-document navigation. Site permission is independent of the task registry; adding a route does not grant access.

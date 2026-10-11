@@ -90,6 +90,14 @@ export class RouteEngine {
       this.stop("The page left the supported origin.");
       return;
     }
+    if (ui.routeUrlAllowed === false) {
+      this.stop("This page is outside the route’s supported scope.");
+      return;
+    }
+    if (!this.route.allowQuery && ui.hasQuery) {
+      this.stop("This route does not support pages with query parameters.");
+      return;
+    }
     const result = localize(this.route, ui, this.view.stateId);
     this.lastLocalization = result;
     this.view.diagnostics!.localization = {

@@ -5,13 +5,20 @@ import { routeRegistry } from "../../../packages/route-registry";
 import { allowedOrigin } from "../../../packages/safety-policy";
 import { contentMessageSchema } from "../../../packages/route-schema";
 import type { Transition } from "../../../packages/route-schema";
+import { PageCoach } from "./page-coach";
+import {
+  LIVE_ROUTE_ID,
+  LIVE_VERSION,
+  type SiteMemory,
+} from "../../../packages/page-model";
 const marker = "__internetNavigatorLoaded";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
-  const adapter = new BrowserAdapter(),
-    overlay = new GuidanceOverlay();
+  let adapter = new BrowserAdapter();
+  const overlay = new GuidanceOverlay();
   let engine: RouteEngine | undefined;
+  let coach: PageCoach | undefined;
   let sessionId: string | undefined;
   let cleanup: (() => void) | undefined;
   let current: Transition | undefined;
@@ -116,37 +123,96 @@ if (!host[marker]) {
     const message = parsed.data;
     if (message.type === "BEGIN_SESSION") {
       const route = routeRegistry.get(message.routeId, message.routeVersion);
-      if (!route || !allowedOrigin(route, location.origin)) {
+      const dynamic =
+        message.routeId === LIVE_ROUTE_ID &&
+        message.routeVersion === LIVE_VERSION;
+      if (!dynamic && (!route || !allowedOrigin(route, location.origin))) {
         respond({
           error: "Route is unavailable or unsupported on this origin.",
         });
         return;
       }
       teardown();
+      coach?.unload();
+      coach = undefined;
+      engine = undefined;
       sessionId = message.sessionId;
-      engine = new RouteEngine(route);
+      if (dynamic) {
+        coach = new PageCoach(
+          (view, observed, navigation) => {
+            chrome.runtime
+              .sendMessage({
+                type: "SESSION_UPDATE",
+                sessionId,
+                view,
+                observed,
+                navigation,
+              })
+              .catch(() => {});
+          },
+          message.verifiedSteps,
+          message.memory as SiteMemory | undefined,
+          message.goalPlan,
+        );
+        respond({ view: coach.start() });
+        return;
+      }
+      adapter = new BrowserAdapter(route);
+      engine = new RouteEngine(route!);
       observe();
       display(engine.start(adapter.snapshot()));
     } else {
-      if (!engine || message.sessionId !== sessionId) {
+      if ((!engine && !coach) || message.sessionId !== sessionId) {
         respond({ error: "Stale session command." });
+        return;
+      }
+      if (message.type === "GUIDE_CONTROL") {
+        respond(
+          coach
+            ? coach.guide(message.controlId)
+            : { error: "This task has no page control chooser." },
+        );
+        return;
+      }
+      if (message.type === "GET_PAGE") {
+        respond({ page: coach?.getPage(), view: coach?.view });
+        return;
+      }
+      if (message.type === "UPDATE_MEMORY") {
+        coach?.updateMemory(message.memory as SiteMemory);
+        respond({ ok: true });
+        return;
+      }
+      if (message.type === "SET_GOAL") {
+        respond(
+          coach
+            ? coach.goal(message.goal, message.revision, message.proposal)
+            : { error: "Start live navigation first." },
+        );
+        return;
+      }
+      if (coach) {
+        if (message.action === "PAUSE") coach.pause();
+        if (message.action === "RESUME") coach.resume();
+        if (message.action === "STOP") coach.stop();
+        respond({ view: coach.view });
         return;
       }
       switch (message.action) {
         case "PAUSE":
-          engine.pause();
+          engine!.pause();
           teardown();
           publish();
           break;
         case "RESUME":
-          if (["paused", "checkpoint"].includes(engine.view.status)) {
+          if (["paused", "checkpoint"].includes(engine!.view.status)) {
             teardown();
             observe();
-            display(engine.resume(adapter.snapshot()));
+            display(engine!.resume(adapter.snapshot()));
           }
           break;
         case "STOP":
-          engine.stop();
+          engine!.stop();
           teardown();
           publish();
           break;
@@ -155,6 +221,10 @@ if (!host[marker]) {
     respond({ view: engine?.view });
   });
   window.addEventListener("pagehide", () => {
+    if (coach) {
+      coach.unload();
+      return;
+    }
     if (!engine) return;
     if (!["boundary", "completed", "stopped"].includes(engine.view.status))
       engine.stop(
