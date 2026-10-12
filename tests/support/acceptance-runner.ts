@@ -32,12 +32,24 @@ export function sample(
 export async function setGoal(app: NavigatorApp, goal: string) {
   await app.page.bringToFront();
   return app.panel.evaluate(async (goal) => {
-    const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
-    return chrome.runtime.sendMessage({
-      type: "SET_GOAL",
-      goal,
-      revision: current.page.revision,
-    });
+    let reply;
+    // Responsive reflow may legitimately invalidate a scan between these two
+    // messages. Repeat only the explicitly rejected request with fresh evidence;
+    // preserve all other errors and the caller's target/outcome assertions.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
+      reply = await chrome.runtime.sendMessage({
+        type: "SET_GOAL",
+        goal,
+        revision: current.page.revision,
+      });
+      if (
+        reply.error !==
+        "The page changed before this request. Use the current scan."
+      )
+        return reply;
+    }
+    return reply;
   }, goal);
 }
 export async function resetClicks(app: NavigatorApp) {
@@ -105,6 +117,19 @@ export async function runGoal(
     const actual = await (oracle.revealed || oracle.target).isVisible();
     result.verifications.push(actual);
     if (!actual) result.falseSuccess++;
+    await expect
+      .poll(
+        async () => {
+          const next = await app.view();
+          return (
+            !!next.selectedControlId ||
+            (next.verifiedSteps === before + 2 &&
+              next.goalPlan.status === "completed")
+          );
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true);
     view = await app.view();
     if (
       view.verifiedSteps === before + 2 &&

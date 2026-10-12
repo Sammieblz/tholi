@@ -7,7 +7,7 @@ import {
   type GoalIntent,
   hash,
 } from "../page-model";
-import { sanitizeText } from "../privacy-redaction";
+import { sanitizeText, sanitizeGoal } from "../privacy-redaction";
 import { shortestRoute } from "./route-graph";
 import { taskWords } from "./task-intent";
 import {
@@ -293,7 +293,7 @@ function planGoalInternal(
   trace: { path?: SiteMemory["transitions"] } = {},
   targetScope?: GoalIntent["scope"],
 ): GoalPlan {
-  const goal = sanitizeText(rawGoal);
+  const goal = sanitizeGoal(rawGoal);
   if (!goal)
     return unresolved(
       "Choose a goal",
@@ -574,7 +574,7 @@ export function inspectGoal(
     proposal || !interpretation
       ? planGoalInternal(page, rawGoal, memory, proposal, trace)
       : replanIntent(page, rawGoal, interpretation, memory, trace);
-  const goal = sanitizeText(rawGoal);
+  const goal = sanitizeGoal(rawGoal);
   const selected = new Set(plan.steps.map((s) => s.controlId));
   const roles = new Set([
     "button",
@@ -704,7 +704,7 @@ function replanIntent(
     return original;
   return {
     ...plan,
-    goal: sanitizeText(rawGoal),
+    goal: sanitizeGoal(rawGoal),
     source: "on-device",
     interpretation: intent,
   };

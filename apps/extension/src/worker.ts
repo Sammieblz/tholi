@@ -26,9 +26,31 @@ import {
   IndexedDBSiteMemory,
   memorySummary,
 } from "../../../packages/site-memory";
+import { localNlp, cancelNlp } from "./nlp-client";
+import { IndexedDBDerivedStore } from "../../../packages/site-memory/derived";
+import {
+  planInputSchema,
+  resultSchema,
+  requestSchema,
+  type PlanInput,
+} from "../../../packages/navigation-core/contracts";
+import {
+  advanceQueue,
+  continuesDestination,
+} from "../../../packages/navigation-core/queue";
+import { sanitizeGoal } from "../../../packages/privacy-redaction";
+import {
+  backendNlp,
+  backendSettings,
+  setBackendSettings,
+  deleteBackendMemory,
+  mirrorRoute,
+  cancelBackendPlanning,
+} from "./backend-client";
 let session: PinnedSession | undefined;
 const memory = new IndexedDBSiteMemory();
 let lastObservation = "";
+let goalGeneration = 0;
 const navigationStarts = new Map<
   number,
   { sessionId: string; journeyId: string; key: string; at: number }
@@ -37,6 +59,22 @@ const ready = chrome.storage.session.get("navigatorSession").then((data) => {
   session = restoreSession(data.navigatorSession);
   if (session?.view?.journey)
     session.view.journey = resumeJourney(session.view.journey);
+});
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason !== "update") return;
+  void ready.then(async () => {
+    if (session?.view) {
+      session.view.status = "paused";
+      session.view.controls = [];
+      session.view.page = undefined;
+      session.view.selectedControlId = undefined;
+      session.view.instruction =
+        "Navigator was updated. Resume for a fresh page handshake.";
+      session.documentId = undefined;
+      session.navigationPending = true;
+      await save();
+    }
+  });
 });
 const save = async () => {
   if (session) await chrome.storage.session.set({ navigatorSession: session });
@@ -99,8 +137,11 @@ async function remember(observed?: unknown) {
       if (
         !session.forgottenTaskIds?.includes(taskKey(journey)) &&
         (!savedTask?.completed || journey.status === "completed")
-      )
-        await memory.saveTask(saveTask(journey, page, session.view.goalPlan));
+      ) {
+        const task = saveTask(journey, page, session.view.goalPlan);
+        await memory.saveTask(task);
+        void mirrorRoute(task).catch(() => {});
+      }
     }
     lastObservation = key;
     await chrome.tabs
@@ -162,6 +203,8 @@ async function attachSession() {
     session.view.verifiedSteps++;
     if (
       !contextualTask(session.view.journey) &&
+      session.view.request?.tasks[session.view.request.active]?.operation !==
+        "search" &&
       session.view.goalPlan?.status === "guiding" &&
       session.view.goalPlan.steps.length <= 1 &&
       session.view.goalPlan.source !== "memory"
@@ -172,6 +215,8 @@ async function attachSession() {
         steps: [],
         reason: "The linked destination loaded and was observed.",
       };
+    if (session.view.request && session.view.goalPlan?.status === "completed")
+      session.view.request = advanceQueue(session.view.request, "verified");
   }
   session.pendingNavigation = undefined;
   const reply = await chrome.tabs.sendMessage(session.tabId, {
@@ -185,6 +230,7 @@ async function attachSession() {
           memory: await memory.get(session.origin!).catch(() => undefined),
           goalPlan: session.view?.goalPlan,
           journey: session.view?.journey,
+          request: session.view?.request,
           savedTask: session.view?.journey
             ? (await memory.tasks(session.view.journey.origin)).find(
                 (t) =>
@@ -213,6 +259,8 @@ async function attachSession() {
   return session;
 }
 async function stopSession(reason = "Navigation stopped.") {
+  cancelBackendPlanning();
+  await cancelNlp();
   navigationStarts.clear();
   if (!session) return;
   try {
@@ -246,6 +294,29 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   return next;
 }
 chrome.runtime.onMessage.addListener((raw, sender, respond) => {
+  if (raw?.target === "offscreen") return;
+  if (
+    sender.id === chrome.runtime.id &&
+    sender.url === chrome.runtime.getURL("sidepanel.html") &&
+    ["SET_GOAL", "CLARIFY", "STOP"].includes(raw?.type)
+  )
+    goalGeneration++;
+  if (
+    (raw?.type === "SET_GOAL" && !raw.proposal && !raw.journeyId) ||
+    raw?.type === "NLP_REPLAN" ||
+    raw?.type === "NLP_SUGGEST" ||
+    raw?.type === "CLARIFY"
+  ) {
+    void handleNlp(raw, sender)
+      .then(respond)
+      .catch((error) =>
+        respond({
+          error:
+            error instanceof Error ? error.message : "Local planning failed.",
+        }),
+      );
+    return true;
+  }
   enqueue(async () => {
     if (sender.id !== chrome.runtime.id) return { error: "Invalid sender." };
     if (raw?.type === "SESSION_UPDATE") {
@@ -264,6 +335,37 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         return { error: "Inactive session update." };
       const incoming = validPinnedView(session, raw.view);
       if (!incoming) return { error: "Invalid page observation." };
+      if (session.view && incoming.verifiedSteps < session.view.verifiedSteps)
+        return { error: "Older progress observation." };
+      if (
+        session.view?.page &&
+        incoming.page &&
+        incoming.page.revision < session.view.page.revision
+      )
+        return { error: "Older scan observation." };
+      if (incoming.journey?.id !== session.view?.journey?.id) {
+        const queueAdvance =
+          incoming.request?.id === session.view?.request?.id &&
+          incoming.request &&
+          incoming.journey?.requestTaskId ===
+            incoming.request.tasks[incoming.request.active]?.id &&
+          incoming.journey?.requestTaskId !==
+            session.view?.journey?.requestTaskId;
+        if (!queueAdvance) return { error: "Older journey observation." };
+      }
+      if (
+        session.view?.request &&
+        session.view.status === "running" &&
+        incoming.request?.id !== session.view.request.id
+      )
+        return { error: "Older request observation." };
+      if (
+        session.view?.request &&
+        incoming.request &&
+        incoming.request.id === session.view.request.id &&
+        incoming.request.active < session.view.request.active
+      )
+        return { error: "Older task observation." };
       if (raw.navigation) {
         const nav = sessionSchema.shape.pendingNavigation.safeParse(
             raw.navigation,
@@ -301,6 +403,8 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     const parsed = messageSchema.safeParse(raw);
     if (!parsed.success) return { error: "Invalid command." };
     const command = parsed.data;
+    if (command.type === "GET_BACKEND") return backendSettings();
+    if (command.type === "SET_BACKEND") return setBackendSettings(command);
     if (command.type === "GET_SESSION") return session || {};
     if (command.type === "GET_TASKS" || command.type === "DELETE_TASK") {
       const tab = await activeTab(),
@@ -379,6 +483,13 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         command.type === "CLEAR_MEMORY"
           ? await memory.clear()
           : origin && (await memory.forget(origin));
+        await cancelNlp();
+        await new IndexedDBDerivedStore().clearDerived(
+          command.type === "CLEAR_MEMORY" ? undefined : origin,
+        );
+        await deleteBackendMemory(
+          command.type === "CLEAR_MEMORY" ? undefined : origin,
+        );
         lastObservation = "";
         if (session?.view && live()) {
           session.view.memory = memorySummary();
@@ -441,14 +552,14 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         : { error: "Start navigation first." };
     if (command.type === "STOP") {
       await stopSession();
-      return session;
+      return structuredClone(session);
     }
     const tab = await activeTab();
     if (
       command.type === "CONTINUE_TASK" &&
       session.view &&
       session.pendingNavigation &&
-      contextualTask(session.view?.journey)
+      continuesDestination(session.view.journey, session.view.request)
     ) {
       const nav = session.pendingNavigation;
       if (
@@ -536,7 +647,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       await acceptView(reply?.view);
       await remember();
       await save();
-      return session;
+      return structuredClone(session);
     } catch {
       await stopSession(
         "Page unavailable. Click the extension icon on the website and start again.",
@@ -553,6 +664,172 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     );
   return true;
 });
+async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
+  const startedGeneration = goalGeneration;
+  if (sender.id !== chrome.runtime.id) throw new Error("Invalid sender.");
+  const fromContent = raw.type === "NLP_REPLAN";
+  if (!fromContent && sender.url !== chrome.runtime.getURL("sidepanel.html"))
+    throw new Error("Trusted extension panel required.");
+  if (!fromContent && !messageSchema.safeParse(raw).success)
+    throw new Error("Invalid request.");
+  const captured = await enqueue(async () => {
+    if (
+      !session ||
+      !live() ||
+      session.navigationPending ||
+      session.view?.status !== "running"
+    )
+      throw new Error("Start or resume navigation first.");
+    if (
+      fromContent &&
+      (sender.tab?.id !== session.tabId ||
+        sender.documentId !== session.documentId ||
+        raw.sessionId !== session.sessionId ||
+        !inScope(sender.url || ""))
+    )
+      throw new Error("Stale document.");
+    const reply = await chrome.tabs.sendMessage(session.tabId, {
+      type: "GET_PAGE",
+      sessionId: session.sessionId,
+    });
+    if (!reply.page) throw new Error("Fresh page observation required.");
+    if (raw.type === "SET_GOAL" && raw.revision !== reply.page.revision)
+      throw new Error(
+        "The page changed before this request. Use the current scan.",
+      );
+    const request = fromContent
+      ? requestSchema.parse(raw.request)
+      : raw.type === "CLARIFY"
+        ? session.view.request
+        : undefined;
+    return {
+      sessionId: session.sessionId,
+      documentId: session.documentId!,
+      request,
+      page: reply.page,
+      origin: session.origin!,
+      journey: session.view.journey,
+      target: session.view.request?.tasks[session.view.request.active]?.target,
+    };
+  });
+  let input: PlanInput = planInputSchema.parse({
+    requestId: captured.request?.id || raw.requestId || crypto.randomUUID(),
+    documentId: captured.documentId,
+    revision: captured.page.revision,
+    text: sanitizeGoal(captured.request?.original || raw.text || raw.goal),
+    observation: captured.page,
+    strategy: raw.strategy || captured.journey?.strategy || "fastest",
+    request: captured.request,
+    choice: raw.choice,
+    context: {
+      target: captured.target,
+      verifiedDestination: fromContent ? raw.verifiedDestination : undefined,
+    },
+  });
+  const site = await memory.get(captured.origin);
+  input.journey = captured.journey;
+  if (raw.savedRouteId) {
+    const saved = (await memory.tasks(captured.origin)).find(
+      (task) => task.id === raw.savedRouteId,
+    );
+    if (saved) {
+      input.savedRoute = saved;
+      input.context = { ...input.context, target: saved.objective.purpose };
+    }
+  }
+  if (captured.journey?.savedRouteId)
+    input.savedRoute = (await memory.tasks(captured.journey.origin)).find(
+      (t) => t.id === captured.journey!.savedRouteId,
+    );
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let value;
+    try {
+      value = await backendNlp(input, raw.type === "NLP_SUGGEST", site);
+    } catch {
+      value = undefined;
+    }
+    if (startedGeneration !== goalGeneration)
+      throw new Error("Planning was replaced or canceled.");
+    value ??= await localNlp(input, site, raw.type === "NLP_SUGGEST");
+    const applied = await enqueue(async () => {
+      if (startedGeneration !== goalGeneration)
+        throw new Error("This request was replaced or canceled.");
+      if (fromContent && session?.view?.request?.id !== captured.request?.id)
+        throw new Error("Older request result.");
+      if (
+        !session ||
+        session.sessionId !== captured.sessionId ||
+        session.view?.status !== "running" ||
+        session.navigationPending
+      )
+        throw new Error("Planning canceled by navigation or Stop.");
+      const fresh = await chrome.tabs.sendMessage(session.tabId, {
+        type: "GET_PAGE",
+        sessionId: session.sessionId,
+      });
+      if (
+        fromContent &&
+        input.journey &&
+        fresh.view?.journey?.requestTaskId === input.journey.requestTaskId &&
+        fresh.view.journey.progress.length !== input.journey.progress.length
+      ) {
+        input = {
+          ...input,
+          journey: fresh.view.journey,
+          observation: fresh.page,
+          revision: fresh.page.revision,
+          documentId: session.documentId!,
+        };
+        return undefined;
+      }
+      if (
+        session.documentId !== input.documentId ||
+        fresh.page.revision !== input.revision
+      ) {
+        input = {
+          ...input,
+          documentId: session.documentId!,
+          observation: fresh.page,
+          revision: fresh.page.revision,
+        };
+        return undefined;
+      }
+      if (raw.type === "NLP_SUGGEST")
+        return {
+          requestId: input.requestId,
+          documentId: input.documentId,
+          revision: input.revision,
+          suggestions: value,
+        };
+      const result = resultSchema.parse(value);
+      if (
+        result.documentId !== input.documentId ||
+        result.revision !== input.revision ||
+        result.requestId !== input.requestId
+      )
+        throw new Error("Stale planning result.");
+      if (fromContent) return result;
+      const reply = await chrome.tabs.sendMessage(session.tabId, {
+        type: "INSTALL_REQUEST",
+        sessionId: session.sessionId,
+        result,
+        strategy: raw.strategy,
+        savedRouteId: raw.savedRouteId,
+      });
+      if (reply.error) return undefined;
+      await acceptView(reply.view);
+      await remember();
+      await save();
+      return structuredClone(session);
+    });
+    if (applied) return applied;
+  }
+  return {
+    status: "pending-indexing",
+    error:
+      "The page is changing. Your request is retained; resume once it settles.",
+  };
+}
 chrome.tabs.onRemoved.addListener((tabId) => {
   void enqueue(async () => {
     if (session?.tabId === tabId) {
@@ -655,15 +932,16 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       change.status === "complete" &&
       tab.openerTabId === session.tabId &&
       session.view &&
-      contextualTask(session.view?.journey) &&
+      continuesDestination(session.view.journey, session.view.request) &&
       session.pendingNavigation
     ) {
       const url = tab.url && new URL(tab.url),
         nav = session.pendingNavigation;
       if (
-        !url ||
-        (url.origin === nav.origin &&
-          hash(url.origin + url.pathname + url.search) === nav.navigationKey)
+        nav.newTab &&
+        (!url ||
+          (url.origin === nav.origin &&
+            hash(url.origin + url.pathname + url.search) === nav.navigationKey))
       ) {
         await chrome.tabs
           .sendMessage(session.tabId, {
@@ -741,7 +1019,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       const nav = session.pendingNavigation,
         url = tab.url && new URL(tab.url);
       if (
-        contextualTask(session.view.journey) &&
+        continuesDestination(session.view.journey, session.view.request) &&
         nav &&
         (!url ||
           (nav.origin === url.origin &&

@@ -3,7 +3,7 @@ import { safeName, sanitizeText } from "../privacy-redaction";
 
 const headings = 'h1,h2,h3,h4,h5,h6,[role="heading"]';
 const boundaries =
-  'main,article,nav,header,footer,aside,dialog,form,fieldset,[role="main"],[role="navigation"],[role="dialog"],[role="search"],[role="region"],[role="complementary"],[role="toolbar"]';
+  'main,article,nav,header,footer,aside,dialog,form,fieldset,[role="main"],[role="navigation"],[role="banner"],[role="contentinfo"],[role="dialog"],[role="search"],[role="region"],[role="complementary"],[role="toolbar"]';
 function parent(element: Element): Element | null {
   return (
     element.parentElement ||
@@ -53,6 +53,7 @@ function regionRole(element: Element) {
 // Build one outline per structural boundary. Article headings must not lend
 // their purpose to an unrelated toolbar, footer, form, or detached dialog.
 export class StructureIndex {
+  private regions = new Map<Element, { role: string; name: string }>();
   private outlines = new Map<
     Element | Document | ShadowRoot,
     {
@@ -108,11 +109,17 @@ export class StructureIndex {
       ancestor && depth < 16;
       ancestor = parent(ancestor), depth++
     ) {
-      if (ancestor.matches(boundaries))
-        regions.unshift({
-          role: sanitizeText(regionRole(ancestor)).slice(0, 40),
-          name: regionName(ancestor),
-        });
+      if (ancestor.matches(boundaries)) {
+        let region = this.regions.get(ancestor);
+        if (!region) {
+          region = {
+            role: sanitizeText(regionRole(ancestor)).slice(0, 40),
+            name: regionName(ancestor),
+          };
+          this.regions.set(ancestor, region);
+        }
+        regions.unshift(region);
+      }
       // Nested navigation still belongs to its enclosing section. Its heading
       // is evidence only when it precedes the control in that section.
       if (ancestor.matches("section,main,article,[role=main]")) {

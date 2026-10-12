@@ -1,0 +1,103 @@
+import { readFile, mkdir, cp, writeFile, stat } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { thirdParty } from "./third-party.mjs";
+import { readdir } from "node:fs/promises";
+const report = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
+if (!report.passed)
+  throw new Error(
+    "Run passing real-model and API validation before packaging.",
+  );
+const apiFiles = {};
+for (const file of (await readdir("apps/api/dist")).sort())
+  apiFiles[file] = createHash("sha256")
+    .update(await readFile("apps/api/dist/" + file))
+    .digest("hex");
+if (JSON.stringify(apiFiles) !== JSON.stringify(report.apiArtifactFiles))
+  throw new Error("API bytes differ from the passing evaluation.");
+const version = JSON.parse(
+  await readFile("apps/api/package.json", "utf8"),
+).version;
+if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid version");
+const release = resolve("output/releases"),
+  staging = join(release, "backend-" + version),
+  name = "internet-navigator-api-" + version;
+await mkdir(release, { recursive: true });
+if (await stat(join(release, name + ".tgz")).catch(() => undefined))
+  throw new Error("Preserve the existing release; bump the version.");
+await mkdir(staging, { recursive: true });
+await cp("apps/api/dist", join(staging, "dist"), { recursive: true });
+await cp("assets/models", join(staging, "assets/models"), { recursive: true });
+await cp("assets/model-lock.json", join(staging, "assets/model-lock.json"));
+await cp("docs/api-setup.md", join(staging, "README.md"));
+await thirdParty(staging);
+const dependencies = {};
+const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
+for (const dependency of [
+  "compromise",
+  "@huggingface/transformers",
+  "zod",
+  "fastify",
+  "@fastify/cors",
+  "@fastify/swagger",
+  "zod-to-json-schema",
+])
+  dependencies[dependency] =
+    lock.packages["node_modules/" + dependency].version;
+await writeFile(
+  join(staging, "package.json"),
+  JSON.stringify(
+    {
+      name: "@internet-navigator/api",
+      version,
+      type: "module",
+      license: "MIT",
+      engines: { node: ">=24.19.0 <25" },
+      scripts: { start: "node dist/cli.js" },
+      dependencies,
+    },
+    null,
+    2,
+  ) + "\n",
+);
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+const opts = {
+  cwd: staging,
+  encoding: "utf8",
+  shell: process.platform === "win32",
+};
+execFileSync(npm, ["install", "--package-lock-only", "--ignore-scripts"], opts);
+await cp(
+  join(staging, "package-lock.json"),
+  join(staging, "npm-shrinkwrap.json"),
+);
+const packed = JSON.parse(
+  execFileSync(npm, ["pack", "--json", "--ignore-scripts"], opts),
+)[0];
+const archive = join(release, name + ".tgz");
+await cp(join(staging, packed.filename), archive);
+const sha256 = createHash("sha256")
+  .update(await readFile(archive))
+  .digest("hex");
+await writeFile(
+  join(release, name + ".sha256"),
+  sha256 + "  " + name + ".tgz\n",
+);
+await writeFile(
+  join(release, name + ".json"),
+  JSON.stringify(
+    {
+      version,
+      sha256,
+      node: "24.19.x",
+      modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+      evaluatedAt: report.evaluatedAt,
+      apiTestsPassed: report.passed,
+      setup: "docs/api-setup.md",
+    },
+    null,
+    2,
+  ) + "\n",
+);
+console.log("Verified backend package: " + archive + "\nSHA256: " + sha256);

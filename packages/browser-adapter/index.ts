@@ -7,6 +7,7 @@ import {
 } from "../privacy-redaction";
 import { rankTargets } from "../semantic-locator";
 import { routeSupportsUrl } from "../safety-policy";
+import { clippedRect, GeometrySnapshot } from "./geometry";
 export function roleOf(element: Element): string {
   const explicit = element.getAttribute("role");
   if (explicit) return explicit;
@@ -17,18 +18,22 @@ export function roleOf(element: Element): string {
   if (tag === "dialog") return "dialog";
   return "";
 }
-export function visible(element: Element): boolean {
+export function visible(
+  element: Element,
+  geometry = new GeometrySnapshot(),
+): boolean {
   if (
     !element.isConnected ||
     element.closest('[hidden], [aria-hidden="true"], [inert]')
   )
     return false;
-  const style = getComputedStyle(element);
+  const style = geometry.style(element);
   return (
     style.display !== "none" &&
     style.visibility !== "hidden" &&
     style.opacity !== "0" &&
-    element.getClientRects().length > 0
+    element.getClientRects().length > 0 &&
+    !!clippedRect(element, geometry)
   );
 }
 export class BrowserAdapter {
@@ -155,7 +160,7 @@ export class BrowserAdapter {
       landmarks,
       modal: [
         ...document.querySelectorAll('dialog[open],[role="dialog"]'),
-      ].some(visible),
+      ].some((element) => visible(element)),
     };
   }
   locate(target: Target) {

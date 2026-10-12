@@ -1,0 +1,35 @@
+name: Validate offline navigation
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci
+      - run: npm run fetch:model
+      - run: npm run check
+      - run: npm run build:api
+      - run: npm run test:nlp
+      - run: npx playwright install chromium
+      - run: npm run test:nlp:browser
+      - run: npm run test:e2e
+      - run: npm run test:live:wikipedia
+      - run: npm run test:acceptance
+      - run: npm run package:extension
+      - run: npm run package:api
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-evidence
+          path: |
+            output/nlp
+            output/acceptance
+            output/releases/*.zip
+            output/releases/*.tgz
+            output/releases/*.sha256
+            output/releases/*.json
+            test-results*

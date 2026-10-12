@@ -1,0 +1,455 @@
+export * from "./contracts";
+export * from "./queue";
+export * from "./storage";
+import {
+  planInputSchema,
+  resultSchema,
+  type PlanInput,
+  type PlanResult,
+} from "./contracts";
+import { interpretRequest, canonicalGoal } from "../nlp/interpret";
+import { SemanticIndex, MODEL_REVISION, words } from "../nlp";
+import { beginJourney, planTask } from "../goal-planner/task-journey";
+import { planGoal } from "../goal-planner";
+import type { SiteMemory } from "../page-model";
+import { sanitizeText } from "../privacy-redaction";
+import { shortestRoute } from "../goal-planner/route-graph";
+import { hasCommitLanguage } from "../safety-policy/action-language";
+import { authenticationIntent } from "../goal-planner/task-intent";
+export class NavigationCore {
+  constructor(public index: SemanticIndex) {}
+  async plan(
+    raw: PlanInput,
+    memory?: SiteMemory,
+    signal?: AbortSignal,
+  ): Promise<PlanResult> {
+    signal?.throwIfAborted();
+    const input = planInputSchema.parse(raw),
+      { requestId, documentId, revision } = input;
+    const activityBefore = { ...this.index.activity };
+    const result = (
+      value: Omit<
+        PlanResult,
+        "requestId" | "documentId" | "revision" | "activity"
+      >,
+    ): PlanResult =>
+      resultSchema.parse({
+        ...value,
+        requestId,
+        documentId,
+        revision,
+        activity: {
+          embedded: this.index.activity.embedded - activityBefore.embedded,
+          cacheHits: this.index.activity.cacheHits - activityBefore.cacheHits,
+          llmCalls: 0,
+          modelRevision: MODEL_REVISION,
+        },
+      });
+    let request;
+    try {
+      request = input.request
+        ? structuredClone(input.request)
+        : interpretRequest(input.text, input.context);
+    } catch (error) {
+      return result({
+        status: "unsupported",
+        reason:
+          error instanceof Error
+            ? error.message
+            : "Could not interpret the request.",
+      });
+    }
+    if (!input.request) request.id = requestId;
+    const task = request.tasks[request.active];
+    if (!task)
+      return result({
+        status: "unsupported",
+        request,
+        reason: "All tasks have finished.",
+      });
+    if (task.needsReference)
+      return result({
+        status: "unsupported",
+        request,
+        reason: "What does “it” refer to? Name the control or setting.",
+      });
+    if (task.negatedOnly)
+      return result({
+        status: "unsupported",
+        request,
+        reason:
+          "I retained your exclusion. Describe the action you would like to take.",
+      });
+    if (input.choice) {
+      const choice = input.observation.controls.find(
+        (c) => c.signature === input.choice,
+      );
+      if (!choice)
+        return result({
+          status: "unsupported",
+          request,
+          reason:
+            "That choice changed. Please choose from the current controls.",
+        });
+      task.contextTarget ||= task.target;
+      task.target = choice.label;
+      task.boundSignature = choice.signature;
+      request.status = "active";
+    }
+    const candidates = await this.index.rank(input.observation, task, signal);
+    if (
+      ["locate", "choose"].includes(task.operation) &&
+      hasCommitLanguage(task.target)
+    ) {
+      request.status = "blocked";
+      task.status = "blocked";
+      return result({
+        status: "unsupported",
+        request,
+        reason:
+          "Review this consequential action on the website. Reaching its control or heading cannot verify that it succeeded.",
+        canonicalGoal: canonicalGoal(task),
+        plan: {
+          goal: task.original,
+          source: "semantics",
+          status: "unresolved",
+          confidence: 0,
+          issue: "consequential",
+          steps: [],
+          reason:
+            "Review this consequential action on the website. Navigator stops before submission.",
+        },
+      });
+    }
+    const eligible = candidates.filter((c) => c.eligible && c.control.enabled);
+    const workflowGoal = authenticationIntent(task.contextTarget || task.target)
+      ? task.contextTarget || task.target
+      : undefined;
+    let goal = workflowGoal || canonicalGoal(task);
+    if (goal.length > 1000)
+      return result({
+        status: "unsupported",
+        request,
+        reason:
+          "That action description is too long. Shorten this task while keeping its requested value.",
+      });
+    const journey =
+      (input.journey?.canonicalGoal || input.journey?.goal) === goal &&
+      input.journey?.requestTaskId === task.id
+        ? { ...input.journey, goal }
+        : beginJourney(goal, input.observation.origin, input.strategy);
+    let plan = planTask(
+      input.observation,
+      journey,
+      memory,
+      undefined,
+      input.savedRoute
+        ? {
+            ...input.savedRoute,
+            goal: input.savedRoute.canonicalGoal || input.savedRoute.goal,
+          }
+        : undefined,
+    );
+    // Explicit exclusions are hard constraints, including the first revealed step.
+    if (
+      plan.steps.some((step) => {
+        const control = input.observation.controls.find(
+          (c) => c.id === step.controlId,
+        );
+        return (
+          !control ||
+          task.exclusions.some((e) =>
+            words(e).some((w) =>
+              words(control.label + " " + (control.description || "")).includes(
+                w,
+              ),
+            ),
+          )
+        );
+      })
+    )
+      plan = {
+        ...plan,
+        status: "unresolved",
+        steps: [],
+        issue: "no-match",
+        confidence: 0,
+        reason: "The route conflicts with a requested exclusion.",
+      };
+    const best = eligible[0],
+      second = eligible[1];
+    const strong =
+      !!best && (best.direct || (best.semantic >= 0.64 && best.score >= 0.64));
+    const ambiguous =
+      strong &&
+      second &&
+      best.score - second.score < 0.07 &&
+      best.control.signature !== second.control.signature &&
+      !(
+        best.control.destination &&
+        best.control.destination.key === second.control.destination?.key
+      );
+    if (
+      (plan.issue === "ambiguous" ||
+        (plan.status === "unresolved" &&
+          plan.issue === "no-match" &&
+          ambiguous)) &&
+      !task.boundSignature
+    ) {
+      const choices = eligible
+        .filter((c) => c.score >= (best?.score || 0) - 0.12)
+        .filter(
+          (c, i, all) =>
+            all.findIndex(
+              (v) => v.control.signature === c.control.signature,
+            ) === i,
+        )
+        .slice(0, 3);
+      if (choices.length >= 2) {
+        request.status = "clarification";
+        return result({
+          status: "clarification",
+          request,
+          clarification: {
+            question: `Which “${sanitizeText(task.target)}” do you mean?`,
+            choices: choices.map((c) => ({
+              id: c.control.signature,
+              signature: c.control.signature,
+              target: c.control.label,
+              label: sanitizeText(
+                [c.control.label, c.control.context]
+                  .filter(Boolean)
+                  .join(" · "),
+              ),
+            })),
+          },
+          reason: "Several scanned controls fit this request.",
+        });
+      }
+    }
+    if (
+      plan.status === "unresolved" &&
+      plan.issue === "no-match" &&
+      strong &&
+      !ambiguous &&
+      best.control.risk === "ordinary" &&
+      !journey.objective.workflow &&
+      !task.desiredValue
+    ) {
+      goal = best.control.label;
+      // The selected semantic target is still checked by the existing grounded
+      // planner. Hidden controls need a verified reveal relationship or route.
+      plan = planGoal(input.observation, goal, memory);
+      if (plan.steps.length) {
+        task.contextTarget ||= task.target;
+        task.target = goal;
+        task.boundSignature = best.control.signature;
+      }
+    }
+    if (task.boundSignature) {
+      const bound = input.observation.controls.find(
+        (c) => c.signature === task.boundSignature,
+      );
+      if (
+        bound &&
+        !task.desiredValue &&
+        (!journey.objective.workflow ||
+          ["navigation", "expand"].includes(bound.kind)) &&
+        candidates.find((c) => c.control.signature === bound.signature)
+          ?.eligible
+      ) {
+        if (!journey.objective.workflow) goal = bound.label;
+        plan = planGoal(
+          {
+            ...input.observation,
+            controls: input.observation.controls.filter(
+              (c) =>
+                c.signature === bound.signature ||
+                bound.revealIds.includes(c.id),
+            ),
+          },
+          bound.label,
+          memory,
+        );
+      }
+    }
+    if (
+      plan.status === "unresolved" &&
+      plan.issue === "no-match" &&
+      !task.desiredValue &&
+      !journey.objective.workflow &&
+      memory?.origin === input.observation.origin
+    ) {
+      // Remembered controls need an observed path whose first edge binds to a
+      // fresh ordinary control. Historical IDs never become DOM targets.
+      const reachable = (memory.states || memory.pages).filter((p) =>
+        shortestRoute(
+          input.observation,
+          memory,
+          new Set([p.stateKey]),
+          input.strategy,
+        ),
+      );
+      const seen = new Set(input.observation.controls.map((c) => c.signature));
+      const controls = reachable
+        .flatMap((p) => p.controls)
+        .filter((c) => {
+          if (
+            !c.active ||
+            !c.enabled ||
+            c.risk !== "ordinary" ||
+            seen.has(c.signature)
+          )
+            return false;
+          seen.add(c.signature);
+          return true;
+        })
+        .slice(0, 600)
+        .map((c, i) => ({
+          ...c,
+          id: `wffffffffffffffff-${i}`,
+          revealIds: [],
+          inViewport: false,
+        }));
+      if (controls.length) {
+        const historical = await this.index.rank(
+          { ...input.observation, controls },
+          task,
+          signal,
+        );
+        const candidates = historical.filter((c) => c.eligible),
+          first = candidates[0],
+          next = candidates[1];
+        if (
+          first &&
+          (first.direct || (first.semantic >= 0.68 && first.score >= 0.68)) &&
+          (!next || first.score - next.score >= 0.08)
+        ) {
+          const grounded = planTask(
+            input.observation,
+            beginJourney(
+              first.control.label,
+              input.observation.origin,
+              input.strategy,
+            ),
+            memory,
+          );
+          if (
+            grounded.source === "memory" &&
+            grounded.status === "guiding" &&
+            grounded.steps.every((step) =>
+              input.observation.controls.some((c) => c.id === step.controlId),
+            )
+          ) {
+            plan = grounded;
+            goal = first.control.label;
+            task.contextTarget ||= task.target;
+            task.target = goal;
+            task.boundSignature = first.control.signature;
+          }
+        }
+      }
+    }
+    // A search destination requires manual entry + a newly observed matching
+    // result + arrival. Finding or focusing a textbox is only an intermediate step.
+    if (task.operation === "search" && task.desiredValue) {
+      const desired = task.desiredValue.toLowerCase();
+      const arrived = input.observation.controls.some(
+        (c) =>
+          c.kind === "section" &&
+          c.label.toLowerCase() === desired &&
+          c.sectionVisible,
+      );
+      const link = input.observation.controls.find(
+        (c) =>
+          c.kind === "navigation" &&
+          c.label.toLowerCase() === desired &&
+          c.visible &&
+          c.enabled &&
+          c.risk === "ordinary",
+      );
+      const field = input.observation.controls.find(
+        (c) =>
+          c.kind === "focus" &&
+          /search/i.test(c.label + " " + c.role) &&
+          c.visible &&
+          c.enabled,
+      );
+      const target = link || (task.searchPhase ? undefined : field);
+      goal = target?.label || "Search";
+      plan = target
+        ? planGoal(input.observation, goal, memory)
+        : {
+            ...plan,
+            status: "awaiting-choice",
+            steps: [],
+            reason: `Enter “${task.desiredValue.slice(0, 160)}” in the website search, then choose a matching result.`,
+          };
+      if (
+        arrived &&
+        input.context?.verifiedDestination?.toLowerCase() === desired
+      )
+        plan = {
+          ...plan,
+          status: "completed",
+          steps: [],
+          reason:
+            "The requested search destination is visible after a verified navigation.",
+        };
+      else if (plan.status === "completed")
+        plan = {
+          ...plan,
+          status: "awaiting-choice",
+          steps: [],
+          reason: `Enter “${task.desiredValue.slice(0, 160)}” manually and select its result. Focusing Search does not finish this task.`,
+        };
+      if (link) {
+        task.boundSignature = link.signature;
+        task.searchPhase = "destination";
+      }
+    }
+    if (plan.issue === "consequential" || plan.issue === "unknown-effect") {
+      request.status = "blocked";
+      task.status = "blocked";
+    }
+    return result({
+      status: plan.status === "unresolved" ? "unsupported" : "plan",
+      request,
+      plan: { ...plan, goal: task.original },
+      canonicalGoal: goal,
+      reason: plan.reason,
+    });
+  }
+  async suggestions(
+    input: PlanInput,
+    memory?: SiteMemory,
+    signal?: AbortSignal,
+  ) {
+    const parsed = planInputSchema.parse(input),
+      request = interpretRequest(parsed.text, parsed.context);
+    const ranked = await this.index.rank(
+      parsed.observation,
+      request.tasks[0],
+      signal,
+    );
+    return ranked
+      .filter(
+        (c) =>
+          c.eligible &&
+          c.control.risk === "ordinary" &&
+          c.control.enabled &&
+          (c.control.visible ||
+            parsed.observation.controls.some(
+              (o) => o.visible && o.revealIds.includes(c.control.id),
+            ) ||
+            memory?.transitions.some(
+              (t) =>
+                t.active &&
+                t.evidence === "observed" &&
+                t.signature === c.control.signature,
+            )),
+      )
+      .slice(0, 3)
+      .map((c) => ({ label: c.control.label, signature: c.control.signature }));
+  }
+}

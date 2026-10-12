@@ -63,6 +63,9 @@ export interface SessionView {
   page?: import("../page-model").PageSnapshot;
   goalPlan?: import("../page-model").GoalPlan;
   journey?: import("../page-model").TaskJourney;
+  request?: import("../navigation-core/contracts").NavigationRequest;
+  clarification?: import("../navigation-core/contracts").Clarification;
+  embeddingActivity?: import("../navigation-core/contracts").PlanResult["activity"];
   continuationOrigin?: string;
   memory?: {
     pages: number;

@@ -1,4 +1,5 @@
 import { BrowserAdapter } from "../../../packages/browser-adapter";
+import { fullyUnclipped } from "../../../packages/browser-adapter/geometry";
 import { GuidanceOverlay } from "../../../packages/overlay-ui";
 import {
   PageDiscovery,
@@ -35,6 +36,18 @@ import {
   type VerificationEvent,
 } from "../../../packages/live-diagnostics";
 import type { SessionView } from "../../../packages/shared-types";
+import type {
+  NavigationRequest,
+  PlanResult,
+} from "../../../packages/navigation-core/contracts";
+import {
+  advanceQueue,
+  pauseQueue,
+  stopQueue,
+  resumeQueue,
+  continuesDestination,
+} from "../../../packages/navigation-core/queue";
+import { canonicalGoal } from "../../../packages/nlp/canonical";
 export class PageCoach {
   view: SessionView;
   private discovery = new PageDiscovery();
@@ -52,6 +65,8 @@ export class PageCoach {
   private expectedNavigation?: string;
   private beforeUrl?: string;
   private selectedAt = 0;
+  private planningRevision = "";
+  private verifiedDestination?: string;
   constructor(
     private publish: (
       view: SessionView,
@@ -66,6 +81,12 @@ export class PageCoach {
     restoredJourney?: TaskJourney,
     private savedTask?: SavedTask,
     private restoredNavigation?: PendingNavigation,
+    restoredRequest?: NavigationRequest,
+    private requestPlanner?: (
+      request: NavigationRequest,
+      page: PageSnapshot,
+      verifiedDestination?: string,
+    ) => Promise<PlanResult>,
   ) {
     this.view = {
       routeId: LIVE_ROUTE_ID,
@@ -80,9 +101,11 @@ export class PageCoach {
       goalPlan: restoredPlan,
       journey: restoredJourney && resumeJourney(restoredJourney),
       liveDiagnostics: restoredDiagnostics,
+      request: restoredRequest,
     };
   }
   start() {
+    if (this.view.request) this.view.request = resumeQueue(this.view.request);
     this.observe();
     if (this.view.goalPlan?.status === "completed")
       this.view.instruction =
@@ -99,6 +122,7 @@ export class PageCoach {
       this.view.journey?.status === "active"
     )
       this.replan();
+    if (this.view.request?.status === "active") this.requestReplan();
     return this.view;
   }
   private observe() {
@@ -145,6 +169,7 @@ export class PageCoach {
       this.navigationVerified = false;
       if (this.restoredNavigation && this.view.journey) {
         const nav = this.restoredNavigation;
+        this.verifiedDestination = nav.label;
         this.view.journey = advanceJourney(
           this.view.journey,
           page,
@@ -188,6 +213,7 @@ export class PageCoach {
         chosen.destination.getBoundingClientRect();
       const sectionVisible =
         !!destination &&
+        fullyUnclipped(chosen.destination!) &&
         destination.top >= 0 &&
         destination.bottom <= innerHeight &&
         destination.left >= 0 &&
@@ -316,16 +342,26 @@ export class PageCoach {
         this.view.instruction =
           "The control changed or is hidden. The page was rescanned; choose a current control.";
         if (this.view.goalPlan?.status === "guiding") {
+          if (this.view.request) {
+            this.view.goalPlan = {
+              ...this.view.goalPlan,
+              status: "unresolved",
+              steps: [],
+              reason: this.view.instruction,
+            };
+            this.publish(this.view);
+          }
           this.replan();
           return;
         }
       } else if (!this.pending)
         this.overlay.show(fresh.geometry, this.view.instruction);
     } else if (
-      this.view.goalPlan?.status === "unresolved" ||
-      (this.view.goalPlan?.status === "awaiting-choice" &&
-        this.view.journey?.progress.length &&
-        this.view.goalPlan.interpretation)
+      !this.view.request &&
+      (this.view.goalPlan?.status === "unresolved" ||
+        (this.view.goalPlan?.status === "awaiting-choice" &&
+          this.view.journey?.progress.length &&
+          this.view.goalPlan.interpretation))
     ) {
       const plan = this.plan(this.view.goalPlan.goal);
       if (plan.status !== "unresolved") {
@@ -360,6 +396,25 @@ export class PageCoach {
           }
         : undefined;
     const plan = this.view.goalPlan;
+    const requestTask = this.view.request?.tasks[this.view.request.active];
+    if (requestTask?.operation === "search") {
+      this.view.verifiedSteps++;
+      if (selected.control.kind === "focus")
+        requestTask.searchPhase = "results";
+      if (selected.control.kind === "navigation")
+        this.verifiedDestination = selected.control.label;
+      this.clearTarget();
+      this.view.goalPlan = {
+        ...plan!,
+        status: "awaiting-choice",
+        steps: [],
+        reason: `Enter “${requestTask.desiredValue?.slice(0, 160)}” in the website search and select a matching result.`,
+      };
+      this.view.instruction = this.view.goalPlan.reason;
+      this.publish(this.view, evidence);
+      this.requestReplan();
+      return;
+    }
     if (this.view.journey) {
       this.view.journey = advanceJourney(
         this.view.journey,
@@ -368,13 +423,6 @@ export class PageCoach {
         before.stateKey,
         Date.now() - this.selectedAt,
       );
-      if (contextualTask(this.view.journey)) {
-        this.view.verifiedSteps++;
-        this.clearTarget();
-        this.publish(this.view, evidence);
-        this.replan();
-        return;
-      }
     }
     this.view.verifiedSteps++;
     this.clearTarget();
@@ -386,21 +434,52 @@ export class PageCoach {
       if (
         remaining.length &&
         remaining.every((step) =>
-          page.controls.some((c) => c.id === step.controlId && c.enabled),
+          page.controls.some(
+            (c) =>
+              c.id === step.controlId &&
+              c.label === step.label &&
+              c.signature ===
+                before.controls.find((old) => old.id === c.id)?.signature &&
+              c.enabled &&
+              c.risk === "ordinary",
+          ),
         ) &&
         page.controls.some((c) => c.id === remaining[0].controlId && c.visible)
       ) {
+        // Rebind a known next step from this fresh scan before publishing the
+        // verification. A menu reveal need not wait for another model query.
+        this.planningRevision = "";
         this.view.goalPlan = { ...plan, steps: remaining };
-        this.publish(this.view, evidence);
-        this.select(remaining[0].controlId);
+        this.select(remaining[0].controlId, evidence);
         return;
       }
-      if (remaining.length || plan.source === "memory") {
+      if (
+        contextualTask(this.view.journey) ||
+        remaining.length ||
+        plan.source === "memory"
+      ) {
         this.publish(this.view, evidence);
         this.replan();
         return;
       }
       if (selected.control.kind === "expand") {
+        if (
+          requestTask &&
+          requestTask.operation === "navigate" &&
+          !requestTask.desiredValue
+        ) {
+          this.view.goalPlan = {
+            ...plan,
+            status: "completed",
+            steps: [],
+            reason:
+              "The requested menu opened and its declared state change was verified.",
+          };
+          if (this.view.journey) this.view.journey.status = "completed";
+          this.completeQueuedTask();
+          this.publish(this.view, evidence);
+          return;
+        }
         this.view.goalPlan = {
           ...plan,
           status: "awaiting-choice",
@@ -421,6 +500,7 @@ export class PageCoach {
         reason: "The final step's expected result was observed.",
       };
       if (this.view.journey) this.view.journey.status = "completed";
+      this.completeQueuedTask();
       this.view.instruction =
         "Goal reached. The expected control result was verified.";
       if (this.view.liveDiagnostics?.planning)
@@ -458,6 +538,8 @@ export class PageCoach {
     }
     this.clearTarget();
     if (!options.journeyId) {
+      this.view.request = undefined;
+      this.view.clarification = undefined;
       this.view.journey = beginJourney(
         goal,
         this.view.page.origin,
@@ -469,6 +551,10 @@ export class PageCoach {
     return { view: this.view };
   }
   private replan() {
+    if (this.view.request && this.requestPlanner) {
+      this.requestReplan();
+      return;
+    }
     if (this.view.page && this.view.goalPlan)
       this.installPlan(this.plan(this.view.goalPlan.goal));
   }
@@ -548,8 +634,125 @@ export class PageCoach {
       this.state(plan.status === "completed" ? "verified" : "choosing");
       this.publish(this.view);
     }
+    if (this.view.request && plan.status === "completed")
+      this.completeQueuedTask();
+    if (
+      this.view.request &&
+      (plan.issue === "consequential" || plan.issue === "unknown-effect")
+    )
+      this.view.request = advanceQueue(this.view.request, "boundary");
+  }
+  installRequest(
+    result: PlanResult,
+    strategy?: RouteStrategy,
+    savedRouteId?: string,
+  ) {
+    this.refresh();
+    if (
+      this.view.status !== "running" ||
+      this.view.page?.revision !== result.revision
+    )
+      return { error: "Stale scan. Recalculate using the current document." };
+    this.clearTarget();
+    this.view.request = result.request;
+    this.view.clarification = result.clarification;
+    this.view.embeddingActivity = result.activity;
+    if (result.plan && this.view.liveDiagnostics) {
+      this.view.liveDiagnostics.planning = inspectGoal(
+        this.view.page,
+        result.canonicalGoal || result.plan.goal,
+        this.memory,
+      ).diagnostics;
+      this.view.liveDiagnostics.planning.decision = result.plan.status;
+      this.view.liveDiagnostics.planning.source = result.plan.source;
+    }
+    const task = result.request?.tasks[result.request.active];
+    if (task && this.view.journey?.requestTaskId !== task.id) {
+      this.view.journey = beginJourney(
+        result.canonicalGoal || canonicalGoal(task),
+        this.view.page.origin,
+        strategy,
+      );
+      this.view.journey.savedRouteId = savedRouteId;
+      this.view.journey.requestTaskId = task.id;
+      this.view.journey.canonicalGoal =
+        result.canonicalGoal || canonicalGoal(task);
+      this.view.journey.goal = task.original;
+    }
+    if (result.plan) {
+      if (result.plan.status === "completed" && this.view.journey)
+        this.view.journey.status = "completed";
+      this.installPlan(result.plan);
+    } else {
+      this.view.goalPlan = {
+        goal: result.request?.original || "Request",
+        source: "semantics",
+        status: "unresolved",
+        confidence: 0,
+        issue: result.status === "clarification" ? "ambiguous" : "no-match",
+        steps: [],
+        reason: result.reason,
+      };
+      this.view.instruction = result.reason;
+      this.publish(this.view);
+    }
+    return { view: this.view };
+  }
+  private completeQueuedTask() {
+    if (!this.view.request || this.view.request.status !== "active") return;
+    this.view.request = advanceQueue(this.view.request, "verified");
+    if (this.view.request.status === "active")
+      queueMicrotask(() => this.requestReplan());
+  }
+  skipTask() {
+    if (!this.view.request || this.view.request.status === "canceled") return;
+    this.clearTarget();
+    this.view.request = advanceQueue(this.view.request, "skipped");
+    this.view.clarification = undefined;
+    this.planningRevision = "";
+    if (this.view.request.status === "active") this.requestReplan();
+    this.publish(this.view);
+  }
+  private requestReplan() {
+    const request = this.view.request,
+      page = this.view.page;
+    if (
+      !request ||
+      !page ||
+      !this.requestPlanner ||
+      !["active", "clarification"].includes(request.status) ||
+      this.view.status !== "running"
+    )
+      return;
+    // A queued task can change without a new page revision.
+    const revision = `${page.revision}:${request.active}:${this.view.verifiedSteps}:${this.view.journey?.progress.length || 0}:${request.tasks[request.active]?.searchPhase || ""}`;
+    if (this.planningRevision === revision) return;
+    this.planningRevision = revision;
+    const id = request.id,
+      active = request.active;
+    void this.requestPlanner(request, page, this.verifiedDestination)
+      .then((result) => {
+        if (this.planningRevision !== revision) return;
+        if (
+          this.view.status !== "running" ||
+          this.view.request?.id !== id ||
+          this.view.request.active !== active
+        )
+          return;
+        if (this.view.page?.revision !== result.revision) {
+          this.planningRevision = "";
+          this.requestReplan();
+          return;
+        }
+        this.installRequest(result, this.view.journey?.strategy);
+      })
+      .catch(() => {
+        if (this.planningRevision === revision) this.planningRevision = "";
+      });
   }
   guide(id: string) {
+    this.view.request = undefined;
+    this.view.clarification = undefined;
     this.view.goalPlan = undefined;
     this.view.journey = undefined;
     if (this.view.liveDiagnostics)
@@ -557,7 +760,7 @@ export class PageCoach {
     this.refresh();
     return this.select(id);
   }
-  private select(id: string) {
+  private select(id: string, observed?: ObservedTransition) {
     if (this.view.status !== "running")
       return { error: "Resume navigation before choosing a control." };
     const target = this.discovery.bindings.get(id);
@@ -573,10 +776,12 @@ export class PageCoach {
       };
     this.clearTarget();
     if (target.control.risk === "consequential") {
+      if (this.view.request)
+        this.view.request = advanceQueue(this.view.request, "boundary");
       this.view.goalPlan = actionBoundary(target.control);
       this.view.instruction = this.view.goalPlan.reason;
       this.state("choosing");
-      this.publish(this.view);
+      this.publish(this.view, observed);
       return { view: this.view };
     }
     this.selected = target;
@@ -634,7 +839,7 @@ export class PageCoach {
                   "” control, then choose an option on the website."
                 : "Use the highlighted “" + target.control.label + "” control.";
     this.overlay.show(target.geometry, this.view.instruction);
-    this.publish(this.view);
+    this.publish(this.view, observed);
     return { view: this.view };
   }
   private interacted() {
@@ -671,7 +876,7 @@ export class PageCoach {
       if (
         !(this.selected.element as HTMLAnchorElement).target ||
         (this.selected.element as HTMLAnchorElement).target === "_self" ||
-        (contextualTask(this.view.journey) &&
+        (continuesDestination(this.view.journey, this.view.request) &&
           (this.selected.element as HTMLAnchorElement).target === "_blank")
       )
         navigation = {
@@ -684,6 +889,8 @@ export class PageCoach {
           durationMs: Math.min(300000, Date.now() - this.selectedAt),
           kind: "navigation",
           fromOrigin: this.before!.origin,
+          newTab:
+            (this.selected.element as HTMLAnchorElement).target === "_blank",
         };
     }
     this.publish(this.view, undefined, navigation);
@@ -735,6 +942,7 @@ export class PageCoach {
     this.savedTask = savedTask;
   }
   pause() {
+    if (this.view.request) this.view.request = pauseQueue(this.view.request);
     this.record("canceled", "guidance-cleared");
     this.teardown();
     this.view.status = "paused";
@@ -747,11 +955,19 @@ export class PageCoach {
   resume() {
     if (this.view.status !== "paused") return;
     this.view.status = "running";
+    if (this.view.request) this.view.request = resumeQueue(this.view.request);
+    this.planningRevision = "";
     this.observe();
     this.refresh();
-    if (this.view.goalPlan?.status === "guiding") this.replan();
+    if (
+      this.view.goalPlan?.status === "guiding" ||
+      this.view.request?.status === "active"
+    )
+      this.replan();
   }
   stop(reason = "Navigation stopped.") {
+    if (this.view.request) this.view.request = stopQueue(this.view.request);
+    this.view.clarification = undefined;
     this.record("canceled", "guidance-cleared");
     this.teardown();
     this.view.status = "stopped";

@@ -4,6 +4,11 @@ import {
   isSensitiveElement,
 } from "../privacy-redaction";
 import { visible } from "../browser-adapter";
+import {
+  clippedRect,
+  GeometrySnapshot,
+  fullyUnclipped,
+} from "../browser-adapter/geometry";
 import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
 import { StructureIndex } from "./structure";
@@ -34,7 +39,10 @@ export function publicPath(url: URL): string {
     .join("/")
     .slice(0, 500);
 }
-export function presented(element: HTMLElement): HTMLElement | undefined {
+export function presented(
+  element: HTMLElement,
+  geometry = new GeometrySnapshot(),
+): HTMLElement | undefined {
   if (
     !element.isConnected ||
     isSensitiveElement(element) ||
@@ -51,9 +59,9 @@ export function presented(element: HTMLElement): HTMLElement | undefined {
       !element.closest('[hidden],[aria-hidden="true"]') &&
       !label.closest("[hidden],[inert]")
     ) {
-      const style = getComputedStyle(label),
-        inputStyle = getComputedStyle(element),
-        rect = label.getBoundingClientRect();
+      const style = geometry.style(label),
+        inputStyle = geometry.style(element),
+        rect = geometry.rect(label);
       if (
         style.display !== "none" &&
         style.visibility !== "hidden" &&
@@ -61,12 +69,13 @@ export function presented(element: HTMLElement): HTMLElement | undefined {
         inputStyle.display !== "none" &&
         inputStyle.visibility !== "hidden" &&
         rect.width &&
-        rect.height
+        rect.height &&
+        clippedRect(label, geometry)
       )
         return label;
     }
   }
-  return visible(element) ? element : undefined;
+  return visible(element, geometry) ? element : undefined;
 }
 function nameOf(element: HTMLElement) {
   const root = element.getRootNode() as Document | ShadowRoot;
@@ -123,7 +132,11 @@ function popupOf(element: HTMLElement): PageControl["popup"] {
   if (value && ["menu", "listbox", "tree", "grid", "dialog"].includes(value))
     return value as PageControl["popup"];
 }
-function contextOf(element: HTMLElement) {
+function contextOf(
+  element: HTMLElement,
+  headingChildren = new Map<HTMLElement, Element[]>(),
+  firstHeadings = new Map<HTMLElement, HTMLElement | undefined>(),
+) {
   const root = element.getRootNode() as Document | ShadowRoot;
   const labelBlock = (e: Element) =>
     e.matches(headingSelector) ||
@@ -133,11 +146,23 @@ function contextOf(element: HTMLElement) {
       !!safeName(e) &&
       safeName(e).length <= 60);
   let parent = element.parentElement;
+  const firstHeading = (parent: HTMLElement) => {
+    if (!firstHeadings.has(parent))
+      firstHeadings.set(
+        parent,
+        parent.querySelector<HTMLElement>(headingSelector) || undefined,
+      );
+    return firstHeadings.get(parent);
+  };
   for (
     let depth = 0;
     parent && depth < 8;
     depth++, parent = parent.parentElement
   ) {
+    if (parent.matches("footer,[role=contentinfo]")) {
+      const heading = firstHeading(parent);
+      return heading ? safeName(heading) : "Footer";
+    }
     const aria = parent.getAttribute("aria-label");
     if (aria) return sanitizeText(aria);
     const referenced = parent
@@ -148,10 +173,17 @@ function contextOf(element: HTMLElement) {
       .map(safeName)
       .join(" ");
     if (referenced) return referenced;
-    const preceding = [...parent.children]
+    let headings = headingChildren.get(parent);
+    if (!headings)
+      headingChildren.set(
+        parent,
+        (headings = [...parent.children].filter((e) =>
+          e.matches(headingSelector),
+        )),
+      );
+    const preceding = headings
       .filter(
         (e) =>
-          e.matches(headingSelector) &&
           !!(
             e.compareDocumentPosition(element) &
             Node.DOCUMENT_POSITION_FOLLOWING
@@ -179,7 +211,7 @@ function contextOf(element: HTMLElement) {
         "nav,[role=navigation],form,[role=search],fieldset,dialog,[role=dialog]",
       )
     ) {
-      const heading = parent.querySelector(headingSelector);
+      const heading = firstHeading(parent);
       if (heading) return safeName(heading);
     }
     if (parent.matches("main,article,body")) break;
@@ -213,7 +245,12 @@ function scopeOf(element: HTMLElement): PageControl["scope"] {
     parent && depth < 5;
     depth++, parent = parent.parentElement
   ) {
-    if (parent.matches("nav,header,[role=navigation]")) return "page";
+    if (
+      parent.matches(
+        "nav,header,footer,[role=navigation],[role=banner],[role=contentinfo]",
+      )
+    )
+      return "page";
     if (parent.matches("main,article,body")) break;
     const heading = parent.matches(headingSelector)
       ? parent
@@ -238,7 +275,9 @@ function groupOf(e: HTMLElement, kind: PageControl["kind"], context: string) {
     return e.matches(headingSelector) ? "Page sections" : context || "Contents";
   if (kind === "focus") return context || "Form fields";
   if (kind === "navigation")
-    return e.closest("nav,[role=navigation],header,footer")
+    return e.closest(
+      "nav,[role=navigation],header,footer,[role=banner],[role=contentinfo]",
+    )
       ? context || "Navigation"
       : "Page links";
   return context || "Page controls";
@@ -259,6 +298,9 @@ export class PageDiscovery {
     const elements: HTMLElement[] = [];
     const popups: HTMLElement[] = [];
     const roots: (Document | ShadowRoot)[] = [];
+    const geometrySnapshot = new GeometrySnapshot();
+    const headingChildren = new Map<HTMLElement, Element[]>();
+    const firstHeadings = new Map<HTMLElement, HTMLElement | undefined>();
     const scan = (root: Document | ShadowRoot) => {
       roots.push(root);
       elements.push(...root.querySelectorAll<HTMLElement>(candidates));
@@ -272,39 +314,53 @@ export class PageDiscovery {
     };
     scan(document);
     const structureIndex = new StructureIndex(roots);
-    // Keep interface controls and section structure ahead of dense article link lists.
+    // Reserve coverage for structure and global landmarks. Large related-link
+    // navigation widgets cannot consume the entire scan before headings/footer.
     const priority = (e: HTMLElement) =>
       e.matches("a[href]")
-        ? e.closest("nav,header,footer,[role=navigation]")
-          ? 1
-          : 3
-        : e.matches(headingSelector)
+        ? e.closest("footer,[role=contentinfo]")
           ? 2
+          : e.closest("nav,header,[role=navigation],[role=banner]")
+            ? e.closest("main,article,[role=main]")
+              ? 4
+              : 3
+            : 5
+        : e.matches(headingSelector)
+          ? 1
           : 0;
     // Compute geometry once per candidate, rather than repeating style/layout reads
     // inside every sort comparison on a dense article.
     const ranked = elements
       .map((e) => {
         const rank = priority(e);
-        const rect =
-          rank === 3 && presented(e) ? e.getBoundingClientRect() : undefined;
+        const geometry = presented(e, geometrySnapshot);
+        const rect = geometry
+          ? clippedRect(geometry, geometrySnapshot)
+          : undefined;
         return {
           element: e,
           rank,
+          geometry,
           inViewport: Number(
             !!rect && rect.top >= 0 && rect.bottom <= innerHeight,
           ),
         };
       })
-      .sort(
-        (a, b) =>
-          a.rank - b.rank || (a.rank === 3 ? b.inViewport - a.inViewport : 0),
-      );
+      .sort((a, b) => a.rank - b.rank || b.inViewport - a.inViewport);
+    const budgets = [240, 100, 60, 100, 60, 40];
+    const reserved = ranked.filter(
+      (candidate) => budgets[candidate.rank]-- > 0,
+    );
+    const protectedElements = new Set(reserved.map((c) => c.element));
+    const ordered = [
+      ...reserved,
+      ...ranked.filter((c) => !protectedElements.has(c.element)),
+    ];
     let partial = false;
     const controls: PageControl[] = [];
     const base = new URL(location.href);
     const forms = new Map<HTMLFormElement, PageControl["form"]>();
-    for (const { element: e } of ranked) {
+    for (const { element: e, geometry } of ordered) {
       if (controls.length >= 600) {
         partial = true;
         break;
@@ -321,12 +377,12 @@ export class PageDiscovery {
       const role = roleOf(e),
         description = descriptionOf(e, rawLabel),
         popup = popupOf(e),
-        context = contextOf(e),
-        geometry = presented(e);
+        context = contextOf(e, headingChildren, firstHeadings);
       let kind: PageControl["kind"] = "action",
         destination: HTMLElement | undefined;
       let link: PageControl["destination"];
       let navigationKey: string | undefined;
+      let destinationAvailable = true;
       if (e.matches(headingSelector)) {
         kind = "section";
         destination = e;
@@ -368,10 +424,44 @@ export class PageDiscovery {
             url.hash
           ) {
             const root = e.getRootNode() as Document | ShadowRoot;
-            destination =
-              root.getElementById(decodeURIComponent(url.hash.slice(1))) ||
-              undefined;
-            if (destination) kind = "section";
+            const anchor = root.getElementById(
+              decodeURIComponent(url.hash.slice(1)),
+            );
+            // A fragment alone does not establish a section. Resolve it to its
+            // real heading/labelled region; broken or unrelated anchors are unusable.
+            const heading =
+              anchor &&
+              (anchor.closest<HTMLElement>(headingSelector) ||
+                anchor.querySelector<HTMLElement>(
+                  ":scope > h1,:scope > h2,:scope > h3,:scope > h4,:scope > h5,:scope > h6,:scope > [role=heading]",
+                ) ||
+                (anchor.nextElementSibling?.matches(headingSelector)
+                  ? (anchor.nextElementSibling as HTMLElement)
+                  : undefined));
+            const label = rawLabel.replace(/^\d+(?:\.\d+)*\s*/, "");
+            const region =
+              anchor?.matches("section,[role=region],main,[role=main]") &&
+              (anchor.hasAttribute("aria-label") ||
+                anchor.hasAttribute("aria-labelledby"))
+                ? anchor
+                : undefined;
+            const target = heading || region;
+            const genericLandmark =
+              /^(?:\(?top\)?|back to top|(?:jump|skip) to (?:main )?content)$/i.test(
+                label,
+              );
+            destinationAvailable =
+              !!target &&
+              (genericLandmark ||
+                goalScore(label, {
+                  label: safeName(target),
+                  context: "",
+                  kind: "section",
+                }) >= 0.6);
+            if (destinationAvailable) {
+              destination = target;
+              kind = "section";
+            }
           }
           if (url.hash === "#" || e.getAttribute("href") === "#") {
             destination =
@@ -480,7 +570,9 @@ export class PageDiscovery {
         ),
         visible: !!geometry,
         enabled:
-          !e.matches(":disabled") && e.getAttribute("aria-disabled") !== "true",
+          destinationAvailable &&
+          !e.matches(":disabled") &&
+          e.getAttribute("aria-disabled") !== "true",
         inViewport:
           !!geometry &&
           rect.width > 0 &&
@@ -506,6 +598,7 @@ export class PageDiscovery {
         sectionKey,
         sectionVisible: sectionRect
           ? !!presented(destination!) &&
+            fullyUnclipped(destination!, geometrySnapshot) &&
             sectionRect.top >= 0 &&
             sectionRect.bottom <= innerHeight &&
             sectionRect.left >= 0 &&

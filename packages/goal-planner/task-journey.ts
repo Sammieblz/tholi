@@ -9,7 +9,7 @@ import type {
   RouteStrategy,
 } from "../page-model";
 import { hash } from "../page-model";
-import { sanitizeText } from "../privacy-redaction";
+import { sanitizeText, sanitizeGoal } from "../privacy-redaction";
 import { planGoal, goalScore, targetIdentity } from "./index";
 import { shortestRoute, edgeCost } from "./route-graph";
 import { authenticationIntent } from "./task-intent";
@@ -59,19 +59,19 @@ export function beginJourney(
   strategy: RouteStrategy = "fastest",
   now = Date.now(),
 ): TaskJourney {
-  goal = sanitizeText(goal);
+  goal = sanitizeGoal(goal);
   const split = goal.match(
     /^(?:.*?\b)?(?:change|switch|set|choose|select)\s+(?:the\s+)?(.+?)\s+(?:to|into)\s+(.+?)[.!?]?$/i,
   );
   const objective = split
     ? {
         purpose: sanitizeText(split[1]),
-        value: sanitizeText(split[2]).slice(0, 80),
+        value: sanitizeGoal(split[2]),
         language: /\blanguages?\b/i.test(split[1])
           ? languageCode(split[2])
           : undefined,
       }
-    : { purpose: goal, workflow: authenticationIntent(goal) };
+    : { purpose: sanitizeText(goal), workflow: authenticationIntent(goal) };
   return {
     id: crypto.randomUUID(),
     goal,
@@ -108,7 +108,8 @@ export function saveTask(
   return {
     id: taskKey(task),
     origin: task.origin,
-    goal: sanitizeText(task.goal),
+    goal: sanitizeGoal(task.goal),
+    canonicalGoal: task.canonicalGoal,
     objective: task.objective,
     strategy: task.strategy,
     updatedAt: task.updatedAt,

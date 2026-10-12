@@ -1,0 +1,369 @@
+{
+  "format": "navigator-regression-v1",
+  "scope": "e2e",
+  "artifactFiles": {
+    "content.js": "25af3033f5f76ac48662d13c10a004ad43c3520073c8f925cab4fdbfb33f237a",
+    "content.js.map": "18a33d6778b81cf7d226eff2978b394826a486dd02b25f18ffa09adc706ad1cf",
+    "manifest.json": "013a76a85d0482f1cc5c1d86ab3e861e9d64293cdea9bc2a45623efad80c3546",
+    "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
+    "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
+    "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
+    "sidepanel.js": "f84d5facd3929a939c35ff803d13e7a771f78d4bbba90f47c18f51dd1538bad8",
+    "sidepanel.js.map": "a74710c2123dc039c6587c44239152e4b3319cb24bbf79f35cdcef03e4136886",
+    "worker.js": "b8309548c44a17d41a6b02db87402066dc9d5677223e66edff9ccbea8b68bc21",
+    "worker.js.map": "44dcd767915c83660db1c27838bfc5ae79049c7b0ad55fbbed5196606f05d44e"
+  },
+  "extensionVersion": "0.6.9",
+  "evaluatedAt": "2026-10-11T21:26:10.084Z",
+  "expected": 86,
+  "configuredCount": 86,
+  "sourceRevision": "1b9d7f06a7fd2caf19ed1bdc933db3a72fb94e3d",
+  "workingTreeDirty": true,
+  "passed": true,
+  "cases": [
+    {
+      "id": " / desktop / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / production localhost access is available without a toolbar grant",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / production localhost access is available without a toolbar grant",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "status": "passed"
+    }
+  ]
+}

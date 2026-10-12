@@ -1,0 +1,1651 @@
+{
+  "version": 1,
+  "annotations": "Expected targets authored independently of model scores. Wikipedia labels checked against the existing live matrix; generic targets use authored accessible controls.",
+  "cases": [
+    {
+      "id": "positive-001",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Log in.",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-002",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Log in?",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-003",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Log in.",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-004",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open Log in?",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-005",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Log in, please?",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-006",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Log in on this page.",
+      "expected": "Log in"
+    },
+    {
+      "id": "positive-007",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Create account.",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-008",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Create account?",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-009",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open Create account.",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-010",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open Create account?",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-011",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Create account, please?",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-012",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Create account on this page.",
+      "expected": "Create account"
+    },
+    {
+      "id": "positive-013",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Languages.",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-014",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Languages?",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-015",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open Languages.",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-016",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Languages?",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-017",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Languages, please?",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-018",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Languages on this page.",
+      "expected": "Languages"
+    },
+    {
+      "id": "positive-019",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Please show me Spanish.",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-020",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Spanish?",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-021",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Spanish.",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-022",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Spanish?",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-023",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Spanish, please?",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-024",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I would like to find Spanish on this page.",
+      "expected": "Spanish"
+    },
+    {
+      "id": "positive-025",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Please show me Dark.",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-026",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Dark?",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-027",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Dark.",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-028",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Dark?",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-029",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Dark, please?",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-030",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I would like to find Dark on this page.",
+      "expected": "Dark"
+    },
+    {
+      "id": "positive-031",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Large.",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-032",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Large?",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-033",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Large.",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-034",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open Large?",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-035",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Large, please?",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-036",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Large on this page.",
+      "expected": "Large"
+    },
+    {
+      "id": "positive-037",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me References.",
+      "expected": "References"
+    },
+    {
+      "id": "positive-038",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find References?",
+      "expected": "References"
+    },
+    {
+      "id": "positive-039",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open References.",
+      "expected": "References"
+    },
+    {
+      "id": "positive-040",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open References?",
+      "expected": "References"
+    },
+    {
+      "id": "positive-041",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to References, please?",
+      "expected": "References"
+    },
+    {
+      "id": "positive-042",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find References on this page.",
+      "expected": "References"
+    },
+    {
+      "id": "positive-043",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Contents.",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-044",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Contents?",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-045",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open Contents.",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-046",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Contents?",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-047",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Contents, please?",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-048",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Contents on this page.",
+      "expected": "Contents"
+    },
+    {
+      "id": "positive-049",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Please show me Search.",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-050",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Search?",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-051",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Search.",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-052",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Search?",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-053",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Search, please?",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-054",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I would like to find Search on this page.",
+      "expected": "Search"
+    },
+    {
+      "id": "positive-055",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Please show me Edit.",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-056",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Edit?",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-057",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Edit.",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-058",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Edit?",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-059",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Edit, please?",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-060",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I would like to find Edit on this page.",
+      "expected": "Edit"
+    },
+    {
+      "id": "positive-061",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me View history.",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-062",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find View history?",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-063",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open View history.",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-064",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open View history?",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-065",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to View history, please?",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-066",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find View history on this page.",
+      "expected": "View history"
+    },
+    {
+      "id": "positive-067",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Appearance.",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-068",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Appearance?",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-069",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open Appearance.",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-070",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "How do I open Appearance?",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-071",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Appearance, please?",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-072",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Appearance on this page.",
+      "expected": "Appearance"
+    },
+    {
+      "id": "positive-073",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Please show me Wide.",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-074",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Wide?",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-075",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I want to open Wide.",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-076",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Wide?",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-077",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Wide, please?",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-078",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I would like to find Wide on this page.",
+      "expected": "Wide"
+    },
+    {
+      "id": "positive-079",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Please show me Tools.",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-080",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "Can you help me find Tools?",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-081",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "I want to open Tools.",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-082",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "How do I open Tools?",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-083",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "wikipedia",
+      "text": "Could you guide me to Tools, please?",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-084",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "wikipedia",
+      "text": "I would like to find Tools on this page.",
+      "expected": "Tools"
+    },
+    {
+      "id": "positive-085",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Please show me Donate.",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-086",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Can you help me find Donate?",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-087",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I want to open Donate.",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-088",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "How do I open Donate?",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-089",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Could you guide me to Donate, please?",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-090",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "I would like to find Donate on this page.",
+      "expected": "Donate"
+    },
+    {
+      "id": "positive-091",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Please show me Download.",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-092",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Can you help me find Download?",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-093",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I want to open Download.",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-094",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "How do I open Download?",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-095",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Could you guide me to Download, please?",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-096",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I would like to find Download on this page.",
+      "expected": "Download"
+    },
+    {
+      "id": "positive-097",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Please show me Help.",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-098",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Can you help me find Help?",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-099",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "I want to open Help.",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-100",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "How do I open Help?",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-101",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Could you guide me to Help, please?",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-102",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I would like to find Help on this page.",
+      "expected": "Help"
+    },
+    {
+      "id": "positive-103",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Please show me Contact.",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-104",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Can you help me find Contact?",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-105",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "I want to open Contact.",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-106",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "How do I open Contact?",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-107",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Could you guide me to Contact, please?",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-108",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I would like to find Contact on this page.",
+      "expected": "Contact"
+    },
+    {
+      "id": "positive-109",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Please show me Settings.",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-110",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Can you help me find Settings?",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-111",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I want to open Settings.",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-112",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "How do I open Settings?",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-113",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Could you guide me to Settings, please?",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-114",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "I would like to find Settings on this page.",
+      "expected": "Settings"
+    },
+    {
+      "id": "positive-115",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Please show me Notifications.",
+      "expected": "Notifications"
+    },
+    {
+      "id": "positive-116",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Can you help me find Notifications?",
+      "expected": "Notifications"
+    },
+    {
+      "id": "positive-117",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "I want to open Notifications.",
+      "expected": "Notifications"
+    },
+    {
+      "id": "positive-118",
+      "category": "positive",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "How do I open Notifications?",
+      "expected": "Notifications"
+    },
+    {
+      "id": "positive-119",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Could you guide me to Notifications, please?",
+      "expected": "Notifications"
+    },
+    {
+      "id": "positive-120",
+      "category": "positive",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "I would like to find Notifications on this page.",
+      "expected": "Notifications"
+    },
+    {
+      "id": "negation-correction-001",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Log in but not Spanish.",
+      "expected": "Log in"
+    },
+    {
+      "id": "negation-correction-002",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Create account but not Dark.",
+      "expected": "Create account"
+    },
+    {
+      "id": "negation-correction-003",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Languages but not Large.",
+      "expected": "Languages"
+    },
+    {
+      "id": "negation-correction-004",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Spanish but not References.",
+      "expected": "Spanish"
+    },
+    {
+      "id": "negation-correction-005",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Dark but not Contents.",
+      "expected": "Dark"
+    },
+    {
+      "id": "negation-correction-006",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Large but not Search.",
+      "expected": "Large"
+    },
+    {
+      "id": "negation-correction-007",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open References but not Edit.",
+      "expected": "References"
+    },
+    {
+      "id": "negation-correction-008",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Contents but not View history.",
+      "expected": "Contents"
+    },
+    {
+      "id": "negation-correction-009",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Search but not Appearance.",
+      "expected": "Search"
+    },
+    {
+      "id": "negation-correction-010",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Edit but not Wide.",
+      "expected": "Edit"
+    },
+    {
+      "id": "negation-correction-011",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Spanish, actually open Log in.",
+      "expected": "Log in"
+    },
+    {
+      "id": "negation-correction-012",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Dark, actually open Create account.",
+      "expected": "Create account"
+    },
+    {
+      "id": "negation-correction-013",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Large, actually open Languages.",
+      "expected": "Languages"
+    },
+    {
+      "id": "negation-correction-014",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open References, actually open Spanish.",
+      "expected": "Spanish"
+    },
+    {
+      "id": "negation-correction-015",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Contents, actually open Dark.",
+      "expected": "Dark"
+    },
+    {
+      "id": "negation-correction-016",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Search, actually open Large.",
+      "expected": "Large"
+    },
+    {
+      "id": "negation-correction-017",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Edit, actually open References.",
+      "expected": "References"
+    },
+    {
+      "id": "negation-correction-018",
+      "category": "negation-correction",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open View history, actually open Contents.",
+      "expected": "Contents"
+    },
+    {
+      "id": "negation-correction-019",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Appearance, actually open Search.",
+      "expected": "Search"
+    },
+    {
+      "id": "negation-correction-020",
+      "category": "negation-correction",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Wide, actually open Edit.",
+      "expected": "Edit"
+    },
+    {
+      "id": "ambiguous-001",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Open settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-002",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Show settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-003",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Find my settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-004",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "Can you help me find settings?",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-005",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "I want to open settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-006",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Where are settings?",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-007",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Go to settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-008",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Please show settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-009",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "I would like to find settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-010",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "Show me the settings",
+      "expected": "clarification",
+      "duplicate": "Settings"
+    },
+    {
+      "id": "ambiguous-011",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Open Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-012",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Find Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-013",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Show Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-014",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "I want to use Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-015",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "Help me find Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-016",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Could you show Search?",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-017",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Please open Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-018",
+      "category": "ambiguous",
+      "split": "calibration",
+      "fixture": "ambiguous",
+      "text": "Go to Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-019",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "Locate Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "ambiguous-020",
+      "category": "ambiguous",
+      "split": "held-out",
+      "fixture": "ambiguous",
+      "text": "Show me Search",
+      "expected": "clarification",
+      "duplicate": "Search"
+    },
+    {
+      "id": "unsupported-001",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Book a flight to Paris",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-002",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Order a pizza",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-003",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Send an email to my boss",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-004",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Tell me the weather tomorrow",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-005",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Calculate my taxes",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-006",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Summarize the entire article",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-007",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Translate the whole article automatically",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-008",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Write a poem",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-009",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Track my shipment",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-010",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Play a song",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-011",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Install an application",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-012",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Create a spreadsheet",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-013",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Automatically click every link",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-014",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Pay my bill",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-015",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Delete my account",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-016",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Purchase a membership",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-017",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Submit my changes",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-018",
+      "category": "unsupported",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Transfer money to another bank",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-019",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Cancel my subscription",
+      "expected": "unsupported"
+    },
+    {
+      "id": "unsupported-020",
+      "category": "unsupported",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Enter my password",
+      "expected": "unsupported"
+    },
+    {
+      "id": "compound-context-001",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Languages and then choose Spanish",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-002",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Appearance and then choose Dark",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-003",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Contents and then find References",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-004",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Tools and then find Download",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-005",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Settings and then open Notifications",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-006",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Languages then change it to Spanish",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-007",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Appearance then show it",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-008",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open Search and then open Help",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-009",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Find Contact and then find Help",
+      "expected": "queue",
+      "tasks": 2
+    },
+    {
+      "id": "compound-context-010",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Open Contents then find References then open View history",
+      "expected": "queue",
+      "tasks": 3
+    },
+    {
+      "id": "compound-context-011",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Change it to Spanish",
+      "expected": "reference",
+      "context": {
+        "target": "Languages"
+      }
+    },
+    {
+      "id": "compound-context-012",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Show it",
+      "expected": "reference",
+      "context": {
+        "target": "Languages"
+      }
+    },
+    {
+      "id": "compound-context-013",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open that",
+      "expected": "reference",
+      "context": {
+        "target": "Languages"
+      }
+    },
+    {
+      "id": "compound-context-014",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Choose it",
+      "expected": "reference",
+      "context": {
+        "target": "Languages"
+      }
+    },
+    {
+      "id": "compound-context-015",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Find it",
+      "expected": "reference",
+      "context": {
+        "target": "Languages"
+      }
+    },
+    {
+      "id": "compound-context-016",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Change it to Spanish",
+      "expected": "unsupported"
+    },
+    {
+      "id": "compound-context-017",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Show it",
+      "expected": "unsupported"
+    },
+    {
+      "id": "compound-context-018",
+      "category": "compound-context",
+      "split": "calibration",
+      "fixture": "generic",
+      "text": "Open that",
+      "expected": "unsupported"
+    },
+    {
+      "id": "compound-context-019",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Choose it",
+      "expected": "unsupported"
+    },
+    {
+      "id": "compound-context-020",
+      "category": "compound-context",
+      "split": "held-out",
+      "fixture": "generic",
+      "text": "Find it",
+      "expected": "unsupported"
+    }
+  ]
+}

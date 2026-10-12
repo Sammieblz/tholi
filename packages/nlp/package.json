@@ -1,0 +1,11 @@
+{
+  "name": "@internet-navigator/nlp",
+  "version": "0.7.1",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "compromise": "14.18.0",
+    "@huggingface/transformers": "4.3.1"
+  }
+}

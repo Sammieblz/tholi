@@ -8,3 +8,8 @@ output/qa/
 output/releases/
 test-results-live/
 test-results-acceptance/
+assets/models/
+apps/api/dist/
+.navigator-api/
+output/nlp/
+test-results-nlp/

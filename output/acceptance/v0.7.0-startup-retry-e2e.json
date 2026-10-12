@@ -1,0 +1,484 @@
+{
+  "format": "navigator-regression-v1",
+  "scope": "e2e",
+  "artifactFiles": {
+    "LICENSE": "f1c60bbc1bfaf1f93e5d07348aab8b461573348ccad6c53e5f79792c22afdea2",
+    "THIRD_PARTY_NOTICES.md": "f73afa9e10c598cf1e1c782fe6f76333e60c925c016d813ff3637c69929230bc",
+    "content.js": "0b1a18ea3b92e2753b2c77ddd42c54ca2ff1484b5d9a21564e474152af755fb2",
+    "content.js.map": "fe2d7991de973169a3cb3205996a3715dce299473eb40da77d974b264ec1ae9e",
+    "inference.js": "5d9f41a10b4b57ddca260a2b688d55221ac707ec8d0122817ecf01c1302f7084",
+    "licenses/@fastify_ajv-compiler-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
+    "licenses/@fastify_cors-LICENSE": "9e51230673e8de1854ffa078934b93db407758b02babc62bef371dfa13b282f5",
+    "licenses/@fastify_deepmerge-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
+    "licenses/@fastify_error-LICENSE": "8d3c1dd501e056405ab56f4ad87b987070d55d1fe814616584ec2360045f9017",
+    "licenses/@fastify_fast-json-stringify-compiler-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
+    "licenses/@fastify_forwarded-LICENSE": "9276503e39bdcaad7d26993fae17b1e82d7ef65cf0fe0ae54c361bbc6cbc33da",
+    "licenses/@fastify_merge-json-schemas-LICENSE": "6881fdd0f607b4f202c5421b0e6de1cf72041e0207b73681bbf6509fe7b86c44",
+    "licenses/@fastify_proxy-addr-LICENSE": "4ffb54af38f35ca8005893c382e19f3c3e919c499d50804c00d3c124bc6508f4",
+    "licenses/@fastify_swagger-LICENSE": "ba9677e5a34c2738c26b36bb478f95e0369cac48fbe68a01a91fd5c7972f2043",
+    "licenses/@huggingface_jinja-LICENSE": "d6e7b19451c1b3d1d66353bb4b1274138953b3bfd9ae60c56e77b1f548796982",
+    "licenses/@huggingface_tokenizers-LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "licenses/@huggingface_transformers-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "licenses/@img_colour-LICENSE.md": "e2eaa4603c14cb26f301e88648c12a853fa3f0f5da6d4b0972958c666e7f2ab8",
+    "licenses/@img_sharp-win32-x64-LICENSE": "dc1f5d2d43c5531dfe0acaf4e950ea5dbe3e61e1850cf0e983bda7efc10d6693",
+    "licenses/@pinojs_redact-LICENSE": "58d4023bfbed5fb530c5bb8d44641299eac62c850267415ec939cc42dea87e4f",
+    "licenses/@protobufjs_aspromise-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_base64-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_codegen-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_eventemitter-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_fetch-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_float-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_path-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_pool-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@protobufjs_utf8-LICENSE": "a67b34a24a5daddcce46aea68c5004e4442bbfb63690329fa607bf4de4269794",
+    "licenses/@types_node-LICENSE": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+    "licenses/adm-zip-LICENSE": "6bb5b2d4c07d793ca928daa63a8899c6914fafb5ac3aa04ec10cae07f3d57dca",
+    "licenses/ajv-LICENSE": "a05350a88e318e4f5f2c2a1ff1e2e88daa4dd38e6e78b71cccae422bdc762cc3",
+    "licenses/ajv-formats-LICENSE": "9df3bb69929a3b650ed73b3bfa1756725aaff0ac296461605753547004eafeaf",
+    "licenses/atomic-sleep-LICENSE": "8d58741278b289a7f4b6dde2d6273fca7711b9849452c477933d1cccd03db1e7",
+    "licenses/avvio-LICENSE": "0dae13c0bb4d8c6dc73d7d49ddecdba7f56075975ffb2ee17050c63f3f3666f0",
+    "licenses/compromise-LICENSE": "489a3d55a72fe45d34b63344366b228b3c60ed21a1ce537264370368bb55a4c6",
+    "licenses/cookie-LICENSE": "c02110eedc16c7114f1a9bdc026c65626ce1d9c7e27fd51a8e0feee8a48a6858",
+    "licenses/debug-LICENSE": "3a61c6c96caf5c1d9b623fb9b04c822b783dfcb78aa7e49c76a3f643e6ed7f95",
+    "licenses/define-data-property-LICENSE": "b41d08bc3624d8c436fc80237d73ebb361985a67f4504bbcd703e5ca2b27254c",
+    "licenses/define-properties-LICENSE": "00d402c2bbe7c67369bd01ce2c16b8ed46ccc949a1ee2d6bb8f9606afa8c7434",
+    "licenses/dequal-license": "306fa513e39b23a6e8747520de761809d206b99800ef41907b530226574c59ae",
+    "licenses/detect-libc-LICENSE": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+    "licenses/efrt-LICENSE": "489a3d55a72fe45d34b63344366b228b3c60ed21a1ce537264370368bb55a4c6",
+    "licenses/es-define-property-LICENSE": "5e325595b4ea8cfec3802f545b1def5d7b73e4a5b8e9ba63e32a320f67732292",
+    "licenses/es-errors-LICENSE": "5e325595b4ea8cfec3802f545b1def5d7b73e4a5b8e9ba63e32a320f67732292",
+    "licenses/escape-string-regexp-license": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3",
+    "licenses/fast-decode-uri-component-LICENSE": "27384b39baee4b476fb876670a75f282286fa55658bf0db14639621dd3801c9a",
+    "licenses/fast-deep-equal-LICENSE": "7bf9b2de73a6b356761c948d0e9eeb4be6c1270bd04c79cd489c1e400ffdfc1a",
+    "licenses/fast-json-stringify-LICENSE": "b08de5bb7b21f44a8358edf74febe50c75ef2a1e5470e06c8919eb934cba067c",
+    "licenses/fast-querystring-LICENSE": "4f8cf48502224399442f7eadd8620d96ef18125f9beb4949c53084ab3b05a4d4",
+    "licenses/fast-uri-LICENSE": "b010b0dfdfdb23d7396e03b82cd4621fc9bb8f95d6b0aea70b9c24e12074c786",
+    "licenses/fastify-LICENSE": "23c91863859171455a536380991b4160fee4e19e2d8dc353ecf7143cc4e53ca2",
+    "licenses/fastify-plugin-LICENSE": "fe26044de416cf0cdb2cfd12ed299e5756d05b5d2ee6c59d3fd25ed304635d58",
+    "licenses/fastq-LICENSE": "c3367f6d01a79d368fc4fbb41b3615fcd92f243d6597ab96742f6f976f9325af",
+    "licenses/find-my-way-LICENSE": "693f9539655acc1847add1ccd364312ba570bf8ce84706b6059e7e0b5ceb90e6",
+    "licenses/flatbuffers-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "licenses/global-agent-LICENSE": "2aabdab5d0ce03a7314def8222988c2da4ba593ae82ae312439e5e306001dbae",
+    "licenses/globalthis-LICENSE": "acfaf437865d82f0fa9b9cdcae8b550bed8d011adaa5b42d973191caf99f62a8",
+    "licenses/gopd-LICENSE": "d90bf0a089da4cf43d644ed240a0b3825dcdb705e64e38371d56995a4cc9e4c5",
+    "licenses/grad-school-LICENSE": "50c0b612ef46f4905c22048a90b6892d364e64b6367fa76f940d9fc3fbb39a47",
+    "licenses/has-property-descriptors-LICENSE": "0f0ca96f50793990031ebc488a38f7292ff70bce8ab6a8e5eeda674abc32ccdf",
+    "licenses/ipaddr.js-LICENSE": "62568a2d1337b77171ecca9db10579163446de1ba6151678e81f06cdc199971b",
+    "licenses/json-schema-ref-resolver-LICENSE": "8550e7875f553e746be4b2ab732c1574bae2c5bb01cbdbd7423665fcf1c10076",
+    "licenses/json-schema-resolver-LICENSE": "dfc6eb4df78850d3a5d38be7d10c7a997f2a95d09db91cfac2e77e51e4f8062c",
+    "licenses/json-schema-traverse-LICENSE": "7bf9b2de73a6b356761c948d0e9eeb4be6c1270bd04c79cd489c1e400ffdfc1a",
+    "licenses/light-my-request-LICENSE": "a46f56efbbd8ee5b8f80c8e60b3340f253714e010803b2671180f860222e1317",
+    "licenses/long-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "licenses/matcher-license": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3",
+    "licenses/model-Apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "licenses/ms-license.md": "1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801",
+    "licenses/object-keys-LICENSE": "5640e5cbe2e9f57f6ccfdd8dbfbeadb875495bdbcb69d2666ce3177ccd0942e4",
+    "licenses/on-exit-leak-free-LICENSE": "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b",
+    "licenses/openapi-types-LICENSE": "a5b243ddbec533f2fc6e809f1194d24623dfc302bb4a29f99093e087928561e8",
+    "licenses/pino-LICENSE": "03ebd87bfc3fde763e4d698939097903a202163f3365d92d2031a4e63e0c5487",
+    "licenses/pino-abstract-transport-LICENSE": "31f005ecff86a12a1351f4c2cb1133267c0b152546b08cd6fa4bdeb1943e00cd",
+    "licenses/pino-std-serializers-LICENSE": "6206673d24786f09656f7a480b7c50af289e9690963aaa135af5b626de5250df",
+    "licenses/platform-LICENSE": "4a161ebed4f1ef933e16ccfa00d86c718703f5d015a9987ea7ce1bb72a43cd22",
+    "licenses/process-warning-LICENSE": "8d3c1dd501e056405ab56f4ad87b987070d55d1fe814616584ec2360045f9017",
+    "licenses/protobufjs-LICENSE": "49d6a1c9a623784c61c6cb70f773f3457faceb1914a13c8560a9823b7631950c",
+    "licenses/quick-format-unescaped-LICENSE": "5ac141bfc70bec8f40838502436bfcb85e3f4c24377e41b9ddef07bdd6aa51bc",
+    "licenses/react-LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/react-dom-LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/real-require-LICENSE.md": "cbf263504e800cf09f99962cce8497b76eef79c3526bca434b90c3ef4c17220d",
+    "licenses/require-from-string-license": "6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f",
+    "licenses/ret-LICENSE": "bfc2c678db20d806b3787956f607a1509da5fca45b4d40a97c671cbee737159d",
+    "licenses/reusify-LICENSE": "93a1506953b08ad4874e1cc0971a1d2ac387ca510da91e4d05e460a6c4966fa3",
+    "licenses/rfdc-LICENSE": "1ce941682a96c7b898ecd125d0f2e22319758ea6f3adbf498a65d649b0f3f7dd",
+    "licenses/safe-regex2-LICENSE": "3871c31d0cc373951d836b8bb97275a2227f8af7464df7c51bc3f98769b87653",
+    "licenses/safe-stable-stringify-LICENSE": "3a6d6de49d284a36c5d271ef0e62eca1838cc460dd7630e3f2c347c8f5b2232a",
+    "licenses/scheduler-LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "licenses/secure-json-parse-LICENSE": "354dacd69de5070d69b2e4c5598bd1f51d980775422c3ee663160f9da88ebf63",
+    "licenses/semver-LICENSE": "4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b",
+    "licenses/serialize-error-license": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3",
+    "licenses/set-cookie-parser-LICENSE": "c5c6c5183a789d122f267c405f685037efb87e27fcde28ab1dd7378a2d2f5962",
+    "licenses/sharp-LICENSE": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
+    "licenses/sonic-boom-LICENSE": "db5c3795cb080810fed0380bf4d6adef3f81579e8ae3a867d3c2abab2329db9d",
+    "licenses/split2-LICENSE": "c372ef2fa1dfcb124ed807609751e75e3a009f108c5724916b489288fcb88a0c",
+    "licenses/suffix-thumb-LICENSE": "f9ade95c0fe7fbb0a5ea45f18ae80bb48c5bfb3c23907dc5706fcd1529a7d77d",
+    "licenses/thread-stream-LICENSE": "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b",
+    "licenses/toad-cache-LICENSE": "644304c533dee96438937c0bdcbb49897d80fd8df3be4573f3c57b9c2ca22587",
+    "licenses/type-fest-license": "64a93ffc0a06a2266dbb57ed7ebe3b56ba66ab337b6347fabdbf86c76819fbae",
+    "licenses/undici-types-LICENSE": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27",
+    "licenses/yaml-LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
+    "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
+    "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
+    "manifest.json": "d519a4c55d7be3622dbc559092dff1206ee9d37c04e5bfaa7681e3e110d02592",
+    "model-lock.json": "404c3b4edb0e28ee3fa4a4ec8acd1bf6037a0ff622cb1a590570dd7db43ac46b",
+    "models/Xenova/all-MiniLM-L6-v2/config.json": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7",
+    "models/Xenova/all-MiniLM-L6-v2/onnx/model_quantized.onnx": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
+    "models/Xenova/all-MiniLM-L6-v2/special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
+    "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+    "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
+    "offscreen.html": "97feb66925aefa94a95bd7aaaae386f95c7a53df6bb61846401fff73ea0f4542",
+    "offscreen.js": "68a327c1cfd6eb415f0b20f135853f73b548a331d8e0ecefd7497e9092c29b11",
+    "offscreen.js.map": "8df6b3ad3c1c366bcb1073a93c188bdd76eb2f2e56ac968c140a9aa825e69313",
+    "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
+    "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
+    "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
+    "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
+    "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
+    "sidepanel.js": "c3a455ddf94652f396d094ade103957a8f90da2680fa4c8376c67c7f854f8e07",
+    "sidepanel.js.map": "74fed54918a347439c0de6c7138d807b500a387ee44876f55c6b29f028e94ebd",
+    "third-party.json": "94a89e82ba0ef814a5263313be97df9177491dddd89fda9ad54b369615eb9f12",
+    "worker.js": "a0183a7f4c16ca04117e89a2320656e8cc430ebfeb02351bb3b940f5240aa4ab",
+    "worker.js.map": "aebefe5346102261ab70571a0e12b3deff1a50a0f9a09932c29a85e5b90ecfa3"
+  },
+  "extensionVersion": "0.7.0",
+  "evaluatedAt": "2026-10-12T03:30:56.224Z",
+  "expected": 86,
+  "configuredCount": 86,
+  "sourceRevision": "a275b0e4d2982d451d3e4dde8beb6aa1cafe25e0",
+  "workingTreeDirty": true,
+  "passed": false,
+  "cases": [
+    {
+      "id": " / desktop / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "failed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / production localhost access is available without a toolbar grant",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "status": "passed"
+    },
+    {
+      "id": " / desktop / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / production localhost access is available without a toolbar grant",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "status": "passed"
+    },
+    {
+      "id": " / narrow / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "status": "passed"
+    }
+  ]
+}

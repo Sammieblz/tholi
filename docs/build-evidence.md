@@ -1,4 +1,6 @@
-# Build verification — October 11, 2026
+# Archived build verification — October 11, 2026
+
+Current release evidence: [v0.7.0 validation and installation](v0.7.0-validation.md).
 
 Production extension candidate: **0.6.9**. Source baseline: `1b9d7f06a7fd2caf19ed1bdc933db3a72fb94e3d`. These fixes are local, uncommitted and unpublished.
 

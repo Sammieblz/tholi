@@ -13,6 +13,8 @@ import {
   restoreSession,
 } from "../packages/route-registry/session";
 import { modelProposalSchema } from "../packages/page-model";
+import { visible } from "../packages/browser-adapter";
+import { clippedRect } from "../packages/browser-adapter/geometry";
 function fixture(html: string) {
   document.body.innerHTML = html;
   const rect = {
@@ -36,6 +38,89 @@ function fixture(html: string) {
   );
 }
 afterEach(() => vi.restoreAllMocks());
+it("preserves real headings and ARIA footer links under dense navigation", () => {
+  fixture(
+    `<main><h1>Catalogue</h1><nav>${Array.from({ length: 900 }, (_, i) => `<a href="/related/${i}">Related item ${i}</a>`).join("")}</nav><h2 id="references">References</h2></main><div role="contentinfo"><a href="/privacy">Privacy policy</a></div>`,
+  );
+  const page = new PageDiscovery().snapshot();
+  expect(page.partial).toBe(true);
+  expect(page.controls).toHaveLength(600);
+  expect(
+    page.controls.some((c) => c.role === "heading" && c.label === "References"),
+  ).toBe(true);
+  const policy = page.controls.find((c) => c.label === "Privacy policy")!;
+  expect(policy).toMatchObject({
+    visible: true,
+    enabled: true,
+    context: "Footer",
+    scope: "page",
+  });
+  expect(policy.structure?.headings).toEqual([]);
+  expect(policy.structure?.regions.some((r) => r.role === "contentinfo")).toBe(
+    true,
+  );
+});
+it("refuses broken or misleading fragment links instead of inventing sections", () => {
+  for (const body of [
+    "",
+    '<span id="references"></span>',
+    '<h2 id="references">Privacy policy</h2>',
+  ]) {
+    fixture(
+      `<nav><a href="#references">References</a></nav>${body}<footer><a href="/privacy">Privacy policy</a></footer>`,
+    );
+    const page = new PageDiscovery().snapshot();
+    expect(page.controls.find((c) => c.label === "References")?.enabled).toBe(
+      false,
+    );
+    expect(planGoal(page, "Help me find references").status).toBe("unresolved");
+  }
+});
+it.each(["auto", "scroll", "hidden", "clip"])(
+  "respects %s clipping without discarding document scroll targets",
+  (overflow) => {
+    fixture(
+      `<nav style="overflow:${overflow}"><a href="/item">Clipped item</a><h2>References</h2></nav><footer><a href="/privacy">Privacy policy</a></footer>`,
+    );
+    const link = document.querySelector("nav a") as HTMLElement;
+    const heading = document.querySelector("h2") as HTMLElement;
+    const rect = (top: number) => ({
+      x: 10,
+      y: top,
+      top,
+      left: 10,
+      right: 110,
+      bottom: top + 30,
+      width: 100,
+      height: 30,
+      toJSON: () => ({}),
+    });
+    let top = 70;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        return rect(this === link ? top : this === heading ? 30 : 10);
+      },
+    );
+    expect(visible(link)).toBe(false);
+    expect(
+      new PageDiscovery()
+        .snapshot()
+        .controls.find((c) => c.label === "Clipped item")?.visible,
+    ).toBe(false);
+    top = 30;
+    expect(clippedRect(link)).toMatchObject({
+      top: 30,
+      bottom: 40,
+      height: 10,
+    });
+    expect(
+      new PageDiscovery()
+        .snapshot()
+        .controls.find((c) => c.label === "References")?.sectionVisible,
+    ).toBe(false);
+    expect(visible(document.querySelector("footer a")!)).toBe(true);
+  },
+);
 it.each([
   ["Change language", "37 languages", "Change language variant"],
   ["Show category", "Categories (12)", "Change category ordering"],

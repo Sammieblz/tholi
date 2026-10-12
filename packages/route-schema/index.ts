@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  requestSchema,
+  clarificationSchema,
+  resultSchema,
+} from "../navigation-core/contracts";
 import { liveDiagnosticsSchema } from "../live-diagnostics";
 import {
   controlSchema,
@@ -152,6 +157,26 @@ export type Target = z.infer<typeof targetSchema>;
 export type RouteState = Route["states"][number];
 export type Transition = Route["transitions"][number];
 export const messageSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("NLP_SUGGEST"),
+      text: z.string().min(1).max(1000),
+      requestId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("CLARIFY"), choice: z.string().max(100) })
+    .strict(),
+  z.object({ type: z.literal("SKIP_TASK") }).strict(),
+  z.object({ type: z.literal("GET_BACKEND") }).strict(),
+  z
+    .object({
+      type: z.literal("SET_BACKEND"),
+      url: z.string().max(300),
+      token: z.string().max(300),
+      enabled: z.boolean(),
+    })
+    .strict(),
   z.object({ type: z.literal("GET_PAGE") }).strict(),
   z.object({ type: z.literal("GET_MEMORY") }).strict(),
   z.object({ type: z.literal("FORGET_SITE") }).strict(),
@@ -164,7 +189,7 @@ export const messageSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("SET_GOAL"),
-      goal: z.string().min(1).max(160),
+      goal: z.string().min(1).max(1000),
       revision: z.number().int().nonnegative(),
       proposal: modelProposalSchema.optional(),
       strategy: strategySchema.optional(),
@@ -195,6 +220,18 @@ export const messageSchema = z.discriminatedUnion("type", [
 export const contentMessageSchema = z.discriminatedUnion("type", [
   z
     .object({
+      type: z.literal("INSTALL_REQUEST"),
+      sessionId: z.string().uuid(),
+      result: resultSchema,
+      strategy: strategySchema.optional(),
+      savedRouteId: z.string().max(100).optional(),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("SKIP_TASK"), sessionId: z.string().uuid() })
+    .strict(),
+  z
+    .object({
       type: z.literal("UPDATE_MEMORY"),
       sessionId: z.string().uuid(),
       memory: z.unknown(),
@@ -208,7 +245,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("SET_GOAL"),
       sessionId: z.string().uuid(),
-      goal: z.string().min(1).max(160),
+      goal: z.string().min(1).max(1000),
       revision: z.number().int().nonnegative(),
       proposal: modelProposalSchema.optional(),
       strategy: strategySchema.optional(),
@@ -226,6 +263,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       memory: z.unknown().optional(),
       goalPlan: goalPlanSchema.optional(),
       journey: journeySchema.optional(),
+      request: requestSchema.optional(),
       savedTask: savedTaskSchema.optional(),
       liveDiagnostics: liveDiagnosticsSchema.optional(),
       navigationVerified: z.boolean().optional(),
@@ -332,6 +370,17 @@ export const sessionViewSchema = z
     page: pageSnapshotSchema.optional(),
     goalPlan: goalPlanSchema.optional(),
     journey: journeySchema.optional(),
+    request: requestSchema.optional(),
+    clarification: clarificationSchema.optional(),
+    embeddingActivity: z
+      .object({
+        embedded: z.number().int().nonnegative(),
+        cacheHits: z.number().int().nonnegative(),
+        llmCalls: z.literal(0),
+        modelRevision: z.string(),
+      })
+      .strict()
+      .optional(),
     continuationOrigin: z.string().max(300).optional(),
     liveDiagnostics: liveDiagnosticsSchema.optional(),
     memory: z

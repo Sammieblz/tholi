@@ -85,6 +85,9 @@ export function validPinnedView(session: PinnedSession, view: unknown) {
     parsed.data.page ||
     parsed.data.goalPlan ||
     parsed.data.journey ||
+    parsed.data.request ||
+    parsed.data.clarification ||
+    parsed.data.embeddingActivity ||
     parsed.data.continuationOrigin ||
     parsed.data.liveDiagnostics
   )

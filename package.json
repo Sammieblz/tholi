@@ -1,7 +1,7 @@
 {
   "name": "internet-navigator",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev:demo": "vite --config apps/demo-saas/vite.config.ts",
@@ -15,7 +15,14 @@
     "format": "prettier --write apps packages routes tests scripts docs *.ts *.json README.md",
     "test:live:wikipedia": "playwright test --config playwright.live.config.ts",
     "test:acceptance": "playwright test --config playwright.acceptance.config.ts",
-    "package:extension": "node scripts/package-extension.mjs"
+    "package:extension": "node scripts/package-extension.mjs",
+    "fetch:model": "node scripts/fetch-model.mjs",
+    "build:api": "node scripts/build-api.mjs",
+    "start:api": "node apps/api/dist/cli.js",
+    "test:nlp": "vitest run --config vitest.nlp.config.ts",
+    "package:api": "node scripts/package-api.mjs",
+    "test:nlp:browser": "playwright test --config playwright.nlp.config.ts",
+    "pretest:nlp": "npm run build:api"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -25,14 +32,24 @@
   "devDependencies": {
     "@playwright/test": "^1.64.0",
     "@types/chrome": "^0.0.300",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "esbuild": "^0.25.0",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.0.0",
     "prettier": "^3.9.9",
     "typescript": "^5.7.0",
     "vite": "^6.1.0",
-    "vitest": "^3.0.0"
-  }
+    "vitest": "^5.0.3"
+  },
+  "workspaces": [
+    "packages/navigation-core",
+    "packages/nlp",
+    "apps/api"
+  ],
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "license": "MIT"
 }

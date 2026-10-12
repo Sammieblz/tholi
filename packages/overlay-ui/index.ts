@@ -1,3 +1,4 @@
+import { clippedRect } from "../browser-adapter/geometry";
 export class GuidanceOverlay {
   private root?: HTMLElement;
   private shadow?: ShadowRoot;
@@ -35,9 +36,10 @@ export class GuidanceOverlay {
       this.clear();
       return;
     }
-    const r = this.target.getBoundingClientRect(),
+    const r = clippedRect(this.target),
       style = getComputedStyle(this.target);
     if (
+      !r ||
       !r.width ||
       !r.height ||
       style.display === "none" ||

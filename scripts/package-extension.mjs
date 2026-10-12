@@ -19,11 +19,38 @@ if (!report.passed || report.extensionVersion !== manifest.version)
   );
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const files = {};
-for (const name of (await readdir(extension)).sort()) {
-  if (!(await stat(join(extension, name))).isFile())
-    throw new Error("Unexpected build directory");
+const names = [];
+async function walk(directory, prefix = "") {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const name = prefix + entry.name;
+    if (entry.isDirectory())
+      await walk(join(directory, entry.name), name + "/");
+    else names.push(name);
+  }
+}
+await walk(extension);
+for (const name of names.sort()) {
   files[name] = sha(await readFile(join(extension, name)));
 }
+const nlp = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
+const nlpBrowser = JSON.parse(
+  await readFile("output/nlp/browser-build.json", "utf8"),
+);
+if (
+  !nlp.passed ||
+  nlp.precision < 0.95 ||
+  nlp.coverage < 0.85 ||
+  nlp.falseCompletions ||
+  nlp.boundaryBypasses ||
+  nlp.warmP95Ms >= 750 ||
+  nlp.unpackedBytes >= 60 * 1024 * 1024 ||
+  JSON.stringify(nlp.artifactFiles) !== JSON.stringify(files) ||
+  JSON.stringify(nlpBrowser.artifactFiles) !== JSON.stringify(files) ||
+  !nlpBrowser.passed
+)
+  throw new Error(
+    "Run complete passing real-model, API and NLP browser tests for these build bytes before packaging",
+  );
 if (JSON.stringify(files) !== JSON.stringify(report.artifactFiles))
   throw new Error(
     "Build differs from the evaluated artifact; rerun acceptance",
@@ -84,7 +111,7 @@ const zipped = JSON.parse(
 );
 if (
   zipped.length !== Object.keys(files).length ||
-  zipped.some((f) => files[f.name] !== f.sha256)
+  zipped.some((f) => files[f.name.replaceAll("\\", "/")] !== f.sha256)
 )
   throw new Error("Archive verification failed");
 const archiveSha256 = sha(await readFile(archive));
@@ -108,7 +135,15 @@ await writeFile(
       metrics: report.summaries,
       regressions,
       optionalAI:
-        "disabled during evaluation; real model accuracy not evaluated",
+        "Experimental LLM disabled; real CPU MiniLM evaluated separately",
+      nlp: {
+        precision: nlp.precision,
+        coverage: nlp.coverage,
+        warmP95Ms: nlp.warmP95Ms,
+        hardware: nlp.hardware,
+        llmCalls: nlp.llmCalls,
+        embeddingActivity: nlp.embeddingActivity,
+      },
       checklist: "docs/chrome-handoff.md",
       pending: [
         "native side-panel reload/activation",

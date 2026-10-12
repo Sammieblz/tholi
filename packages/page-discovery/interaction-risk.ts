@@ -1,8 +1,7 @@
 import type { PageControl } from "../page-model";
 import { taskWords } from "../goal-planner/task-intent";
 
-const commits =
-  /\b(delete|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|confirm cancellation|submit|save(?: changes)?)\b/i;
+import { hasCommitLanguage } from "../safety-policy/action-language";
 const commitOperation =
   /^(delete|remove|purchase|pay|checkout|transfer|send|publish|upload|unsubscribe|submit|save)$/i;
 
@@ -31,7 +30,7 @@ export function interactionRisk(
   // A nearby heading, form endpoint, or sibling's label is not this control's effect.
   if (kind === "focus" || kind === "section") return { risk: "ordinary" };
   const purpose = label + " " + description;
-  if (commits.test(purpose))
+  if (hasCommitLanguage(purpose))
     return { risk: "consequential", riskReason: "commit" };
 
   // Reaching an authentication page/menu is different from submitting credentials

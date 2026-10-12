@@ -173,26 +173,23 @@ export function memorySummary(site?: SiteMemory) {
     version: site?.version || 0,
   };
 }
-export interface SiteMemoryStore {
-  get(origin: string): Promise<SiteMemory | undefined>;
-  observe(
-    page: PageSnapshot,
-    transition?: ObservedTransition,
-  ): Promise<SiteMemory>;
-  forget(origin: string): Promise<void>;
-  clear(): Promise<void>;
-}
+export type SiteMemoryStore =
+  import("../navigation-core/storage").KnowledgeStore;
 // This database belongs to the extension origin, never to a website content script.
 export class IndexedDBSiteMemory implements SiteMemoryStore {
   private database?: Promise<IDBDatabase>;
   private open() {
     return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("navigator-site-memory", 2);
+      const request = indexedDB.open("navigator-site-memory", 3);
       request.onupgradeneeded = () => {
         if (!request.result.objectStoreNames.contains("sites"))
           request.result.createObjectStore("sites", { keyPath: "origin" });
         if (!request.result.objectStoreNames.contains("tasks"))
           request.result.createObjectStore("tasks", { keyPath: "id" });
+        if (!request.result.objectStoreNames.contains("embeddings"))
+          request.result.createObjectStore("embeddings", { keyPath: "key" });
+        if (!request.result.objectStoreNames.contains("indexes"))
+          request.result.createObjectStore("indexes", { keyPath: "origin" });
       };
       request.onsuccess = () => {
         const db = request.result;

@@ -1,5 +1,20 @@
 const sensitiveWords =
   /password|passcode|one.?time|otp|2fa|token|secret|authorization|credit.?card|card.?number|cvv|cvc|bank.?account|routing.?number|payment|passkey/i;
+// Goals are supplied deliberately by the user. Validate before redaction; never
+// silently cut off a qualifier, negation or an ordered task.
+export function sanitizeGoal(value: string): string {
+  if (value.length > 1000)
+    throw new Error("Requests must be 1,000 characters or fewer.");
+  return value
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/(?:Bearer\s+)[A-Za-z0-9_.-]+/gi, "[redacted]")
+    .replace(/\b(?:\d[ -]?){13,19}\b/g, "[redacted]")
+    .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[redacted]")
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 export function isSensitiveElement(element: Element): boolean {
   const input = element as HTMLInputElement;
   const hint = [

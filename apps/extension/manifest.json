@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Internet Navigator",
-  "version": "0.6.9",
+  "version": "0.7.1",
   "description": "Live page discovery, goal-based guidance, and private local site memory. You make every click.",
   "permissions": [
     "activeTab",
     "scripting",
     "sidePanel",
     "storage",
-    "webNavigation"
+    "webNavigation",
+    "offscreen"
   ],
   "action": {
     "default_title": "Open Internet Navigator"
@@ -21,12 +22,15 @@
     "default_path": "sidepanel.html"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "host_permissions": [
     "http://127.0.0.1/*",
     "http://localhost/*",
     "https://en.wikipedia.org/*"
   ],
-  "optional_host_permissions": ["http://*/*", "https://*/*"]
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
 }

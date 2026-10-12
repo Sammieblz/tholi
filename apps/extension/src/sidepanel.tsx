@@ -10,7 +10,7 @@ import {
   type RouteStrategy,
 } from "../../../packages/page-model";
 import { beginJourney } from "../../../packages/goal-planner/task-journey";
-import { sanitizeText } from "../../../packages/privacy-redaction";
+import { sanitizeGoal } from "../../../packages/privacy-redaction";
 import { LocalModel, modelAvailability } from "./local-model";
 import { memorySummary } from "../../../packages/site-memory";
 import { liveReport } from "../../../packages/live-diagnostics";
@@ -47,6 +47,14 @@ function App() {
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
   const [goal, setGoal] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    { label: string; signature: string }[]
+  >([]);
+  const [backend, setBackend] = useState({
+    url: "http://127.0.0.1:8787",
+    token: "",
+    enabled: false,
+  });
   const [strategy, setStrategy] = useState<RouteStrategy>("fastest");
   const [savedTasks, setSavedTasks] = useState<SavedTask[]>([]);
   const automaticAttempts = useRef(new Set<string>());
@@ -57,6 +65,37 @@ function App() {
   const goalField = useRef<HTMLInputElement>(null);
   const sessionAction = useRef<HTMLButtonElement>(null);
   const previousStatus = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    void chrome.runtime
+      .sendMessage({ type: "GET_BACKEND" })
+      .then((r) => {
+        if (!r.error) setBackend(r);
+      })
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    let current = true;
+    if (!goal.trim() || view?.status !== "running") {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void chrome.runtime
+        .sendMessage({
+          type: "NLP_SUGGEST",
+          text: goal,
+          requestId: crypto.randomUUID(),
+        })
+        .then((r) => {
+          if (current) setSuggestions(r.suggestions || []);
+        })
+        .catch(() => {});
+    }, 400);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [goal, view?.status]);
   useEffect(() => {
     let current = true;
     void chrome.runtime
@@ -236,7 +275,7 @@ function App() {
       ? view?.memory || storedMemory
       : storedMemory;
   const submitGoal = async (saved?: SavedTask) => {
-    const safeGoal = sanitizeText(saved?.goal || goal);
+    const safeGoal = sanitizeGoal(saved?.goal || goal);
     if (!safeGoal) return;
     planning.current?.abort();
     const controller = new AbortController();
@@ -617,15 +656,66 @@ function App() {
           </button>
         )}
         {(active || paused) && (
-          <button
-            className="stop"
-            disabled={busy}
-            onClick={() => command("STOP")}
-          >
+          <button className="stop" onClick={() => command("STOP")}>
             Stop
           </button>
         )}
       </div>
+      {view?.request && view.request.status !== "canceled" && (
+        <section aria-label="Task queue" className="goal-plan">
+          <h2>Your tasks</h2>
+          <ol>
+            {view.request.tasks.map((task) => (
+              <li key={task.id}>
+                {task.original} · {task.status}
+              </li>
+            ))}
+          </ol>
+          {view.request.status !== "completed" && (
+            <button
+              disabled={otherTab || view.status !== "running"}
+              onClick={async () => {
+                const r = await chrome.runtime.sendMessage({
+                  type: "SKIP_TASK",
+                });
+                if (r.view) setView(r.view);
+                else if (r.error) setError(r.error);
+              }}
+            >
+              Skip this task
+            </button>
+          )}
+          <p className="small">
+            Each requested result is checked before the next task starts.
+          </p>
+        </section>
+      )}
+      {view?.clarification && (
+        <section className="goal-plan" aria-label="Clarification">
+          <h2>{view.clarification.question}</h2>
+          {view.clarification.choices.map((choice) => (
+            <button
+              key={choice.id}
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await chrome.runtime.sendMessage({
+                    type: "CLARIFY",
+                    choice: choice.id,
+                  });
+                  if (r.view) setView(r.view);
+                  if (r.error) setError(r.error);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </section>
+      )}
       {controlsMode && view?.journey && (
         <section className="goal-plan" aria-label="Task journey">
           <h2>{view.journey.goal}</h2>
@@ -732,6 +822,81 @@ function App() {
             Structure and verified transitions stay in this browser. Form values
             are excluded. Stored data expires after 90 days.
           </p>
+          {view?.embeddingActivity && (
+            <p className="small" aria-label="Embedding activity">
+              MiniLM: {view.embeddingActivity.embedded} embeddings ·{" "}
+              {view.embeddingActivity.cacheHits} cache hits ·{" "}
+              {view.embeddingActivity.llmCalls} LLM calls
+            </p>
+          )}
+          <details>
+            <summary>Optional private backend</summary>
+            <p className="small">
+              Connect your own single-owner API to mirror this website. Browser
+              memory remains the source; connection failures use local
+              processing.
+            </p>
+            <label>
+              API address
+              <input
+                aria-label="API address"
+                value={backend.url}
+                onChange={(e) =>
+                  setBackend({ ...backend, url: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              API token
+              <input
+                aria-label="API token"
+                type="password"
+                autoComplete="off"
+                value={backend.token}
+                onChange={(e) =>
+                  setBackend({ ...backend, token: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={backend.enabled}
+                onChange={(e) =>
+                  setBackend({ ...backend, enabled: e.target.checked })
+                }
+              />
+              Connect this browser
+            </label>
+            <button
+              onClick={async () => {
+                try {
+                  if (backend.enabled) {
+                    const url = new URL(backend.url);
+                    const granted = await chrome.permissions.request({
+                      origins: [url.protocol + "//" + url.hostname + "/*"],
+                    });
+                    if (!granted)
+                      throw new Error("API access was not granted.");
+                  }
+                  const r = await chrome.runtime.sendMessage({
+                    type: "SET_BACKEND",
+                    ...backend,
+                  });
+                  if (r.error) throw new Error(r.error);
+                  setError("");
+                } catch (error) {
+                  setError(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not save connection.",
+                  );
+                }
+              }}
+            >
+              Save connection
+            </button>
+          </details>
           {view?.memoryError && <p role="status">{view.memoryError}</p>}
           <button
             disabled={busy || otherTab}
@@ -768,7 +933,7 @@ function App() {
           <p className="small">
             {aiAvailability === "unavailable"
               ? "On-device AI is unavailable on this device. Semantic planning works without it."
-              : "AI runs locally in Chrome. Enabling it may download the browser's model."}
+              : "Experimental LLM support runs locally in Chrome. Enabling it may download the browser's model. MiniLM works offline without this option."}
           </p>
         </details>
       )}
@@ -787,7 +952,7 @@ function App() {
                 ref={goalField}
                 disabled={otherTab || view?.status === "waiting"}
                 value={goal}
-                maxLength={160}
+                maxLength={1000}
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="Make the text larger, find references…"
               />
@@ -814,6 +979,15 @@ function App() {
               Find a route
             </button>
           </form>
+          {!!suggestions.length && (
+            <div aria-label="Request suggestions">
+              {suggestions.map((s) => (
+                <button key={s.signature} onClick={() => setGoal(s.label)}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
           {planning.current && (
             <button
               onClick={() => {
@@ -1068,7 +1242,7 @@ function App() {
       </details>
       <footer>
         <span>LOCAL FIRST</span>
-        <span>PROTOTYPE 0.6</span>
+        <span>PROTOTYPE 0.7</span>
       </footer>
     </main>
   );

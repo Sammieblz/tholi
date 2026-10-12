@@ -4,7 +4,7 @@ A local-first Chrome navigation coach. It discovers the live page, builds routes
 
 ## Run it
 
-1. Run `npm install`, then `npm run build:extension`.
+1. Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, then `npm run build:extension`.
 2. Open `chrome://extensions`, enable Developer mode, and load unpacked `dist/extension`. After an update, Reload the extension and refresh the website tab.
 3. Open a website and click the Navigator toolbar icon. Choose **Navigate this website**, then **Start navigation**. Chrome may request access to this specific website.
 4. Describe a goal, such as **change language to Spanish**, **make text larger**, **find references**, **How to log in**, **create account**, or **Edit**, choose fastest/fewest clicks, then **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
@@ -12,7 +12,9 @@ A local-first Chrome navigation coach. It discovers the live page, builds routes
 
 Wikipedia is the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. An expected task destination on another origin/tab retains context and offers **Continue task here** with site-specific access. Unrelated navigation ends the session.
 
-**Local site memory and AI** shows stored page/layout/transition counts, provides Forget this website and Clear all site memory, and offers optional on-device AI. Chrome's Prompt API requires a compatible Chrome installation, hardware and model download. The navigator works with semantic matching when AI is unavailable. No remote model endpoint or API key is required.
+**v0.7.1** understands full English requests with Compromise, BM25 and bundled CPU-only MiniLM. Requests support up to 1,000 characters and three ordered tasks, grounded clarification choices, exclusions and compatible references. “Search for Saturn” retains Saturn until a result destination is verified; finding Search alone does not finish it. The extension works offline with no hosted inference bill. Scans preserve heading/footer coverage on dense pages, respect nested clipping and refuse broken section destinations. See [the References/Privacy fixes and validation](docs/v0.7.1-navigation-fixes.md).
+
+**Local site memory and AI** shows knowledge and embedding activity, provides Forget/Clear, and offers an optional private backend plus experimental opt-in Chrome LLM support. MiniLM works without the LLM. See [NLP architecture](docs/nlp-architecture.md), [backend setup](docs/api-setup.md) and [contributing](CONTRIBUTING.md).
 
 Controls now carry nested heading and region context. Optional AI interprets paraphrases into a structured intent grounded in fresh controls, uses goal-ranked context instead of a flat prefix, and replans after menu rerenders. See [page context and intent](docs/page-context.md) for behavior, limits and evaluation scope. OCR remains deferred.
 
@@ -23,6 +25,10 @@ Login and account tasks retain context through their entry menus, linked pages a
 For the controlled Northstar demo, run `npm run dev:demo` and open `http://127.0.0.1:5173`. Its two authored regression tasks remain available: cancellation confirmation (final hard stop) and read-only billing details.
 
 ## Architecture
+
+- `packages/navigation-core`: shared validated contracts, interpretation/retrieval/planning orchestration, ordered task queues and storage ports.
+- `packages/nlp`: lightweight NLP, lexical ranking, incremental embedding cache and pinned pretrained CPU inference.
+- `apps/api`: optional authenticated Fastify/SQLite adapter with inference in a worker thread.
 
 - `packages/page-discovery`: generic rendered DOM/open-shadow-root discovery, semantic labels and relationships, ephemeral control IDs, fresh element bindings.
 - `packages/page-model`: validated observations, goal plans and evidence contracts.
@@ -42,4 +48,4 @@ The scanner retains up to 600 controls per observation and reports partial scans
 
 Run `npm run test:acceptance` for the predeclared accuracy matrix and denominator report. After a complete passing evaluation, `npm run package:extension` packages and verifies those exact build bytes, with a SHA256 and provenance file in `output/releases`. Native Chrome handoff remains a separate checklist.
 
-See [architecture](docs/live-navigation.md), [diagnostics](docs/live-diagnostics.md), [lifecycle](docs/session-lifecycle.md), [guidance/accessibility](docs/passive-guidance.md), [accuracy benchmark](docs/accuracy-benchmark.md), [Chrome handoff](docs/chrome-handoff.md), [privacy](docs/privacy.md), [security](docs/security.md), and [build evidence](docs/build-evidence.md). Current Wikipedia POC tracker: https://github.com/Sammieblz/web-navigator/issues/1.
+See [v0.7.0 validation and installation](docs/v0.7.0-validation.md), [architecture](docs/live-navigation.md), [diagnostics](docs/live-diagnostics.md), [lifecycle](docs/session-lifecycle.md), [guidance/accessibility](docs/passive-guidance.md), [accuracy benchmark](docs/accuracy-benchmark.md), [Chrome handoff](docs/chrome-handoff.md), [privacy](docs/privacy.md), [security](docs/security.md), and [earlier build evidence](docs/build-evidence.md). Current Wikipedia POC tracker: https://github.com/Sammieblz/web-navigator/issues/1.

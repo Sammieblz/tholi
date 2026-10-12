@@ -117,7 +117,7 @@ export const pageSnapshotSchema = z
   .strict();
 export const goalPlanSchema = z
   .object({
-    goal: z.string().min(1).max(160),
+    goal: z.string().min(1).max(1000),
     source: z.enum(["semantics", "memory", "on-device"]),
     status: z.enum(["guiding", "completed", "unresolved", "awaiting-choice"]),
     confidence: z.number().min(0).max(1),
@@ -185,7 +185,7 @@ export const strategySchema = z.enum(["fastest", "fewest-clicks"]);
 export const objectiveSchema = z
   .object({
     purpose: z.string().min(1).max(160),
-    value: z.string().max(80).optional(),
+    value: z.string().max(1000).optional(),
     language: z.string().max(20).optional(),
     workflow: z.enum(["login", "register"]).optional(),
   })
@@ -205,7 +205,7 @@ export const progressSchema = z
 export const journeySchema = z
   .object({
     id: z.string().uuid(),
-    goal: z.string().min(1).max(160),
+    goal: z.string().min(1).max(1000),
     objective: objectiveSchema,
     origin: z.string().max(300),
     strategy: strategySchema,
@@ -215,12 +215,15 @@ export const journeySchema = z
     progress: z.array(progressSchema).max(30),
     reroutes: z.number().int().nonnegative(),
     savedRouteId: z.string().max(100).optional(),
+    requestTaskId: z.string().uuid().optional(),
+    canonicalGoal: z.string().max(1000).optional(),
   })
   .strict();
 export const savedTaskSchema = z
   .object({
     id: z.string().max(100),
-    goal: z.string().min(1).max(160),
+    goal: z.string().min(1).max(1000),
+    canonicalGoal: z.string().max(1000).optional(),
     objective: objectiveSchema,
     origin: z.string().max(300),
     strategy: strategySchema,
@@ -257,6 +260,7 @@ export const pendingNavigationSchema = z
     kind: z.literal("navigation").optional(),
     fromOrigin: z.string().max(300).optional(),
     redirected: z.boolean().optional(),
+    newTab: z.boolean().optional(),
   })
   .strict();
 export type PendingNavigation = z.infer<typeof pendingNavigationSchema>;

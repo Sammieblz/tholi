@@ -11,7 +11,7 @@ import {
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded";
+const marker = "__internetNavigatorLoaded071";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
@@ -158,6 +158,16 @@ if (!host[marker]) {
           message.journey,
           message.savedTask,
           message.navigationEvidence,
+          message.request,
+          async (request, page, verifiedDestination) => {
+            return chrome.runtime.sendMessage({
+              type: "NLP_REPLAN",
+              sessionId,
+              request,
+              page,
+              verifiedDestination,
+            });
+          },
         );
         respond({ view: coach.start() });
         return;
@@ -199,6 +209,21 @@ if (!host[marker]) {
               )
             : { error: "Start live navigation first." },
         );
+        return;
+      }
+      if (message.type === "INSTALL_REQUEST") {
+        respond(
+          coach?.installRequest(
+            message.result,
+            message.strategy,
+            message.savedRouteId,
+          ) || { error: "No live session." },
+        );
+        return;
+      }
+      if (message.type === "SKIP_TASK") {
+        coach?.skipTask();
+        respond({ view: coach?.view });
         return;
       }
       if (coach) {

@@ -3,7 +3,17 @@ import { createHash } from "node:crypto";
 
 export async function buildProvenance() {
   const artifactFiles: Record<string, string> = {};
-  for (const name of (await readdir("dist/extension")).sort())
+  const names: string[] = [];
+  async function walk(directory: string, prefix = "") {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const name = prefix + entry.name;
+      if (entry.isDirectory())
+        await walk(directory + "/" + entry.name, name + "/");
+      else names.push(name);
+    }
+  }
+  await walk("dist/extension");
+  for (const name of names.sort())
     artifactFiles[name] = createHash("sha256")
       .update(await readFile("dist/extension/" + name))
       .digest("hex");
