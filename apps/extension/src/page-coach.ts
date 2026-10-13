@@ -19,6 +19,7 @@ import {
   type SavedTask,
   type RouteStrategy,
   type PendingNavigation,
+  type PageControl,
 } from "../../../packages/page-model";
 import {
   beginJourney,
@@ -48,6 +49,17 @@ import {
   continuesDestination,
 } from "../../../packages/navigation-core/queue";
 import { canonicalGoal } from "../../../packages/nlp/canonical";
+import {
+  recordWorkflowAction,
+  continueWorkflow,
+} from "../../../packages/navigation-core/workflows";
+import { workflowGuides } from "../../../packages/navigation-core/guides";
+import { sanitizeGoal } from "../../../packages/privacy-redaction";
+import type {
+  WorkflowContext,
+  ControlReference,
+} from "../../../packages/navigation-core/workflow-contracts";
+import { frameElement } from "./frame-visibility";
 export class PageCoach {
   view: SessionView;
   private discovery = new PageDiscovery();
@@ -67,6 +79,24 @@ export class PageCoach {
   private selectedAt = 0;
   private planningRevision = "";
   private verifiedDestination?: string;
+  private workflowWaitTimer?: ReturnType<typeof setTimeout>;
+  private frames = new Map<
+    number,
+    { documentId: string; tabId: number; page: PageSnapshot }
+  >();
+  private compositionStarted = false;
+  private compositionRevision = 0;
+  private compositionFingerprint = "";
+  private externalControl?: PageControl;
+  private frameVisibilityStates = new Map<
+    number,
+    {
+      documentId: string;
+      visible: boolean;
+      inViewport: boolean;
+      placement: PageControl["placement"];
+    }
+  >();
   constructor(
     private publish: (
       view: SessionView,
@@ -126,7 +156,7 @@ export class PageCoach {
     return this.view;
   }
   private observe() {
-    this.cleanup = this.adapter.observe(() => this.refresh());
+    this.cleanup = this.discovery.observe(() => this.refresh());
     document.addEventListener("click", this.clicked, true);
     document.addEventListener("focusin", this.focused, true);
     document.addEventListener("change", this.changed, true);
@@ -134,6 +164,11 @@ export class PageCoach {
   private clearTarget() {
     if (this.view.status === "waiting") this.view.status = "running";
     this.selected = undefined;
+    if (this.externalControl)
+      void chrome.runtime
+        .sendMessage({ type: "CLEAR_FRAME_GUIDANCE" })
+        .catch(() => {});
+    this.externalControl = undefined;
     this.before = undefined;
     this.ownedRegions = [];
     this.pending = false;
@@ -149,6 +184,8 @@ export class PageCoach {
     document.removeEventListener("focusin", this.focused, true);
     document.removeEventListener("change", this.changed, true);
     clearTimeout(this.eventTick);
+    clearTimeout(this.workflowWaitTimer);
+    this.workflowWaitTimer = undefined;
     this.clearTarget();
   }
   private state(id: "choosing" | "guiding" | "verified") {
@@ -159,7 +196,7 @@ export class PageCoach {
   private refresh() {
     if (!["running", "waiting"].includes(this.view.status)) return;
     const previousPage = this.view.page;
-    const page = this.discovery.snapshot();
+    const page = this.compose(this.discovery.snapshot());
     this.view.page = page;
     this.view.liveDiagnostics = updateObservation(
       page,
@@ -169,6 +206,29 @@ export class PageCoach {
       this.navigationVerified = false;
       if (this.restoredNavigation && this.view.journey) {
         const nav = this.restoredNavigation;
+        if (
+          this.view.journey.workflow &&
+          this.view.journey.workflow.pendingAction?.signature === nav.signature
+        ) {
+          this.view.journey.workflow = recordWorkflowAction(
+            this.view.journey.workflow,
+            {
+              ...page.controls[0],
+              label: nav.label,
+              signature: nav.signature,
+              kind: "navigation",
+              destination: {
+                origin: page.origin,
+                path: page.path,
+                key: page.pageKey,
+              },
+            },
+            true,
+            page,
+          );
+          if (this.view.journey.workflow.pendingAction)
+            this.view.journey.workflow.pendingAction.frameId = 0;
+        }
         this.verifiedDestination = nav.label;
         this.view.journey = advanceJourney(
           this.view.journey,
@@ -203,7 +263,28 @@ export class PageCoach {
     }
     this.view.controls = page.controls.filter((c) => c.visible && c.enabled);
     this.view.confidence = page.controls.length ? 1 : 0;
-    if (this.selected && this.before) {
+    if (
+      this.externalControl &&
+      !page.controls.some(
+        (c) =>
+          c.id === this.externalControl!.id &&
+          c.signature === this.externalControl!.signature &&
+          c.visible &&
+          c.reference?.documentId ===
+            this.externalControl!.reference?.documentId,
+      )
+    ) {
+      this.clearTarget();
+      this.planningRevision = "";
+      this.requestReplan();
+    }
+    if (
+      this.selected &&
+      this.before &&
+      !["review", "verifying"].includes(
+        this.view.journey?.workflow?.status || "",
+      )
+    ) {
       const chosen = this.selected,
         c = chosen.control,
         fresh = this.discovery.bindings.get(c.id);
@@ -239,8 +320,11 @@ export class PageCoach {
       const changed =
         c.kind === "choice" || c.kind === "toggle"
           ? !!fresh &&
-            fresh.control.checked === this.expectedChecked &&
-            fresh.control.checked !== c.checked
+            ((fresh.control.checked === this.expectedChecked &&
+              fresh.control.checked !== c.checked) ||
+              (c.kind === "choice" &&
+                fresh.control.selected === true &&
+                c.selected !== true))
           : c.kind === "focus"
             ? (() => {
                 let active = document.activeElement;
@@ -255,27 +339,32 @@ export class PageCoach {
                     this.initialSelection &&
                   (!this.view.journey?.objective.value ||
                     objectiveReached(this.view.journey, page))
-                : c.kind === "expand"
-                  ? (!!fresh &&
-                      typeof fresh.control.expanded === "boolean" &&
-                      fresh.control.expanded !== c.expanded) ||
-                    added ||
-                    removed ||
-                    this.ownedRegions.some(
-                      (region) =>
-                        region.element.isConnected &&
-                        !!presented(region.element) !== region.visible,
-                    )
-                  : c.kind === "action"
-                    ? false
-                    : c.kind === "navigation"
-                      ? this.expectedNavigation ===
-                          hash(
-                            location.origin +
-                              location.pathname +
-                              location.search,
-                          ) && this.expectedNavigation !== this.beforeUrl
-                      : false;
+                : c.kind === "range"
+                  ? !!fresh &&
+                    fresh.control.range?.current !== c.range?.current &&
+                    (!this.view.journey?.objective.value ||
+                      objectiveReached(this.view.journey, page))
+                  : c.kind === "expand"
+                    ? (!!fresh &&
+                        typeof fresh.control.expanded === "boolean" &&
+                        fresh.control.expanded !== c.expanded) ||
+                      added ||
+                      removed ||
+                      this.ownedRegions.some(
+                        (region) =>
+                          region.element.isConnected &&
+                          !!presented(region.element) !== region.visible,
+                      )
+                    : c.kind === "action"
+                      ? false
+                      : c.kind === "navigation"
+                        ? this.expectedNavigation ===
+                            hash(
+                              location.origin +
+                                location.pathname +
+                                location.search,
+                            ) && this.expectedNavigation !== this.beforeUrl
+                        : false;
       if (
         (this.pending || c.kind === "section") &&
         changed &&
@@ -397,6 +486,24 @@ export class PageCoach {
         : undefined;
     const plan = this.view.goalPlan;
     const requestTask = this.view.request?.tasks[this.view.request.active];
+    if (this.view.journey?.workflow) {
+      const focused = selected.control.kind === "focus";
+      this.view.journey.workflow = recordWorkflowAction(
+        this.view.journey.workflow,
+        selected.control,
+        true,
+        page,
+      );
+      if (!focused) this.view.verifiedSteps++;
+      this.clearTarget();
+      this.view.instruction = focused
+        ? "Enter the requested details on the website, then continue guidance. Input contents have not been verified."
+        : "The interface transition was verified. Finding the next milestone…";
+      this.publish(this.view, focused ? undefined : evidence);
+      this.planningRevision = "";
+      this.requestReplan();
+      return;
+    }
     if (requestTask?.operation === "search") {
       this.view.verifiedSteps++;
       if (selected.control.kind === "focus")
@@ -430,7 +537,10 @@ export class PageCoach {
     this.view.instruction =
       "Control interaction verified. Choose another control or goal.";
     if (plan?.status === "guiding") {
-      const remaining = plan.steps.slice(1);
+      const destinationReached =
+        !!this.view.journey?.objective.value &&
+        objectiveReached(this.view.journey, page);
+      const remaining = destinationReached ? [] : plan.steps.slice(1);
       if (
         remaining.length &&
         remaining.every((step) =>
@@ -454,15 +564,15 @@ export class PageCoach {
         return;
       }
       if (
-        contextualTask(this.view.journey) ||
+        (!destinationReached && contextualTask(this.view.journey)) ||
         remaining.length ||
-        plan.source === "memory"
+        (!destinationReached && plan.source === "memory")
       ) {
         this.publish(this.view, evidence);
         this.replan();
         return;
       }
-      if (selected.control.kind === "expand") {
+      if (!destinationReached && selected.control.kind === "expand") {
         if (
           requestTask &&
           requestTask.operation === "navigate" &&
@@ -508,7 +618,8 @@ export class PageCoach {
     }
     this.publish(this.view, evidence);
   }
-  getPage() {
+  getPage(query?: string) {
+    if (query) this.discovery.setQuery(query);
     this.refresh();
     return this.view.page;
   }
@@ -649,6 +760,14 @@ export class PageCoach {
   ) {
     this.refresh();
     if (
+      result.request &&
+      this.view.request &&
+      result.request.id === this.view.request.id &&
+      (["completed", "canceled"].includes(this.view.request.status) ||
+        result.request.active < this.view.request.active)
+    )
+      return { view: this.view };
+    if (
       this.view.status !== "running" ||
       this.view.page?.revision !== result.revision
     )
@@ -679,10 +798,66 @@ export class PageCoach {
         result.canonicalGoal || canonicalGoal(task);
       this.view.journey.goal = task.original;
     }
+    if (result.workflow && this.view.journey)
+      this.view.journey.workflow = result.workflow;
+    if (
+      result.workflow?.pendingAction?.acted &&
+      !result.workflow.waitExpired &&
+      !this.workflowWaitTimer
+    ) {
+      this.workflowWaitTimer = setTimeout(
+        () => {
+          this.workflowWaitTimer = undefined;
+          const w = this.view.journey?.workflow;
+          if (
+            !w ||
+            !w.pendingAction?.acted ||
+            ["completed", "canceled"].includes(w.status)
+          )
+            return;
+          w.waitExpired = true;
+          w.revision++;
+          this.view.instruction =
+            "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
+          this.publish(this.view);
+        },
+        Math.max(
+          0,
+          120000 - (Date.now() - result.workflow.pendingAction.startedAt),
+        ),
+      );
+    }
     if (result.plan) {
       if (result.plan.status === "completed" && this.view.journey)
         this.view.journey.status = "completed";
       this.installPlan(result.plan);
+      if (
+        result.workflow?.status === "review" &&
+        result.workflow.pendingAction
+      ) {
+        const target = this.discovery.bindings.get(
+          result.workflow.pendingAction.controlId,
+        );
+        if (
+          target?.control.visible &&
+          target.control.enabled &&
+          !target.control.occluded
+        ) {
+          this.selected = target;
+          this.before = this.view.page;
+          this.selectedAt = Date.now();
+          this.view.selectedControlId = target.control.id;
+          this.view.instruction = result.plan.reason;
+          this.overlay.show(target.geometry, this.view.instruction);
+          this.publish(this.view);
+        }
+        const external = this.view.page?.controls.find(
+          (c) =>
+            c.id === result.workflow!.pendingAction!.controlId &&
+            c.reference?.frameId,
+        );
+        if (external) this.showFrameControl(external, result.plan.reason, true);
+      }
     } else {
       this.view.goalPlan = {
         goal: result.request?.original || "Request",
@@ -701,6 +876,7 @@ export class PageCoach {
   private completeQueuedTask() {
     if (!this.view.request || this.view.request.status !== "active") return;
     this.view.request = advanceQueue(this.view.request, "verified");
+    this.publish(this.view);
     if (this.view.request.status === "active")
       queueMicrotask(() => this.requestReplan());
   }
@@ -725,7 +901,7 @@ export class PageCoach {
     )
       return;
     // A queued task can change without a new page revision.
-    const revision = `${page.revision}:${request.active}:${this.view.verifiedSteps}:${this.view.journey?.progress.length || 0}:${request.tasks[request.active]?.searchPhase || ""}`;
+    const revision = `${page.revision}:${request.active}:${this.view.verifiedSteps}:${this.view.journey?.progress.length || 0}:${request.tasks[request.active]?.searchPhase || ""}:${this.view.journey?.workflow?.revision || 0}`;
     if (this.planningRevision === revision) return;
     this.planningRevision = revision;
     const id = request.id,
@@ -736,7 +912,8 @@ export class PageCoach {
         if (
           this.view.status !== "running" ||
           this.view.request?.id !== id ||
-          this.view.request.active !== active
+          this.view.request.active !== active ||
+          !["active", "clarification"].includes(this.view.request.status)
         )
           return;
         if (this.view.page?.revision !== result.revision) {
@@ -764,6 +941,15 @@ export class PageCoach {
     if (this.view.status !== "running")
       return { error: "Resume navigation before choosing a control." };
     const target = this.discovery.bindings.get(id);
+    const external = this.view.page?.controls.find(
+      (c) => c.id === id && c.reference?.frameId,
+    );
+    if (external)
+      return this.showFrameControl(
+        external,
+        "Use the highlighted control in the embedded application. Its result will be checked.",
+        false,
+      );
     if (
       !target ||
       !target.control.visible ||
@@ -785,6 +971,7 @@ export class PageCoach {
       return { view: this.view };
     }
     this.selected = target;
+    this.discovery.setPriority(target.element);
     this.selectedAt = Date.now();
     this.before = this.view.page;
     this.beforeUrl = hash(
@@ -838,13 +1025,64 @@ export class PageCoach {
                   target.control.label +
                   "” control, then choose an option on the website."
                 : "Use the highlighted “" + target.control.label + "” control.";
+    const workflow = this.view.journey?.workflow,
+      guide = workflow && workflowGuides.find((g) => g.id === workflow.guideId),
+      stage = guide?.milestones[workflow?.activeMilestone || 0],
+      value = workflow?.entities.find((e) => e.type === stage?.entity)?.value;
+    if (value)
+      this.view.instruction =
+        target.control.kind === "focus"
+          ? `Enter “${value}” using the highlighted field and the website's controls. Input contents are not read.`
+          : `Use the highlighted “${target.control.label}” control to choose “${value}”. The requested state is checked.`;
     this.overlay.show(target.geometry, this.view.instruction);
     this.publish(this.view, observed);
     return { view: this.view };
   }
   private interacted() {
     if (!this.selected || this.pending) return;
+    if (this.view.journey?.workflow?.status === "review") {
+      const target = this.selected;
+      this.view.journey.workflow = recordWorkflowAction(
+        this.view.journey.workflow,
+        target.control,
+      );
+      let navigation: PendingNavigation | undefined;
+      if (target.control.kind === "navigation" && target.control.destination) {
+        const url = new URL(
+          target.element.getAttribute("href")!,
+          location.href,
+        );
+        navigation = {
+          from: this.view.page!.stateKey,
+          signature: target.control.signature,
+          label: target.control.label,
+          destinationKey: target.control.destination.key,
+          navigationKey: hash(url.origin + url.pathname + url.search),
+          origin: url.origin,
+          durationMs: Date.now() - this.selectedAt,
+          kind: "navigation",
+          fromOrigin: location.origin,
+          newTab: (target.element as HTMLAnchorElement).target === "_blank",
+        };
+      }
+      this.overlay.clear();
+      this.view.instruction =
+        "Waiting for the website's result. The action has not been verified.";
+      this.publish(this.view, undefined, navigation);
+      this.clearTarget();
+      this.planningRevision = "";
+      this.eventTick = setTimeout(() => {
+        this.refresh();
+        this.requestReplan();
+      }, 0);
+      return;
+    }
     this.pending = true;
+    if (this.view.journey?.workflow)
+      this.view.journey.workflow = recordWorkflowAction(
+        this.view.journey.workflow,
+        this.selected.control,
+      );
     this.record("waiting", "user-interaction");
     this.overlay.clear();
     if (this.selected.control.kind === "action") {
@@ -862,7 +1100,7 @@ export class PageCoach {
       this.publish(this.view);
       return;
     }
-    this.view.status = "waiting";
+    this.view.status = this.view.journey?.workflow ? "running" : "waiting";
     this.view.instruction = "Waiting for the website's expected result…";
     let navigation: PendingNavigation | undefined;
     if (
@@ -894,21 +1132,32 @@ export class PageCoach {
         };
     }
     this.publish(this.view, undefined, navigation);
-    this.deadline = setTimeout(() => {
-      this.record("timeout", "deadline-expired");
-      this.clearTarget();
-      this.state("choosing");
-      this.view.instruction =
-        "The expected result was not observed. Check the page and choose a control again.";
-      if (this.view.goalPlan)
-        this.view.goalPlan = {
-          ...this.view.goalPlan,
-          status: "unresolved",
-          reason: this.view.instruction,
-          steps: [],
-        };
-      this.publish(this.view);
-    }, 8000);
+    this.deadline = setTimeout(
+      () => {
+        if (this.view.journey?.workflow) {
+          this.view.journey.workflow.waitExpired = true;
+          this.view.journey.workflow.revision++;
+          this.view.instruction =
+            "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
+          this.publish(this.view);
+          return;
+        }
+        this.record("timeout", "deadline-expired");
+        this.clearTarget();
+        this.state("choosing");
+        this.view.instruction =
+          "The expected result was not observed. Check the page and choose a control again.";
+        if (this.view.goalPlan)
+          this.view.goalPlan = {
+            ...this.view.goalPlan,
+            status: "unresolved",
+            reason: this.view.instruction,
+            steps: [],
+          };
+        this.publish(this.view);
+      },
+      this.view.journey?.workflow ? 120000 : 8000,
+    );
     this.eventTick = setTimeout(() => this.refresh(), 0);
   }
   private clicked = (event: MouseEvent) => {
@@ -941,6 +1190,321 @@ export class PageCoach {
     this.memory = memory;
     this.savedTask = savedTask;
   }
+  workflowAction(action: "CONTINUE" | "WAIT" | "RETRY") {
+    const workflow = this.view.journey?.workflow;
+    if (!workflow || this.view.status !== "running") return;
+    const guide = workflowGuides.find((g) => g.id === workflow.guideId);
+    if (!guide) return;
+    this.view.journey!.workflow =
+      action === "CONTINUE"
+        ? continueWorkflow(workflow, guide)
+        : {
+            ...workflow,
+            revision: workflow.revision + 1,
+            status: action === "RETRY" ? "active" : workflow.status,
+            pendingAction:
+              action === "RETRY" ? undefined : workflow.pendingAction,
+          };
+    if (action === "WAIT" && this.view.journey!.workflow.pendingAction) {
+      this.view.journey!.workflow.pendingAction.startedAt = Date.now();
+      this.view.journey!.workflow.waitExpired = false;
+    }
+    this.clearTarget();
+    this.planningRevision = "";
+    this.requestReplan();
+    this.publish(this.view);
+  }
+  setWorkflowEntity(
+    type: WorkflowContext["entities"][number]["type"],
+    raw: string,
+  ) {
+    const w = this.view.journey?.workflow,
+      value = sanitizeGoal(raw);
+    if (!w || !value || this.view.status !== "running") return;
+    const guide = workflowGuides.find((g) => g.id === w.guideId);
+    const previous = w.entities.find((e) => e.type === type);
+    w.entities = w.entities.filter((e) => e.type !== type);
+    w.entities.push({ type, value, source: "clarification" });
+    w.revision++;
+    if (previous && previous.value !== value) {
+      const stage = guide?.milestones.findIndex((m) => m.entity === type) ?? -1;
+      if (stage >= 0) w.activeMilestone = Math.min(w.activeMilestone, stage);
+      w.verified = w.verified.filter(
+        (v) =>
+          (guide?.milestones.findIndex((m) => m.id === v.milestone) ?? -1) <
+          w.activeMilestone,
+      );
+    }
+    w.status = "active";
+    w.pendingAction = undefined;
+    this.clearTarget();
+    this.planningRevision = "";
+    this.requestReplan();
+    this.publish(this.view);
+  }
+  private compose(local: PageSnapshot): PageSnapshot {
+    if (!this.frames.size && !this.compositionStarted) return local;
+    this.compositionStarted = true;
+    const modal = [
+      ...document.querySelectorAll<HTMLElement>(
+        "dialog[open],[role=dialog][aria-modal=true]",
+      ),
+    ]
+      .filter((e) => presented(e))
+      .at(-1);
+    const all = [
+      ...local.controls,
+      ...[...this.frames].flatMap(([frameId, f]) =>
+        f.page.controls.map((c) => {
+          const v = this.frameVisibilityStates.get(frameId),
+            element = frameElement(frameId),
+            shown =
+              v?.documentId === f.documentId &&
+              v.visible &&
+              (!modal || (!!element && modal.contains(element)));
+          return {
+            ...c,
+            visible: c.visible && shown,
+            inViewport: c.inViewport && shown && v.inViewport,
+            sectionVisible: c.sectionVisible && shown && v.inViewport,
+            placement: !v?.inViewport ? v?.placement : c.placement,
+            surfaceId: `frame-${frameId}/${c.surfaceId || "page"}`,
+            reference: {
+              frameId,
+              documentId: f.documentId,
+              tabId: f.tabId,
+              controlId: c.id,
+            },
+          };
+        }),
+      ),
+    ];
+    const target = this.view.request?.tasks[this.view.request.active],
+      tokens = (target?.desiredValue || target?.target || "")
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 2);
+    all.sort(
+      (a, b) =>
+        Number(b.id === this.view.selectedControlId) -
+          Number(a.id === this.view.selectedControlId) ||
+        tokens.filter((t) => b.label.toLowerCase().includes(t)).length -
+          tokens.filter((t) => a.label.toLowerCase().includes(t)).length ||
+        Number(b.inViewport) - Number(a.inViewport) ||
+        Number(a.group === "Page links") - Number(b.group === "Page links"),
+    );
+    const controls = all.slice(0, 600),
+      fingerprint = hash(
+        local.fingerprint +
+          "|" +
+          [...this.frames]
+            .map(
+              ([id, f]) =>
+                id +
+                ":" +
+                f.documentId +
+                ":" +
+                f.page.fingerprint +
+                ":" +
+                JSON.stringify(this.frameVisibilityStates.get(id)),
+            )
+            .join("|"),
+      );
+    const freshness = hash(
+      fingerprint +
+        "|" +
+        local.revision +
+        "|" +
+        [...this.frames].map(([id, f]) => id + ":" + f.page.revision).join("|"),
+    );
+    if (freshness !== this.compositionFingerprint) {
+      this.compositionFingerprint = freshness;
+      this.compositionRevision =
+        Math.max(
+          this.compositionRevision,
+          local.revision,
+          this.view.page?.revision || 0,
+        ) + 1;
+    }
+    const coverage = [
+      ...(local.coverage || []),
+      ...[...this.frames].flatMap(([id, f]) =>
+        (f.page.coverage || []).map((s) => ({
+          ...s,
+          surfaceId: `frame-${id}/${s.surfaceId}`,
+        })),
+      ),
+    ]
+      .map((s) => {
+        const projected = controls.filter(
+          (c) => c.surfaceId === s.surfaceId,
+        ).length;
+        return {
+          ...s,
+          projected,
+          omitted: Math.max(0, s.indexed - projected),
+          complete: s.complete && projected === s.indexed,
+        };
+      })
+      .slice(0, 100);
+    return {
+      ...local,
+      controls,
+      coverage,
+      fingerprint,
+      stateKey: local.pageKey + ":" + fingerprint,
+      revision: this.compositionRevision,
+      partial:
+        local.partial ||
+        all.length > 600 ||
+        [...this.frames.values()].some((f) => f.page.partial),
+      busy: local.busy || [...this.frames.values()].some((f) => f.page.busy),
+      indexedControls: Math.min(
+        5000,
+        (local.indexedControls || local.controls.length) +
+          [...this.frames.values()].reduce(
+            (n, f) => n + (f.page.indexedControls || f.page.controls.length),
+            0,
+          ),
+      ),
+      signals: [
+        ...(local.signals || []),
+        ...[...this.frames]
+          .filter(([id]) => this.frameVisibilityStates.get(id)?.visible)
+          .flatMap(([id, f]) =>
+            (f.page.signals || []).map((s) => ({
+              ...s,
+              frameId: id,
+              documentId: f.documentId,
+            })),
+          ),
+      ].slice(0, 30),
+    };
+  }
+  frameAccess(origins: string[], limit: number) {
+    this.frames.clear();
+    this.frameVisibilityStates.clear();
+    this.view.frameAccess = origins;
+    this.discovery.setLimit(limit);
+    this.refresh();
+  }
+  frameObservation(
+    frameId: number,
+    documentId: string,
+    tabId: number,
+    page: PageSnapshot,
+  ) {
+    if (this.view.status !== "running") return;
+    const old = this.frames.get(frameId);
+    if (old?.documentId === documentId && old.page.revision > page.revision)
+      return;
+    this.frames.set(frameId, { documentId, tabId, page });
+    this.refresh();
+  }
+  frameVisibility(
+    frameId: number,
+    documentId: string,
+    shown: boolean,
+    inViewport: boolean,
+    placement: PageControl["placement"],
+  ) {
+    this.frameVisibilityStates.set(frameId, {
+      documentId,
+      visible: shown,
+      inViewport,
+      placement,
+    });
+    this.refresh();
+  }
+  frameInteraction(
+    reference: ControlReference,
+    signature: string,
+    verified: boolean,
+  ) {
+    const control = this.view.page?.controls.find(
+      (c) =>
+        c.id === reference.controlId &&
+        c.reference?.documentId === reference.documentId &&
+        c.signature === signature,
+    );
+    if (
+      !control ||
+      control.id !== this.externalControl?.id ||
+      this.view.status !== "running"
+    )
+      return;
+    if (this.view.journey?.workflow) {
+      this.view.journey.workflow = recordWorkflowAction(
+        this.view.journey.workflow,
+        control,
+        verified,
+        this.view.page,
+      );
+      if (verified && control.kind !== "focus") this.view.verifiedSteps++;
+    } else if (
+      verified &&
+      this.view.request?.tasks[this.view.request.active]?.operation === "search"
+    ) {
+      this.view.request.tasks[this.view.request.active].searchPhase = "results";
+      this.view.verifiedSteps++;
+    } else if (verified && this.view.journey?.objective.value) {
+      this.view.verifiedSteps++;
+    } else if (verified && this.view.goalPlan) {
+      this.view.verifiedSteps++;
+      this.view.goalPlan = {
+        ...this.view.goalPlan,
+        status: "completed",
+        steps: [],
+        reason:
+          "The requested control interaction was verified in the embedded application.",
+      };
+      this.completeQueuedTask();
+    }
+    this.publish(this.view);
+    this.planningRevision = "";
+    this.requestReplan();
+  }
+  private showFrameControl(
+    control: PageControl,
+    instruction: string,
+    review: boolean,
+  ) {
+    if (
+      !control.visible ||
+      !control.enabled ||
+      control.occluded ||
+      (control.risk === "consequential" && !review)
+    )
+      return { error: "Frame target requires fresh review." };
+    this.clearTarget();
+    this.externalControl = control;
+    this.view.selectedControlId = control.id;
+    this.view.instruction = instruction;
+    const element = frameElement(control.reference!.frameId);
+    if (element && !control.inViewport)
+      this.overlay.show(
+        element,
+        "Scroll to the embedded application to see its highlighted control.",
+      );
+    void chrome.runtime
+      .sendMessage({
+        type: "GUIDE_FRAME",
+        reference: control.reference,
+        signature: control.signature,
+        instruction,
+        review,
+      })
+      .then((reply) => {
+        if (reply?.error) {
+          this.clearTarget();
+          this.view.instruction = reply.error;
+          this.publish(this.view);
+        }
+      })
+      .catch(() => this.clearTarget());
+    this.publish(this.view);
+    return { view: this.view };
+  }
   pause() {
     if (this.view.request) this.view.request = pauseQueue(this.view.request);
     this.record("canceled", "guidance-cleared");
@@ -966,6 +1530,8 @@ export class PageCoach {
       this.replan();
   }
   stop(reason = "Navigation stopped.") {
+    if (this.view.journey?.workflow)
+      this.view.journey.workflow.status = "canceled";
     if (this.view.request) this.view.request = stopQueue(this.view.request);
     this.view.clarification = undefined;
     this.record("canceled", "guidance-cleared");
@@ -978,5 +1544,9 @@ export class PageCoach {
   }
   unload() {
     this.teardown();
+    if (["running", "waiting"].includes(this.view.status)) {
+      this.view.status = "paused";
+      if (this.view.request) this.view.request = pauseQueue(this.view.request);
+    }
   }
 }

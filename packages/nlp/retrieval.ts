@@ -4,6 +4,11 @@ import { sanitizeText } from "../privacy-redaction";
 import type { Embedder } from "./model";
 import { MODEL_REVISION, DIMENSIONS } from "./constants";
 import { goalScore } from "../goal-planner";
+import { languageCode } from "../goal-planner/task-journey";
+import {
+  privatePlatform,
+  structuralObservation,
+} from "../navigation-core/privacy";
 export interface CachedEmbedding {
   key: string;
   revision: string;
@@ -100,9 +105,15 @@ export function bm25(query: string, documents: string[]): number[] {
   const tokens = documents.map(words),
     avg = tokens.reduce((s, d) => s + d.length, 0) / Math.max(1, tokens.length);
   const q = [...new Set(words(query))];
+  const frequencies = new Map(
+    q.map((term) => [
+      term,
+      tokens.reduce((count, d) => count + Number(d.includes(term)), 0),
+    ]),
+  );
   return tokens.map((d) =>
     q.reduce((score, term) => {
-      const df = tokens.filter((v) => v.includes(term)).length,
+      const df = frequencies.get(term) || 0,
         tf = d.filter((v) => v === term).length;
       return (
         score +
@@ -126,7 +137,7 @@ export class SemanticIndex {
     private embedder: Embedder,
     private storage: DerivedStore,
   ) {}
-  async vector(text: string, signal?: AbortSignal) {
+  async vector(text: string, signal?: AbortSignal, persist = true) {
     signal?.throwIfAborted();
     const hot = this.hot.get(text);
     if (hot) {
@@ -134,7 +145,7 @@ export class SemanticIndex {
       return hot;
     }
     const key = MODEL_REVISION + ":" + (await semanticHash(text)),
-      cached = await this.storage.getEmbedding(key);
+      cached = persist ? await this.storage.getEmbedding(key) : undefined;
     if (
       cached?.revision === MODEL_REVISION &&
       cached.vector.length === DIMENSIONS &&
@@ -146,21 +157,77 @@ export class SemanticIndex {
     }
     const [vector] = await this.embedder.embed([text], signal);
     this.activity.embedded++;
-    await this.storage.putEmbedding({
-      key,
-      revision: MODEL_REVISION,
-      vector,
-      usedAt: Date.now(),
-    });
+    if (persist)
+      await this.storage.putEmbedding({
+        key,
+        revision: MODEL_REVISION,
+        vector,
+        usedAt: Date.now(),
+      });
     this.remember(text, vector);
     return vector;
   }
-  async rank(page: PageSnapshot, task: TaskIntent, signal?: AbortSignal) {
+  async rank(
+    page: PageSnapshot,
+    task: TaskIntent,
+    signal?: AbortSignal,
+    options?: { lexicalFirst?: boolean },
+  ) {
     const texts = page.controls.map((c) => semanticText(c, page));
     const query = [task.target, ...task.qualifiers].join(" ");
     const lexical = bm25(query, texts),
       max = Math.max(1, ...lexical);
-    const queryVector = await this.vector(query, signal);
+    const constraints = (control: PageControl, text: string) =>
+      !task.exclusions.some((e) =>
+        words(e).some((w) => words(text).includes(w)),
+      ) &&
+      task.qualifiers.every(
+        (q) =>
+          words(q).every((w) => words(text).includes(w)) ||
+          goalScore(q, control) >= 0.7,
+      ) &&
+      (task.scope === "any" || !control.scope || task.scope === control.scope);
+    const locale =
+      task.desiredValue &&
+      /^(?:(?:page|site|website|display|interface|ui) )?languages?$/i.test(
+        task.target,
+      )
+        ? languageCode(task.desiredValue)
+        : undefined;
+    const isDirect = (control: PageControl) =>
+      (!!locale &&
+        control.targetLanguage?.split("-")[0].toLowerCase() === locale) ||
+      (words(task.target).length > 0 &&
+        words(task.target).every((w) =>
+          words(control.label + " " + (control.description || "")).includes(w),
+        ));
+    // Fresh exact lexical evidence can guide immediately while model assets/indexes
+    // load. Ambiguous matches remain candidates; the planner still owns eligibility.
+    if (
+      options?.lexicalFirst &&
+      page.controls.some(
+        (c, i) =>
+          isDirect(c) && constraints(c, texts[i]) && c.visible && c.enabled,
+      )
+    ) {
+      return page.controls
+        .map((control, i) => ({
+          control,
+          lexical: lexical[i] / max,
+          semantic: 0,
+          score: isDirect(control) ? 1 : (0.55 * lexical[i]) / max,
+          eligible: constraints(control, texts[i]),
+          direct: isDirect(control),
+        }))
+        .sort((a, b) => b.score - a.score);
+    }
+    const ephemeral =
+      privatePlatform(page.origin) ||
+      page.controls.some(
+        (c) => c.reference?.frameId || c.retention === "session",
+      );
+    const structural = structuralObservation(page).controls;
+    const queryVector = await this.vector(query, signal, !ephemeral);
     const entries: IndexEntry[] = [];
     const candidates = [];
     // Semantic/state cache keys deliberately omit visibility, risk and checked state.
@@ -168,17 +235,31 @@ export class SemanticIndex {
     for (let i = 0; i < page.controls.length; i++) {
       const control = page.controls[i],
         text = texts[i];
-      const vector = await this.vector(text, signal),
-        hash = this.hashes.get(text) || (await semanticHash(text));
-      this.hashes.set(text, hash);
+      const clean = ephemeral
+        ? structural.find(
+            (c) => c.label === control.label && c.role === control.role,
+          )
+        : undefined;
+      const embeddingText = clean ? semanticText(clean) : text;
+      const vector = await this.vector(
+          embeddingText,
+          signal,
+          !ephemeral || !!clean,
+        ),
+        hash =
+          this.hashes.get(embeddingText) || (await semanticHash(embeddingText));
+      this.hashes.set(embeddingText, hash);
       while (this.hashes.size > 10000)
         this.hashes.delete(this.hashes.keys().next().value!);
-      entries.push({ signature: control.signature, hash, text });
+      if (!ephemeral || clean)
+        entries.push({
+          signature: clean?.signature || control.signature,
+          hash,
+          text: embeddingText,
+        });
       const semantic = cosine(queryVector, vector),
         lex = lexical[i] / max;
-      const direct = words(task.target).every((w) =>
-        words(control.label + " " + (control.description || "")).includes(w),
-      );
+      const direct = isDirect(control);
       const excluded = task.exclusions.some((e) =>
         words(e).some((w) => words(text).includes(w)),
       );

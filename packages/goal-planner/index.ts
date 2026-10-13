@@ -279,7 +279,7 @@ function operationMatches(intent: GoalIntent, control: PageControl) {
       {
         focus: ["focus"],
         reveal: ["expand"],
-        choose: ["choice", "toggle", "select"],
+        choose: ["choice", "toggle", "select", "range"],
         navigate: ["navigation", "section"],
       } as Record<string, string[]>
     )[intent.operation]?.includes(control.kind)

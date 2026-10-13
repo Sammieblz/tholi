@@ -6,8 +6,10 @@ npm run fetch:model
 npm run check
 npm run build:api
 npm run test:nlp
+npm run test:multi-app
 npx playwright install chromium
 npm run test:nlp:browser
+npm run test:multi-app:browser
 npm run test:e2e
 npm run test:live:wikipedia
 npm run test:acceptance
@@ -36,3 +38,10 @@ do not regenerate expectations from predictions or lower release thresholds.
 Release tests recursively hash every packaged asset. Package without rebuilding
 after evaluation. Existing release ZIPs are immutable. See
 `docs/nlp-architecture.md` and `docs/chrome-handoff.md` for runtime limitations.
+
+The v0.8 corpus is frozen in `tests/multi-app/corpus.json` with its checksum.
+Guides describe semantic milestones derived from official sources, with version
+and source hashes. They must never supply selectors or automatic destination
+URLs. Keep signed-in outcomes separate from fixture/public-page evidence; mark
+unavailable checks pending. Do not record authenticated screenshots or traces by
+default. Private entity text must stay out of persistent knowledge and vectors.

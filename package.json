@@ -1,7 +1,7 @@
 {
   "name": "internet-navigator",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev:demo": "vite --config apps/demo-saas/vite.config.ts",
@@ -22,7 +22,10 @@
     "test:nlp": "vitest run --config vitest.nlp.config.ts",
     "package:api": "node scripts/package-api.mjs",
     "test:nlp:browser": "playwright test --config playwright.nlp.config.ts",
-    "pretest:nlp": "npm run build:api"
+    "test:multi-app": "vitest run --config vitest.multi-app.config.ts",
+    "test:multi-app:browser": "playwright test --config playwright.multi-app.config.ts",
+    "pretest:nlp": "npm run build:api",
+    "pretest:multi-app": "npm run build:api"
   },
   "dependencies": {
     "react": "^19.0.0",

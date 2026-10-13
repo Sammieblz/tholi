@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  coverageSchema,
+  workflowContextSchema,
+  outcomeEvidenceSchema,
+  controlReferenceSchema,
+} from "../navigation-core/workflow-contracts";
 export const LIVE_ROUTE_ID = "navigator.live";
 export const LIVE_VERSION = "1.0.0";
 export const controlId = z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/);
@@ -68,6 +74,7 @@ export const controlSchema = z
       "navigation",
       "expand",
       "action",
+      "range",
     ]),
     visible: z.boolean(),
     enabled: z.boolean(),
@@ -95,6 +102,19 @@ export const controlSchema = z
       .max(100)
       .optional(),
     risk: z.enum(["ordinary", "consequential"]),
+    retention: z.enum(["interface", "session"]).optional(),
+    surfaceId: z.string().max(100).optional(),
+    occluded: z.boolean().optional(),
+    reference: controlReferenceSchema.optional(),
+    range: z
+      .object({
+        current: z.number().finite(),
+        min: z.number().finite(),
+        max: z.number().finite(),
+        step: z.number().finite().positive().optional(),
+      })
+      .strict()
+      .optional(),
     riskReason: z
       .enum(["commit", "form-submit", "unknown-edit-effect"])
       .optional(),
@@ -113,6 +133,10 @@ export const pageSnapshotSchema = z
     language: z.string().max(20),
     controls: z.array(controlSchema).max(600),
     partial: z.boolean(),
+    coverage: z.array(coverageSchema).max(100).optional(),
+    signals: z.array(outcomeEvidenceSchema).max(30).optional(),
+    busy: z.boolean().optional(),
+    indexedControls: z.number().int().nonnegative().max(5000).optional(),
   })
   .strict();
 export const goalPlanSchema = z
@@ -148,7 +172,7 @@ export const goalPlanSchema = z
             z
               .object({
                 label: z.string().max(160),
-                evidence: z.enum(["observed", "predicted"]),
+                evidence: z.enum(["observed", "predicted", "documented"]),
               })
               .strict(),
           )
@@ -217,6 +241,7 @@ export const journeySchema = z
     savedRouteId: z.string().max(100).optional(),
     requestTaskId: z.string().uuid().optional(),
     canonicalGoal: z.string().max(1000).optional(),
+    workflow: workflowContextSchema.optional(),
   })
   .strict();
 export const savedTaskSchema = z
@@ -236,13 +261,17 @@ export const savedTaskSchema = z
           .object({
             label: z.string().max(160),
             signature: z.string().max(100).optional(),
-            evidence: z.enum(["live", "observed", "predicted"]),
+            evidence: z.enum(["live", "observed", "predicted", "documented"]),
           })
           .strict(),
       )
       .max(24)
       .optional(),
     estimate: goalPlanSchema.shape.route,
+    guideId: z.string().max(100).optional(),
+    guideVersion: z.string().max(40).optional(),
+    parameters: z.array(z.string().max(40)).max(20).optional(),
+    retention: z.enum(["interface", "session"]).optional(),
   })
   .strict();
 export type TaskJourney = z.infer<typeof journeySchema>;

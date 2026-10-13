@@ -13,3 +13,5 @@ apps/api/dist/
 .navigator-api/
 output/nlp/
 test-results-nlp/
+test-results-multi-app/
+output/multi-app/

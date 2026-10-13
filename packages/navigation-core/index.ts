@@ -1,6 +1,8 @@
 export * from "./contracts";
 export * from "./queue";
 export * from "./storage";
+export * from "./workflow-contracts";
+export * from "./guides";
 import {
   planInputSchema,
   resultSchema,
@@ -16,6 +18,7 @@ import { sanitizeText } from "../privacy-redaction";
 import { shortestRoute } from "../goal-planner/route-graph";
 import { hasCommitLanguage } from "../safety-policy/action-language";
 import { authenticationIntent } from "../goal-planner/task-intent";
+import { planWorkflow } from "./workflows";
 export class NavigationCore {
   constructor(public index: SemanticIndex) {}
   async plan(
@@ -38,6 +41,22 @@ export class NavigationCore {
         requestId,
         documentId,
         revision,
+        ...(input.protocolVersion === 2
+          ? {
+              protocolVersion: 2,
+              contextRevision: input.contextRevision || 0,
+              targetReference: value.workflow?.pendingAction
+                ? input.observation.controls.find(
+                    (c) => c.id === value.workflow!.pendingAction!.controlId,
+                  )?.reference || {
+                    tabId: input.tabId ?? -1,
+                    frameId: input.frameId || 0,
+                    documentId,
+                    controlId: value.workflow.pendingAction.controlId,
+                  }
+                : undefined,
+            }
+          : {}),
         activity: {
           embedded: this.index.activity.embedded - activityBefore.embedded,
           cacheHits: this.index.activity.cacheHits - activityBefore.cacheHits,
@@ -49,7 +68,9 @@ export class NavigationCore {
     try {
       request = input.request
         ? structuredClone(input.request)
-        : interpretRequest(input.text, input.context);
+        : interpretRequest(input.text, input.context, {
+            clauses: input.protocolVersion === 2,
+          });
     } catch (error) {
       return result({
         status: "unsupported",
@@ -80,6 +101,77 @@ export class NavigationCore {
         reason:
           "I retained your exclusion. Describe the action you would like to take.",
       });
+    if (input.protocolVersion === 2) {
+      const workflow = await planWorkflow(
+        input,
+        request,
+        task,
+        this.index,
+        signal,
+        memory,
+      );
+      if (workflow) return result(workflow);
+    }
+    // Revealing a picker does not imply that the user wants its search field.
+    // Keep the verified menu handoff until a choice/value is supplied. Require
+    // the same task and fresh expanded-state evidence; a closed/stale menu
+    // must still be replanned rather than treated as an observed outcome.
+    const revealed = input.journey?.progress.at(-1);
+    const openPicker =
+      ["reveal", "choose"].includes(task.operation) &&
+      !task.desiredValue &&
+      !input.choice &&
+      input.journey?.requestTaskId === task.id &&
+      revealed?.kind === "expand" &&
+      input.observation.controls.find(
+        (c) =>
+          c.signature === revealed.signature &&
+          c.kind === "expand" &&
+          c.expanded === true &&
+          c.enabled &&
+          c.risk === "ordinary" &&
+          revealed.origin === input.observation.origin &&
+          (task.scope === "any" || !c.scope || task.scope === c.scope) &&
+          !task.exclusions.some((exclusion) =>
+            words(exclusion).some((word) =>
+              words([c.label, c.description, c.context].join(" ")).includes(
+                word,
+              ),
+            ),
+          ) &&
+          task.qualifiers.every((qualifier) =>
+            words(qualifier).every((word) =>
+              words([c.label, c.description, c.context].join(" ")).includes(
+                word,
+              ),
+            ),
+          ) &&
+          words(task.target).length > 0 &&
+          words(task.target).every((word) => words(c.label).includes(word)),
+      );
+    if (openPicker)
+      return result({
+        status: "plan",
+        request,
+        canonicalGoal: input.journey!.canonicalGoal || canonicalGoal(task),
+        plan: {
+          goal: task.original,
+          source: "semantics",
+          status:
+            task.operation === "reveal" &&
+            request.active < request.tasks.length - 1
+              ? "completed"
+              : "awaiting-choice",
+          confidence: 1,
+          steps: [],
+          reason:
+            task.operation === "reveal" &&
+            request.active < request.tasks.length - 1
+              ? "The requested menu opened and its current expanded state was verified."
+              : "Menu opened. Choose an option on the website, or describe the option you want.",
+        },
+        reason: "The menu's current expanded state was verified.",
+      });
     if (input.choice) {
       const choice = input.observation.controls.find(
         (c) => c.signature === input.choice,
@@ -96,7 +188,10 @@ export class NavigationCore {
       task.boundSignature = choice.signature;
       request.status = "active";
     }
-    const candidates = await this.index.rank(input.observation, task, signal);
+    const candidates = await this.index.rank(input.observation, task, signal, {
+      lexicalFirst:
+        input.protocolVersion === 2 && input.observation.controls.length > 100,
+    });
     if (
       ["locate", "choose"].includes(task.operation) &&
       hasCommitLanguage(task.target)

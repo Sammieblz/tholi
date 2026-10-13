@@ -15,9 +15,17 @@ import {
 import {
   savedTaskSchema,
   transitionEvidenceSchema,
+  hash,
 } from "../../../packages/page-model";
 import { SqliteStorage } from "./storage";
 import { interpretRequest } from "../../../packages/nlp/interpret";
+import {
+  planInputV2Schema,
+  resultV2Schema,
+  observationEnvelopeSchema,
+  observationDeltaSchema,
+} from "../../../packages/navigation-core/contracts-v2";
+import { workflowGuides } from "../../../packages/navigation-core/guides";
 const observeSchema = observationInputSchema
   .extend({ transition: transitionEvidenceSchema.optional() })
   .strict();
@@ -40,8 +48,17 @@ export async function createApi(options: ApiOptions) {
     throw new Error(
       "CORS origins must explicitly name installed Chrome extensions.",
     );
-  const app = Fastify({ bodyLimit: 8 * 1024 * 1024, logger: false });
+  const app = Fastify({
+    bodyLimit: 8 * 1024 * 1024,
+    logger: false,
+    ajv: { customOptions: { removeAdditional: false } },
+  });
   const store = new SqliteStorage(options.database);
+  // Delta assembly is bounded session memory. Only structural knowledge reaches SQLite.
+  const observations = new Map<
+    string,
+    { page: import("../../../packages/page-model").PageSnapshot; used: number }
+  >();
   const worker = new Worker(
     options.worker || new URL("./inference.js", import.meta.url),
     {
@@ -114,7 +131,7 @@ export async function createApi(options: ApiOptions) {
   });
   await app.register(swagger, {
     openapi: {
-      info: { title: "Internet Navigator single-owner API", version: "0.7.0" },
+      info: { title: "Internet Navigator single-owner API", version: "0.8.0" },
       components: {
         securitySchemes: { bearer: { type: "http", scheme: "bearer" } },
       },
@@ -143,7 +160,7 @@ export async function createApi(options: ApiOptions) {
       .send({ error: invalid ? "Invalid API request." : e.message });
   });
   app.get("/v1/health", { schema: { tags: ["capabilities"] } }, async () => ({
-    version: "0.7.0",
+    version: "0.8.0",
     status: "ok",
     capabilities: [
       "english-nlp",
@@ -260,6 +277,196 @@ export async function createApi(options: ApiOptions) {
     },
   );
   app.post("/v1/clear", async () => {
+    await infer("reset", {});
+    await store.clear();
+    return { ok: true };
+  });
+  app.get("/v2/health", { schema: { tags: ["capabilities"] } }, async () => ({
+    version: "0.8.0",
+    status: "ok",
+    protocols: [1, 2],
+    capabilities: [
+      "contextual-workflows",
+      "incremental-observations",
+      "session-only-entities",
+      "manual-review-verification",
+      "cpu-minilm",
+    ],
+    guides: workflowGuides.map((g) => ({
+      id: g.id,
+      version: g.version,
+      platform: g.platform,
+    })),
+    llm: false,
+  }));
+  app.get("/v2/openapi.json", async () => app.swagger());
+  app.post(
+    "/v2/observations",
+    {
+      schema: {
+        body: zodToJsonSchema(
+          observationInputSchema
+            .or(observationEnvelopeSchema)
+            .or(observationDeltaSchema),
+        ),
+      },
+    },
+    async (req, reply) => {
+      const input = observationInputSchema
+        .or(observationEnvelopeSchema)
+        .or(observationDeltaSchema)
+        .parse(req.body);
+      for (const [key, value] of observations)
+        if (Date.now() - value.used > 300000) observations.delete(key);
+      let page = input.observation;
+      if ("upserts" in input) {
+        const key = input.documentId + ":" + input.frameId,
+          prior = observations.get(key)?.page;
+        if (!page) {
+          if (!prior || prior.revision !== input.baseRevision)
+            return reply.code(409).send({
+              error: "Fresh observation required; delta base is stale.",
+            });
+          const controls = new Map(prior.controls.map((c) => [c.id, c]));
+          for (const id of input.removed) controls.delete(id);
+          for (const c of input.upserts) controls.set(c.id, c);
+          if (controls.size > 600)
+            return reply
+              .code(409)
+              .send({ error: "Send a bounded fresh projection." });
+          page = {
+            ...prior,
+            controls: [...controls.values()],
+            revision: input.revision,
+            coverage: input.coverage,
+            partial: true,
+          };
+          page.fingerprint = hash(
+            prior.fingerprint + "|delta|" + JSON.stringify(page.controls),
+          );
+          page.stateKey = page.pageKey + ":" + page.fingerprint;
+        }
+        observations.delete(key);
+        observations.set(key, { page, used: Date.now() });
+      } else if ("reference" in input) {
+        const key = input.reference.documentId + ":" + input.reference.frameId;
+        observations.delete(key);
+        observations.set(key, { page: page!, used: Date.now() });
+      }
+      while (observations.size > 32)
+        observations.delete(observations.keys().next().value!);
+      if (!page)
+        return reply.code(400).send({ error: "Observation required." });
+      await store.observe(page);
+      return { ok: true, revision: page.revision };
+    },
+  );
+  app.post(
+    "/v2/knowledge",
+    { schema: { body: zodToJsonSchema(siteKnowledgeSchema) } },
+    async (req) => {
+      await store.mirror(siteKnowledgeSchema.parse(req.body));
+      return { ok: true };
+    },
+  );
+  app.post(
+    "/v2/plans",
+    {
+      schema: {
+        body: zodToJsonSchema(planInputV2Schema),
+        response: { 200: zodToJsonSchema(resultV2Schema) },
+      },
+    },
+    async (req, reply) => {
+      const input = planInputV2Schema.parse(req.body),
+        controller = new AbortController();
+      reply.raw.on("close", () => {
+        if (!reply.raw.writableEnded) controller.abort();
+      });
+      try {
+        return resultV2Schema.parse(
+          await infer("plan", input, controller.signal),
+        );
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          !error.message.includes("Indexing timed out")
+        )
+          throw error;
+        const request =
+          input.request ||
+          interpretRequest(input.text, input.context, { clauses: true });
+        request.id = input.requestId;
+        return resultV2Schema.parse({
+          requestId: input.requestId,
+          documentId: input.documentId,
+          revision: input.revision,
+          contextRevision: input.contextRevision,
+          protocolVersion: 2,
+          status: "pending-indexing",
+          request,
+          workflow: input.workflow,
+          reason:
+            "Indexing has not finished. Retry this retained request on the current page.",
+          activity: {
+            embedded: 0,
+            cacheHits: 0,
+            llmCalls: 0,
+            modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+          },
+        });
+      }
+    },
+  );
+  app.post(
+    "/v2/suggestions",
+    { schema: { body: zodToJsonSchema(planInputV2Schema) } },
+    async (req) => {
+      const input = planInputV2Schema.parse(req.body);
+      return {
+        requestId: input.requestId,
+        documentId: input.documentId,
+        revision: input.revision,
+        contextRevision: input.contextRevision,
+        suggestions: await infer("suggestions", input),
+      };
+    },
+  );
+  app.get(
+    "/v2/routes",
+    { schema: { querystring: zodToJsonSchema(originSchema) } },
+    async (req) => ({
+      routes: await store.tasks(originSchema.parse(req.query).origin),
+    }),
+  );
+  app.post(
+    "/v2/routes",
+    { schema: { body: zodToJsonSchema(savedTaskSchema) } },
+    async (req) => {
+      await store.saveTask(savedTaskSchema.parse(req.body));
+      return { ok: true };
+    },
+  );
+  app.delete("/v2/routes/:id", async (req) => {
+    await store.deleteTask(
+      z.object({ id: z.string().max(100) }).parse(req.params).id,
+    );
+    return { ok: true };
+  });
+  app.post(
+    "/v2/forget",
+    { schema: { body: zodToJsonSchema(originSchema) } },
+    async (req) => {
+      const origin = originSchema.parse(req.body).origin;
+      for (const [key, value] of observations)
+        if (value.page.origin === origin) observations.delete(key);
+      await infer("reset", {});
+      await store.forget(origin);
+      return { ok: true };
+    },
+  );
+  app.post("/v2/clear", async () => {
+    observations.clear();
     await infer("reset", {});
     await store.clear();
     return { ok: true };

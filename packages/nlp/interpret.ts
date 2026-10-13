@@ -10,10 +10,11 @@ const clean = (s: string) =>
     .replace(/^["'“”]+|["'“”.!?,;:]+$/g, "")
     .trim();
 const actions =
-  "(?:open|show|find|navigate|go|change|switch|set|select|choose|turn|search|look|edit|create|log|sign|make|hide|enable|disable|read|view)";
+  "(?:open|show|find|navigate|go|change|switch|set|select|choose|turn|search|look|edit|create|log|sign|make|hide|enable|disable|read|view|deploy|publish|host|launch|cancel|unsubscribe|upgrade|downgrade|configure|report|add|sort|filter|order)";
 export function interpretRequest(
   text: string,
   context?: { target?: string },
+  options?: { clauses?: boolean },
 ): NavigationRequest {
   const original = sanitizeGoal(text);
   if (!original) throw new Error("Describe what you would like to do.");
@@ -35,13 +36,21 @@ export function interpretRequest(
         "i",
       ),
     )
-    .map(clean)
+    .map((s) =>
+      options?.clauses
+        ? s
+            .trim()
+            .replace(/[.!?,;:]+$/, "")
+            .trim()
+        : clean(s),
+    )
     .filter(Boolean);
   if (clauses.length > 3)
     throw new Error("Please split this request into at most three tasks.");
   let reference = context?.target;
   const tasks = clauses.map((clause) => {
     const task = interpretClause(clause, reference);
+    if (options?.clauses) task.clause = clause;
     if (!task.needsReference) reference = task.target;
     return task;
   });
@@ -92,7 +101,31 @@ function interpretClause(original: string, reference?: string): TaskIntent {
     /^(?:turn|switch|set)\s+(?:the\s+)?(.+?)\s+(on|off)$/i,
   );
   const enableState = text.match(/^(enable|disable)\s+(?:the\s+)?(.+)$/i);
-  if (prefixState || suffixState || enableState) {
+  const sorting =
+    text.match(/^(?:sort|order)\s+(?:.*?)\bby\s+(.+)$/i) ||
+    text.match(/^(?:sort|order)\s+(.+)$/i);
+  const filtering =
+    text.match(/^filter\b.*?\b(?:by|to|for)\s+(.+)$/i) ||
+    text.match(
+      /^(?:show|find)\s+only\s+(.+?)(?:\s+(?:products|results|items))?$/i,
+    );
+  if (sorting) {
+    operation = "choose";
+    target = "Sort by";
+    desiredValue = clean(sorting[1]);
+    if (/cheapest|lowest price|price (?:low|ascending)/i.test(desiredValue))
+      desiredValue = "Price low to high";
+    if (
+      /most expensive|highest price|price (?:high|descending)/i.test(
+        desiredValue,
+      )
+    )
+      desiredValue = "Price high to low";
+  } else if (filtering) {
+    operation = "choose";
+    target = clean(filtering[1]);
+    desiredValue = "on";
+  } else if (prefixState || suffixState || enableState) {
     operation = "choose";
     target = clean(prefixState?.[2] || suffixState?.[1] || enableState![2]);
     desiredValue = (
@@ -108,6 +141,10 @@ function interpretClause(original: string, reference?: string): TaskIntent {
     operation = "choose";
     target = clean(change[1]);
     desiredValue = clean(change[2]);
+    const scoped = desiredValue.match(
+      /^(.*?)\s+(?:in|for|on)\s+(?:(?:the|my)\s+)?(?:repository|repo|project|space|account)\s+.+$/i,
+    );
+    if (scoped) desiredValue = clean(scoped[1]);
   } else {
     if (/^(?:open|go|navigate|visit|read|view)\b/i.test(text))
       operation = "navigate";

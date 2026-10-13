@@ -7,6 +7,15 @@ import {
   savedTaskSchema,
   type SavedTask,
 } from "../page-model";
+import {
+  structuralObservation,
+  structuralTransition,
+  structuralKnowledge,
+  parameterizedTask,
+  privatePlatform,
+} from "../navigation-core/privacy";
+import { upgradePrivateMemory } from "./migration";
+import { boundedTransaction } from "./transaction";
 const MAX_AGE = 90 * 86400000;
 export function mergeObservation(
   previous: SiteMemory | undefined,
@@ -180,7 +189,7 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   private database?: Promise<IDBDatabase>;
   private open() {
     return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("navigator-site-memory", 3);
+      const request = indexedDB.open("navigator-site-memory", 4);
       request.onupgradeneeded = () => {
         if (!request.result.objectStoreNames.contains("sites"))
           request.result.createObjectStore("sites", { keyPath: "origin" });
@@ -190,6 +199,7 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
           request.result.createObjectStore("embeddings", { keyPath: "key" });
         if (!request.result.objectStoreNames.contains("indexes"))
           request.result.createObjectStore("indexes", { keyPath: "origin" });
+        upgradePrivateMemory(request.transaction!);
       };
       request.onsuccess = () => {
         const db = request.result;
@@ -215,73 +225,79 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   }
   async get(origin: string): Promise<SiteMemory | undefined> {
     const db = await this.open();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction("sites", "readwrite"),
-        store = transaction.objectStore("sites"),
-        request = store.get(origin);
-      let result: SiteMemory | undefined;
-      request.onsuccess = () => {
-        const site = request.result as SiteMemory | undefined,
-          now = Date.now();
-        if (!site) return;
-        if (site.schemaVersion !== 1 || now - site.lastSeen > MAX_AGE) {
-          store.delete(origin);
-          return;
-        }
-        const serialized = JSON.stringify(site);
-        site.pages = site.pages
-          .filter((p) => now - p.lastSeen < MAX_AGE)
-          .map((p) => ({
-            ...p,
-            controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
-          }));
-        site.templates = site.templates.filter(
-          (t) => now - t.lastSeen < MAX_AGE,
-        );
-        site.transitions = site.transitions.filter(
-          (t) => now - t.lastVerified < MAX_AGE,
-        );
-        site.states = site.states
-          ?.filter((p) => now - p.lastSeen < MAX_AGE)
-          .map((p) => ({
-            ...p,
-            controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
-          }));
-        if (serialized !== JSON.stringify(site)) store.put(site);
-        result = site;
-      };
-      transaction.oncomplete = () => resolve(result);
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
+    return boundedTransaction<SiteMemory | undefined>(
+      db,
+      "sites",
+      "readwrite",
+      (transaction, result) => {
+        const store = transaction.objectStore("sites"),
+          request = store.get(origin);
+        request.onsuccess = () => {
+          const site = request.result as SiteMemory | undefined,
+            now = Date.now();
+          if (!site) return;
+          if (site.schemaVersion !== 1 || now - site.lastSeen > MAX_AGE) {
+            store.delete(origin);
+            return;
+          }
+          const serialized = JSON.stringify(site);
+          site.pages = site.pages
+            .filter((p) => now - p.lastSeen < MAX_AGE)
+            .map((p) => ({
+              ...p,
+              controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
+            }));
+          site.templates = site.templates.filter(
+            (t) => now - t.lastSeen < MAX_AGE,
+          );
+          site.transitions = site.transitions.filter(
+            (t) => now - t.lastVerified < MAX_AGE,
+          );
+          site.states = site.states
+            ?.filter((p) => now - p.lastSeen < MAX_AGE)
+            .map((p) => ({
+              ...p,
+              controls: p.controls.filter((c) => now - c.lastSeen < MAX_AGE),
+            }));
+          if (serialized !== JSON.stringify(site)) store.put(site);
+          result(site);
+        };
+      },
+    );
   }
   async observe(page: PageSnapshot, transition?: ObservedTransition) {
+    transition = structuralTransition(
+      page.origin,
+      transition,
+      page.controls.some(
+        (c) => c.retention === "session" || c.reference?.frameId,
+      ),
+    );
+    page = structuralObservation(page);
     const db = await this.open();
-    return new Promise<SiteMemory>((resolve, reject) => {
-      const transaction = db.transaction("sites", "readwrite"),
-        store = transaction.objectStore("sites");
-      let result: SiteMemory;
-      const request = store.get(page.origin);
-      request.onsuccess = () => {
-        result = mergeObservation(request.result, page, transition);
-        store.put(result);
-      };
-      const all = store.getAll();
-      all.onsuccess = () => {
-        const sites = (all.result as SiteMemory[])
-          .filter((s) => s.origin !== page.origin)
-          .sort((a, b) => b.lastSeen - a.lastSeen);
-        for (const site of sites.slice(49)) store.delete(site.origin);
-        for (const site of sites)
-          if (Date.now() - site.lastSeen > MAX_AGE) store.delete(site.origin);
-      };
-      transaction.oncomplete = () => resolve(result);
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () =>
-        reject(
-          transaction.error || new Error("Site memory could not be saved."),
-        );
-    });
+    return boundedTransaction<SiteMemory>(
+      db,
+      "sites",
+      "readwrite",
+      (transaction, result) => {
+        const store = transaction.objectStore("sites");
+        const request = store.get(page.origin);
+        request.onsuccess = () => {
+          const site = mergeObservation(request.result, page, transition);
+          store.put(site);
+          result(site);
+        };
+        const all = store.getAll();
+        all.onsuccess = () => {
+          const sites = (all.result as SiteMemory[])
+            .filter((s) => s.origin !== page.origin)
+            .sort((a, b) => b.lastSeen - a.lastSeen);
+          for (const site of sites.slice(49)) store.delete(site.origin);
+          for (const site of sites)
+            if (Date.now() - site.lastSeen > MAX_AGE) store.delete(site.origin);
+        };
+      },
+    );
   }
   async forget(origin: string) {
     await this.remove(origin);
@@ -291,32 +307,37 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   }
   async tasks(origin: string): Promise<SavedTask[]> {
     const db = await this.open();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction("tasks", "readwrite"),
-        store = tx.objectStore("tasks"),
-        request = store.getAll();
-      let result: SavedTask[] = [];
-      request.onsuccess = () => {
-        for (const raw of request.result) {
-          const parsed = savedTaskSchema.safeParse(raw);
-          if (!parsed.success || Date.now() - parsed.data.updatedAt > MAX_AGE) {
-            store.delete(raw.id);
-            continue;
+    return boundedTransaction<SavedTask[]>(
+      db,
+      "tasks",
+      "readwrite",
+      (tx, finish) => {
+        const store = tx.objectStore("tasks"),
+          request = store.getAll();
+        let result: SavedTask[] = [];
+        request.onsuccess = () => {
+          for (const raw of request.result) {
+            const parsed = savedTaskSchema.safeParse(raw);
+            if (
+              !parsed.success ||
+              Date.now() - parsed.data.updatedAt > MAX_AGE
+            ) {
+              store.delete(raw.id);
+              continue;
+            }
+            if (parsed.data.origin === origin) result.push(parsed.data);
           }
-          if (parsed.data.origin === origin) result.push(parsed.data);
-        }
-        result.sort((a, b) => b.updatedAt - a.updatedAt);
-      };
-      tx.oncomplete = () => resolve(result);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
+          result.sort((a, b) => b.updatedAt - a.updatedAt);
+          finish(result);
+        };
+      },
+    );
   }
   async saveTask(task: SavedTask) {
+    task = parameterizedTask(task);
     const db = await this.open();
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction("tasks", "readwrite"),
-        store = tx.objectStore("tasks");
+    await boundedTransaction<void>(db, "tasks", "readwrite", (tx) => {
+      const store = tx.objectStore("tasks");
       store.put(savedTaskSchema.parse(task));
       const request = store.getAll();
       request.onsuccess = () => {
@@ -325,43 +346,37 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
         );
         for (const old of tasks.slice(100)) store.delete(old.id);
       };
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
     });
   }
   async deleteTask(id: string) {
     const db = await this.open();
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction("tasks", "readwrite");
+    await boundedTransaction<void>(db, "tasks", "readwrite", (tx) => {
       tx.objectStore("tasks").delete(id);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
     });
   }
   private async remove(origin?: string) {
     const db = await this.open();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(["sites", "tasks"], "readwrite");
-      const store = transaction.objectStore("sites");
-      origin ? store.delete(origin) : store.clear();
-      const tasks = transaction.objectStore("tasks");
-      if (!origin) tasks.clear();
-      else {
-        const request = tasks.getAll();
-        request.onsuccess = () => {
-          for (const task of request.result as SavedTask[])
-            if (
-              task.origin === origin ||
-              task.progress.some((p) => p.origin === origin)
-            )
-              tasks.delete(task.id);
-        };
-      }
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
+    await boundedTransaction<void>(
+      db,
+      ["sites", "tasks"],
+      "readwrite",
+      (transaction) => {
+        const store = transaction.objectStore("sites");
+        origin ? store.delete(origin) : store.clear();
+        const tasks = transaction.objectStore("tasks");
+        if (!origin) tasks.clear();
+        else {
+          const request = tasks.getAll();
+          request.onsuccess = () => {
+            for (const task of request.result as SavedTask[])
+              if (
+                task.origin === origin ||
+                task.progress.some((p) => p.origin === origin)
+              )
+                tasks.delete(task.id);
+          };
+        }
+      },
+    );
   }
 }

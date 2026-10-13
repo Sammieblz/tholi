@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  workflowContextSchema,
+  controlReferenceSchema,
+} from "./workflow-contracts";
+import {
   pageSnapshotSchema,
   goalPlanSchema,
   strategySchema,
@@ -37,6 +41,7 @@ export const taskIntentSchema = z
     contextTarget: z.string().max(1000).optional(),
     needsReference: z.boolean().optional(),
     negatedOnly: z.boolean().optional(),
+    clause: z.string().max(1000).optional(),
     searchPhase: z.enum(["input", "results", "destination"]).optional(),
   })
   .strict();
@@ -92,6 +97,11 @@ export const planInputSchema = stampSchema
       })
       .strict()
       .optional(),
+    protocolVersion: z.literal(2).optional(),
+    contextRevision: z.number().int().nonnegative().optional(),
+    frameId: z.number().int().nonnegative().optional(),
+    tabId: z.number().int().optional(),
+    workflow: workflowContextSchema.optional(),
   })
   .strict()
   .refine(
@@ -112,6 +122,10 @@ export const resultSchema = stampSchema
     proposal: modelProposalSchema.optional(),
     canonicalGoal: z.string().max(1000).optional(),
     reason: z.string().max(500),
+    contextRevision: z.number().int().nonnegative().optional(),
+    workflow: workflowContextSchema.optional(),
+    protocolVersion: z.literal(2).optional(),
+    targetReference: controlReferenceSchema.optional(),
     activity: z
       .object({
         embedded: z.number().int().nonnegative(),

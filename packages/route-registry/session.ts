@@ -18,6 +18,13 @@ export const sessionSchema = z
     origin: z.string().optional(),
     forgottenTaskIds: z.array(z.string().max(100)).max(100).optional(),
     pendingNavigation: pendingNavigationSchema.optional(),
+    handoffReturn: z
+      .object({
+        tabId: z.number().int().nonnegative(),
+        origin: z.string().url(),
+      })
+      .strict()
+      .optional(),
     view: sessionViewSchema.optional(),
   })
   .strict();

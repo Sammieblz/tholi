@@ -2,6 +2,7 @@ import { readFile, readdir, stat, mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { multiAppEvidence } from "./verify-multi-app-release.mjs";
 
 // Package the exact build that passed evaluation; never rebuild or overwrite it.
 const extension = resolve("dist/extension");
@@ -32,6 +33,7 @@ await walk(extension);
 for (const name of names.sort()) {
   files[name] = sha(await readFile(join(extension, name)));
 }
+const multiApp = await multiAppEvidence(files);
 const nlp = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
 const nlpBrowser = JSON.parse(
   await readFile("output/nlp/browser-build.json", "utf8"),
@@ -134,6 +136,7 @@ await writeFile(
       matrixSha256: report.matrixSha256,
       metrics: report.summaries,
       regressions,
+      multiApp,
       optionalAI:
         "Experimental LLM disabled; real CPU MiniLM evaluated separately",
       nlp: {
@@ -146,6 +149,7 @@ await writeFile(
       },
       checklist: "docs/chrome-handoff.md",
       pending: [
+        "six-platform signed-in workflow verification",
         "native side-panel reload/activation",
         "native keyboard and screen reader",
         "per-site permission denial/recovery",

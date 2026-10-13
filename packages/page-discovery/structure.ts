@@ -54,6 +54,7 @@ function regionRole(element: Element) {
 // their purpose to an unrelated toolbar, footer, form, or detached dialog.
 export class StructureIndex {
   private regions = new Map<Element, { role: string; name: string }>();
+  private childHeadings = new Map<Element, Element[]>();
   private outlines = new Map<
     Element | Document | ShadowRoot,
     {
@@ -123,7 +124,12 @@ export class StructureIndex {
       // Nested navigation still belongs to its enclosing section. Its heading
       // is evidence only when it precedes the control in that section.
       if (ancestor.matches("section,main,article,[role=main]")) {
-        const heading = [...ancestor.children].find(
+        let children = this.childHeadings.get(ancestor);
+        if (!children) {
+          children = [...ancestor.children].filter((e) => e.matches(headings));
+          this.childHeadings.set(ancestor, children);
+        }
+        const heading = children.find(
           (e) =>
             e.matches(headings) &&
             (ancestor.matches("section") || level(e) === 1) &&

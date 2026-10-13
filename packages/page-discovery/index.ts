@@ -14,14 +14,20 @@ import { hash, type PageControl, type PageSnapshot } from "../page-model";
 import { StructureIndex } from "./structure";
 import { interactionRisk } from "./interaction-risk";
 import { formContext } from "./form-context";
+import {
+  IncrementalControlIndex,
+  controlSelector,
+  surfaceSelector,
+} from "./incremental";
+import { platformFor, interfaceVocabulary } from "../navigation-core/guides";
+import { discoverOutcomes } from "./outcomes";
 export interface BoundControl {
   control: PageControl;
   element: HTMLElement;
   geometry: HTMLElement;
   destination?: HTMLElement;
 }
-const candidates =
-  'a[href],button,input:not([type="hidden"]),select,textarea,summary,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="combobox"],[role="menuitem"],h1,h2,h3,h4,h5,h6,[role="heading"]';
+const candidates = controlSelector + ',[role="slider"]';
 const headingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"],legend';
 export function publicPath(url: URL): string {
   return url.pathname
@@ -46,7 +52,8 @@ export function presented(
   if (
     !element.isConnected ||
     isSensitiveElement(element) ||
-    element.closest('[inert],[contenteditable],[data-sensitive="true"]')
+    element.closest('[inert],[data-sensitive="true"]') ||
+    element.parentElement?.closest("[contenteditable]")
   )
     return;
   const closed = element.closest("details:not([open])");
@@ -79,12 +86,17 @@ export function presented(
 }
 function nameOf(element: HTMLElement) {
   const root = element.getRootNode() as Document | ShadowRoot;
-  if (!element.matches("input,select,textarea"))
+  if (
+    !element.matches(
+      "input,select,textarea,[contenteditable],[role=textbox],[role=searchbox]",
+    )
+  )
     return (
       safeName(element) ||
       sanitizeText(
         element.getAttribute("title") ||
           element.querySelector("img")?.getAttribute("alt") ||
+          element.querySelector("svg title")?.textContent ||
           "",
       )
     );
@@ -97,6 +109,11 @@ function nameOf(element: HTMLElement) {
   return sanitizeText(
     refs?.map(safeName).join(" ") ||
       element.getAttribute("aria-label") ||
+      (element.matches(
+        'input[type="submit"],input[type="button"],input[type="reset"]',
+      )
+        ? element.getAttribute("value")
+        : "") ||
       (labels ? [...labels].map(safeName).join(" ") : "") ||
       element.getAttribute("placeholder") ||
       element.getAttribute("title") ||
@@ -236,7 +253,10 @@ function roleOf(e: HTMLElement): string {
                 : "button")
   );
 }
-function scopeOf(element: HTMLElement): PageControl["scope"] {
+function scopeOf(
+  element: HTMLElement,
+  childHeadings = new Map<Element, Element | undefined>(),
+): PageControl["scope"] {
   // Local heading ownership distinguishes repeated section controls from the
   // page toolbar without relying on a site's class names or IDs.
   let parent: HTMLElement | null = element;
@@ -252,9 +272,14 @@ function scopeOf(element: HTMLElement): PageControl["scope"] {
     )
       return "page";
     if (parent.matches("main,article,body")) break;
+    if (!childHeadings.has(parent))
+      childHeadings.set(
+        parent,
+        [...parent.children].find((child) => child.matches(headingSelector)),
+      );
     const heading = parent.matches(headingSelector)
       ? parent
-      : [...parent.children].find((child) => child.matches(headingSelector));
+      : childHeadings.get(parent);
     if (heading) {
       if (heading.matches("legend")) return;
       return heading.matches("h1,[role=heading][aria-level='1']")
@@ -293,6 +318,39 @@ export class PageDiscovery {
   private counter = 0;
   private revision = 0;
   private last = "";
+  private incremental?: IncrementalControlIndex;
+  private semanticCache = new Map<HTMLElement, BoundControl>();
+  private query = "";
+  private surfaceIds = new WeakMap<Element, string>();
+  private surfaceCounter = 0;
+  private surfaceId(e: HTMLElement) {
+    const surface = e.closest(surfaceSelector) || document.body;
+    let id = this.surfaceIds.get(surface);
+    if (!id)
+      this.surfaceIds.set(surface, (id = "surface-" + ++this.surfaceCounter));
+    return id;
+  }
+  observe(callback: () => void) {
+    this.incremental ||= new IncrementalControlIndex();
+    this.incremental.start(callback);
+    return () => this.incremental?.stop();
+  }
+  setQuery(query: string) {
+    if (query !== this.query) {
+      this.query = query;
+      this.incremental?.reconcile();
+    }
+  }
+  setLimit(limit: number) {
+    this.incremental ||= new IncrementalControlIndex(limit);
+    this.incremental.setLimit(limit);
+  }
+  setPriority(element?: HTMLElement) {
+    this.incremental?.setPriority(element);
+  }
+  invalidate() {
+    this.incremental?.invalidate();
+  }
   snapshot(): PageSnapshot {
     this.bindings.clear();
     const elements: HTMLElement[] = [];
@@ -301,6 +359,7 @@ export class PageDiscovery {
     const geometrySnapshot = new GeometrySnapshot();
     const headingChildren = new Map<HTMLElement, Element[]>();
     const firstHeadings = new Map<HTMLElement, HTMLElement | undefined>();
+    const scopeHeadings = new Map<Element, Element | undefined>();
     const scan = (root: Document | ShadowRoot) => {
       roots.push(root);
       elements.push(...root.querySelectorAll<HTMLElement>(candidates));
@@ -312,8 +371,27 @@ export class PageDiscovery {
       for (const node of root.querySelectorAll("*"))
         if (node.shadowRoot) scan(node.shadowRoot);
     };
-    scan(document);
+    if (this.incremental) {
+      elements.push(...this.incremental.elements);
+      roots.push(...this.incremental.roots);
+      for (const root of roots)
+        popups.push(
+          ...root.querySelectorAll<HTMLElement>(
+            'dialog,[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover]',
+          ),
+        );
+      for (const e of this.semanticCache.keys())
+        if (!e.isConnected || !this.incremental.elements.has(e))
+          this.semanticCache.delete(e);
+    } else scan(document);
     const structureIndex = new StructureIndex(roots);
+    const activeModal = popups
+      .filter(
+        (p) =>
+          p.matches('dialog[open],[role="dialog"][aria-modal="true"]') &&
+          presented(p),
+      )
+      .at(-1);
     // Reserve coverage for structure and global landmarks. Large related-link
     // navigation widgets cannot consume the entire scan before headings/footer.
     const priority = (e: HTMLElement) =>
@@ -330,23 +408,60 @@ export class PageDiscovery {
           : 0;
     // Compute geometry once per candidate, rather than repeating style/layout reads
     // inside every sort comparison on a dense article.
+    const queryWords =
+      this.query
+        .toLowerCase()
+        .match(/[\p{L}\p{N}]+/gu)
+        ?.filter((w) => w.length > 2) || [];
     const ranked = elements
       .map((e) => {
         const rank = priority(e);
-        const geometry = presented(e, geometrySnapshot);
-        const rect = geometry
-          ? clippedRect(geometry, geometrySnapshot)
-          : undefined;
+        const geometry = this.incremental
+          ? undefined
+          : presented(e, geometrySnapshot);
+        const rect = this.incremental
+          ? e.getBoundingClientRect()
+          : geometry
+            ? clippedRect(geometry, geometrySnapshot)
+            : undefined;
+        const name =
+          this.semanticCache.get(e)?.control.label ||
+          e.getAttribute("aria-label") ||
+          e.getAttribute("title") ||
+          (queryWords.length ? nameOf(e) : "");
+        const relevant = queryWords.filter((w) =>
+          name.toLowerCase().includes(w),
+        ).length;
         return {
           element: e,
           rank,
           geometry,
+          relevant,
+          surface: this.incremental
+            ? Number(
+                !!rect?.width &&
+                  !!rect.height &&
+                  !!e.closest(
+                    'dialog[open],[role="dialog"],[role="menu"],[role="listbox"],[popover]:popover-open',
+                  ) &&
+                  !e.closest('[hidden],[aria-hidden="true"]'),
+              )
+            : 0,
           inViewport: Number(
-            !!rect && rect.top >= 0 && rect.bottom <= innerHeight,
+            !!rect?.width &&
+              !!rect.height &&
+              rect.top >= 0 &&
+              rect.bottom <= innerHeight,
           ),
         };
       })
-      .sort((a, b) => a.rank - b.rank || b.inViewport - a.inViewport);
+      .sort(
+        (a, b) =>
+          b.surface - a.surface ||
+          b.relevant - a.relevant ||
+          a.rank - b.rank ||
+          b.inViewport - a.inViewport,
+      );
     const budgets = [240, 100, 60, 100, 60, 40];
     const reserved = ranked.filter(
       (candidate) => budgets[candidate.rank]-- > 0,
@@ -360,18 +475,112 @@ export class PageDiscovery {
     const controls: PageControl[] = [];
     const base = new URL(location.href);
     const forms = new Map<HTMLFormElement, PageControl["form"]>();
-    for (const { element: e, geometry } of ordered) {
+    for (const { element: e, geometry: initialGeometry } of ordered) {
       if (controls.length >= 600) {
         partial = true;
         break;
       }
       if (
-        e.closest(
-          "#internet-navigator-overlay,[contenteditable],[data-sensitive=true]",
-        ) ||
+        e.closest("#internet-navigator-overlay,[data-sensitive=true]") ||
         isSensitiveElement(e)
       )
         continue;
+      if (e.parentElement?.closest("[contenteditable]")) continue;
+      const geometry = initialGeometry || presented(e, geometrySnapshot);
+      let cached =
+        this.incremental && !this.incremental.dirty.has(e)
+          ? this.semanticCache.get(e)
+          : undefined;
+      if (cached?.destination && !cached.destination.isConnected)
+        cached = undefined;
+      if (cached) {
+        const control = { ...cached.control, revealIds: [] as string[] };
+        if (
+          e instanceof HTMLInputElement &&
+          e.matches("input[type=checkbox],input[type=radio]")
+        )
+          control.checked = e.checked;
+        else if (e.hasAttribute("aria-checked"))
+          control.checked = e.getAttribute("aria-checked") === "true";
+        if (e.hasAttribute("aria-selected"))
+          control.selected = e.getAttribute("aria-selected") === "true";
+        else if (e.hasAttribute("aria-current"))
+          control.selected = e.getAttribute("aria-current") !== "false";
+        if (e.hasAttribute("aria-expanded"))
+          control.expanded = e.getAttribute("aria-expanded") === "true";
+        else if (
+          control.kind === "expand" &&
+          e instanceof HTMLInputElement &&
+          e.type === "checkbox"
+        )
+          control.expanded = e.checked;
+        else if (e.matches("summary"))
+          control.expanded = e.parentElement?.hasAttribute("open");
+        if (e instanceof HTMLSelectElement)
+          control.options = control.options?.map((o, i) => ({
+            ...o,
+            selected: !!e.options[i]?.selected,
+            enabled: !!e.options[i] && !e.options[i].disabled,
+          }));
+        const r = (geometry || e).getBoundingClientRect();
+        control.visible = !!geometry;
+        control.enabled =
+          !e.matches(":disabled") &&
+          e.getAttribute("aria-disabled") !== "true" &&
+          cached.control.enabled;
+        control.inViewport =
+          !!geometry &&
+          r.top >= 0 &&
+          r.bottom <= innerHeight &&
+          r.left >= 0 &&
+          r.right <= innerWidth;
+        control.placement = !geometry
+          ? undefined
+          : r.bottom <= 0
+            ? "above"
+            : r.top >= innerHeight
+              ? "below"
+              : r.right <= 0
+                ? "left"
+                : r.left >= innerWidth
+                  ? "right"
+                  : "viewport";
+        control.occluded = !!activeModal && !activeModal.contains(e);
+        const hitTest = (e.getRootNode() as Document).elementFromPoint?.bind(
+          e.getRootNode(),
+        );
+        const hit =
+          geometry &&
+          control.inViewport &&
+          hitTest?.((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+        control.occluded ||=
+          !!hit &&
+          hit !== e &&
+          !e.contains(hit) &&
+          !hit.contains(e) &&
+          hit !== geometry &&
+          !geometry?.contains(hit) &&
+          !hit.contains(geometry || e) &&
+          !hit.closest("#internet-navigator-overlay");
+        if (control.occluded) control.visible = false;
+        if (cached.destination) {
+          const d = cached.destination.getBoundingClientRect();
+          control.sectionVisible =
+            !!presented(cached.destination) &&
+            fullyUnclipped(cached.destination, geometrySnapshot) &&
+            d.top >= 0 &&
+            d.bottom <= innerHeight &&
+            d.left >= 0 &&
+            d.right <= innerWidth;
+        }
+        controls.push(control);
+        this.bindings.set(control.id, {
+          ...cached,
+          control,
+          geometry: geometry || e,
+        });
+        continue;
+      }
       const rawLabel = nameOf(e);
       if (!rawLabel) continue;
       const role = roleOf(e),
@@ -386,15 +595,26 @@ export class PageDiscovery {
       if (e.matches(headingSelector)) {
         kind = "section";
         destination = e;
-      } else if (role === "button" && popup) kind = "expand";
-      else if (e.matches('input[type="radio"],[role="radio"]')) kind = "choice";
+      } else if (e.matches("input[type=range],[role=slider]")) kind = "range";
+      else if (role === "button" && popup) kind = "expand";
+      else if (e.matches('[role="treeitem"][aria-expanded]')) kind = "expand";
       else if (
-        e.matches('input[type="checkbox"],[role="checkbox"],[role="switch"]')
+        e.matches(
+          'input[type="radio"],[role="radio"],[role="option"],[role="treeitem"],[role="tab"],[role="menuitemradio"]',
+        )
+      )
+        kind = "choice";
+      else if (
+        e.matches(
+          'input[type="checkbox"],[role="checkbox"],[role="switch"],[role="menuitemcheckbox"]',
+        )
       )
         kind = "toggle";
       else if (e.matches("select")) kind = "select";
       else if (
-        e.matches("input,textarea,[role=combobox]") &&
+        e.matches(
+          'input,textarea,[role=combobox],[role=textbox],[role=searchbox],[contenteditable="true"]',
+        ) &&
         !e.matches("input[type=submit],input[type=button],input[type=reset]")
       )
         kind = "focus";
@@ -405,7 +625,10 @@ export class PageDiscovery {
         e.hasAttribute("popovertarget")
       )
         kind = "expand";
-      if (e.matches("a[href]") && kind !== "expand") {
+      if (
+        e.matches("a[href]") &&
+        !["expand", "choice", "toggle"].includes(kind)
+      ) {
         try {
           const url = new URL(e.getAttribute("href")!, base);
           if (!["http:", "https:"].includes(url.protocol)) continue;
@@ -477,7 +700,9 @@ export class PageDiscovery {
         ? (e as HTMLInputElement).checked
         : e.hasAttribute("aria-checked")
           ? e.getAttribute("aria-checked") === "true"
-          : undefined;
+          : e.hasAttribute("aria-selected")
+            ? e.getAttribute("aria-selected") === "true"
+            : undefined;
       const expanded = e.matches("summary")
         ? (e.parentElement as HTMLDetailsElement)?.open
         : e.hasAttribute("aria-expanded")
@@ -518,7 +743,7 @@ export class PageDiscovery {
         structure.headings.some((h) => h.level > 1) &&
         e.closest("section nav,section [role=navigation]")
           ? "section"
-          : scopeOf(e);
+          : scopeOf(e, scopeHeadings);
       const targetLanguage = e
         .getAttribute("hreflang")
         ?.match(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)?.[0]
@@ -535,6 +760,23 @@ export class PageDiscovery {
                   o.parentElement.disabled
                 ),
             }))
+          : undefined;
+      const range =
+        kind === "range"
+          ? {
+              current:
+                e instanceof HTMLInputElement
+                  ? e.valueAsNumber
+                  : e.hasAttribute("aria-valuenow")
+                    ? Number(e.getAttribute("aria-valuenow"))
+                    : NaN,
+              min: Number(
+                e.getAttribute("min") || e.getAttribute("aria-valuemin") || 0,
+              ),
+              max: Number(
+                e.getAttribute("max") || e.getAttribute("aria-valuemax") || 100,
+              ),
+            }
           : undefined;
       const control: PageControl = {
         id,
@@ -606,15 +848,48 @@ export class PageDiscovery {
           : undefined,
         selected: e.hasAttribute("aria-selected")
           ? e.getAttribute("aria-selected") === "true"
-          : undefined,
+          : e.hasAttribute("aria-current")
+            ? e.getAttribute("aria-current") !== "false"
+            : undefined,
         revealIds: [],
         destination: link,
         navigationKey,
         targetLanguage,
         options,
+        range:
+          range && Object.values(range).every(Number.isFinite)
+            ? range
+            : undefined,
         form,
         ...risk,
+        surfaceId: this.surfaceId(e),
+        retention:
+          /(^|\.)wikipedia\.org$/.test(base.hostname) ||
+          ["localhost", "127.0.0.1"].includes(base.hostname)
+            ? "interface"
+            : interfaceVocabulary.has(rawLabel.toLowerCase()) &&
+                !context &&
+                !description
+              ? "interface"
+              : "session",
       };
+      const root = e.getRootNode() as Document | ShadowRoot;
+      const hitTest = (root as Document).elementFromPoint?.bind(root);
+      const hit =
+        geometry &&
+        control.inViewport &&
+        hitTest?.((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
+      control.occluded =
+        (!!activeModal && !activeModal.contains(e)) ||
+        (!!hit &&
+          hit !== e &&
+          !e.contains(hit) &&
+          !hit.contains(e) &&
+          hit !== geometry &&
+          !geometry?.contains(hit) &&
+          !hit.contains(geometry || e) &&
+          !hit.closest("#internet-navigator-overlay"));
+      if (control.occluded) control.visible = false;
       controls.push(control);
       this.bindings.set(id, {
         control,
@@ -622,6 +897,7 @@ export class PageDiscovery {
         geometry: geometry || e,
         destination,
       });
+      if (this.incremental) this.semanticCache.set(e, this.bindings.get(id)!);
     }
     let active = document.activeElement;
     while (active?.shadowRoot?.activeElement)
@@ -672,7 +948,11 @@ export class PageDiscovery {
     }
     for (const binding of this.bindings.values()) {
       const control = binding.control;
-      if (!control.visible || control.kind !== "expand" || !control.popup)
+      if (
+        !presented(binding.element) ||
+        control.kind !== "expand" ||
+        !control.popup
+      )
         continue;
       const root = binding.element.getRootNode() as Document | ShadowRoot;
       const owns = [
@@ -792,22 +1072,43 @@ export class PageDiscovery {
         .slice(0, 10)
         .map((r) => r.id);
     }
-    const state = controls
-      .map((c) =>
-        [
-          c.signature,
-          c.visible,
-          c.enabled,
-          c.checked,
-          c.expanded,
-          c.selected,
-          c.options?.map((o) => o.selected).join(","),
-        ].join(":"),
-      )
-      .sort()
-      .join("|");
+    const signals = discoverOutcomes(roots, this.revision);
+    const busy = roots.some((root) =>
+      [...root.querySelectorAll('[aria-busy="true"]')].some((e) =>
+        presented(e as HTMLElement),
+      ),
+    );
+    const state =
+      controls
+        .map((c) =>
+          [
+            c.signature,
+            c.visible,
+            c.enabled,
+            c.checked,
+            c.expanded,
+            c.selected,
+            c.range?.current,
+            c.options?.map((o) => o.selected).join(","),
+          ].join(":"),
+        )
+        .sort()
+        .join("|") +
+      "|" +
+      JSON.stringify(signals.map(({ revision, ...s }) => s)) +
+      "|busy:" +
+      busy;
     const fingerprint = hash(state);
-    const freshness = hash(state + controls.map((c) => c.id).join("|"));
+    const freshness = hash(
+      state +
+        controls.map((c) => c.id).join("|") +
+        "|coverage:" +
+        partial +
+        ":" +
+        this.incremental?.complete +
+        ":" +
+        this.incremental?.elements.size,
+    );
     if (freshness !== this.last) {
       this.revision++;
       this.last = freshness;
@@ -827,6 +1128,37 @@ export class PageDiscovery {
         base.pathname.split("/").filter(Boolean)[0] || "/",
       ].join("|"),
     );
+    if (this.incremental) {
+      this.incremental.dirty.clear();
+      this.incremental.acknowledge();
+    }
+    const surfaces = new Map<
+      string,
+      { role: string; indexed: number; projected: number; virtualized: boolean }
+    >();
+    for (const e of elements) {
+      const key = this.surfaceId(e),
+        surface = e.closest(surfaceSelector);
+      const previous = surfaces.get(key) || {
+        role:
+          surface?.getAttribute("role") ||
+          surface?.tagName.toLowerCase() ||
+          "page",
+        indexed: 0,
+        projected: 0,
+        virtualized: false,
+      };
+      previous.indexed++;
+      previous.virtualized ||=
+        (e.hasAttribute("aria-setsize") &&
+          Number(e.getAttribute("aria-setsize")) > 1) ||
+        !!surface?.hasAttribute("aria-rowcount");
+      surfaces.set(key, previous);
+    }
+    for (const c of controls) {
+      const s = surfaces.get(c.surfaceId || "page");
+      if (s) s.projected++;
+    }
     return {
       origin: base.origin,
       path,
@@ -838,7 +1170,19 @@ export class PageDiscovery {
       layout,
       language,
       controls,
-      partial,
+      partial: partial || (!!this.incremental && !this.incremental.complete),
+      coverage: [...surfaces].slice(0, 100).map(([surfaceId, s]) => ({
+        surfaceId,
+        ...s,
+        complete:
+          s.projected === s.indexed &&
+          !s.virtualized &&
+          (!this.incremental || this.incremental.complete),
+        omitted: Math.max(0, s.indexed - s.projected),
+      })),
+      signals: signals.map((s) => ({ ...s, revision: this.revision })),
+      busy,
+      indexedControls: Math.min(5000, elements.length),
     };
   }
 }

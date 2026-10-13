@@ -52,6 +52,126 @@ async function selected(app: App, label: string) {
     )
     .toBe(label);
 }
+test("blocked durable memory cannot hold menu guidance or Stop, and Clear drains older writes", async () => {
+  const app = await prepare();
+  try {
+    await goal(app, "Show languages");
+    await app.panel.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("navigator-site-memory", 4);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const tx = db.transaction(
+        ["sites", "embeddings", "indexes"],
+        "readwrite",
+      );
+      let hold = true;
+      const done = new Promise<void>((resolve) => {
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+      });
+      (window as any).releaseMemory = async () => {
+        hold = false;
+        await done;
+      };
+      await new Promise<void>((resolve) => {
+        const pump = () => {
+          const request = tx.objectStore("sites").get("http://localhost:5173");
+          request.onsuccess = () => {
+            resolve();
+            if (hold) pump();
+          };
+        };
+        pump();
+      });
+    });
+    await app.page
+      .locator("summary")
+      .filter({ hasText: /^Languages$/ })
+      .click();
+    await expect
+      .poll(async () => (await app.view()).goalPlan?.status, { timeout: 2000 })
+      .toBe("awaiting-choice");
+    const preference = await goal(app, "Change language to Spanish");
+    await app.page.getByLabel("English", { exact: true }).check();
+    expect((await app.view()).goalPlan.status).toBe("guiding");
+    await app.page.getByLabel("Spanish", { exact: true }).check();
+    await expect
+      .poll(async () => (await app.view()).goalPlan?.status, { timeout: 1500 })
+      .toBe("completed");
+    expect((await app.view()).request.status).toBe("completed");
+    const completedSteps = (await app.view()).verifiedSteps;
+    const stale = await app.panel.evaluate(async (previous) => {
+      const session = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+      return chrome.tabs.sendMessage(session.tabId, {
+        type: "INSTALL_REQUEST",
+        sessionId: session.sessionId,
+        result: {
+          status: "plan",
+          requestId: previous.request.id,
+          documentId: session.documentId,
+          revision: previous.page.revision,
+          request: previous.request,
+          plan: previous.goalPlan,
+          reason: previous.goalPlan.reason,
+          canonicalGoal: previous.journey.canonicalGoal,
+          activity: previous.embeddingActivity,
+          protocolVersion: 2,
+          contextRevision: 0,
+        },
+      });
+    }, preference);
+    expect(stale.error).toBeUndefined();
+    expect(stale.view.goalPlan.status).toBe("completed");
+    expect(stale.view.request.status).toBe("completed");
+    expect(stale.view.verifiedSteps).toBe(completedSteps);
+    expect(stale.view.selectedControlId).toBeUndefined();
+    const queryStarted = performance.now();
+    const missing = await goal(app, "Find the unicorn portal");
+    expect(missing.goalPlan.status).toBe("unresolved");
+    expect(missing.selectedControlId).toBeUndefined();
+    expect(performance.now() - queryStarted).toBeLessThan(2000);
+    const started = performance.now();
+    await app.stop();
+    expect(performance.now() - started).toBeLessThan(1000);
+    await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
+      0,
+    );
+    await app.panel.evaluate(() => (window as any).releaseMemory());
+    const cleared = await app.panel.evaluate(() =>
+      chrome.runtime.sendMessage({ type: "CLEAR_MEMORY" }),
+    );
+    expect(cleared.error).toBeUndefined();
+    const counts = await app.panel.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => {
+        const r = indexedDB.open("navigator-site-memory", 4);
+        r.onsuccess = () => resolve(r.result);
+      });
+      try {
+        return await Promise.all(
+          ["sites", "tasks"].map(
+            (name) =>
+              new Promise<number>((resolve) => {
+                const r = db.transaction(name).objectStore(name).count();
+                r.onsuccess = () => resolve(r.result);
+              }),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
+    expect(counts).toEqual([0, 0]);
+  } finally {
+    await app.panel
+      .evaluate(() => (window as any).releaseMemory?.())
+      .catch(() => {});
+    await app.close();
+  }
+});
 test("bundled CPU inference works offline and three tasks continue through a menu and a document", async () => {
   const app = await prepare();
   try {
@@ -281,7 +401,7 @@ test("backend outage falls back locally, migration preserves knowledge, restart 
     const derived = await app.panel.evaluate(
       () =>
         new Promise<any>((resolve, reject) => {
-          const r = indexedDB.open("navigator-site-memory", 3);
+          const r = indexedDB.open("navigator-site-memory");
           r.onsuccess = () => {
             const db = r.result,
               tx = db.transaction(["indexes", "embeddings"]);
@@ -321,7 +441,7 @@ test("browser CPU and optional HTTP service return the same grounded plan and re
   });
   let remotePlans = 0;
   api.addHook("onResponse", async (request) => {
-    if (request.url === "/v1/plans") remotePlans++;
+    if (/^\/v[12]\/plans$/.test(request.url)) remotePlans++;
   });
   try {
     const local = await goal(app, "Can you help me find Preferences?");

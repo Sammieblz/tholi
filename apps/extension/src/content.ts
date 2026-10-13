@@ -5,13 +5,14 @@ import { routeRegistry } from "../../../packages/route-registry";
 import { allowedOrigin } from "../../../packages/safety-policy";
 import { contentMessageSchema } from "../../../packages/route-schema";
 import type { Transition } from "../../../packages/route-schema";
+import { frameVisibilityBridge } from "./frame-visibility";
 import { PageCoach } from "./page-coach";
 import {
   LIVE_ROUTE_ID,
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded071";
+const marker = "__internetNavigatorLoaded080";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
@@ -20,6 +21,8 @@ if (!host[marker]) {
   let engine: RouteEngine | undefined;
   let coach: PageCoach | undefined;
   let sessionId: string | undefined;
+  let frameNonce = "";
+  let frameVisibilityCleanup: (() => void) | undefined;
   let cleanup: (() => void) | undefined;
   let current: Transition | undefined;
   let target: HTMLElement | undefined;
@@ -190,7 +193,69 @@ if (!host[marker]) {
         return;
       }
       if (message.type === "GET_PAGE") {
-        respond({ page: coach?.getPage(), view: coach?.view });
+        respond({ page: coach?.getPage(message.query), view: coach?.view });
+        return;
+      }
+      if (message.type === "FRAME_ACCESS") {
+        frameVisibilityCleanup?.();
+        frameNonce = message.nonce;
+        frameVisibilityCleanup = frameVisibilityBridge(() =>
+          sessionId && frameNonce
+            ? { sessionId, nonce: frameNonce }
+            : undefined,
+        );
+        coach?.frameAccess(message.origins, message.limit);
+        respond({ ok: true });
+        return;
+      }
+      if (message.type === "FRAME_VISIBILITY_PARENT") {
+        coach?.frameVisibility(
+          message.frameId,
+          message.documentId,
+          message.visible,
+          message.inViewport,
+          message.placement,
+        );
+        respond({ ok: true });
+        return;
+      }
+      if (message.type === "FRAME_OBSERVATION_PARENT") {
+        coach?.frameObservation(
+          message.frameId,
+          message.documentId,
+          message.tabId,
+          message.page,
+        );
+        respond({ ok: true });
+        return;
+      }
+      if (message.type === "FRAME_INTERACTION_PARENT") {
+        coach?.frameInteraction(
+          {
+            frameId: message.frameId,
+            documentId: message.documentId,
+            tabId: message.tabId,
+            controlId: message.controlId,
+          },
+          message.signature,
+          message.verified,
+        );
+        respond({ ok: true });
+        return;
+      }
+      if (message.type === "WORKFLOW_ACTION") {
+        coach?.workflowAction(message.action);
+        respond({ view: coach?.view });
+        return;
+      }
+      if (message.type === "WORKFLOW_ENTITY") {
+        coach?.setWorkflowEntity(message.entity, message.value);
+        respond({ view: coach?.view });
+        return;
+      }
+      if (message.type === "SPA_CHANGED") {
+        coach?.getPage();
+        respond({ view: coach?.view });
         return;
       }
       if (message.type === "UPDATE_MEMORY") {
@@ -227,6 +292,11 @@ if (!host[marker]) {
         return;
       }
       if (coach) {
+        if (["PAUSE", "STOP"].includes(message.action)) {
+          frameVisibilityCleanup?.();
+          frameVisibilityCleanup = undefined;
+          frameNonce = "";
+        }
         if (message.action === "PAUSE") coach.pause();
         if (message.action === "RESUME") coach.resume();
         if (message.action === "STOP") coach.stop();

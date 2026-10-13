@@ -26,7 +26,9 @@ test.beforeAll(async ({}, testInfo) => {
     "http://localhost/*",
     "https://en.wikipedia.org/*",
   ]);
-  expect(manifest.permissions).not.toContain("tabs");
+  // Tab metadata is needed to offer navigation before a new site's host grant.
+  expect(manifest.permissions).toContain("tabs");
+  expect(manifest.permissions).not.toContain("history");
   context = await chromium.launchPersistentContext(join(directory, "profile"), {
     channel: "chromium",
     headless: true,

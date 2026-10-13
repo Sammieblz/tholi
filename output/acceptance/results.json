@@ -1,12 +1,14 @@
 {
   "format": "navigator-acceptance-v1",
-  "evaluatedAt": "2026-10-12T17:43:14.827Z",
+  "evaluatedAt": "2026-10-13T05:52:49.368Z",
   "artifactFiles": {
     "LICENSE": "f1c60bbc1bfaf1f93e5d07348aab8b461573348ccad6c53e5f79792c22afdea2",
     "THIRD_PARTY_NOTICES.md": "f73afa9e10c598cf1e1c782fe6f76333e60c925c016d813ff3637c69929230bc",
-    "content.js": "e68fa17ee434706401f24ec2d21bdd75201799e814b38705b6df2ab3edd97aae",
-    "content.js.map": "e81e77504d624d6ed6fc1c138c25fcd9d949b63c0c33f075e94dfd865d0b8ea3",
-    "inference.js": "e0cc0464ca51c606882780a2247569fb7eb9a480a0691928823a30665cdf87d1",
+    "content.js": "65fe0b59fc9ef3858410bca1674ce6c3370ee7bae0f1bf6fa95847cd599478da",
+    "content.js.map": "b16c3f2bd1a7a2f8b4aac4a7d17c5352982636202281a1de90018b92d6e0ad7b",
+    "frame-agent.js": "f6389b2dfdadc1d456f7e90572c6a9d1bf40e98056c8b43b73b38783a104d0dd",
+    "frame-agent.js.map": "b58d6d5acc63eb7a3315b0e1a7cac6766746043d776953e199864487e7d8d581",
+    "inference.js": "1e27aed4cd702a9f992529f3a9917a372ce13dcd83df9127b0991a1e4a8506c8",
     "licenses/@fastify_ajv-compiler-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
     "licenses/@fastify_cors-LICENSE": "9e51230673e8de1854ffa078934b93db407758b02babc62bef371dfa13b282f5",
     "licenses/@fastify_deepmerge-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
@@ -107,7 +109,7 @@
     "licenses/yaml-LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
     "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
     "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
-    "manifest.json": "4faea5c78fc8852cc69daf5b30ec299cf62239833de3d2cc53d481816561048f",
+    "manifest.json": "642566373077647edd6d44e2a3cd3eaa74778b45f0defe8a4c2b7006c7f6e403",
     "model-lock.json": "404c3b4edb0e28ee3fa4a4ec8acd1bf6037a0ff622cb1a590570dd7db43ac46b",
     "models/Xenova/all-MiniLM-L6-v2/config.json": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7",
     "models/Xenova/all-MiniLM-L6-v2/onnx/model_quantized.onnx": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
@@ -115,23 +117,23 @@
     "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
     "offscreen.html": "97feb66925aefa94a95bd7aaaae386f95c7a53df6bb61846401fff73ea0f4542",
-    "offscreen.js": "68a327c1cfd6eb415f0b20f135853f73b548a331d8e0ecefd7497e9092c29b11",
-    "offscreen.js.map": "8df6b3ad3c1c366bcb1073a93c188bdd76eb2f2e56ac968c140a9aa825e69313",
+    "offscreen.js": "efa01ef2f051a6b4950a61c8600a66876fc7220b11ddc214cafc867d24760908",
+    "offscreen.js.map": "e07bb29932db361d24ef8c5ab23b739b1c99526495e8dd8e6ba12dcf4360345d",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
     "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
     "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
     "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
-    "sidepanel.js": "c3a455ddf94652f396d094ade103957a8f90da2680fa4c8376c67c7f854f8e07",
-    "sidepanel.js.map": "34bd2f14e4eb8ab218d81bfbfb0ad0913e4101e4fa30fce02b7d14d40cc591c3",
+    "sidepanel.js": "3c2fa1424394acb3ce3e089d10b916d9c839222ae49cf7a02ddb3998f1cef5af",
+    "sidepanel.js.map": "9547dcc8441d1b0e946d61c958139e7d8ebd842792aab4816e6cba3dcc84116b",
     "third-party.json": "94a89e82ba0ef814a5263313be97df9177491dddd89fda9ad54b369615eb9f12",
-    "worker.js": "b77f5c404d6db16a9c921f285f10c9cf0b8dc6917f8adba95c3362558111c13f",
-    "worker.js.map": "d2c0236e8f7fcb5206df3e44d11489ede8da934ee6b7439d1d7ad74519156aba"
+    "worker.js": "e09770c9f64865587c86b9bbb42566f006bad7e53709a8e9a526a2fde66c1ee4",
+    "worker.js.map": "906c61f0f76b8fe345e6b32e17c44c80209c1a3eb02bcc0933ea4fb3ccf70fa3"
   },
   "matrixSha256": "bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae",
-  "extensionVersion": "0.7.1",
+  "extensionVersion": "0.8.0",
   "protocolVersion": "1.0.0",
-  "sourceRevision": "a275b0e4d2982d451d3e4dde8beb6aa1cafe25e0",
+  "sourceRevision": "fe161ad894648f0841cc58ad430f75a3708f9626",
   "workingTreeDirty": true,
   "environment": {
     "platform": "win32",
@@ -155,24 +157,129 @@
   "liveExpected": 60,
   "fixtureExpected": 30,
   "authoredExpected": 26,
-  "missingCases": [],
+  "missingCases": [
+    "desktop/Casino_Royale_(novel)/text-size",
+    "desktop/Casino_Royale_(novel)/theme",
+    "desktop/Casino_Royale_(novel)/width",
+    "desktop/Casino_Royale_(novel)/section",
+    "desktop/Casino_Royale_(novel)/search",
+    "desktop/Casino_Royale_(novel)/language-picker",
+    "desktop/Earth/text-size",
+    "desktop/Earth/theme",
+    "desktop/Earth/width",
+    "desktop/Earth/section",
+    "desktop/Earth/search",
+    "desktop/Earth/language-picker",
+    "desktop/Mathematics/text-size",
+    "desktop/Mathematics/theme",
+    "desktop/Mathematics/width",
+    "desktop/Mathematics/section",
+    "desktop/Mathematics/search",
+    "desktop/Mathematics/language-picker",
+    "desktop/fixture/text-size",
+    "desktop/fixture/theme",
+    "desktop/fixture/width",
+    "desktop/fixture/section",
+    "desktop/fixture/search",
+    "desktop/fixture/language-picker",
+    "desktop/fixture/missing",
+    "desktop/fixture/ambiguous-context",
+    "desktop/fixture/duplicate-controls",
+    "desktop/fixture/consequential",
+    "desktop/fixture/unknown-edit-effect",
+    "desktop/fixture/implicit-submit",
+    "desktop/fixture/unrelated-popup",
+    "desktop/fixture/unrelated-action",
+    "desktop/fixture/stale-target",
+    "desktop/authored/home",
+    "desktop/authored/account",
+    "desktop/authored/billing",
+    "desktop/authored/plan",
+    "desktop/authored/profile",
+    "desktop/authored/retention",
+    "desktop/authored/login",
+    "desktop/authored/confirmation",
+    "desktop/authored/success",
+    "desktop/authored/unknown",
+    "desktop/authored/conflicting",
+    "desktop/authored/ambiguous",
+    "desktop/authored/origin-change",
+    "narrow/Ada_Lovelace/text-size",
+    "narrow/Ada_Lovelace/theme",
+    "narrow/Ada_Lovelace/width",
+    "narrow/Ada_Lovelace/section",
+    "narrow/Ada_Lovelace/search",
+    "narrow/Ada_Lovelace/language-picker",
+    "narrow/List_of_James_Bond_novels_and_short_stories/text-size",
+    "narrow/List_of_James_Bond_novels_and_short_stories/theme",
+    "narrow/List_of_James_Bond_novels_and_short_stories/width",
+    "narrow/List_of_James_Bond_novels_and_short_stories/section",
+    "narrow/List_of_James_Bond_novels_and_short_stories/search",
+    "narrow/List_of_James_Bond_novels_and_short_stories/language-picker",
+    "narrow/Casino_Royale_(novel)/text-size",
+    "narrow/Casino_Royale_(novel)/theme",
+    "narrow/Casino_Royale_(novel)/width",
+    "narrow/Casino_Royale_(novel)/section",
+    "narrow/Casino_Royale_(novel)/search",
+    "narrow/Casino_Royale_(novel)/language-picker",
+    "narrow/Earth/text-size",
+    "narrow/Earth/theme",
+    "narrow/Earth/width",
+    "narrow/Earth/section",
+    "narrow/Earth/search",
+    "narrow/Earth/language-picker",
+    "narrow/Mathematics/text-size",
+    "narrow/Mathematics/theme",
+    "narrow/Mathematics/width",
+    "narrow/Mathematics/section",
+    "narrow/Mathematics/search",
+    "narrow/Mathematics/language-picker",
+    "narrow/fixture/text-size",
+    "narrow/fixture/theme",
+    "narrow/fixture/width",
+    "narrow/fixture/section",
+    "narrow/fixture/search",
+    "narrow/fixture/language-picker",
+    "narrow/fixture/missing",
+    "narrow/fixture/ambiguous-context",
+    "narrow/fixture/duplicate-controls",
+    "narrow/fixture/consequential",
+    "narrow/fixture/unknown-edit-effect",
+    "narrow/fixture/implicit-submit",
+    "narrow/fixture/unrelated-popup",
+    "narrow/fixture/unrelated-action",
+    "narrow/fixture/stale-target",
+    "narrow/authored/home",
+    "narrow/authored/account",
+    "narrow/authored/billing",
+    "narrow/authored/plan",
+    "narrow/authored/profile",
+    "narrow/authored/retention",
+    "narrow/authored/login",
+    "narrow/authored/confirmation",
+    "narrow/authored/success",
+    "narrow/authored/unknown",
+    "narrow/authored/conflicting",
+    "narrow/authored/ambiguous",
+    "narrow/authored/origin-change"
+  ],
   "unexpectedCases": [],
   "summaries": {
     "live": {
-      "attempts": 60,
+      "attempts": 12,
       "targetPrecision": {
-        "correct": 70,
-        "total": 70,
+        "correct": 12,
+        "total": 12,
         "rate": 1
       },
       "verificationPrecision": {
-        "correct": 70,
-        "total": 70,
+        "correct": 12,
+        "total": 12,
         "rate": 1
       },
       "supportedCompletion": {
-        "correct": 60,
-        "total": 60,
+        "correct": 12,
+        "total": 12,
         "rate": 1
       },
       "unresolved": 0,
@@ -183,23 +290,23 @@
       "modelCalls": 0
     },
     "fixture": {
-      "attempts": 30,
+      "attempts": 0,
       "targetPrecision": {
-        "correct": 24,
-        "total": 24,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
       "verificationPrecision": {
-        "correct": 18,
-        "total": 18,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
       "supportedCompletion": {
-        "correct": 12,
-        "total": 12,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
-      "unresolved": 12,
+      "unresolved": 0,
       "stopped": 0,
       "falseSuccess": 0,
       "automation": 0,
@@ -207,24 +314,24 @@
       "modelCalls": 0
     },
     "authored": {
-      "attempts": 26,
+      "attempts": 0,
       "targetPrecision": {
-        "correct": 12,
-        "total": 12,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
       "verificationPrecision": {
-        "correct": 18,
-        "total": 18,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
       "supportedCompletion": {
-        "correct": 26,
-        "total": 26,
-        "rate": 1
+        "correct": 0,
+        "total": 0,
+        "rate": 0
       },
       "unresolved": 0,
-      "stopped": 8,
+      "stopped": 0,
       "falseSuccess": 0,
       "automation": 0,
       "secretLeaks": 0,
@@ -233,466 +340,8 @@
   },
   "missing": [],
   "failures": [],
-  "passed": true,
+  "passed": false,
   "cases": [
-    {
-      "id": "desktop/authored/home",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/account",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/billing",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/plan",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/profile",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/retention",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/login",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/confirmation",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/success",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/unknown",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/conflicting",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/ambiguous",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/authored/origin-change",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/text-size",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/theme",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/width",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/section",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/search",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/language-picker",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/missing",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/ambiguous-context",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/duplicate-controls",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/consequential",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/unknown-edit-effect",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/implicit-submit",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/unrelated-popup",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/unrelated-action",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/fixture/stale-target",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
     {
       "id": "desktop/Ada_Lovelace/text-size",
       "suite": "live",
@@ -893,1348 +542,6 @@
     },
     {
       "id": "desktop/List_of_James_Bond_novels_and_short_stories/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Casino_Royale_(novel)/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Earth/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "desktop/Mathematics/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/home",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/account",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/billing",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/plan",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/profile",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/retention",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/login",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/confirmation",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/success",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/unknown",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/conflicting",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/ambiguous",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/authored/origin-change",
-      "suite": "authored",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": true,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/text-size",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/theme",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/width",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/section",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/search",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/language-picker",
-      "suite": "fixture",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/missing",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/ambiguous-context",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/duplicate-controls",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/consequential",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/unknown-edit-effect",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/implicit-submit",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": true,
-      "stopped": false,
-      "targets": [],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/unrelated-popup",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/unrelated-action",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/fixture/stale-target",
-      "suite": "fixture",
-      "supported": false,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Ada_Lovelace/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/List_of_James_Bond_novels_and_short_stories/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Casino_Royale_(novel)/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Earth/language-picker",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/text-size",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/theme",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/width",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/section",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true
-      ],
-      "verifications": [
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/search",
-      "suite": "live",
-      "supported": true,
-      "completed": true,
-      "unresolved": false,
-      "stopped": false,
-      "targets": [
-        true,
-        true
-      ],
-      "verifications": [
-        true,
-        true
-      ],
-      "falseSuccess": 0,
-      "automation": 0,
-      "secretLeaks": 0,
-      "modelCalls": 0
-    },
-    {
-      "id": "narrow/Mathematics/language-picker",
       "suite": "live",
       "supported": true,
       "completed": true,

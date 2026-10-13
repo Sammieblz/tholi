@@ -1,6 +1,11 @@
 import type { PlanInput } from "../../../packages/navigation-core/contracts";
 import { resultSchema } from "../../../packages/navigation-core/contracts";
 import type { SiteMemory, SavedTask } from "../../../packages/page-model";
+import {
+  structuralObservation,
+  structuralKnowledge,
+  parameterizedTask,
+} from "../../../packages/navigation-core/privacy";
 type Settings = { url: string; token: string; enabled: boolean };
 const planning = new Set<AbortController>();
 export function cancelBackendPlanning() {
@@ -44,12 +49,17 @@ export async function setBackendSettings(settings: Settings) {
   });
   return { ok: true };
 }
-async function call(settings: Settings, path: string, body: unknown) {
+async function call(
+  settings: Settings,
+  path: string,
+  body: unknown,
+  version = 1,
+) {
   const controller = new AbortController(),
     isPlanning = ["plans", "suggestions"].includes(path);
   if (isPlanning) planning.add(controller);
   try {
-    const response = await fetch(settings.url + "/v1/" + path, {
+    const response = await fetch(settings.url + "/v" + version + "/" + path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,13 +81,28 @@ export async function backendNlp(
 ) {
   const settings = await backendSettings();
   if (!settings.enabled) return undefined;
+  const version = input.protocolVersion === 2 ? 2 : 1;
+  if (version === 2) {
+    const capability = await fetch(settings.url + "/v2/health", {
+      headers: { Authorization: "Bearer " + settings.token },
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!capability.ok || !(await capability.json()).protocols?.includes(2))
+      return undefined;
+  }
   if (memory && memory.origin === input.observation.origin)
-    await call(settings, "knowledge", memory);
-  await call(settings, "observations", { observation: input.observation });
+    await call(settings, "knowledge", structuralKnowledge(memory), version);
+  await call(
+    settings,
+    "observations",
+    { observation: structuralObservation(input.observation) },
+    version,
+  );
   const value = await call(
     settings,
     suggestions ? "suggestions" : "plans",
     input,
+    version,
   );
   return suggestions
     ? value.suggestions
@@ -87,7 +112,7 @@ export async function backendNlp(
 }
 export async function mirrorRoute(task: SavedTask) {
   const settings = await backendSettings();
-  if (settings.enabled) await call(settings, "routes", task);
+  if (settings.enabled) await call(settings, "routes", parameterizedTask(task));
 }
 export async function deleteBackendMemory(origin?: string) {
   const settings = await backendSettings();

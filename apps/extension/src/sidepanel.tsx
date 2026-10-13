@@ -15,6 +15,8 @@ import { LocalModel, modelAvailability } from "./local-model";
 import { memorySummary } from "../../../packages/site-memory";
 import { liveReport } from "../../../packages/live-diagnostics";
 import { LiveInspector } from "./live-inspector";
+import { WorkflowPanel } from "./workflow-panel";
+import { requestCurrentSiteAccess } from "./site-access";
 import "./sidepanel.css";
 function unresolvedTitle(plan: GoalPlan) {
   switch (plan.issue) {
@@ -35,6 +37,7 @@ function App() {
   const [context, setContext] = useState<{
     tabId?: number;
     origin?: string;
+    siteAccessRequired?: boolean;
     canContinueTask?: boolean;
     routes: RoutePreview[];
     reason?: string;
@@ -171,26 +174,23 @@ function App() {
     setBusy(true);
     setError("");
     try {
+      let startTarget: { tabId: number; origin: string } | undefined;
       if (
-        (type === "START" && route?.id === LIVE_ROUTE_ID && context?.origin) ||
+        (type === "START" && route?.id === LIVE_ROUTE_ID) ||
         (type === "CONTINUE_TASK" && view?.continuationOrigin)
       ) {
-        const url = new URL(
-          type === "CONTINUE_TASK"
-            ? view!.continuationOrigin!
-            : context!.origin!,
+        startTarget = await requestCurrentSiteAccess(
+          type === "CONTINUE_TASK" ? view!.continuationOrigin! : undefined,
         );
-        const granted = await chrome.permissions.request({
-          origins: [url.protocol + "//" + url.hostname + "/*"],
-        });
-        if (!granted)
-          throw new Error(
-            "Website access was declined. Click the extension icon or grant access to start discovery.",
-          );
       }
       const r = await chrome.runtime.sendMessage(
         type === "START"
-          ? { type, routeId: route?.id, routeVersion: route?.version }
+          ? {
+              type,
+              routeId: route?.id,
+              routeVersion: route?.version,
+              ...startTarget,
+            }
           : { type },
       );
       if (r?.error) setError(r.error);
@@ -612,6 +612,12 @@ function App() {
           {error}
         </p>
       )}
+      {!active && !paused && controlsMode && context?.siteAccessRequired && (
+        <p role="status">
+          Allow access to {route.siteName} to scan its controls. Navigator only
+          scans when you start navigation.
+        </p>
+      )}
       <div className="actions">
         {view?.continuationOrigin && (
           <button
@@ -631,7 +637,11 @@ function App() {
             }
             onClick={() => command("START")}
           >
-            {busy ? "Starting…" : "Start navigation"}{" "}
+            {busy
+              ? "Starting…"
+              : context?.siteAccessRequired && controlsMode
+                ? "Allow website access and start"
+                : "Start navigation"}{" "}
             <span aria-hidden="true">↗</span>
           </button>
         )}
@@ -715,6 +725,40 @@ function App() {
             </button>
           ))}
         </section>
+      )}
+      {!!view?.frameAccess?.length && (
+        <section className="goal-plan" aria-label="Embedded application access">
+          <h2>Embedded application access</h2>
+          <p>Allow access to an embedded website to guide its controls.</p>
+          {view.frameAccess.map((origin) => (
+            <button
+              key={origin}
+              disabled={busy || otherTab}
+              onClick={async () => {
+                const granted = await chrome.permissions.request({
+                  origins: [origin + "/*"],
+                });
+                if (!granted)
+                  setError(
+                    "Access was not granted. Other page controls remain available.",
+                  );
+              }}
+            >
+              Allow {origin}
+            </button>
+          ))}
+        </section>
+      )}
+      {view?.journey?.workflow && (
+        <WorkflowPanel
+          workflow={view.journey.workflow}
+          disabled={busy || otherTab || view.status !== "running"}
+          onMessage={async (message) => {
+            const r = await chrome.runtime.sendMessage(message);
+            if (r.view) setView(r.view);
+            if (r.error) setError(r.error);
+          }}
+        />
       )}
       {controlsMode && view?.journey && (
         <section className="goal-plan" aria-label="Task journey">

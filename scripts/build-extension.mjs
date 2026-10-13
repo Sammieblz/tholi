@@ -8,6 +8,7 @@ await build({
   entryPoints: {
     worker: "apps/extension/src/worker.ts",
     content: "apps/extension/src/content.ts",
+    "frame-agent": "apps/extension/src/frame-agent.ts",
     sidepanel: "apps/extension/src/sidepanel.tsx",
     offscreen: "apps/extension/src/offscreen.ts",
   },

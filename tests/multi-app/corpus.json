@@ -1,0 +1,3978 @@
+{
+  "version": 1,
+  "annotations": "Independent English requests and accessible fixture targets. 60 cases per platform: 40 positive, 10 ambiguous, 10 unsupported. 20 calibration and 40 held-out cases each. Includes negation, correction, compound requests and references with explicit prior context. Frozen before model evaluation; final actions are never success predicates.",
+  "cases": [
+    {
+      "id": "cloudflare-positive-1",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "deploy my Pages website from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-2",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "publish my website with Pages using a Git repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-3",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "host a site on Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-4",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "deploy a Pages project using a repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-5",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "put my website online with Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-6",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "upload my website to Pages using prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-7",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "deploy Pages through Direct Upload.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-8",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "host a website on Pages with prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-9",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "deploy a website from GitHub with Pages.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-10",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "publish a Pages website from prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-11",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please deploy my Pages website from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-12",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please publish my website with Pages using a Git repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-13",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please host a site on Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-14",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please deploy a Pages project using a repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-15",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please put my website online with Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-16",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please upload my website to Pages using prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-17",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please deploy Pages through Direct Upload.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-18",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please host a website on Pages with prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-19",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please deploy a website from GitHub with Pages.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-20",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please publish a Pages website from prebuilt files.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "cloudflare-positive-21",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me deploy my Pages website from GitHub, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-22",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me publish my website with Pages using a Git repository, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-23",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me host a site on Pages from GitHub, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-24",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me deploy a Pages project using a repository, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-25",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me put my website online with Pages from GitHub, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-26",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me upload my website to Pages using prebuilt files, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-27",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me deploy Pages through Direct Upload, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-28",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me host a website on Pages with prebuilt files, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-29",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me deploy a website from GitHub with Pages, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-30",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me publish a Pages website from prebuilt files, but do not purchase anything?",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-31",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, deploy my Pages website from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-32",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, publish my website with Pages using a Git repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-33",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, host a site on Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-34",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, deploy a Pages project using a repository.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-35",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, put my website online with Pages from GitHub.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-36",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please upload my website to Pages using prebuilt files and then open Help.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-37",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please deploy Pages through Direct Upload and then open Help.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-38",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please host a website on Pages with prebuilt files and then open Help.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-39",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please deploy a website from GitHub with Pages and then open Help.",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "cloudflare-positive-40",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Deploy Pages from GitHub using that repository",
+      "expected": "Workers & Pages",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Deploy Pages from GitHub repository \"context-demo\""
+    },
+    {
+      "id": "cloudflare-ambiguous-1",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "deploy my website with Pages.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-2",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "host my site on Pages.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-3",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "publish a Pages website.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-4",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "deploy my Pages project.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-5",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "put my Pages website online.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-6",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please deploy my website with Pages.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-7",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please host my site on Pages.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-8",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please publish a Pages website.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-9",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please deploy my Pages project.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-ambiguous-10",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please put my Pages website online.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "cloudflare-negative-1",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "deploy a Worker.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-2",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "buy a domain automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-3",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess my production API secret.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-4",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete every account without review.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-5",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "publish to AWS instead.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-6",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please deploy a Worker.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-7",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please buy a domain automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-8",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess my production API secret.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-9",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete every account without review.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "cloudflare-negative-10",
+      "platform": "cloudflare",
+      "origin": "https://dash.cloudflare.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please publish to AWS instead.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-positive-1",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "find repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-2",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "open the repo settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-3",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "show me repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-4",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "navigate to repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-5",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "configure this repository.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-6",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change the default branch to dev.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-7",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "switch the default branch to develop.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-8",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "set the default branch to main.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-9",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change the default branch to release.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-10",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "switch the default branch to staging.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-11",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please find repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-12",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please open the repo settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-13",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please show me repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-14",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please navigate to repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-15",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please configure this repository.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-16",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change the default branch to dev.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-17",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please switch the default branch to develop.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-18",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please set the default branch to main.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-19",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change the default branch to release.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-20",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please switch the default branch to staging.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "github-positive-21",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me find repository settings, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-22",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me open the repo settings, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-23",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me show me repository settings, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-24",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me navigate to repository settings, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-25",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me configure this repository, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-26",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change the default branch to dev, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-27",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me switch the default branch to develop, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-28",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me set the default branch to main, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-29",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change the default branch to release, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-30",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me switch the default branch to staging, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "github-positive-31",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, find repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "github-positive-32",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, open the repo settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "github-positive-33",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, show me repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "github-positive-34",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, navigate to repository settings.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "github-positive-35",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, configure this repository.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "github-positive-36",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change the default branch to dev and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "github-positive-37",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please switch the default branch to develop and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "github-positive-38",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please set the default branch to main and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "github-positive-39",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change the default branch to release and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "github-positive-40",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Change the default branch to dev in that repository",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Find repository settings for repository \"context-demo\""
+    },
+    {
+      "id": "github-ambiguous-1",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "open Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-2",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "show me the settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-3",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "find the settings control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-4",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "navigate to Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-5",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "where are settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-6",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please open Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-7",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please show me the settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-8",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please find the settings control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-9",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please navigate to Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-ambiguous-10",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please where are settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "github-negative-1",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete every repository automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-2",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess my GitHub password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-3",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "merge unreviewed code for me.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-4",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "purchase a hosting plan.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-5",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "change somebody else's private repository.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-6",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete every repository automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-7",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess my GitHub password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-8",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please merge unreviewed code for me.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-9",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please purchase a hosting plan.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "github-negative-10",
+      "platform": "github",
+      "origin": "https://github.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please change somebody else's private repository.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-positive-1",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create an issue.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-2",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create a ticket.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-3",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "report a bug.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-4",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create a work item.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-5",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "add a task.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-6",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "file a bug.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-7",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create an issue titled \"Broken layout\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-8",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create a work item named \"Improve search\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-9",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "report a bug titled \"Crash\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-10",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "create a ticket called \"Missing menu\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-11",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please create an issue.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-12",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please create a ticket.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-13",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please report a bug.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-14",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create a work item.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-15",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please add a task.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-16",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please file a bug.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-17",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create an issue titled \"Broken layout\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-18",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create a work item named \"Improve search\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-19",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please report a bug titled \"Crash\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-20",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create a ticket called \"Missing menu\".",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "jira-positive-21",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create an issue, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-22",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create a ticket, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-23",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me report a bug, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-24",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create a work item, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-25",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me add a task, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-26",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me file a bug, but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-27",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create an issue titled \"Broken layout\", but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-28",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create a work item named \"Improve search\", but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-29",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me report a bug titled \"Crash\", but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-30",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me create a ticket called \"Missing menu\", but do not purchase anything?",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "jira-positive-31",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, create an issue.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "jira-positive-32",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, create a ticket.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "jira-positive-33",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, report a bug.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "jira-positive-34",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, create a work item.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "jira-positive-35",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, add a task.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "jira-positive-36",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please file a bug and then open Help.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "jira-positive-37",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create an issue titled \"Broken layout\" and then open Help.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "jira-positive-38",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please create a work item named \"Improve search\" and then open Help.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "jira-positive-39",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please report a bug titled \"Crash\" and then open Help.",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "jira-positive-40",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Create an issue titled \"Crash\" in that project",
+      "expected": "Projects",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Create an issue in project \"context-demo\""
+    },
+    {
+      "id": "jira-ambiguous-1",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "open project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-2",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "find project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-3",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "show me project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-4",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "navigate to project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-5",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "where are project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-6",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please open project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-7",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please find project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-8",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please show me project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-9",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please navigate to project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-ambiguous-10",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please where are project settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "jira-negative-1",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete every project automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-2",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess the administrator password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-3",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "send all private issues to a public server.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-4",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "change another company's Jira account.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-5",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "purchase a domain.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-6",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete every project automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-7",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess the administrator password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-8",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please send all private issues to a public server.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-9",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please change another company's Jira account.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "jira-negative-10",
+      "platform": "jira",
+      "origin": "https://team.atlassian.net",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please purchase a domain.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-positive-1",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-2",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change subtitles to French.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-3",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change the subtitle language to German.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-4",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "translate captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-5",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change video captions to Italian.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-6",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change playback speed to 1.5.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-7",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "set playback speed to 2.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-8",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change video speed to 0.75.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-9",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "watch faster at 1.5x speed.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-10",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change playback speed to 1.25.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-11",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please change captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-12",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please change subtitles to French.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-13",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change the subtitle language to German.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-14",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please translate captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-15",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change video captions to Italian.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-16",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change playback speed to 1.5.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-17",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please set playback speed to 2.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-18",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change video speed to 0.75.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-19",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please watch faster at 1.5x speed.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-20",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change playback speed to 1.25.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "youtube-positive-21",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change captions to Spanish, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-22",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change subtitles to French, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-23",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change the subtitle language to German, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-24",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me translate captions to Spanish, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-25",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change video captions to Italian, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-26",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change playback speed to 1.5, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-27",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me set playback speed to 2, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-28",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change video speed to 0.75, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-29",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me watch faster at 1.5x speed, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-30",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change playback speed to 1.25, but do not purchase anything?",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "youtube-positive-31",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, change captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "youtube-positive-32",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, change subtitles to French.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "youtube-positive-33",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, change the subtitle language to German.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "youtube-positive-34",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, translate captions to Spanish.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "youtube-positive-35",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, change video captions to Italian.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "youtube-positive-36",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change playback speed to 1.5 and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "youtube-positive-37",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please set playback speed to 2 and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "youtube-positive-38",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change video speed to 0.75 and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "youtube-positive-39",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please watch faster at 1.5x speed and then open Help.",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "youtube-positive-40",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Change it to Spanish",
+      "expected": "Settings",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Change captions to French"
+    },
+    {
+      "id": "youtube-ambiguous-1",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "open Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-2",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "show me settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-3",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "find the settings control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-4",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "navigate to Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-5",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "where are settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-6",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please open Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-7",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please show me settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-8",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please find the settings control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-9",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please navigate to Settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-ambiguous-10",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please where are settings.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "youtube-negative-1",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "download a copyrighted movie illegally.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-2",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess the creator's password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-3",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete somebody else's channel.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-4",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "purchase a Cloudflare domain.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-5",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "deploy a Git repository.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-6",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please download a copyrighted movie illegally.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-7",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess the creator's password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-8",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete somebody else's channel.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-9",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please purchase a Cloudflare domain.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "youtube-negative-10",
+      "platform": "youtube",
+      "origin": "https://www.youtube.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please deploy a Git repository.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-positive-1",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my Netflix membership.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-2",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-3",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "end my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-4",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "stop Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-5",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "unsubscribe from Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-6",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change my plan to Premium.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-7",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "switch my plan to Standard.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-8",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "upgrade my plan to Premium.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-9",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "downgrade my plan to Standard.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-10",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "change my Netflix plan to Basic.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-11",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please cancel my Netflix membership.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-12",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please cancel my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-13",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please end my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-14",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please stop Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-15",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please unsubscribe from Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-16",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change my plan to Premium.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-17",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please switch my plan to Standard.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-18",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please upgrade my plan to Premium.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-19",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please downgrade my plan to Standard.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-20",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change my Netflix plan to Basic.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "netflix-positive-21",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my Netflix membership, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-22",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my subscription, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-23",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me end my subscription, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-24",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me stop Netflix, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-25",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me unsubscribe from Netflix, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-26",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change my plan to Premium, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-27",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me switch my plan to Standard, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-28",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me upgrade my plan to Premium, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-29",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me downgrade my plan to Standard, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-30",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me change my Netflix plan to Basic, but do not purchase anything?",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "netflix-positive-31",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, cancel my Netflix membership.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "netflix-positive-32",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, cancel my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "netflix-positive-33",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, end my subscription.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "netflix-positive-34",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, stop Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "netflix-positive-35",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, unsubscribe from Netflix.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "netflix-positive-36",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please change my plan to Premium and then open Help.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "netflix-positive-37",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please switch my plan to Standard and then open Help.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "netflix-positive-38",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please upgrade my plan to Premium and then open Help.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "netflix-positive-39",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please downgrade my plan to Standard and then open Help.",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "netflix-positive-40",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Change it to Basic",
+      "expected": "Account",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Change my plan to Premium"
+    },
+    {
+      "id": "netflix-ambiguous-1",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "open Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-2",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "show me my account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-3",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "find the account control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-4",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "navigate to Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-5",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "where is Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-6",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please open Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-7",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please show me my account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-8",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please find the account control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-9",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please navigate to Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-ambiguous-10",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please where is Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "netflix-negative-1",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess my Netflix password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-2",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "watch paid content without paying.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-3",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete somebody else's profile automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-4",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "deploy my website.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-5",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "change a GitHub branch.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-6",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess my Netflix password.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-7",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please watch paid content without paying.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-8",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete somebody else's profile automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-9",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please deploy my website.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "netflix-negative-10",
+      "platform": "netflix",
+      "origin": "https://www.netflix.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please change a GitHub branch.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-positive-1",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-2",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "end my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-3",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my Amazon Prime subscription.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-4",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "stop Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-5",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-6",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-7",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "end Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-8",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "cancel my subscription.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-9",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "stop my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-10",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "end my Amazon Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-11",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please cancel Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-12",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "calibration",
+      "text": "Please end my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-13",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my Amazon Prime subscription.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-14",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please stop Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-15",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-16",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-17",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please end Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-18",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my subscription.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-19",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please stop my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-20",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please end my Amazon Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": []
+    },
+    {
+      "id": "amazon-positive-21",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel Prime, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-22",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me end my Prime membership, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-23",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my Amazon Prime subscription, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-24",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me stop Prime, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-25",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my Prime membership, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-26",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my membership, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-27",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me end Prime, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-28",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me cancel my subscription, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-29",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me stop my Prime membership, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-30",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Could you help me end my Amazon Prime membership, but do not purchase anything?",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "negation"
+      ]
+    },
+    {
+      "id": "amazon-positive-31",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, cancel Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "amazon-positive-32",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, end my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "amazon-positive-33",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, cancel my Amazon Prime subscription.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "amazon-positive-34",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, stop Prime.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "amazon-positive-35",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Open Help. Actually, cancel my Prime membership.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "correction"
+      ]
+    },
+    {
+      "id": "amazon-positive-36",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my membership and then open Help.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "amazon-positive-37",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please end Prime and then open Help.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "amazon-positive-38",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please cancel my subscription and then open Help.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "amazon-positive-39",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Please stop my Prime membership and then open Help.",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "compound"
+      ]
+    },
+    {
+      "id": "amazon-positive-40",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "positive",
+      "split": "held-out",
+      "text": "Cancel that membership",
+      "expected": "Prime",
+      "expectedStatus": "guiding",
+      "features": [
+        "context",
+        "reference"
+      ],
+      "prior": "Cancel my Prime membership"
+    },
+    {
+      "id": "amazon-ambiguous-1",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "open Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-2",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "show me my account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-3",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "find the account control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-4",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "calibration",
+      "text": "navigate to Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-5",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "where is Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-6",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please open Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-7",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please show me my account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-8",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please find the account control.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-9",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please navigate to Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-ambiguous-10",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "ambiguous",
+      "split": "held-out",
+      "text": "Please where is Account.",
+      "expectedStatus": "clarification"
+    },
+    {
+      "id": "amazon-negative-1",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "buy everything automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-2",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "guess my credit card details.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-3",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "delete somebody else's orders.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-4",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "calibration",
+      "text": "deploy a Cloudflare Worker.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-5",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "change my Netflix plan.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-6",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please buy everything automatically.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-7",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please guess my credit card details.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-8",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please delete somebody else's orders.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-9",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please deploy a Cloudflare Worker.",
+      "expectedStatus": "unsupported"
+    },
+    {
+      "id": "amazon-negative-10",
+      "platform": "amazon",
+      "origin": "https://www.amazon.com",
+      "category": "unsupported",
+      "split": "held-out",
+      "text": "Please change my Netflix plan.",
+      "expectedStatus": "unsupported"
+    }
+  ]
+}

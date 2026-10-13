@@ -1,4 +1,4 @@
-Version 0.7.0 supports English requests on English interfaces. Compromise
+Version 0.8.0 supports English requests on English interfaces. Compromise
 parses the entire validated request before retrieval, preserving ordered tasks,
 negation, corrections and desired values. The maximum is 1,000 characters and
 three explicit tasks. Unresolved references require an explicit target.
@@ -8,8 +8,8 @@ existing semantic/observed-route planner. Index text contains sanitized labels,
 descriptions, roles, headings, regions, form purpose and reveal relationships.
 Visibility, enabled state, risk and checked state are freshly validated and
 never encoded as semantic cache identity. SHA-256 plus the pinned model revision
-keys the global 10,000-entry derived cache. Browser IndexedDB v3 preserves the
-v2 sites and saved routes; incompatible model-derived indexes are rebuilt.
+keys the global 10,000-entry derived cache. Browser IndexedDB v4 preserves public sites and reusable routes while removing
+private entity data from older platform indexes; derived indexes are rebuilt.
 
 The extension runs packaged q8 ONNX weights in a worker owned by a Chrome
 offscreen document. ONNX uses one CPU thread, a packaged WASM backend and no
@@ -39,3 +39,7 @@ processing. A bearer token and an explicit extension-origin allowlist protect
 the single-owner API. Non-loopback connections require HTTPS. OCR, custom
 training, hosted inference, multilingual requests and multi-user sync remain
 outside this release.
+
+See [contextual workflow architecture](v0.8.0-architecture.md) and the
+[per-platform capability matrix](v0.8.0-capabilities.md) for v2 contracts,
+private persistence rules, incremental frames and verification boundaries.

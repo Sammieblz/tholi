@@ -86,7 +86,11 @@ export function beginJourney(
   };
 }
 export function contextualTask(task?: TaskJourney) {
-  return !!(task?.objective.value || task?.objective.workflow);
+  return !!(
+    task?.objective.value ||
+    task?.objective.workflow ||
+    task?.workflow
+  );
 }
 export function resumeJourney(task: TaskJourney): TaskJourney {
   if (task.objective.value || task.objective.workflow) return task;
@@ -108,9 +112,20 @@ export function saveTask(
   return {
     id: taskKey(task),
     origin: task.origin,
-    goal: sanitizeGoal(task.goal),
-    canonicalGoal: task.canonicalGoal,
-    objective: task.objective,
+    goal: sanitizeGoal(task.workflow?.objective || task.goal),
+    canonicalGoal: task.workflow?.objective || task.canonicalGoal,
+    objective: task.workflow
+      ? { purpose: task.workflow.objective }
+      : task.objective,
+    guideId: task.workflow?.guideId,
+    guideVersion: task.workflow?.guideVersion,
+    parameters: task.workflow?.entities.map((e) => e.type),
+    retention:
+      page?.controls.some(
+        (c) => c.reference?.frameId || c.retention === "session",
+      ) || task.workflow?.entities.length
+        ? "session"
+        : undefined,
     strategy: task.strategy,
     updatedAt: task.updatedAt,
     completed: task.status === "completed",
@@ -141,6 +156,7 @@ function valueScore(
     | "structure"
     | "targetLanguage"
     | "options"
+    | "range"
   >,
 ) {
   const { value, language, purpose } = task.objective;
@@ -176,6 +192,15 @@ function valueScore(
   )
     return 1;
   if (
+    c.kind === "range" &&
+    groundedPurpose &&
+    c.range &&
+    Number.isFinite(Number(value)) &&
+    Number(value) >= c.range.min &&
+    Number(value) <= c.range.max
+  )
+    return 1;
+  if (
     exactLanguage &&
     (/^(?:(?:page|site|website|display|interface|ui) )?languages?$/i.test(
       purpose,
@@ -191,6 +216,7 @@ function valueScore(
     : 0;
 }
 export function objectiveReached(task: TaskJourney, page: PageSnapshot) {
+  if (task.workflow) return task.workflow.status === "completed";
   if (
     task.objective.language &&
     /^(?:(?:page|site|website|display|interface|ui) )?languages?$/i.test(
@@ -211,6 +237,8 @@ export function objectiveReached(task: TaskJourney, page: PageSnapshot) {
           (c.kind === "toggle" &&
             c.checked === booleanValue(task.objective.value!)) ||
           c.selected === true ||
+          (c.kind === "range" &&
+            c.range?.current === Number(task.objective.value)) ||
           (c.kind === "select" &&
             c.options?.some(
               (o) =>

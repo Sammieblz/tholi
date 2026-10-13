@@ -4,9 +4,19 @@ export function continuesDestination(
   journey?: TaskJourney,
   request?: NavigationRequest,
 ) {
+  if (
+    journey?.status === "completed" &&
+    (!request ||
+      !["active", "paused", "clarification", "blocked"].includes(
+        request.status,
+      ))
+  )
+    return false;
   return !!(
     journey?.objective.value ||
     journey?.objective.workflow ||
+    (journey?.workflow &&
+      !["completed", "canceled"].includes(journey.workflow.status)) ||
     (request &&
       ["active", "paused"].includes(request.status) &&
       (request.tasks.length > 1 ||
@@ -70,12 +80,23 @@ export const stopQueue = (request: NavigationRequest): NavigationRequest => ({
   status: "canceled",
 });
 export function matchesStamp(
-  result: { requestId: string; documentId: string; revision: number },
-  stamp: { requestId: string; documentId: string; revision: number },
+  result: {
+    requestId: string;
+    documentId: string;
+    revision: number;
+    contextRevision?: number;
+  },
+  stamp: {
+    requestId: string;
+    documentId: string;
+    revision: number;
+    contextRevision?: number;
+  },
 ) {
   return (
     result.requestId === stamp.requestId &&
     result.documentId === stamp.documentId &&
-    result.revision === stamp.revision
+    result.revision === stamp.revision &&
+    result.contextRevision === stamp.contextRevision
   );
 }

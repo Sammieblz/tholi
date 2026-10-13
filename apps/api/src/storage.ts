@@ -14,6 +14,13 @@ import { savedTaskSchema } from "../../../packages/page-model";
 import { mergeObservation } from "../../../packages/site-memory";
 import { MODEL_REVISION } from "../../../packages/nlp/constants";
 import type { KnowledgeStore } from "../../../packages/navigation-core/storage";
+import {
+  structuralObservation,
+  structuralTransition,
+  structuralKnowledge,
+  parameterizedTask,
+  privatePlatform,
+} from "../../../packages/navigation-core/privacy";
 export class SqliteStorage implements DerivedStore, KnowledgeStore {
   private db: DatabaseSync;
   constructor(path: string) {
@@ -32,6 +39,39 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
       this.db
         .prepare("INSERT OR REPLACE INTO metadata VALUES('model_revision',?)")
         .run(MODEL_REVISION);
+    }
+    const privacy = this.db
+      .prepare("SELECT value FROM metadata WHERE key='privacy_version'")
+      .get();
+    if (privacy?.value !== "4") {
+      for (const row of this.db
+        .prepare("SELECT origin,data FROM sites")
+        .all()) {
+        if (privatePlatform(String(row.origin))) {
+          this.db
+            .prepare("UPDATE sites SET data=? WHERE origin=?")
+            .run(
+              JSON.stringify(structuralKnowledge(JSON.parse(String(row.data)))),
+              row.origin,
+            );
+          this.db.prepare("DELETE FROM indexes WHERE origin=?").run(row.origin);
+        }
+      }
+      for (const row of this.db.prepare("SELECT id,data FROM routes").all()) {
+        this.db
+          .prepare("UPDATE routes SET data=? WHERE id=?")
+          .run(
+            JSON.stringify(
+              parameterizedTask(
+                savedTaskSchema.parse(JSON.parse(String(row.data))),
+              ),
+            ),
+            row.id,
+          );
+      }
+      this.db.exec(
+        "DELETE FROM embeddings; INSERT OR REPLACE INTO metadata VALUES('privacy_version','4')",
+      );
     }
   }
   async getEmbedding(key: string) {
@@ -91,6 +131,14 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
     return row ? JSON.parse(String(row.data)) : undefined;
   }
   async observe(page: PageSnapshot, transition?: ObservedTransition) {
+    transition = structuralTransition(
+      page.origin,
+      transition,
+      page.controls.some(
+        (c) => c.retention === "session" || c.reference?.frameId,
+      ),
+    );
+    page = structuralObservation(page);
     const site = mergeObservation(
       await this.get(page.origin),
       page,
@@ -102,6 +150,7 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
     return site;
   }
   async mirror(site: SiteMemory) {
+    site = structuralKnowledge(site);
     this.db
       .prepare("INSERT OR REPLACE INTO sites VALUES(?,?)")
       .run(site.origin, JSON.stringify(site));
@@ -145,6 +194,7 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
       .map((row) => savedTaskSchema.parse(JSON.parse(String(row.data))));
   }
   async saveTask(task: SavedTask) {
+    task = parameterizedTask(task);
     task = savedTaskSchema.parse(task);
     this.db
       .prepare("INSERT OR REPLACE INTO routes VALUES(?,?,?)")

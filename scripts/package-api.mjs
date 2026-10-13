@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { thirdParty } from "./third-party.mjs";
 import { readdir } from "node:fs/promises";
+import { multiAppEvidence } from "./verify-multi-app-release.mjs";
 const report = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
 if (!report.passed)
   throw new Error(
@@ -16,6 +17,7 @@ for (const file of (await readdir("apps/api/dist")).sort())
     .digest("hex");
 if (JSON.stringify(apiFiles) !== JSON.stringify(report.apiArtifactFiles))
   throw new Error("API bytes differ from the passing evaluation.");
+const multiApp = await multiAppEvidence(report.artifactFiles, apiFiles);
 const version = JSON.parse(
   await readFile("apps/api/package.json", "utf8"),
 ).version;
@@ -94,6 +96,7 @@ await writeFile(
       modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
       evaluatedAt: report.evaluatedAt,
       apiTestsPassed: report.passed,
+      multiApp,
       setup: "docs/api-setup.md",
     },
     null,

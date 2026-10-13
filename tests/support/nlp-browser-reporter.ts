@@ -29,8 +29,8 @@ export default class NlpBrowserReporter implements Reporter {
           evaluatedAt: new Date().toISOString(),
           passed:
             result.status === "passed" &&
-            this.expected === 11 &&
-            this.cases.length === 11 &&
+            this.expected === 12 &&
+            this.cases.length === 12 &&
             this.cases.every((c) => c.status === "passed") &&
             JSON.stringify(this.start) === JSON.stringify(end),
           cases: this.cases,

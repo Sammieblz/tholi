@@ -67,6 +67,7 @@ export interface SessionView {
   clarification?: import("../navigation-core/contracts").Clarification;
   embeddingActivity?: import("../navigation-core/contracts").PlanResult["activity"];
   continuationOrigin?: string;
+  frameAccess?: string[];
   memory?: {
     pages: number;
     templates: number;

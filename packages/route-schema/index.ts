@@ -168,6 +168,30 @@ export const messageSchema = z.discriminatedUnion("type", [
     .object({ type: z.literal("CLARIFY"), choice: z.string().max(100) })
     .strict(),
   z.object({ type: z.literal("SKIP_TASK") }).strict(),
+  z
+    .object({
+      type: z.literal("WORKFLOW_ACTION"),
+      action: z.enum(["CONTINUE", "WAIT", "RETRY"]),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("WORKFLOW_ENTITY"),
+      entity: z.enum([
+        "account",
+        "repository",
+        "project",
+        "issue",
+        "branch",
+        "plan",
+        "query",
+        "language",
+        "speed",
+        "method",
+      ]),
+      value: z.string().min(1).max(1000),
+    })
+    .strict(),
   z.object({ type: z.literal("GET_BACKEND") }).strict(),
   z
     .object({
@@ -202,6 +226,8 @@ export const messageSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("START"),
+      tabId: z.number().int().nonnegative().optional(),
+      origin: z.string().url().max(300).optional(),
       routeId: z.string().min(1),
       routeVersion: z.string().min(1),
     })
@@ -218,6 +244,77 @@ export const messageSchema = z.discriminatedUnion("type", [
 ]);
 
 export const contentMessageSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("FRAME_ACCESS"),
+      sessionId: z.string().uuid(),
+      origins: z.array(z.string().url()).max(16),
+      limit: z.number().int().min(1).max(5000),
+      nonce: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("FRAME_VISIBILITY_PARENT"),
+      sessionId: z.string().uuid(),
+      frameId: z.number().int(),
+      documentId: z.string(),
+      visible: z.boolean(),
+      inViewport: z.boolean(),
+      placement: z.enum(["above", "below", "left", "right", "viewport"]),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("FRAME_OBSERVATION_PARENT"),
+      sessionId: z.string().uuid(),
+      frameId: z.number().int(),
+      documentId: z.string(),
+      tabId: z.number().int(),
+      page: pageSnapshotSchema,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("FRAME_INTERACTION_PARENT"),
+      sessionId: z.string().uuid(),
+      frameId: z.number().int(),
+      documentId: z.string(),
+      tabId: z.number().int(),
+      controlId: z.string(),
+      signature: z.string(),
+      verified: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("WORKFLOW_ACTION"),
+      sessionId: z.string().uuid(),
+      action: z.enum(["CONTINUE", "WAIT", "RETRY"]),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("WORKFLOW_ENTITY"),
+      sessionId: z.string().uuid(),
+      entity: z.enum([
+        "account",
+        "repository",
+        "project",
+        "issue",
+        "branch",
+        "plan",
+        "query",
+        "language",
+        "speed",
+        "method",
+      ]),
+      value: z.string().min(1).max(1000),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("SPA_CHANGED"), sessionId: z.string().uuid() })
+    .strict(),
   z
     .object({
       type: z.literal("INSTALL_REQUEST"),
@@ -239,7 +336,11 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z
-    .object({ type: z.literal("GET_PAGE"), sessionId: z.string().uuid() })
+    .object({
+      type: z.literal("GET_PAGE"),
+      sessionId: z.string().uuid(),
+      query: z.string().max(1000).optional(),
+    })
     .strict(),
   z
     .object({
@@ -382,6 +483,7 @@ export const sessionViewSchema = z
       .strict()
       .optional(),
     continuationOrigin: z.string().max(300).optional(),
+    frameAccess: z.array(z.string().url()).max(16).optional(),
     liveDiagnostics: liveDiagnosticsSchema.optional(),
     memory: z
       .object({
