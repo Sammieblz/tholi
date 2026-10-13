@@ -4,7 +4,7 @@ let creating: Promise<void> | undefined;
 let idle: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
 let active = 0;
-async function ensureOffscreen() {
+export async function ensureOffscreen() {
   const contexts = await chrome.runtime.getContexts({
     contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
   });
@@ -55,4 +55,28 @@ export async function cancelNlp() {
     .sendMessage({ target: "offscreen", type: "CANCEL_NLP" })
     .catch(() => {});
   await chrome.offscreen.closeDocument().catch(() => {});
+}
+
+export async function browserOcr(message: Record<string, unknown>) {
+  clearTimeout(idle);
+  active++;
+  try {
+    await ensureOffscreen();
+    const response = await chrome.runtime.sendMessage({
+      ...message,
+      target: "offscreen",
+      type: "OCR_REQUEST",
+      id: crypto.randomUUID(),
+    });
+    if (!response || response.error)
+      throw new Error(response?.error || "OCR unavailable");
+    return response.value;
+  } finally {
+    active--;
+    if (!active)
+      idle = setTimeout(
+        () => void chrome.offscreen.closeDocument().catch(() => {}),
+        120000,
+      );
+  }
 }

@@ -141,7 +141,19 @@ export function saveTask(
           ...(plan.route?.predictions || []),
         ].slice(0, 24)
       : undefined,
-    estimate: plan?.route,
+    estimate:
+      task.status === "completed"
+        ? {
+            strategy: task.strategy,
+            clicks: 0,
+            minSeconds: 0,
+            maxSeconds: 0,
+            complete: true,
+            available: true,
+            basis: "observed",
+            predictions: [],
+          }
+        : plan?.route,
   };
 }
 function valueScore(
@@ -157,7 +169,8 @@ function valueScore(
     | "targetLanguage"
     | "options"
     | "range"
-  >,
+  > & { revealIds?: string[] },
+  page?: PageSnapshot,
 ) {
   const { value, language, purpose } = task.objective;
   if (!value) return goalScore(task.goal, c);
@@ -169,6 +182,9 @@ function valueScore(
     [
       c.context,
       c.description,
+      ...(page?.controls
+        .filter((opener) => c.revealIds?.includes(opener.id) && opener.expanded)
+        .map((opener) => opener.label) || []),
       ...(c.structure?.regions.map((r) => r.name) || []),
       ...(c.structure?.headings.map((h) => h.label) || []),
     ].join(" "),
@@ -232,7 +248,7 @@ export function objectiveReached(task: TaskJourney, page: PageSnapshot) {
         c.visible &&
         c.enabled &&
         c.risk === "ordinary" &&
-        valueScore(task, c) >= 0.9 &&
+        valueScore(task, c, page) >= 0.9 &&
         ((c.kind === "choice" && c.checked === true) ||
           (c.kind === "toggle" &&
             c.checked === booleanValue(task.objective.value!)) ||
@@ -273,9 +289,32 @@ export function advanceJourney(
   const complete = task.objective.value
     ? objectiveReached(task, page)
     : task.status === "completed";
+  const totalVerified = (task.totalVerified ?? task.progress.length) + 1;
+  const checkpoint =
+    totalVerified % 25 === 0
+      ? {
+          at: now,
+          count: totalVerified,
+          objective: structuredClone(task.objective),
+          goal: task.goal,
+          milestones: [
+            ...new Set([
+              ...(task.checkpoint?.milestones || []),
+              ...(task.workflow?.verified.map((v) => v.milestone) || []),
+            ]),
+          ].slice(-64),
+          entities: structuredClone(task.workflow?.entities || []),
+          exclusions: [
+            ...(task.workflow?.exclusions || task.checkpoint?.exclusions || []),
+          ],
+          breadcrumbs: progress.map((p) => ({ origin: p.origin, state: p.to })),
+        }
+      : task.checkpoint;
   return {
     ...task,
     progress,
+    totalVerified,
+    checkpoint,
     updatedAt: now,
     status: complete ? ("completed" as const) : ("active" as const),
   };
@@ -341,7 +380,7 @@ export function planTask(
       (c) =>
         c.enabled &&
         c.risk === "ordinary" &&
-        valueScore(task, c) >= 0.9 &&
+        valueScore(task, c, page) >= 0.9 &&
         (c.visible ||
           c.revealIds.some((id) =>
             page.controls.some(
@@ -385,7 +424,9 @@ export function planTask(
           .filter((p) =>
             p.controls.some(
               (c) =>
-                c.active && c.risk === "ordinary" && valueScore(task, c) >= 0.9,
+                c.active &&
+                c.risk === "ordinary" &&
+                valueScore(task, c, page) >= 0.9,
             ),
           )
           .map((p) => p.stateKey),
@@ -564,7 +605,7 @@ export function planTask(
     task.objective.value &&
     plan.status === "guiding" &&
     finalLive &&
-    valueScore(task, finalLive) < 0.9
+    valueScore(task, finalLive, page) < 0.9
   )
     predictions.push({ label: task.objective.value, evidence: "predicted" });
   const clicks =
@@ -590,7 +631,7 @@ export function planTask(
           (c) =>
             task.objective.value &&
             c.id === plan.steps.at(-1)?.controlId &&
-            valueScore(task, c) >= 0.9,
+            valueScore(task, c, page) >= 0.9,
         )));
   const timings = observations.length
     ? observations.map((e) => e.meanMs || 5000)

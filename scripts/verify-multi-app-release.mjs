@@ -1,17 +1,20 @@
 import { readFile } from "node:fs/promises";
 export async function multiAppEvidence(files, apiFiles) {
   const reports = {};
+  const expectedVersion = JSON.parse(
+    await readFile("apps/extension/manifest.json", "utf8"),
+  ).version;
   for (const name of ["model", "runtime", "browser", "performance"]) {
     const report = JSON.parse(
       await readFile(`output/multi-app/${name}.json`, "utf8"),
     );
     if (
       !report.passed ||
-      report.extensionVersion !== "0.8.0" ||
+      report.extensionVersion !== expectedVersion ||
       JSON.stringify(report.artifactFiles) !== JSON.stringify(files)
     )
       throw Error(
-        `Run passing v0.8 ${name} validation for the exact build bytes.`,
+        `Run passing ${expectedVersion} ${name} validation for the exact build bytes.`,
       );
     reports[name] = report;
   }
@@ -29,7 +32,7 @@ export async function multiAppEvidence(files, apiFiles) {
     initialMs: reports.performance.initialMs,
     refreshP95Ms: reports.performance.refreshP95Ms,
     warmP95Ms: reports.performance.warmP95Ms,
-    capabilityMatrix: "docs/v0.8.0-capabilities.md",
+    capabilityMatrix: "docs/v0.9.0-validation.md",
     authenticatedChecks: "pending user-assisted signed-in verification",
   };
 }

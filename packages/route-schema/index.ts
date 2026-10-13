@@ -157,6 +157,18 @@ export type Target = z.infer<typeof targetSchema>;
 export type RouteState = Route["states"][number];
 export type Transition = Route["transitions"][number];
 export const messageSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("GET_JOURNEYS") }).strict(),
+  z
+    .object({ type: z.literal("RESUME_JOURNEY"), id: z.string().uuid() })
+    .strict(),
+  z
+    .object({ type: z.literal("DELETE_JOURNEY"), id: z.string().uuid() })
+    .strict(),
+  z.object({ type: z.literal("CHECK_ROUTE_ACTION") }).strict(),
+  z.object({ type: z.literal("CHECK_VISUAL_ACTION") }).strict(),
+  z.object({ type: z.literal("REQUEST_VISION") }).strict(),
+  z.object({ type: z.literal("GET_VISION") }).strict(),
+  z.object({ type: z.literal("SET_VISION"), backend: z.boolean() }).strict(),
   z
     .object({
       type: z.literal("NLP_SUGGEST"),

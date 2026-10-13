@@ -14,7 +14,7 @@ import {
   parameterizedTask,
   privatePlatform,
 } from "../navigation-core/privacy";
-import { upgradePrivateMemory } from "./migration";
+import { upgradePrivateMemory, upgradeRouteActions } from "./migration";
 import { boundedTransaction } from "./transaction";
 const MAX_AGE = 90 * 86400000;
 export function mergeObservation(
@@ -154,6 +154,8 @@ export function mergeObservation(
   if (observed && observed.from !== observed.to)
     upsert({
       ...observed,
+      action: { kind: "control", signature: observed.signature },
+      requiresFreshBinding: true,
       evidence: "observed",
       lastVerified: now,
       active: true,
@@ -189,8 +191,8 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
   private database?: Promise<IDBDatabase>;
   private open() {
     return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("navigator-site-memory", 4);
-      request.onupgradeneeded = () => {
+      const request = indexedDB.open("navigator-site-memory", 5);
+      request.onupgradeneeded = (event) => {
         if (!request.result.objectStoreNames.contains("sites"))
           request.result.createObjectStore("sites", { keyPath: "origin" });
         if (!request.result.objectStoreNames.contains("tasks"))
@@ -199,7 +201,8 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
           request.result.createObjectStore("embeddings", { keyPath: "key" });
         if (!request.result.objectStoreNames.contains("indexes"))
           request.result.createObjectStore("indexes", { keyPath: "origin" });
-        upgradePrivateMemory(request.transaction!);
+        if (event.oldVersion < 4) upgradePrivateMemory(request.transaction!);
+        else upgradeRouteActions(request.transaction!);
       };
       request.onsuccess = () => {
         const db = request.result;

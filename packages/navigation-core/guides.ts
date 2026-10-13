@@ -20,6 +20,10 @@ export function platformFor(
   return families.find(([, pattern]) => pattern.test(host))?.[0];
 }
 const sources = {
+  createRepo: [
+    "https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository",
+    "0a22e59d13fa8e782c6c73b7052d5f1bd0cd1da4080c5269b8256c3fcb45bfe5",
+  ],
   git: [
     "https://developers.cloudflare.com/pages/get-started/git-integration/",
     "a725d6ea9999aab2148d43934108eee3b51e73e2e7023a5a640da7e741418cb6",
@@ -85,7 +89,7 @@ const guide = (
     platform,
     purpose,
     intents,
-    version: "1.0.0",
+    version: id === "cloudflare.pages.deploy" ? "1.1.0" : "1.0.0",
     sources: source.map((key) => ({
       url: sources[key][0],
       sha256: sources[key][1],
@@ -108,11 +112,78 @@ const guide = (
 // These describe documented purposes, not scripts. Every target is retrieved and
 // bound from the current interface. A guide cannot override a live risk boundary.
 export const workflowGuides: WorkflowGuide[] = [
+  {
+    ...guide(
+      "github.repository.create",
+      "github",
+      "Create a new GitHub repository",
+      [
+        "create repository",
+        "create repo",
+        "new repository",
+        "new repo",
+        "make repository",
+        "make repo",
+        "start repository",
+        "set up repository",
+      ],
+      ["createRepo"],
+      [
+        step(
+          "creation-menu",
+          "Open the creation menu",
+          ["Create new", "Create new...", "Create menu"],
+          "reveal",
+        ),
+        step(
+          "creation-entry",
+          "Open the new repository form",
+          ["New repository", "New", "Create a new repository"],
+          "navigate",
+        ),
+        step(
+          "repository-form",
+          "Enter the requested repository details",
+          ["Repository name", "Repository details", "Owner"],
+          "input",
+          {
+            entity: "repository",
+            instruction:
+              "Enter the requested name and review owner, visibility and initialization settings on GitHub.",
+          },
+        ),
+        step(
+          "create-review",
+          "Review creation of the requested repository",
+          ["Create repository"],
+          "review",
+        ),
+        step(
+          "created",
+          "Verify the requested new repository",
+          ["Repository"],
+          "result",
+          {
+            entity: "repository",
+            outcome: ["repository created", "repository successfully created"],
+            instruction:
+              "Verify the requested owner and repository name; a creation click alone is insufficient.",
+          },
+        ),
+      ],
+    ),
+    scopeEntities: [],
+  },
+
   guide(
     "cloudflare.pages.deploy",
     "cloudflare",
     "Deploy a website with Cloudflare Pages",
     [
+      "deploy web page",
+      "deploy webpage",
+      "publish web page",
+      "publish webpage",
       "deploy website",
       "publish website",
       "host site",

@@ -1,3 +1,6 @@
+import { returnPlan } from "./continuity";
+import { semanticVisual, needsVision } from "../vision/fusion";
+import { workflowGuides } from "./guides";
 export * from "./contracts";
 export * from "./queue";
 export * from "./storage";
@@ -30,13 +33,69 @@ export class NavigationCore {
     const input = planInputSchema.parse(raw),
       { requestId, documentId, revision } = input;
     const activityBefore = { ...this.index.activity };
-    const result = (
+    const result = async (
       value: Omit<
         PlanResult,
         "requestId" | "documentId" | "revision" | "activity"
       >,
-    ): PlanResult =>
-      resultSchema.parse({
+    ): Promise<PlanResult> => {
+      const visual = input.visualObservation,
+        task = value.request?.tasks[value.request.active];
+      if (
+        visual &&
+        task &&
+        input.journey &&
+        needsVision(value.plan, !!value.clarification) &&
+        value.workflow?.status !== "review" &&
+        visual.requestId === requestId &&
+        visual.journeyId === input.journey.id &&
+        visual.contextRevision === (input.contextRevision || 0) &&
+        visual.documentId === documentId &&
+        visual.observationRevision === revision
+      ) {
+        const milestone =
+          value.workflow &&
+          workflowGuides.find((g) => g.id === value.workflow!.guideId)
+            ?.milestones[value.workflow.activeMilestone];
+        const target =
+          milestone?.targets[0] ||
+          [task.target, task.desiredValue].filter(Boolean).join(" ");
+        const plan = await semanticVisual(
+          this.index,
+          input.observation,
+          visual,
+          target,
+          input.text,
+          task.exclusions,
+          task.qualifiers,
+          signal,
+        );
+        if (plan)
+          value = { ...value, plan, reason: plan.reason, status: "plan" };
+      }
+      if (value.plan?.budgetPending && value.plan.status === "unresolved")
+        value = { ...value, status: "pending-indexing" };
+      if (
+        !value.plan?.budgetPending &&
+        value.plan?.issue === "no-match" &&
+        ["unresolved", "awaiting-choice"].includes(value.plan.status) &&
+        !value.plan.steps.length &&
+        !value.clarification &&
+        input.navigationLedger &&
+        input.tabId !== undefined
+      ) {
+        const task = value.request?.tasks[value.request.active];
+        const back = returnPlan(
+          input.observation,
+          input.text,
+          input.navigationLedger,
+          input.tabId,
+          task?.exclusions,
+        );
+        if (back)
+          value = { ...value, plan: back, reason: back.reason, status: "plan" };
+      }
+      return resultSchema.parse({
         ...value,
         requestId,
         documentId,
@@ -64,6 +123,7 @@ export class NavigationCore {
           modelRevision: MODEL_REVISION,
         },
       });
+    };
     let request;
     try {
       request = input.request

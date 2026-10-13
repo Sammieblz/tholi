@@ -15,3 +15,7 @@ output/nlp/
 test-results-nlp/
 test-results-multi-app/
 output/multi-app/
+
+assets/ocr/
+test-results-continuity/
+output/vision/

@@ -3,6 +3,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["tests/**/*.test.ts"],
-    exclude: ["tests/nlp/**", "tests/multi-app/**"],
+    exclude: ["tests/nlp/**", "tests/multi-app/**", "tests/vision/**"],
   },
 });

@@ -40,6 +40,27 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
         .prepare("INSERT OR REPLACE INTO metadata VALUES('model_revision',?)")
         .run(MODEL_REVISION);
     }
+    const routeVersion = this.db
+      .prepare("SELECT value FROM metadata WHERE key='route_actions'")
+      .get();
+    if (routeVersion?.value !== "5") {
+      for (const row of this.db
+        .prepare("SELECT origin,data FROM sites")
+        .all()) {
+        const site = JSON.parse(String(row.data));
+        site.transitions = (site.transitions || []).map((edge: any) => ({
+          ...edge,
+          action: edge.action || { kind: "control", signature: edge.signature },
+          requiresFreshBinding: true,
+        }));
+        this.db
+          .prepare("UPDATE sites SET data=? WHERE origin=?")
+          .run(JSON.stringify(site), row.origin);
+      }
+      this.db
+        .prepare("INSERT OR REPLACE INTO metadata VALUES('route_actions',?)")
+        .run("5");
+    }
     const privacy = this.db
       .prepare("SELECT value FROM metadata WHERE key='privacy_version'")
       .get();

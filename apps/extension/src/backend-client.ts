@@ -120,3 +120,34 @@ export async function deleteBackendMemory(origin?: string) {
   // Surface mirror deletion failures, rather than claiming remote data was erased.
   await call(settings, origin ? "forget" : "clear", origin ? { origin } : {});
 }
+
+export async function backendOcr(
+  input: import("../../../packages/vision/contracts").RecognitionInput,
+  signal?: AbortSignal,
+) {
+  const settings = await backendSettings();
+  if (!settings.enabled) return;
+  const health = await fetch(settings.url + "/v2/health", {
+    headers: { Authorization: "Bearer " + settings.token },
+    signal: AbortSignal.any([
+      signal || new AbortController().signal,
+      AbortSignal.timeout(2000),
+    ]),
+  });
+  if (!health.ok || !(await health.json()).capabilities?.includes("cpu-ocr"))
+    return;
+  const response = await fetch(settings.url + "/v2/ocr", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + settings.token,
+    },
+    body: JSON.stringify(input),
+    signal: AbortSignal.any([
+      signal || new AbortController().signal,
+      AbortSignal.timeout(10000),
+    ]),
+  });
+  if (!response.ok) throw new Error("Backend OCR unavailable");
+  return response.json();
+}

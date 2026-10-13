@@ -4,6 +4,7 @@ await build({
     "apps/api/src/cli.ts",
     "apps/api/src/server.ts",
     "apps/api/src/inference.ts",
+    "apps/api/src/ocr.ts",
   ],
   outdir: "apps/api/dist",
   bundle: true,

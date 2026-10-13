@@ -163,7 +163,7 @@ test("an unmatched destination reports an unavailable estimate instead of zero c
     );
     await expect(
       app.panel.getByRole("region", { name: "Task journey" }),
-    ).toContainText("No sufficiently clear route");
+    ).toContainText("could not identify a reliable next step");
     await expect(app.panel.getByLabel("Route estimate")).not.toContainText(
       "0–0",
     );

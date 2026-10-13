@@ -1,3 +1,4 @@
+import { visionEvidence } from "./verify-vision-release.mjs";
 import { readFile, readdir, stat, mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
@@ -34,6 +35,7 @@ for (const name of names.sort()) {
   files[name] = sha(await readFile(join(extension, name)));
 }
 const multiApp = await multiAppEvidence(files);
+const vision = await visionEvidence(files);
 const nlp = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
 const nlpBrowser = JSON.parse(
   await readFile("output/nlp/browser-build.json", "utf8"),
@@ -137,6 +139,7 @@ await writeFile(
       metrics: report.summaries,
       regressions,
       multiApp,
+      vision,
       optionalAI:
         "Experimental LLM disabled; real CPU MiniLM evaluated separately",
       nlp: {

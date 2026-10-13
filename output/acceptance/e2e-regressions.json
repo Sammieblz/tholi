@@ -3,12 +3,12 @@
   "scope": "e2e",
   "artifactFiles": {
     "LICENSE": "f1c60bbc1bfaf1f93e5d07348aab8b461573348ccad6c53e5f79792c22afdea2",
-    "THIRD_PARTY_NOTICES.md": "f73afa9e10c598cf1e1c782fe6f76333e60c925c016d813ff3637c69929230bc",
-    "content.js": "e19018552fcf58480a59846e85571701a32719f4123c1c6262058542cc743a58",
-    "content.js.map": "5c0afc03d1c2fb1cd61d3f0c25134921325546b9276bd68e65acd0d6dc4926ec",
-    "frame-agent.js": "f6389b2dfdadc1d456f7e90572c6a9d1bf40e98056c8b43b73b38783a104d0dd",
-    "frame-agent.js.map": "b58d6d5acc63eb7a3315b0e1a7cac6766746043d776953e199864487e7d8d581",
-    "inference.js": "75c73f363f492897874c412ac51e9fd2aa238f506663ed6b11a94376c4390096",
+    "THIRD_PARTY_NOTICES.md": "ea0aa638de3848a1c77e4eba4262ebb6750082bf1b6b9b0c2a5198a2aae46138",
+    "content.js": "afb928d30ae14feabdf0bacf4367e6080d8e41278032fd18b36eb84d37af2d98",
+    "content.js.map": "049299fa9abe6996d102571f59927af150ccc76877dc1f37b2e095c5a4945949",
+    "frame-agent.js": "0ed36159a48409c4b1ec06e0125c2f6ebaa89036e409ce02dd7ffdb09228320a",
+    "frame-agent.js.map": "2a165eb1420f71ee2685c302b412227c0cd839b65cd81d0d0065592b47f2b8f6",
+    "inference.js": "74bede4301a1a087c48bd942eb1be781d81b19d653eba302f2ad93b51e19f3af",
     "licenses/@fastify_ajv-compiler-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
     "licenses/@fastify_cors-LICENSE": "9e51230673e8de1854ffa078934b93db407758b02babc62bef371dfa13b282f5",
     "licenses/@fastify_deepmerge-LICENSE": "e2d09f74a77005e85e9f9bd501e3b7599ccae19d918538461196dde42f7f1b97",
@@ -39,6 +39,7 @@
     "licenses/ajv-formats-LICENSE": "9df3bb69929a3b650ed73b3bfa1756725aaff0ac296461605753547004eafeaf",
     "licenses/atomic-sleep-LICENSE": "8d58741278b289a7f4b6dde2d6273fca7711b9849452c477933d1cccd03db1e7",
     "licenses/avvio-LICENSE": "0dae13c0bb4d8c6dc73d7d49ddecdba7f56075975ffb2ee17050c63f3f3666f0",
+    "licenses/bmp-js-LICENSE": "9f165f5bd2b462122cacb8c6dc32028be1abb4d8ad0322e9a332f30b2ebdb833",
     "licenses/compromise-LICENSE": "489a3d55a72fe45d34b63344366b228b3c60ed21a1ce537264370368bb55a4c6",
     "licenses/cookie-LICENSE": "c02110eedc16c7114f1a9bdc026c65626ce1d9c7e27fd51a8e0feee8a48a6858",
     "licenses/debug-LICENSE": "3a61c6c96caf5c1d9b623fb9b04c822b783dfcb78aa7e49c76a3f643e6ed7f95",
@@ -65,6 +66,7 @@
     "licenses/gopd-LICENSE": "d90bf0a089da4cf43d644ed240a0b3825dcdb705e64e38371d56995a4cc9e4c5",
     "licenses/grad-school-LICENSE": "50c0b612ef46f4905c22048a90b6892d364e64b6367fa76f940d9fc3fbb39a47",
     "licenses/has-property-descriptors-LICENSE": "0f0ca96f50793990031ebc488a38f7292ff70bce8ab6a8e5eeda674abc32ccdf",
+    "licenses/idb-keyval-LICENCE": "20c27d6339619eeb3113cb865d4e98a3f559e52964fc75caea9cb5fa72674565",
     "licenses/ipaddr.js-LICENSE": "62568a2d1337b77171ecca9db10579163446de1ba6151678e81f06cdc199971b",
     "licenses/json-schema-ref-resolver-LICENSE": "8550e7875f553e746be4b2ab732c1574bae2c5bb01cbdbd7423665fcf1c10076",
     "licenses/json-schema-resolver-LICENSE": "dfc6eb4df78850d3a5d38be7d10c7a997f2a95d09db91cfac2e77e51e4f8062c",
@@ -74,9 +76,11 @@
     "licenses/matcher-license": "5c932d88256b4ab958f64a856fa48e8bd1f55bc1d96b8149c65689e0c61789d3",
     "licenses/model-Apache-2.0.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "licenses/ms-license.md": "1662fae9b5314d11cf51284e2dcd1f006a354f7343f08712a730fcff9a359801",
+    "licenses/node-fetch-LICENSE.md": "84eaa985e1ef71b8c630e8aba73404c219ff425c6fdb45c62e998b58d4fbdc8e",
     "licenses/object-keys-LICENSE": "5640e5cbe2e9f57f6ccfdd8dbfbeadb875495bdbcb69d2666ce3177ccd0942e4",
     "licenses/on-exit-leak-free-LICENSE": "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b",
     "licenses/openapi-types-LICENSE": "a5b243ddbec533f2fc6e809f1194d24623dfc302bb4a29f99093e087928561e8",
+    "licenses/opencollective-postinstall-LICENSE": "86641df2e1c0c0e655d7eb9962a28e850e80c97c62a29500f2f93ab142c3c8f2",
     "licenses/pino-LICENSE": "03ebd87bfc3fde763e4d698939097903a202163f3365d92d2031a4e63e0c5487",
     "licenses/pino-abstract-transport-LICENSE": "31f005ecff86a12a1351f4c2cb1133267c0b152546b08cd6fa4bdeb1943e00cd",
     "licenses/pino-std-serializers-LICENSE": "6206673d24786f09656f7a480b7c50af289e9690963aaa135af5b626de5250df",
@@ -87,6 +91,7 @@
     "licenses/react-LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "licenses/react-dom-LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "licenses/real-require-LICENSE.md": "cbf263504e800cf09f99962cce8497b76eef79c3526bca434b90c3ef4c17220d",
+    "licenses/regenerator-runtime-LICENSE": "51887a3d47051ac2fce1210562e5b9fe0830a8a8fabeb272c2d586eeb18a05fd",
     "licenses/require-from-string-license": "6ee0feb1f6ef996ff5a68600f8cf98909cf412d39ef3cdceaefd87d636fa1b7f",
     "licenses/ret-LICENSE": "bfc2c678db20d806b3787956f607a1509da5fca45b4d40a97c671cbee737159d",
     "licenses/reusify-LICENSE": "93a1506953b08ad4874e1cc0971a1d2ac387ca510da91e4d05e460a6c4966fa3",
@@ -102,41 +107,54 @@
     "licenses/sonic-boom-LICENSE": "db5c3795cb080810fed0380bf4d6adef3f81579e8ae3a867d3c2abab2329db9d",
     "licenses/split2-LICENSE": "c372ef2fa1dfcb124ed807609751e75e3a009f108c5724916b489288fcb88a0c",
     "licenses/suffix-thumb-LICENSE": "f9ade95c0fe7fbb0a5ea45f18ae80bb48c5bfb3c23907dc5706fcd1529a7d77d",
+    "licenses/tesseract.js-LICENSE.md": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+    "licenses/tesseract.js-core-LICENSE": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
     "licenses/thread-stream-LICENSE": "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b",
     "licenses/toad-cache-LICENSE": "644304c533dee96438937c0bdcbb49897d80fd8df3be4573f3c57b9c2ca22587",
     "licenses/type-fest-license": "64a93ffc0a06a2266dbb57ed7ebe3b56ba66ab337b6347fabdbf86c76819fbae",
     "licenses/undici-types-LICENSE": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27",
+    "licenses/wasm-feature-detect-LICENSE": "bcf29b4fd3ec2cb5f9d40a0866da446f6da62170d2ccedf4aeca9cf9406dd20c",
+    "licenses/webidl-conversions-LICENSE.md": "a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c",
+    "licenses/whatwg-url-LICENSE.txt": "6b7a1792144374d84dc5ed3655b8bbe2754d06f4f1f64a9fb8b9de2d6f448b85",
     "licenses/yaml-LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
+    "licenses/zlibjs-LICENSE": "131afe3f7bdce1698beb292fb8de1a968de01bce876122a60ef5db230471c866",
     "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
     "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
-    "manifest.json": "642566373077647edd6d44e2a3cd3eaa74778b45f0defe8a4c2b7006c7f6e403",
+    "manifest.json": "fff2be2a42e0f73fc4d6f07ae27755a842909ede5bfdc97729bcf308fb9b9120",
     "model-lock.json": "404c3b4edb0e28ee3fa4a4ec8acd1bf6037a0ff622cb1a590570dd7db43ac46b",
     "models/Xenova/all-MiniLM-L6-v2/config.json": "7135149f7cffa1a573466c6e4d8423ed73b62fd2332c575bf738a0d033f70df7",
     "models/Xenova/all-MiniLM-L6-v2/onnx/model_quantized.onnx": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
     "models/Xenova/all-MiniLM-L6-v2/special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
+    "ocr-lock.json": "ac01ead32b50df222b8cca5ccc7b41d34b432997d05e21ebe488544179caabca",
+    "ocr-worker.js": "e731cafb26ddfd2c6e4b84683c6cf414d87ca9188b7998482d101b833c987ed1",
+    "ocr/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "ocr/eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+    "ocr/tesseract-core-lstm.wasm.js": "775a35df6f2ae100e02609443e6bd5cafcd07983dd6175454ca4a432a7730687",
+    "ocr/tesseract-core-simd-lstm.wasm.js": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
+    "ocr/worker.min.js": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
     "offscreen.html": "97feb66925aefa94a95bd7aaaae386f95c7a53df6bb61846401fff73ea0f4542",
-    "offscreen.js": "efa01ef2f051a6b4950a61c8600a66876fc7220b11ddc214cafc867d24760908",
-    "offscreen.js.map": "e07bb29932db361d24ef8c5ab23b739b1c99526495e8dd8e6ba12dcf4360345d",
+    "offscreen.js": "c4c7e909f74d4932533347048ac75ab8bc9a22d790c53ac69387461eeb57e77b",
+    "offscreen.js.map": "a83191e00caa0d4bc2f8d25b51be8899172f567f3cca57956d34db11f979f870",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
     "sidepanel.css": "64968bea621dfe33cd9001b5a10cd2726af64fa7f70008de272c5aa909d65ed3",
     "sidepanel.css.map": "401f2f32d29b042acf27ba7d6b280e8685d399ab39f494ed6f04fc4517c7def0",
     "sidepanel.html": "baef7f4f8af4c3e465bfa46a9db8923235dbe9bfde4f0255983ac31b6d982240",
-    "sidepanel.js": "3c2fa1424394acb3ce3e089d10b916d9c839222ae49cf7a02ddb3998f1cef5af",
-    "sidepanel.js.map": "9547dcc8441d1b0e946d61c958139e7d8ebd842792aab4816e6cba3dcc84116b",
-    "third-party.json": "94a89e82ba0ef814a5263313be97df9177491dddd89fda9ad54b369615eb9f12",
-    "worker.js": "e09770c9f64865587c86b9bbb42566f006bad7e53709a8e9a526a2fde66c1ee4",
-    "worker.js.map": "906c61f0f76b8fe345e6b32e17c44c80209c1a3eb02bcc0933ea4fb3ccf70fa3"
+    "sidepanel.js": "0baa09c83bb22372b38b05a84bbeaa365d5d63295dc95adea6e00c509c0a57af",
+    "sidepanel.js.map": "6ce7677e4009d2ab63fa03b5124fcdfacc833998a5fbb77ca89678207a643792",
+    "third-party.json": "9e8cce51d4865328d7ae9cb5f0f5459ae359a79090adeb867e28869c3140fa69",
+    "worker.js": "2aff88fc6c6ff4773a1b5b48597a5a180057552b4efea0bb09d729c57d39337c",
+    "worker.js.map": "d7abfb075cba9028eb1250b2d490940eb224516b7e071f3c5d7b7f32e9be775b"
   },
-  "extensionVersion": "0.8.0",
-  "evaluatedAt": "2026-10-13T04:49:38.570Z",
+  "extensionVersion": "0.9.0",
+  "evaluatedAt": "2026-10-13T09:09:41.406Z",
   "expected": 86,
   "configuredCount": 86,
-  "sourceRevision": "fe161ad894648f0841cc58ad430f75a3708f9626",
+  "sourceRevision": "0c6a79073c9e17e01dd007669b44413df56ac182",
   "workingTreeDirty": true,
-  "passed": true,
+  "passed": false,
   "cases": [
     {
       "id": " / desktop / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
@@ -152,7 +170,7 @@
     },
     {
       "id": " / desktop / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
-      "status": "passed"
+      "status": "failed"
     },
     {
       "id": " / desktop / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
@@ -284,7 +302,7 @@
     },
     {
       "id": " / desktop / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
-      "status": "passed"
+      "status": "failed"
     },
     {
       "id": " / desktop / task-journey.spec.ts / a wrong native selection cannot complete the destination",
@@ -324,7 +342,7 @@
     },
     {
       "id": " / narrow / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
-      "status": "passed"
+      "status": "failed"
     },
     {
       "id": " / narrow / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
@@ -456,7 +474,7 @@
     },
     {
       "id": " / narrow / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
-      "status": "passed"
+      "status": "failed"
     },
     {
       "id": " / narrow / task-journey.spec.ts / a wrong native selection cannot complete the destination",

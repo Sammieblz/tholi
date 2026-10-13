@@ -1,3 +1,4 @@
+import { visionEvidence } from "./verify-vision-release.mjs";
 import { readFile, mkdir, cp, writeFile, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
@@ -18,6 +19,7 @@ for (const file of (await readdir("apps/api/dist")).sort())
 if (JSON.stringify(apiFiles) !== JSON.stringify(report.apiArtifactFiles))
   throw new Error("API bytes differ from the passing evaluation.");
 const multiApp = await multiAppEvidence(report.artifactFiles, apiFiles);
+const vision = await visionEvidence(report.artifactFiles, apiFiles);
 const version = JSON.parse(
   await readFile("apps/api/package.json", "utf8"),
 ).version;
@@ -30,6 +32,8 @@ if (await stat(join(release, name + ".tgz")).catch(() => undefined))
   throw new Error("Preserve the existing release; bump the version.");
 await mkdir(staging, { recursive: true });
 await cp("apps/api/dist", join(staging, "dist"), { recursive: true });
+await cp("assets/ocr", join(staging, "assets/ocr"), { recursive: true });
+await cp("assets/ocr-lock.json", join(staging, "assets/ocr-lock.json"));
 await cp("assets/models", join(staging, "assets/models"), { recursive: true });
 await cp("assets/model-lock.json", join(staging, "assets/model-lock.json"));
 await cp("docs/api-setup.md", join(staging, "README.md"));
@@ -37,6 +41,8 @@ await thirdParty(staging);
 const dependencies = {};
 const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
 for (const dependency of [
+  "tesseract.js",
+  "tesseract.js-core",
   "compromise",
   "@huggingface/transformers",
   "zod",
@@ -97,6 +103,7 @@ await writeFile(
       evaluatedAt: report.evaluatedAt,
       apiTestsPassed: report.passed,
       multiApp,
+      vision,
       setup: "docs/api-setup.md",
     },
     null,

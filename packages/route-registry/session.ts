@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ledgerEntrySchema } from "../navigation-core/continuity";
 import { sessionViewSchema } from "../route-schema";
 import { routeRegistry } from "./index";
 import {
@@ -17,6 +18,7 @@ export const sessionSchema = z
     navigationPending: z.boolean().optional(),
     origin: z.string().optional(),
     forgottenTaskIds: z.array(z.string().max(100)).max(100).optional(),
+    ledger: z.array(ledgerEntrySchema).max(200).optional(),
     pendingNavigation: pendingNavigationSchema.optional(),
     handoffReturn: z
       .object({

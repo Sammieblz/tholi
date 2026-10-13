@@ -57,3 +57,13 @@ Run `npm run test:acceptance` for the predeclared accuracy matrix and denominato
 Run `npm run test:multi-app` and `npm run test:multi-app:browser` for the frozen 360-case platform corpus, v2 API/privacy/migration, workflow, frame and dynamic-page performance gates. See [v0.8.0 validation and installation](docs/v0.8.0-validation.md) for measured results and pending native/signed-in checks.
 
 See [v0.7.0 validation and installation](docs/v0.7.0-validation.md), [architecture](docs/live-navigation.md), [diagnostics](docs/live-diagnostics.md), [lifecycle](docs/session-lifecycle.md), [guidance/accessibility](docs/passive-guidance.md), [accuracy benchmark](docs/accuracy-benchmark.md), [Chrome handoff](docs/chrome-handoff.md), [privacy](docs/privacy.md), [security](docs/security.md), and [earlier build evidence](docs/build-evidence.md). Current Wikipedia POC tracker: https://github.com/Sammieblz/web-navigator/issues/1.
+
+### v0.9 continuous journeys and visual assistance
+
+Journeys retain the requested outcome through documents and menus, checkpoint every 25 verified interactions, and keep unfinished tasks under **Resume previous task**. A return route can ask you to close an observed menu, use browser Back, or switch to an associated tab. Navigator checks the new surface before continuing.
+
+English OCR runs offline when refreshed discovery cannot identify an eligible next step or confidence is below 0.60. A dashed visual highlight is an unverified suggestion: review it and make the interaction yourself. Chrome may require clicking the extension icon again to grant screenshot access after navigation. The backend is optional; sending temporary masked images there requires the OCR backend setting.
+
+Setup: `npm ci`, `npm run fetch:model`, `npm run fetch:ocr`, `npm run build:extension`. Reload the unpacked extension from `dist/extension` in `chrome://extensions`, refresh the website, then start navigation. Optional API: `npm run build:api`, `npm run start:api` (see `docs/api-setup.md`).
+
+Verification: `npm run test:vision` and `npm run test:continuity:browser`, alongside the existing NLP, multi-app, Wikipedia and regression gates. See [v0.9 validation](docs/v0.9.0-validation.md). Signed-in Cloudflare/GitHub workflows and native toolbar screenshot permission checks require user-assisted verification; fixture passes do not establish those checks.

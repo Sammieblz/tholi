@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { navigationActionSchema } from "../navigation-core/navigation-actions";
 import {
   coverageSchema,
   workflowContextSchema,
@@ -158,6 +159,9 @@ export const goalPlanSchema = z
       ])
       .optional(),
     interpretation: intentSchema.optional(),
+    action: navigationActionSchema.optional(),
+    exploration: z.boolean().optional(),
+    budgetPending: z.boolean().optional(),
     route: z
       .object({
         strategy: z.enum(["fastest", "fewest-clicks"]),
@@ -237,6 +241,22 @@ export const journeySchema = z
     updatedAt: z.number().nonnegative(),
     status: z.enum(["active", "completed"]),
     progress: z.array(progressSchema).max(30),
+    totalVerified: z.number().int().nonnegative().optional(),
+    checkpoint: z
+      .object({
+        at: z.number(),
+        count: z.number().int().nonnegative(),
+        objective: objectiveSchema,
+        goal: z.string().max(1000),
+        milestones: z.array(z.string().max(100)).max(64),
+        entities: workflowContextSchema.shape.entities,
+        exclusions: z.array(z.string().max(1000)).max(256),
+        breadcrumbs: z
+          .array(z.object({ origin: z.string(), state: z.string() }))
+          .max(30),
+      })
+      .strict()
+      .optional(),
     reroutes: z.number().int().nonnegative(),
     savedRouteId: z.string().max(100).optional(),
     requestTaskId: z.string().uuid().optional(),
@@ -312,6 +332,8 @@ export interface MemoryPage {
   language?: string;
 }
 export interface MemoryTransition {
+  action?: { kind: "control"; signature: string };
+  requiresFreshBinding?: boolean;
   from: string;
   to: string;
   signature: string;

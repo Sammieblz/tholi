@@ -4,7 +4,7 @@ import type {
   IndexEntry,
 } from "../nlp/retrieval";
 import { MODEL_REVISION } from "../nlp/constants";
-import { upgradePrivateMemory } from "./migration";
+import { upgradePrivateMemory, upgradeRouteActions } from "./migration";
 import { boundedTransaction } from "./transaction";
 import { BackgroundMemory } from "./background";
 export class IndexedDBDerivedStore implements DerivedStore {
@@ -13,8 +13,8 @@ export class IndexedDBDerivedStore implements DerivedStore {
   private unavailableUntil = 0;
   private open() {
     return (this.database ||= new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("navigator-site-memory", 4);
-      request.onupgradeneeded = () => {
+      const request = indexedDB.open("navigator-site-memory", 5);
+      request.onupgradeneeded = (event) => {
         for (const [name, key] of [
           ["sites", "origin"],
           ["tasks", "id"],
@@ -23,7 +23,8 @@ export class IndexedDBDerivedStore implements DerivedStore {
         ])
           if (!request.result.objectStoreNames.contains(name))
             request.result.createObjectStore(name, { keyPath: key });
-        upgradePrivateMemory(request.transaction!);
+        if (event.oldVersion < 4) upgradePrivateMemory(request.transaction!);
+        else upgradeRouteActions(request.transaction!);
       };
       request.onsuccess = () => {
         const db = request.result;

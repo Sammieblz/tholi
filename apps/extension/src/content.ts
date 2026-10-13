@@ -1,3 +1,14 @@
+import {
+  captureMetadata,
+  restoreOverlay,
+  viewportRevision,
+  showVisual,
+  onVisualInvalidation,
+  clearVisual,
+} from "./visual-guidance";
+import { navigationActionSchema } from "../../../packages/navigation-core/navigation-actions";
+import { journeySchema } from "../../../packages/page-model";
+import { requestSchema } from "../../../packages/navigation-core/contracts";
 import { BrowserAdapter } from "../../../packages/browser-adapter";
 import { GuidanceOverlay } from "../../../packages/overlay-ui";
 import { RouteEngine } from "../../../packages/route-engine";
@@ -12,7 +23,7 @@ import {
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded080";
+const marker = "__internetNavigatorLoaded090";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
@@ -21,6 +32,16 @@ if (!host[marker]) {
   let engine: RouteEngine | undefined;
   let coach: PageCoach | undefined;
   let sessionId: string | undefined;
+  let visualNotification: ReturnType<typeof setTimeout> | undefined;
+  onVisualInvalidation(() => {
+    if (!sessionId || visualNotification) return;
+    visualNotification = setTimeout(() => {
+      visualNotification = undefined;
+      void chrome.runtime
+        .sendMessage({ type: "VISION_INVALIDATED", sessionId })
+        .catch(() => {});
+    }, 50);
+  });
   let frameNonce = "";
   let frameVisibilityCleanup: (() => void) | undefined;
   let cleanup: (() => void) | undefined;
@@ -121,6 +142,59 @@ if (!host[marker]) {
   };
   chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     if (sender.id !== chrome.runtime.id) return;
+    if (
+      raw.type === "RESTORE_JOURNEY" &&
+      raw.sessionId === sessionId &&
+      coach
+    ) {
+      const journey = journeySchema.safeParse(raw.journey),
+        request = requestSchema.safeParse(raw.request);
+      if (!journey.success || !request.success) {
+        respond({ error: "Invalid saved journey." });
+        return;
+      }
+      respond(coach.restoreJourney(journey.data, request.data));
+      return;
+    }
+    if (
+      raw.sessionId === sessionId &&
+      raw.type === "CONTROL_SESSION" &&
+      ["STOP", "PAUSE"].includes(raw.action)
+    )
+      clearVisual();
+    if (raw.sessionId === sessionId && coach) {
+      if (raw.type === "RECHECK_JOURNEY") {
+        respond(coach.recheckJourney());
+        return;
+      }
+      if (raw.type === "PREPARE_CAPTURE") {
+        const metadata = captureMetadata(
+          Array.isArray(raw.allowedFrameUrls) ? raw.allowedFrameUrls : [],
+        );
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => respond(metadata)),
+        );
+        return true;
+      }
+      if (raw.type === "RESTORE_CAPTURE") {
+        restoreOverlay();
+        respond({ viewportRevision: viewportRevision() });
+        return;
+      }
+      if (raw.type === "CHECK_VIEWPORT") {
+        respond({ viewportRevision: viewportRevision() });
+        return;
+      }
+      if (raw.type === "SHOW_VISUAL") {
+        const action = navigationActionSchema.safeParse(raw.action);
+        respond({
+          shown:
+            action.success &&
+            showVisual(action.data, raw.viewportRevision, raw.capturedAt),
+        });
+        return;
+      }
+    }
     const parsed = contentMessageSchema.safeParse(raw);
     if (!parsed.success) return;
     const message = parsed.data;

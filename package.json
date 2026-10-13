@@ -1,7 +1,7 @@
 {
   "name": "internet-navigator",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "scripts": {
     "dev:demo": "vite --config apps/demo-saas/vite.config.ts",
@@ -16,6 +16,9 @@
     "test:live:wikipedia": "playwright test --config playwright.live.config.ts",
     "test:acceptance": "playwright test --config playwright.acceptance.config.ts",
     "package:extension": "node scripts/package-extension.mjs",
+    "fetch:ocr": "node scripts/fetch-ocr.mjs",
+    "test:vision": "vitest run --config vitest.vision.config.ts",
+    "test:continuity:browser": "playwright test --config playwright.continuity.config.ts",
     "fetch:model": "node scripts/fetch-model.mjs",
     "build:api": "node scripts/build-api.mjs",
     "start:api": "node apps/api/dist/cli.js",
@@ -49,6 +52,7 @@
   "workspaces": [
     "packages/navigation-core",
     "packages/nlp",
+    "packages/vision",
     "apps/api"
   ],
   "engines": {

@@ -41,7 +41,7 @@ test("v2 real-model API parity, capabilities, authentication, privacy, persisten
     ).toBe(403);
     const health = (await api.inject({ url: "/v2/health", headers })).json();
     expect(health.protocols).toEqual([1, 2]);
-    expect(health.guides).toHaveLength(9);
+    expect(health.guides).toHaveLength(10);
     const observation = appFixture("cloudflare", "https://dash.cloudflare.com");
     observation.controls.push({
       ...observation.controls[0],

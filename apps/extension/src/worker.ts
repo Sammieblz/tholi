@@ -1,3 +1,17 @@
+import { browserOcr } from "./nlp-client";
+import { backendOcr } from "./backend-client";
+import { needsVision } from "../../../packages/vision/fusion";
+import {
+  visualObservationSchema,
+  type VisualObservation,
+} from "../../../packages/vision/contracts";
+import {
+  appendLedger,
+  suspendJourney,
+  sameDestination,
+  suspendedJourneySchema,
+  type SuspendedJourney,
+} from "../../../packages/navigation-core/continuity";
 import { messageSchema } from "../../../packages/route-schema";
 import { routeRegistry, previewRoute } from "../../../packages/route-registry";
 import {
@@ -62,6 +76,7 @@ import {
   cancelBackendPlanning,
 } from "./backend-client";
 let session: PinnedSession | undefined;
+let suspended: SuspendedJourney[] = [];
 const memory = new IndexedDBSiteMemory();
 const memoryJobs = new BackgroundMemory();
 const knownSites = new Map<string, SiteMemory | undefined>();
@@ -88,16 +103,265 @@ function refreshMemory(origin: string) {
   });
 }
 let lastObservation = "";
+let ledgerNavigationEvent = false;
 let goalGeneration = 0;
+let visionJob: AbortController | undefined;
+let lastCapture = 0;
+let lastVisionKey = "";
+
+function cancelVision() {
+  visionJob?.abort();
+  visionJob = undefined;
+  lastVisionKey = "";
+  void chrome.runtime
+    .sendMessage({ target: "offscreen", type: "CANCEL_OCR" })
+    .catch(() => {});
+}
+async function attemptVision(sessionId: string, requestId: string) {
+  if (
+    visionJob ||
+    !session ||
+    session.sessionId !== sessionId ||
+    session.view?.request?.id !== requestId ||
+    !session.view.journey ||
+    !session.view.page ||
+    session.view.status !== "running" ||
+    session.view.journey.workflow?.status === "review" ||
+    !needsVision(session.view.goalPlan, !!session.view.clarification)
+  )
+    return;
+  const captured = structuredClone(session),
+    view = captured.view!,
+    task = view.request!.tasks[view.request!.active];
+  const controller = new AbortController();
+  visionJob = controller;
+  const generation = goalGeneration;
+  try {
+    const tab = await activeTab();
+    if (
+      tab?.id !== captured.tabId ||
+      !supportsLiveUrl(tab.url || "") ||
+      originOf(tab.url) !== captured.origin
+    )
+      return;
+    const frames = await chrome.webNavigation.getAllFrames({
+      tabId: captured.tabId,
+    });
+    const allowedFrameUrls: string[] = [];
+    for (const frame of frames || [])
+      if (frame.frameId !== 0 && supportsLiveUrl(frame.url)) {
+        const origin = new URL(frame.url);
+        if (
+          await chrome.permissions.contains({
+            origins: [origin.protocol + "//" + origin.hostname + "/*"],
+          })
+        )
+          allowedFrameUrls.push(frame.url);
+      }
+    const metadata = await chrome.tabs.sendMessage(captured.tabId, {
+      type: "PREPARE_CAPTURE",
+      sessionId,
+      allowedFrameUrls,
+    });
+    if (!metadata?.width || !metadata?.height) return;
+    const key = [
+      requestId,
+      captured.documentId,
+      view.page!.revision,
+      metadata.viewportRevision,
+    ].join(":");
+    if (lastVisionKey === key) return;
+    if (Date.now() - lastCapture < 2000) {
+      setTimeout(
+        () => void attemptVision(sessionId, requestId),
+        2000 - (Date.now() - lastCapture),
+      );
+      return;
+    }
+    lastCapture = Date.now();
+    lastVisionKey = key;
+    const image = await chrome.tabs.captureVisibleTab(tab.windowId, {
+      format: "png",
+    });
+    controller.signal.throwIfAborted();
+    const afterTab = await activeTab();
+    if (afterTab?.id !== tab.id || afterTab.url !== tab.url) return;
+    const stamp = {
+      requestId,
+      journeyId: view.journey!.id,
+      contextRevision: view.journey!.workflow?.revision || 0,
+      documentId: captured.documentId!,
+      observationRevision: view.page!.revision,
+      viewportRevision: metadata.viewportRevision,
+      captureId: crypto.randomUUID(),
+    };
+    const settings = (await chrome.storage.local.get("vision")).vision;
+    let value;
+    if (settings?.backend) {
+      const input = await browserOcr({
+        image,
+        metadata,
+        stamp,
+        prepareOnly: true,
+      });
+      controller.signal.throwIfAborted();
+      try {
+        value = await backendOcr(input, controller.signal);
+      } catch {
+        value = undefined;
+      }
+    }
+    value ??= await browserOcr({ image, metadata, stamp });
+    controller.signal.throwIfAborted();
+    const observation = visualObservationSchema.parse(value);
+    if (
+      Object.entries(stamp).some(
+        ([k, v]) => observation[k as keyof VisualObservation] !== v,
+      )
+    )
+      return;
+    const viewport = await chrome.tabs.sendMessage(captured.tabId, {
+      type: "CHECK_VIEWPORT",
+      sessionId,
+    });
+    const fresh = await chrome.tabs.sendMessage(captured.tabId, {
+      type: "GET_PAGE",
+      sessionId,
+    });
+    if (
+      generation !== goalGeneration ||
+      session?.documentId !== stamp.documentId ||
+      session.view?.request?.id !== requestId ||
+      fresh.page?.revision !== stamp.observationRevision ||
+      viewport.viewportRevision !== stamp.viewportRevision ||
+      fresh.view?.journey?.id !== stamp.journeyId ||
+      (fresh.view.journey.workflow?.revision || 0) !== stamp.contextRevision ||
+      fresh.view.status !== "running" ||
+      !needsVision(fresh.view.goalPlan, !!fresh.view.clarification)
+    )
+      return;
+
+    const visualInput = planInputSchema.parse({
+      requestId,
+      documentId: stamp.documentId,
+      revision: stamp.observationRevision,
+      text: view.request!.original,
+      observation: fresh.page,
+      request: fresh.view.request,
+      journey: fresh.view.journey,
+      workflow: fresh.view.journey.workflow,
+      contextRevision: stamp.contextRevision,
+      protocolVersion: 2,
+      strategy: fresh.view.journey.strategy,
+      tabId: captured.tabId,
+      visualObservation: observation,
+    });
+    const interpreted = resultSchema.parse(
+      await localNlp(visualInput, knownSites.get(captured.origin!)),
+    );
+    controller.signal.throwIfAborted();
+    const currentViewport = await chrome.tabs.sendMessage(captured.tabId, {
+      type: "CHECK_VIEWPORT",
+      sessionId,
+    });
+    if (
+      currentViewport.viewportRevision !== stamp.viewportRevision ||
+      session?.view?.request?.id !== requestId ||
+      session.view.page?.revision !== stamp.observationRevision
+    )
+      return;
+    const plan = interpreted.plan;
+    if (!plan) {
+      session.view!.instruction =
+        "Visual assistance did not identify an unambiguous target. Your destination remains active.";
+      await save();
+      return;
+    }
+    if (plan.action?.kind === "visual") {
+      const delay = Math.max(0, 2000 - (Date.now() - lastCapture));
+      if (delay)
+        await new Promise<void>((resolve) => setTimeout(resolve, delay));
+      controller.signal.throwIfAborted();
+      const active = await activeTab();
+      if (active?.id !== captured.tabId || active.url !== tab.url) return;
+      lastCapture = Date.now();
+      const currentImage = await chrome.tabs.captureVisibleTab(
+        active.windowId,
+        { format: "png" },
+      );
+      const checked = await browserOcr({
+        image: currentImage,
+        referenceImage: image,
+        metadata,
+        stamp,
+        compareRegion: plan.action.box,
+      });
+      controller.signal.throwIfAborted();
+      if (!checked.matches) {
+        lastVisionKey = "";
+        return;
+      }
+      const shown = await chrome.tabs.sendMessage(captured.tabId, {
+        type: "SHOW_VISUAL",
+        sessionId,
+        action: plan.action,
+        viewportRevision: metadata.viewportRevision,
+        capturedAt: metadata.at,
+      });
+      if (!shown.shown) return;
+    }
+    const result = interpreted;
+    const reply = await chrome.tabs.sendMessage(captured.tabId, {
+      type: "INSTALL_REQUEST",
+      sessionId,
+      result,
+    });
+    if (
+      reply.view &&
+      session?.sessionId === sessionId &&
+      generation === goalGeneration
+    ) {
+      await acceptView(reply.view);
+      await save();
+    }
+  } catch (error) {
+    if (
+      !controller.signal.aborted &&
+      session?.sessionId === sessionId &&
+      generation === goalGeneration
+    ) {
+      session.view!.instruction =
+        /activeTab|permission|capture|Cannot access/i.test(
+          error instanceof Error ? error.message : "",
+        )
+          ? "Chrome needs renewed capture access. Click the extension icon on this website; your destination is retained."
+          : "Visual recognition is unavailable right now. Your destination is retained; use live controls or retry visual assistance.";
+      await save();
+    }
+  } finally {
+    await chrome.tabs
+      .sendMessage(captured.tabId, { type: "RESTORE_CAPTURE", sessionId })
+      .catch(() => {});
+    if (visionJob === controller) visionJob = undefined;
+  }
+}
+
 const navigationStarts = new Map<
   number,
   { sessionId: string; journeyId: string; key: string; at: number }
 >();
-const ready = chrome.storage.session.get("navigatorSession").then((data) => {
-  session = restoreSession(data.navigatorSession);
-  if (session?.view?.journey)
-    session.view.journey = resumeJourney(session.view.journey);
-});
+const ready = chrome.storage.session
+  .get(["navigatorSession", "navigatorJourneys"])
+  .then((data) => {
+    session = restoreSession(data.navigatorSession);
+    suspended = (data.navigatorJourneys || [])
+      .map((v: unknown) => suspendedJourneySchema.safeParse(v))
+      .filter((v: any) => v.success)
+      .map((v: any) => v.data)
+      .slice(0, 5);
+    if (session?.view?.journey)
+      session.view.journey = resumeJourney(session.view.journey);
+  });
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== "update") return;
   void ready.then(async () => {
@@ -115,6 +379,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 });
 const save = async () => {
+  await chrome.storage.session.set({ navigatorJourneys: suspended });
   if (session) await chrome.storage.session.set({ navigatorSession: session });
   else await chrome.storage.session.remove("navigatorSession");
 };
@@ -234,6 +499,15 @@ async function acceptView(raw: unknown) {
   view.memory = session.view?.memory;
   view.memoryError = session.view?.memoryError;
   session.view = view;
+  if (view.page && session.documentId)
+    session.ledger = appendLedger(
+      session.ledger || [],
+      view.page,
+      session.tabId,
+      session.documentId,
+      ledgerNavigationEvent,
+    );
+  ledgerNavigationEvent = false;
 }
 async function attachSession() {
   if (!session) throw new Error("No pinned session.");
@@ -437,9 +711,24 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
   if (
     sender.id === chrome.runtime.id &&
     sender.url === chrome.runtime.getURL("sidepanel.html") &&
-    ["SET_GOAL", "CLARIFY", "STOP"].includes(raw?.type)
-  )
+    ["SET_GOAL", "CLARIFY", "STOP", "PAUSE", "RESUME_JOURNEY"].includes(
+      raw?.type,
+    )
+  ) {
     goalGeneration++;
+    cancelVision();
+  }
+  if (raw?.type === "VISION_INVALIDATED") {
+    if (
+      sender.id === chrome.runtime.id &&
+      sender.tab?.id === session?.tabId &&
+      sender.documentId === session?.documentId &&
+      raw.sessionId === session?.sessionId
+    )
+      cancelVision();
+    respond({ ok: true });
+    return;
+  }
   if (raw?.type === "GET_MEMORY") {
     if (
       sender.id !== chrome.runtime.id ||
@@ -578,6 +867,122 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     const parsed = messageSchema.safeParse(raw);
     if (!parsed.success) return { error: "Invalid command." };
     const command = parsed.data;
+    if (command.type === "CHECK_VISUAL_ACTION") {
+      if (!session || session.view?.goalPlan?.action?.kind !== "visual")
+        return { error: "No visual suggestion is pending." };
+      const response = await chrome.tabs.sendMessage(session.tabId, {
+        type: "RECHECK_JOURNEY",
+        sessionId: session.sessionId,
+      });
+      if (response.view) await acceptView(response.view);
+      await save();
+      return session;
+    }
+    if (command.type === "GET_VISION")
+      return {
+        backend: !!(await chrome.storage.local.get("vision")).vision?.backend,
+      };
+    if (command.type === "SET_VISION") {
+      await chrome.storage.local.setAccessLevel({
+        accessLevel: "TRUSTED_CONTEXTS",
+      });
+      await chrome.storage.local.set({ vision: { backend: command.backend } });
+      return { ok: true };
+    }
+    if (command.type === "REQUEST_VISION") {
+      lastVisionKey = "";
+      if (session?.view?.request)
+        void attemptVision(session.sessionId, session.view.request.id);
+      return { ok: true };
+    }
+    if (command.type === "GET_JOURNEYS")
+      return {
+        journeys: suspended.map((e) => ({
+          id: e.id,
+          goal: e.journey.goal,
+          pausedAt: e.pausedAt,
+        })),
+      };
+    if (command.type === "DELETE_JOURNEY") {
+      suspended = suspended.filter((e) => e.id !== command.id);
+      await save();
+      return { ok: true };
+    }
+    if (command.type === "RESUME_JOURNEY") {
+      const entry = suspended.find((e) => e.id === command.id);
+      if (!entry || !session || !live())
+        return { error: "Start navigation on the website before resuming." };
+      const tab = await activeTab();
+      if (tab?.id !== session.tabId || originOf(tab.url) !== entry.origin)
+        return {
+          error:
+            "Open the journey's website and start navigation there, then resume this task.",
+        };
+      const parked =
+        session.view?.journey &&
+        session.view.request &&
+        suspendJourney(
+          session.view.journey,
+          session.view.request,
+          session.origin!,
+          session.tabId,
+        );
+      suspended = suspended.filter((e) => e.id !== entry.id);
+      if (parked && !suspended.some((e) => e.id === parked.id))
+        suspended.push(parked);
+      if (!session.view) return { error: "Fresh website handshake required." };
+      session.view.journey = entry.journey;
+      session.view.request = {
+        ...entry.request,
+        status: entry.request.resumeStatus || "active",
+        resumeStatus: undefined,
+      };
+      session.view.goalPlan = undefined;
+      const response = await chrome.tabs.sendMessage(session.tabId, {
+        type: "RESTORE_JOURNEY",
+        sessionId: session.sessionId,
+        journey: entry.journey,
+        request: session.view.request,
+      });
+      if (response?.view) await acceptView(response.view);
+      await save();
+      return session;
+    }
+    if (command.type === "CHECK_ROUTE_ACTION") {
+      const action = session?.view?.goalPlan?.action;
+      if (
+        !session ||
+        !action ||
+        !["history-back", "tab-switch"].includes(action.kind)
+      )
+        return { error: "No return action is pending." };
+      if (action.kind !== "history-back" && action.kind !== "tab-switch")
+        return;
+      const tab = await activeTab();
+      const entry = session.ledger?.find((e) => e.id === action.entryId);
+      if (
+        !entry ||
+        tab?.id !== action.tabId ||
+        originOf(tab.url) !== entry.origin
+      )
+        return {
+          error:
+            "Return to the indicated website tab first. The destination is still retained.",
+        };
+      if (session.tabId !== tab.id) {
+        session.tabId = tab.id;
+        session.documentId = undefined;
+      }
+      await attachSession();
+      const current = session.view?.page;
+      if (!current || current.stateKey !== action.expectedState)
+        return {
+          error:
+            "That page changed. Your task remains incomplete; fresh navigation will be recalculated.",
+          view: session.view,
+        };
+      return session;
+    }
     if (command.type === "GET_BACKEND") return backendSettings();
     if (command.type === "SET_BACKEND") return setBackendSettings(command);
     if (command.type === "GET_SESSION") return session || {};
@@ -932,6 +1337,7 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
       origin: session.origin!,
       journey: session.view.journey,
       tabId: session.tabId,
+      activeRequest: session.view.request,
       target: session.view.request?.tasks[session.view.request.active]?.target,
     };
   });
@@ -951,9 +1357,24 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
     protocolVersion: 2,
     tabId: captured.tabId,
     frameId: 0,
+    navigationLedger: session?.ledger,
     workflow: captured.journey?.workflow,
     contextRevision: captured.journey?.workflow?.revision || 0,
   });
+  if (
+    raw.type === "SET_GOAL" &&
+    captured.activeRequest &&
+    !["completed", "canceled"].includes(captured.activeRequest.status)
+  ) {
+    const parsed = interpretRequest(input.text, input.context, {
+      clauses: true,
+    });
+    if (sameDestination(parsed, captured.activeRequest)) {
+      input.request = captured.activeRequest;
+      input.requestId = captured.activeRequest.id;
+      input.text = captured.activeRequest.original;
+    }
+  }
   const site = knownSites.get(captured.origin);
   input.journey = captured.journey;
   if (raw.savedRouteId) {
@@ -999,7 +1420,9 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
         fromContent &&
         input.journey &&
         fresh.view?.journey?.requestTaskId === input.journey.requestTaskId &&
-        fresh.view.journey.progress.length !== input.journey.progress.length
+        (fresh.view.journey.totalVerified ??
+          fresh.view.journey.progress.length) !==
+          (input.journey.totalVerified ?? input.journey.progress.length)
       ) {
         input = {
           ...input,
@@ -1042,7 +1465,39 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
         result.contextRevision !== input.contextRevision
       )
         throw new Error("Stale planning result.");
-      if (fromContent) return result;
+      if (fromContent) {
+        if (needsVision(result.plan, !!result.clarification))
+          setTimeout(
+            () => void attemptVision(captured.sessionId, result.requestId),
+            100,
+          );
+        return result;
+      }
+      if (
+        raw.type === "SET_GOAL" &&
+        session.view?.journey &&
+        session.view.request &&
+        result.request?.id !== session.view.request.id
+      ) {
+        const correction =
+          !!result.workflow &&
+          result.workflow.id === session.view.journey.workflow?.id;
+        const parked =
+          !correction &&
+          suspendJourney(
+            session.view.journey,
+            session.view.request,
+            session.origin!,
+            session.tabId,
+          );
+        if (parked && !suspended.some((e) => e.id === parked.id)) {
+          if (suspended.length >= 5)
+            throw new Error(
+              "Five unfinished journeys are saved. Remove one from Resume previous task, then submit this destination again.",
+            );
+          suspended.push(parked);
+        }
+      }
       const reply = await chrome.tabs.sendMessage(session.tabId, {
         type: "INSTALL_REQUEST",
         sessionId: session.sessionId,
@@ -1054,6 +1509,11 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
       await acceptView(reply.view);
       await remember();
       await save();
+      if (needsVision(result.plan, !!result.clarification))
+        setTimeout(
+          () => void attemptVision(captured.sessionId, result.requestId),
+          100,
+        );
       return structuredClone(session);
     });
     if (applied) return applied;
@@ -1138,6 +1598,7 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
     !live()
   )
     return;
+  ledgerNavigationEvent = true;
   void chrome.tabs
     .sendMessage(details.tabId, {
       type: "SPA_CHANGED",
@@ -1404,4 +1865,8 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       );
     }
   });
+});
+
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  if (details.tabId === session?.tabId && visionJob) cancelVision();
 });

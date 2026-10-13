@@ -1,0 +1,454 @@
+{
+  "version": 1,
+  "split": "held-out",
+  "cases": [
+    {
+      "id": "github-supported-1",
+      "platform": "github",
+      "category": "supported",
+      "text": "Create a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-2",
+      "platform": "github",
+      "category": "supported",
+      "text": "Please help me create a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-3",
+      "platform": "github",
+      "category": "supported",
+      "text": "Show me how to create a repo",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-4",
+      "platform": "github",
+      "category": "supported",
+      "text": "I want to create a repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-5",
+      "platform": "github",
+      "category": "supported",
+      "text": "Help me create a GitHub repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-6",
+      "platform": "github",
+      "category": "supported",
+      "text": "Guide me through creating a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-7",
+      "platform": "github",
+      "category": "supported",
+      "text": "Create a repository called \"demo\"",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-8",
+      "platform": "github",
+      "category": "supported",
+      "text": "Create a new repo for my website",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-9",
+      "platform": "github",
+      "category": "supported",
+      "text": "I would like a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-10",
+      "platform": "github",
+      "category": "supported",
+      "text": "Can you help me set up a new repository?",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-11",
+      "platform": "github",
+      "category": "supported",
+      "text": "Where do I start creating a repository?",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-12",
+      "platform": "github",
+      "category": "supported",
+      "text": "How do I create a new repository?",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-13",
+      "platform": "github",
+      "category": "supported",
+      "text": "Please walk me through creating a repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-14",
+      "platform": "github",
+      "category": "supported",
+      "text": "Make a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-15",
+      "platform": "github",
+      "category": "supported",
+      "text": "Make a new repo",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-16",
+      "platform": "github",
+      "category": "supported",
+      "text": "Help me start a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-17",
+      "platform": "github",
+      "category": "supported",
+      "text": "Set up a new repository",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-18",
+      "platform": "github",
+      "category": "supported",
+      "text": "Create a repository named \"site\"",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-19",
+      "platform": "github",
+      "category": "supported",
+      "text": "Show me how to make a new repo",
+      "expected": "Create new"
+    },
+    {
+      "id": "github-supported-20",
+      "platform": "github",
+      "category": "supported",
+      "text": "I need a new repository for this project",
+      "expected": "Create new"
+    },
+    {
+      "id": "cloudflare-supported-1",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Deploy a website with Cloudflare Pages",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-2",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Show me how to deploy a web page",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-3",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Help me publish a Pages website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-4",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "I want to host a website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-5",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Guide me through deploying my website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-6",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Deploy Pages from GitHub",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-7",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Publish a website using direct upload",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-8",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Help me put my website online",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-9",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "How do I deploy my site using Pages?",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-10",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Please help me upload a website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-11",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Host my website on Cloudflare Pages",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-12",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Show me how to publish my website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-13",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "I would like to deploy my web page",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-14",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Help me deploy a webpage",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-15",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Please deploy my website from a Git repository",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-16",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Deploy a website using prebuilt files",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-17",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Walk me through hosting a website",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-18",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Can you show me how to deploy Pages?",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-19",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "I want to put a website online",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "cloudflare-supported-20",
+      "platform": "cloudflare",
+      "category": "supported",
+      "text": "Publish my web page",
+      "expected": "Workers & Pages"
+    },
+    {
+      "id": "github-ambiguous-1",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Help me choose settings",
+      "expected": null
+    },
+    {
+      "id": "github-ambiguous-2",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Show settings",
+      "expected": null
+    },
+    {
+      "id": "github-ambiguous-3",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Open settings",
+      "expected": null
+    },
+    {
+      "id": "github-ambiguous-4",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Where are settings?",
+      "expected": null
+    },
+    {
+      "id": "github-ambiguous-5",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Find settings",
+      "expected": null
+    },
+    {
+      "id": "github-ambiguous-6",
+      "platform": "github",
+      "category": "ambiguous",
+      "text": "Take me to settings",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-1",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Find my lost bicycle",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-2",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Order me a pizza",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-3",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Diagnose my chest pain",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-4",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Translate this entire website into Klingon",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-5",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Play a chess game for me",
+      "expected": null
+    },
+    {
+      "id": "github-unsupported-6",
+      "platform": "github",
+      "category": "unsupported",
+      "text": "Predict tomorrow's lottery numbers",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-1",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Help me choose settings",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-2",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Show settings",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-3",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Open settings",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-4",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Where are settings?",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-5",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Find settings",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-ambiguous-6",
+      "platform": "cloudflare",
+      "category": "ambiguous",
+      "text": "Take me to settings",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-1",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Find my lost bicycle",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-2",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Order me a pizza",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-3",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Diagnose my chest pain",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-4",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Translate this entire website into Klingon",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-5",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Play a chess game for me",
+      "expected": null
+    },
+    {
+      "id": "cloudflare-unsupported-6",
+      "platform": "cloudflare",
+      "category": "unsupported",
+      "text": "Predict tomorrow's lottery numbers",
+      "expected": null
+    }
+  ]
+}

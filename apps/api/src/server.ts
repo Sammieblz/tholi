@@ -1,3 +1,8 @@
+import {
+  recognitionInputSchema,
+  visualObservationSchema,
+  validatePng,
+} from "../../../packages/vision/contracts";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
@@ -68,6 +73,54 @@ export async function createApi(options: ApiOptions) {
       },
     },
   );
+  const ocrWorker = new Worker(
+    new URL("./ocr.js", options.worker || import.meta.url),
+    { workerData: { models: resolve(options.models, "../ocr") } },
+  );
+  const ocrPending = new Map<
+    string,
+    {
+      resolve: (value: unknown) => void;
+      reject: (e: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
+  const failOcr = (error: Error) => {
+    for (const p of ocrPending.values()) {
+      clearTimeout(p.timer);
+      p.reject(error);
+    }
+    ocrPending.clear();
+  };
+  ocrWorker.on("message", (m) => {
+    const p = ocrPending.get(m.id);
+    if (!p) return;
+    clearTimeout(p.timer);
+    ocrPending.delete(m.id);
+    m.error ? p.reject(new Error(m.error)) : p.resolve(m.value);
+  });
+  ocrWorker.on("error", failOcr);
+  ocrWorker.on("exit", () => failOcr(new Error("OCR worker stopped")));
+  const recognize = (input: unknown, signal: AbortSignal) =>
+    new Promise((resolve, reject) => {
+      const id = crypto.randomUUID();
+      const cancel = () => {
+        const p = ocrPending.get(id);
+        if (!p) return;
+        clearTimeout(p.timer);
+        ocrPending.delete(id);
+        ocrWorker.postMessage({ type: "cancel", id });
+        reject(new Error("OCR canceled"));
+      };
+      const timer = setTimeout(cancel, 30000);
+      ocrPending.set(id, { resolve, reject, timer });
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) {
+        cancel();
+        return;
+      }
+      ocrWorker.postMessage({ id, input });
+    });
   const pending = new Map<
     string,
     {
@@ -160,7 +213,7 @@ export async function createApi(options: ApiOptions) {
       .send({ error: invalid ? "Invalid API request." : e.message });
   });
   app.get("/v1/health", { schema: { tags: ["capabilities"] } }, async () => ({
-    version: "0.8.0",
+    version: "0.9.0",
     status: "ok",
     capabilities: [
       "english-nlp",
@@ -282,10 +335,13 @@ export async function createApi(options: ApiOptions) {
     return { ok: true };
   });
   app.get("/v2/health", { schema: { tags: ["capabilities"] } }, async () => ({
-    version: "0.8.0",
+    version: "0.9.0",
     status: "ok",
     protocols: [1, 2],
     capabilities: [
+      "continuous-journeys",
+      "return-routing",
+      "cpu-ocr",
       "contextual-workflows",
       "incremental-observations",
       "session-only-entities",
@@ -300,6 +356,47 @@ export async function createApi(options: ApiOptions) {
     llm: false,
   }));
   app.get("/v2/openapi.json", async () => app.swagger());
+  app.post(
+    "/v2/ocr",
+    {
+      bodyLimit: 6 * 1024 * 1024,
+      schema: {
+        body: zodToJsonSchema(recognitionInputSchema),
+        response: {
+          200: zodToJsonSchema(visualObservationSchema),
+          400: { type: "object", properties: { error: { type: "string" } } },
+          503: { type: "object", properties: { error: { type: "string" } } },
+        },
+      },
+    },
+    async (req, reply) => {
+      const parsed = recognitionInputSchema.safeParse(req.body);
+      if (!parsed.success)
+        return reply.code(400).send({ error: "Invalid bounded OCR capture" });
+      try {
+        validatePng(parsed.data);
+      } catch {
+        return reply
+          .code(400)
+          .send({ error: "Invalid PNG or image dimensions" });
+      }
+      const controller = new AbortController();
+      req.raw.once("aborted", () => controller.abort());
+      reply.raw.once("close", () => {
+        if (!reply.raw.writableFinished) controller.abort();
+      });
+      try {
+        return visualObservationSchema.parse(
+          await recognize(parsed.data, controller.signal),
+        );
+      } catch {
+        return reply
+          .code(503)
+          .send({ error: "OCR unavailable; use browser processing" });
+      }
+    },
+  );
+
   app.post(
     "/v2/observations",
     {
@@ -473,6 +570,8 @@ export async function createApi(options: ApiOptions) {
   });
   app.addHook("onClose", async () => {
     fail(new Error("API closed."));
+    failOcr(new Error("API closed"));
+    await ocrWorker.terminate();
     await worker.terminate();
     store.close();
   });

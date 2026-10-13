@@ -3,6 +3,7 @@ import { mkdir, copyFile, cp } from "node:fs/promises";
 import { thirdParty } from "./third-party.mjs";
 const out = "dist/extension";
 await import("./fetch-model.mjs");
+await import("./fetch-ocr.mjs");
 await mkdir(out, { recursive: true });
 await build({
   entryPoints: {
@@ -66,3 +67,27 @@ await copyFile("apps/extension/manifest.json", out + "/manifest.json");
 await copyFile("apps/extension/sidepanel.html", out + "/sidepanel.html");
 await thirdParty(out);
 console.log("Unpacked extension ready: dist/extension");
+
+await build({
+  entryPoints: ["apps/extension/src/ocr-worker.ts"],
+  outdir: out,
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "chrome120",
+  minify: true,
+});
+await cp("assets/ocr", out + "/ocr", { recursive: true });
+await copyFile("assets/ocr-lock.json", out + "/ocr-lock.json");
+for (const file of [
+  "tesseract-core-lstm.wasm.js",
+  "tesseract-core-simd-lstm.wasm.js",
+])
+  await copyFile(
+    "node_modules/tesseract.js-core/" + file,
+    out + "/ocr/" + file,
+  );
+await copyFile(
+  "node_modules/tesseract.js/dist/worker.min.js",
+  out + "/ocr/worker.min.js",
+);

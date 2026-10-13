@@ -58,7 +58,7 @@ test("blocked durable memory cannot hold menu guidance or Stop, and Clear drains
     await goal(app, "Show languages");
     await app.panel.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("navigator-site-memory", 4);
+        const request = indexedDB.open("navigator-site-memory", 5);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
@@ -147,7 +147,7 @@ test("blocked durable memory cannot hold menu guidance or Stop, and Clear drains
     expect(cleared.error).toBeUndefined();
     const counts = await app.panel.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve) => {
-        const r = indexedDB.open("navigator-site-memory", 4);
+        const r = indexedDB.open("navigator-site-memory", 5);
         r.onsuccess = () => resolve(r.result);
       });
       try {

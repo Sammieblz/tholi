@@ -1,3 +1,5 @@
+import { ledgerEntrySchema } from "./navigation-actions";
+import { visualObservationSchema } from "../vision/contracts";
 import { z } from "zod";
 import {
   workflowContextSchema,
@@ -102,6 +104,8 @@ export const planInputSchema = stampSchema
     frameId: z.number().int().nonnegative().optional(),
     tabId: z.number().int().optional(),
     workflow: workflowContextSchema.optional(),
+    navigationLedger: z.array(ledgerEntrySchema).max(200).optional(),
+    visualObservation: visualObservationSchema.optional(),
   })
   .strict()
   .refine(
@@ -195,6 +199,11 @@ export const siteKnowledgeSchema = z
             active: z.boolean(),
             samples: z.number().nonnegative().optional(),
             meanMs: z.number().nonnegative().optional(),
+            action: z
+              .object({ kind: z.literal("control"), signature: z.string() })
+              .strict()
+              .optional(),
+            requiresFreshBinding: z.boolean().optional(),
           })
           .strict(),
       )

@@ -11,7 +11,7 @@ import {
   beginJourney,
   saveTask,
 } from "../../packages/goal-planner/task-journey";
-test("v3 to v4 preserves public knowledge and routes while sanitizing private indexes", async () => {
+test("v3 to v5 preserves public knowledge and routes while sanitizing private indexes", async () => {
   const publicPage = fixture(),
     privatePage = appFixture("github", "https://github.com");
   privatePage.controls[0].context = "secret-repo";

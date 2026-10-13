@@ -47,6 +47,7 @@ function App() {
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [visionBackend, setVisionBackend] = useState(false);
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
   const [goal, setGoal] = useState("");
@@ -59,6 +60,7 @@ function App() {
     enabled: false,
   });
   const [strategy, setStrategy] = useState<RouteStrategy>("fastest");
+  const [journeys, setJourneys] = useState<{ id: string; goal: string }[]>([]);
   const [savedTasks, setSavedTasks] = useState<SavedTask[]>([]);
   const automaticAttempts = useRef(new Set<string>());
   const [aiAvailability, setAiAvailability] = useState("checking");
@@ -69,6 +71,10 @@ function App() {
   const sessionAction = useRef<HTMLButtonElement>(null);
   const previousStatus = useRef<string | undefined>(undefined);
   useEffect(() => {
+    void chrome.runtime
+      .sendMessage({ type: "GET_VISION" })
+      .then((r) => setVisionBackend(!!r.backend))
+      .catch(() => {});
     void chrome.runtime
       .sendMessage({ type: "GET_BACKEND" })
       .then((r) => {
@@ -127,8 +133,16 @@ function App() {
           reading = false;
         });
     };
-    refresh();
-    const timer = setInterval(refresh, 2000);
+    const previousRefresh = refresh;
+    const refreshJourneys = () => {
+      previousRefresh();
+      void chrome.runtime
+        .sendMessage({ type: "GET_JOURNEYS" })
+        .then((r) => setJourneys(r.journeys || []))
+        .catch(() => {});
+    };
+    refreshJourneys();
+    const timer = setInterval(refreshJourneys, 2000);
     return () => {
       current = false;
       clearInterval(timer);
@@ -169,7 +183,10 @@ function App() {
       clearInterval(interval);
     };
   }, []);
-  const command = async (type: string) => {
+  const command = async (
+    type: string,
+    payload: Record<string, unknown> = {},
+  ) => {
     planning.current?.abort();
     setBusy(true);
     setError("");
@@ -191,7 +208,7 @@ function App() {
               routeVersion: route?.version,
               ...startTarget,
             }
-          : { type },
+          : { type, ...payload },
       );
       if (r?.error) setError(r.error);
       if (r?.view) setView(r.view);
@@ -875,6 +892,17 @@ function App() {
           )}
           <details>
             <summary>Optional private backend</summary>
+            <label>
+              <input
+                type="checkbox"
+                checked={visionBackend}
+                onChange={(e) => {
+                  setVisionBackend(e.target.checked);
+                  void command("SET_VISION", { backend: e.target.checked });
+                }}
+              />
+              Send temporary masked images to the connected backend for OCR
+            </label>
             <p className="small">
               Connect your own single-owner API to mirror this website. Browser
               memory remains the source; connection failures use local
@@ -981,6 +1009,61 @@ function App() {
           </p>
         </details>
       )}
+      {view?.goalPlan?.action?.kind === "visual" && (
+        <section aria-label="Visual review">
+          <h2>Visual suggestion — review required</h2>
+          <p>{view.goalPlan.reason}</p>
+          <p>
+            Make the interaction yourself. Navigator will check fresh website
+            evidence; the highlighted text does not establish its effect.
+          </p>
+          <button
+            disabled={busy}
+            onClick={() => command("CHECK_VISUAL_ACTION")}
+          >
+            Check the current page
+          </button>
+        </section>
+      )}
+      {active && view?.goalPlan?.issue === "no-match" && (
+        <button disabled={busy} onClick={() => command("REQUEST_VISION")}>
+          Try visual assistance
+        </button>
+      )}
+      {journeys.length > 0 && (
+        <section aria-label="Resume previous task">
+          <h2>Resume previous task</h2>
+          {journeys.map((j) => (
+            <div key={j.id}>
+              <button
+                disabled={busy}
+                onClick={() => command("RESUME_JOURNEY", { id: j.id })}
+              >
+                {j.goal}
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => command("DELETE_JOURNEY", { id: j.id })}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+      {view?.goalPlan?.action &&
+        ["history-back", "tab-switch"].includes(view.goalPlan.action.kind) && (
+          <section aria-label="Return navigation">
+            <h2>Your destination is retained</h2>
+            <p>{view.goalPlan.reason}</p>
+            <button
+              disabled={busy}
+              onClick={() => command("CHECK_ROUTE_ACTION")}
+            >
+              I returned — check this page
+            </button>
+          </section>
+        )}
       {controlsMode && active && (
         <section className="page-controls" aria-label="Live page controls">
           <form

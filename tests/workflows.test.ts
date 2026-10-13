@@ -301,7 +301,9 @@ test("a failed deployment remains incomplete and a missing target has no invente
     ),
   );
   expect(absent.plan?.steps).toEqual([]);
-  expect(absent.status).toBe("unsupported");
+  expect(absent.status).toBe("plan");
+  expect(absent.workflow?.status).not.toBe("completed");
+  expect(absent.reason).toContain("retained");
 });
 test("corrections replace the entity and invalidate its dependent milestones", async () => {
   const c = core(),

@@ -15,9 +15,11 @@ jobs:
       - run: npm run build:api
       - run: npm run test:nlp
       - run: npm run test:multi-app
+      - run: npm run test:vision
       - run: npx playwright install chromium
       - run: npm run test:nlp:browser
       - run: npm run test:multi-app:browser
+      - run: npm run test:continuity:browser
       - run: npm run test:e2e
       - run: npm run test:live:wikipedia
       - run: npm run test:acceptance
@@ -30,6 +32,7 @@ jobs:
           path: |
             output/nlp
             output/multi-app
+            output/vision
             output/acceptance
             output/releases/*.zip
             output/releases/*.tgz

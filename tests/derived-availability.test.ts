@@ -7,7 +7,7 @@ test("a blocked embedding cache falls back promptly, writes asynchronously, and 
   const store = new IndexedDBDerivedStore();
   await store.getEmbedding("initialize");
   const db = await new Promise<IDBDatabase>((resolve) => {
-    const r = indexedDB.open("navigator-site-memory", 4);
+    const r = indexedDB.open("navigator-site-memory", 5);
     r.onsuccess = () => resolve(r.result);
   });
   const blocker = db.transaction(["embeddings", "indexes"], "readwrite");

@@ -180,6 +180,10 @@ function contextOf(
       const heading = firstHeading(parent);
       return heading ? safeName(heading) : "Footer";
     }
+    if (parent.matches("details") && !element.matches("summary")) {
+      const summary = parent.querySelector<HTMLElement>(":scope > summary");
+      if (summary && safeName(summary)) return safeName(summary);
+    }
     const aria = parent.getAttribute("aria-label");
     if (aria) return sanitizeText(aria);
     const referenced = parent
@@ -1030,6 +1034,13 @@ export class PageDiscovery {
       if (binding.control.revealIds.length) continue;
       const ranked = revealers
         .map((revealer) => {
+          if (
+            revealer.element.matches("summary") &&
+            binding.element !== revealer.element &&
+            binding.element.closest("details") ===
+              revealer.element.parentElement
+          )
+            return { id: revealer.control.id, distance: 0 };
           const ids = [
             revealer.element.getAttribute("aria-controls"),
             revealer.element.getAttribute("aria-owns"),

@@ -63,7 +63,7 @@ function initialEntities(
     "plan",
   ] as const) {
     const synonyms = {
-      account: "account|organization",
+      account: "account|organization|owner",
       repository: "repository|repo",
       project: "project|space|site",
       issue: "issue|ticket|work item|bug",
@@ -176,7 +176,7 @@ export async function selectGuide(
   // Similarity narrows documented purposes, but still needs a compatible action
   // and object. It cannot invent an effect or unsupported workflow.
   const action =
-    /\b(deploy|publish|host|launch|ship|create|add|file|report|cancel|end|stop|unsubscribe|change|switch|set|upgrade|downgrade|configure)\b/i.test(
+    /\b(deploy|publish|host|launch|ship|create|make|start|set up|add|file|report|cancel|end|stop|unsubscribe|change|switch|set|upgrade|downgrade|configure)\b/i.test(
       sentence,
     );
   if (!action) return;
@@ -258,17 +258,29 @@ function candidateScore(control: PageControl, target: string) {
   return 0;
 }
 function subjectMatches(w: WorkflowContext, signal: OutcomeEvidence) {
-  const subjectType = w.guideId.includes("branch")
-    ? "branch"
-    : w.guideId.includes("work-item")
-      ? "issue"
-      : w.guideId.includes("plan")
-        ? "plan"
-        : w.guideId.includes("pages")
-          ? "project"
-          : undefined;
+  const subjectType =
+    w.guideId === "github.repository.create"
+      ? "repository"
+      : w.guideId.includes("branch")
+        ? "branch"
+        : w.guideId.includes("work-item")
+          ? "issue"
+          : w.guideId.includes("plan")
+            ? "plan"
+            : w.guideId.includes("pages")
+              ? "project"
+              : undefined;
   const subject = entityValue(w, subjectType);
-  if (subject) return matches(signal.subject + " " + signal.text, subject);
+  if (subject) {
+    const owner =
+      w.guideId === "github.repository.create"
+        ? entityValue(w, "account")
+        : undefined;
+    return (
+      matches(signal.subject + " " + signal.text, subject) &&
+      (!owner || matches(signal.subject + " " + signal.text, owner))
+    );
+  }
   // Without an object name, the signal must identify the actual workflow.
   return w.guideId.includes("membership") || w.guideId.includes("prime")
     ? /membership|subscription|prime/i.test(signal.subject + " " + signal.text)
@@ -418,6 +430,7 @@ export function recordWorkflowAction(
   next.revision++;
   if (next.pendingAction!.milestone.startsWith("route:")) {
     if (verified) {
+      next.verified = next.verified.slice(-63);
       next.verified.push({
         milestone: next.pendingAction!.milestone,
         revision: page?.revision || next.pendingAction!.beforeRevision,
@@ -482,6 +495,7 @@ export function recordWorkflowAction(
       next.status = "active";
       return next;
     }
+    next.verified = next.verified.slice(-63);
     next.verified.push({
       milestone: next.pendingAction!.milestone,
       revision: next.pendingAction!.beforeRevision,
@@ -533,13 +547,23 @@ export async function planWorkflow(
   | undefined
 > {
   const existing = input.workflow;
+  const sameTask = existing?.requestTaskId === task.id;
+  const selected = sameTask
+    ? workflowGuides.find((g) => g.id === existing!.guideId)
+    : await selectGuide(input, task, index, signal);
   const correction =
     !!existing &&
-    /^(?:actually|instead|no[, ]|use .* instead)/i.test(task.original);
-  const guide =
-    existing && (existing.requestTaskId === task.id || correction)
-      ? workflowGuides.find((g) => g.id === existing.guideId)
-      : await selectGuide(input, task, index, signal);
+    !sameTask &&
+    /^(?:actually|instead|no[, ]|use .* instead)/i.test(task.original) &&
+    task.operation !== "search" &&
+    (selected?.id === existing.guideId ||
+      (!selected &&
+        /^(?:actually[, ]*|instead[, ]*|no[, ]*)?(?:use|choose|select)\b/i.test(
+          task.original,
+        )));
+  const guide = correction
+    ? workflowGuides.find((g) => g.id === existing!.guideId)
+    : selected;
   if (!guide) return;
   let w =
     existing && existing.requestTaskId === task.id
@@ -699,6 +723,7 @@ export async function planWorkflow(
     if (scopeLive(w, input.observation, type, value)) {
       const current = guide.milestones[w.activeMilestone];
       if (current?.entity === type && current.kind === "navigate") {
+        w.verified = w.verified.slice(-63);
         w.verified.push({
           milestone: current.id,
           revision: input.revision,
@@ -853,6 +878,7 @@ export async function planWorkflow(
           nextMilestone.targets.some((t) => exact(c.label, t)),
       );
       if (arrival) {
+        w.verified = w.verified.slice(-63);
         w.verified.push({
           milestone: current.id,
           revision: input.revision,
@@ -1070,12 +1096,52 @@ export async function planWorkflow(
         );
       }
     }
-    w.reason =
-      "This milestone is not present in the scanned interface. Open the relevant menu, use the site's search, or provide more context; no control is assumed.";
-    return emit(
-      { ...base, reason: w.reason, issue: "no-match" },
-      "unsupported",
+    const exploration = input.observation.controls.find(
+      (c) =>
+        allowed(w, c) &&
+        c.risk === "ordinary" &&
+        c.kind === "expand" &&
+        !c.expanded &&
+        /menu|navigation|create|applications|projects/i.test(c.label) &&
+        !w.verified.some((v) => v.milestone === "route:explore:" + c.signature),
     );
+    if (exploration) {
+      w.pendingAction = {
+        milestone: "route:explore:" + exploration.signature,
+        signature: exploration.signature,
+        controlId: exploration.id,
+        label: exploration.label,
+        beforeRevision: input.revision,
+        beforeFingerprint: input.observation.fingerprint,
+        beforeDocumentId: input.documentId,
+        startedAt: Date.now(),
+        acted: false,
+        final: false,
+      };
+      return emit({
+        ...base,
+        status: "guiding",
+        exploration: true,
+        confidence: 0.6,
+        action: {
+          kind: "control",
+          controlId: exploration.id,
+          signature: exploration.signature,
+        },
+        reason:
+          "Explore this observed navigation menu. Your destination is retained; this is not a complete route.",
+        steps: [
+          {
+            controlId: exploration.id,
+            label: exploration.label,
+            outcome: "The menu becomes visible.",
+          },
+        ],
+      });
+    }
+    w.reason =
+      "Still finding the next step. The required milestone is not visible in the scanned interface; your destination and verified progress are retained.";
+    return emit({ ...base, reason: w.reason, issue: "no-match" }, "plan");
   }
   const distinct = candidates.filter(
     (c, i, all) =>

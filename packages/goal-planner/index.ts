@@ -8,7 +8,7 @@ import {
   hash,
 } from "../page-model";
 import { sanitizeText, sanitizeGoal } from "../privacy-redaction";
-import { shortestRoute } from "./route-graph";
+import { searchRoute, shortestRoute } from "./route-graph";
 import { taskWords } from "./task-intent";
 import {
   memoryDiagnostics,
@@ -488,7 +488,16 @@ function planGoalInternal(
           .map((c) => p.stateKey),
       ),
     );
-    const path = shortestRoute(page, memory, desired);
+    const search = searchRoute(page, memory, desired);
+    if (search.status === "pending")
+      return {
+        ...unresolved(
+          goal,
+          "Still finding the next step. Your destination and verified progress are retained.",
+        ),
+        budgetPending: true,
+      };
+    const path = search.path;
     if (path?.length) {
       target = usable.find(
         (c) => c.visible && c.signature === path[0].signature,
@@ -505,7 +514,7 @@ function planGoalInternal(
       goal,
       page.partial
         ? "This large page was partially scanned. Use the control filter, navigate closer, or describe a more specific goal."
-        : "No sufficiently clear route is known yet. Choose a control, reveal a menu, or enable on-device AI for interpretation.",
+        : "I could not identify a reliable next step from the controls scanned so far. Your destination is retained; reveal a navigation menu or use visual assistance.",
     );
   if (target.kind === "expand" && target.expanded === true)
     return {

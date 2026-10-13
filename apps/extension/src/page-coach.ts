@@ -202,6 +202,30 @@ export class PageCoach {
       page,
       this.view.liveDiagnostics,
     );
+    if (
+      !this.pending &&
+      this.view.request?.status === "active" &&
+      this.view.journey?.status === "active" &&
+      this.view.journey.requestTaskId ===
+        this.view.request.tasks[this.view.request.active]?.id &&
+      this.view.journey?.objective.value &&
+      !this.view.journey.workflow &&
+      objectiveReached(this.view.journey, page)
+    ) {
+      this.clearTarget();
+      this.view.journey.status = "completed";
+      this.view.goalPlan = {
+        goal: this.view.journey.goal,
+        source: "semantics",
+        status: "completed",
+        confidence: 1,
+        reason: "The requested preference is present in the fresh page state.",
+        steps: [],
+      };
+      this.completeQueuedTask();
+      return;
+    }
+
     if (this.navigationVerified) {
       this.navigationVerified = false;
       if (this.restoredNavigation && this.view.journey) {
@@ -494,7 +518,18 @@ export class PageCoach {
         true,
         page,
       );
-      if (!focused) this.view.verifiedSteps++;
+      if (!focused) {
+        this.view.verifiedSteps++;
+        this.view.journey = advanceJourney(
+          this.view.journey,
+          page,
+          selected.control,
+          before.stateKey,
+          Date.now() - this.selectedAt,
+          Date.now(),
+          before.origin,
+        );
+      }
       this.clearTarget();
       this.view.instruction = focused
         ? "Enter the requested details on the website, then continue guidance. Input contents have not been verified."
@@ -827,6 +862,25 @@ export class PageCoach {
         ),
       );
     }
+    if (
+      result.plan?.action &&
+      ["history-back", "tab-switch", "visual"].includes(result.plan.action.kind)
+    ) {
+      this.view.goalPlan = result.plan;
+      this.view.instruction = result.plan.reason;
+      this.publish(this.view);
+      return { view: this.view };
+    }
+    if (result.plan?.budgetPending)
+      setTimeout(() => {
+        if (
+          this.view.request?.id === result.request?.id &&
+          this.view.status === "running"
+        ) {
+          this.planningRevision = "";
+          this.requestReplan();
+        }
+      }, 100);
     if (result.plan) {
       if (result.plan.status === "completed" && this.view.journey)
         this.view.journey.status = "completed";
@@ -880,6 +934,25 @@ export class PageCoach {
     if (this.view.request.status === "active")
       queueMicrotask(() => this.requestReplan());
   }
+  recheckJourney() {
+    this.refresh();
+    this.planningRevision = "";
+    this.requestReplan();
+    return { view: this.view };
+  }
+  restoreJourney(journey: TaskJourney, request: NavigationRequest) {
+    this.clearTarget();
+    this.view.journey = structuredClone(journey);
+    this.view.request = structuredClone(request);
+    this.view.goalPlan = undefined;
+    this.view.clarification = undefined;
+    this.planningRevision = "";
+    this.view.status = "running";
+    this.refresh();
+    this.publish(this.view);
+    queueMicrotask(() => this.requestReplan());
+    return { view: this.view };
+  }
   skipTask() {
     if (!this.view.request || this.view.request.status === "canceled") return;
     this.clearTarget();
@@ -901,7 +974,7 @@ export class PageCoach {
     )
       return;
     // A queued task can change without a new page revision.
-    const revision = `${page.revision}:${request.active}:${this.view.verifiedSteps}:${this.view.journey?.progress.length || 0}:${request.tasks[request.active]?.searchPhase || ""}:${this.view.journey?.workflow?.revision || 0}`;
+    const revision = `${page.revision}:${request.active}:${this.view.verifiedSteps}:${this.view.journey?.totalVerified ?? this.view.journey?.progress.length ?? 0}:${request.tasks[request.active]?.searchPhase || ""}:${this.view.journey?.workflow?.revision || 0}`;
     if (this.planningRevision === revision) return;
     this.planningRevision = revision;
     const id = request.id,
