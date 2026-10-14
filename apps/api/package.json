@@ -1,12 +1,12 @@
 {
   "name": "@internet-navigator/api",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "type": "module",
   "private": false,
   "license": "MIT",
   "dependencies": {
-    "@internet-navigator/navigation-core": "0.9.1",
-    "@internet-navigator/vision": "0.9.1",
+    "@internet-navigator/navigation-core": "0.9.2",
+    "@internet-navigator/vision": "0.9.2",
     "fastify": "5.12.5",
     "@fastify/swagger": "9.9.2",
     "@fastify/cors": "11.2.0",

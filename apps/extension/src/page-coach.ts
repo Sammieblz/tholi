@@ -28,7 +28,12 @@ import {
   contextualTask,
   resumeJourney,
 } from "../../../packages/goal-planner/task-journey";
-import { inspectGoal, actionBoundary } from "../../../packages/goal-planner";
+import {
+  inspectGoal,
+  actionBoundary,
+  goalScore,
+} from "../../../packages/goal-planner";
+import { groundedSettingsTarget } from "../../../packages/navigation-core/exploration";
 import {
   updateObservation,
   appendVerification,
@@ -325,7 +330,16 @@ export class PageCoach {
           c.kind !== "section" &&
           (c.reference?.frameId || 0) ===
             (this.selected!.control.reference?.frameId || 0) &&
-          targets.some((t) => t.toLowerCase() === c.label.toLowerCase()) &&
+          (workflow
+            ? targets.some((t) => t.toLowerCase() === c.label.toLowerCase())
+            : this.view.goalPlan?.exploration &&
+              c.risk === "ordinary" &&
+              (goalScore(this.view.goalPlan.goal, c) >= 0.7 ||
+                (!!this.view.request &&
+                  groundedSettingsTarget(
+                    this.view.request.tasks[this.view.request.active],
+                    c,
+                  )))) &&
           !this.before!.controls.some(
             (old) => old.signature === c.signature && old.visible,
           ) &&
@@ -338,7 +352,10 @@ export class PageCoach {
       // A fresh, uniquely task-relevant control inside the declared popup can
       // verify the reveal even when a framework portals it outside the trigger.
       // This verifies only the opening, never the next action or task outcome.
-      if (workflow && matching.length === 1) {
+      if (
+        (workflow || this.view.goalPlan?.exploration) &&
+        matching.length === 1
+      ) {
         this.verified(page);
         return;
       }
@@ -625,6 +642,21 @@ export class PageCoach {
     }
     this.view.verifiedSteps++;
     this.clearTarget();
+    if (plan?.exploration) {
+      this.view.goalPlan = {
+        ...plan,
+        status: "unresolved",
+        exploration: false,
+        steps: [],
+        reason:
+          "The navigation surface opened. Checking it for your retained destination…",
+      };
+      this.view.instruction = this.view.goalPlan.reason;
+      this.publish(this.view, evidence);
+      this.planningRevision = "";
+      this.requestReplan();
+      return;
+    }
     this.state("verified");
     this.view.instruction =
       "Control interaction verified. Choose another control or goal.";
@@ -1221,6 +1253,8 @@ export class PageCoach {
                   target.control.label +
                   "” control, then choose an option on the website."
                 : "Use the highlighted “" + target.control.label + "” control.";
+    if (this.view.goalPlan?.exploration)
+      this.view.instruction = this.view.goalPlan.reason;
     const workflow = this.view.journey?.workflow,
       guide = workflow && workflowGuides.find((g) => g.id === workflow.guideId),
       stage = guide?.milestones[workflow?.activeMilestone || 0],

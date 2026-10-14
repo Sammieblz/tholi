@@ -1,7 +1,7 @@
 {
   "name": "internet-navigator",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "type": "module",
   "scripts": {
     "dev:demo": "vite --config apps/demo-saas/vite.config.ts",

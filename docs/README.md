@@ -15,6 +15,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Privacy](privacy.md) and [security](security.md)
 - [Optional API setup](api-setup.md)
 - [Diagnostics](live-diagnostics.md)
+- [Dashboard settings navigation fix and verification](dashboard-navigation.md)
 - [Cleanup scope and verification](maintenance.md)
 - [Contribution and release procedure](../CONTRIBUTING.md)
 

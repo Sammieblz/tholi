@@ -23,7 +23,7 @@ import {
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded091";
+const marker = "__internetNavigatorLoaded092";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;

@@ -22,6 +22,12 @@ import { shortestRoute } from "../goal-planner/route-graph";
 import { hasCommitLanguage } from "../safety-policy/action-language";
 import { authenticationIntent } from "../goal-planner/task-intent";
 import { planWorkflow } from "./workflows";
+import {
+  compatibleSettingsScope,
+  groundedSettingsTarget,
+  exploreDestination,
+  settingsDestination,
+} from "./exploration";
 export class NavigationCore {
   constructor(public index: SemanticIndex) {}
   async plan(
@@ -268,6 +274,46 @@ export class NavigationCore {
       task.boundSignature = choice.signature;
       request.status = "active";
     }
+    // A declared, relevant menu can be explored without waiting to embed a
+    // dense dashboard. Exact destinations, scope conflicts and known routes
+    // still take priority over exploration.
+    if (
+      !input.choice &&
+      !task.boundSignature &&
+      !task.desiredValue &&
+      !input.journey?.objective.workflow &&
+      !input.journey?.workflow
+    ) {
+      const preliminary = planGoal(
+        {
+          ...input.observation,
+          controls: input.observation.controls.filter((c) =>
+            compatibleSettingsScope(task, c),
+          ),
+        },
+        canonicalGoal(task),
+        memory,
+      );
+      if (
+        preliminary.status === "unresolved" &&
+        preliminary.issue === "no-match" &&
+        !input.observation.controls.some((c) => groundedSettingsTarget(task, c))
+      ) {
+        const exploration = exploreDestination(
+          input.observation,
+          task,
+          input.journey,
+        );
+        if (exploration)
+          return result({
+            status: "plan",
+            request,
+            plan: exploration,
+            canonicalGoal: canonicalGoal(task),
+            reason: exploration.reason,
+          });
+      }
+    }
     const candidates = await this.index.rank(input.observation, task, signal, {
       lexicalFirst:
         input.protocolVersion === 2 && input.observation.controls.length > 100,
@@ -296,11 +342,16 @@ export class NavigationCore {
         },
       });
     }
-    const eligible = candidates.filter((c) => c.eligible && c.control.enabled);
+    const eligible = candidates.filter(
+      (c) =>
+        c.eligible &&
+        c.control.enabled &&
+        compatibleSettingsScope(task, c.control),
+    );
     const workflowGoal = authenticationIntent(task.contextTarget || task.target)
       ? task.contextTarget || task.target
       : undefined;
-    let goal = workflowGoal || canonicalGoal(task);
+    let goal = workflowGoal || settingsDestination(task) || canonicalGoal(task);
     if (goal.length > 1000)
       return result({
         status: "unsupported",
@@ -333,6 +384,7 @@ export class NavigationCore {
         );
         return (
           !control ||
+          !compatibleSettingsScope(task, control) ||
           task.exclusions.some((e) =>
             words(e).some((w) =>
               words(control.label + " " + (control.description || "")).includes(
@@ -349,15 +401,25 @@ export class NavigationCore {
         steps: [],
         issue: "no-match",
         confidence: 0,
-        reason: "The route conflicts with a requested exclusion.",
+        reason: "The route conflicts with the requested scope or exclusion.",
       };
+    eligible.sort(
+      (a, b) =>
+        Number(groundedSettingsTarget(task, b.control)) -
+          Number(groundedSettingsTarget(task, a.control)) || b.score - a.score,
+    );
     const best = eligible[0],
       second = eligible[1];
     const strong =
-      !!best && (best.direct || (best.semantic >= 0.64 && best.score >= 0.64));
+      !!best &&
+      (best.direct ||
+        groundedSettingsTarget(task, best.control) ||
+        (best.semantic >= 0.64 && best.score >= 0.64));
     const ambiguous =
       strong &&
       second &&
+      groundedSettingsTarget(task, best.control) ===
+        groundedSettingsTarget(task, second.control) &&
       best.score - second.score < 0.07 &&
       best.control.signature !== second.control.signature &&
       !(
@@ -414,7 +476,16 @@ export class NavigationCore {
       goal = best.control.label;
       // The selected semantic target is still checked by the existing grounded
       // planner. Hidden controls need a verified reveal relationship or route.
-      plan = planGoal(input.observation, goal, memory);
+      plan = planGoal(
+        {
+          ...input.observation,
+          controls: input.observation.controls.filter((c) =>
+            compatibleSettingsScope(task, c),
+          ),
+        },
+        goal,
+        memory,
+      );
       if (plan.steps.length) {
         task.contextTarget ||= task.target;
         task.target = goal;
@@ -492,7 +563,9 @@ export class NavigationCore {
           task,
           signal,
         );
-        const candidates = historical.filter((c) => c.eligible),
+        const candidates = historical.filter(
+            (c) => c.eligible && compatibleSettingsScope(task, c.control),
+          ),
           first = candidates[0],
           next = candidates[1];
         if (
@@ -525,6 +598,12 @@ export class NavigationCore {
         }
       }
     }
+    if (
+      plan.status === "unresolved" &&
+      plan.issue === "no-match" &&
+      !journey.objective.workflow
+    )
+      plan = exploreDestination(input.observation, task, input.journey) || plan;
     // A search destination requires manual entry + a newly observed matching
     // result + arrival. Finding or focusing a textbox is only an intermediate step.
     if (task.operation === "search" && task.desiredValue) {
@@ -591,7 +670,7 @@ export class NavigationCore {
       status: plan.status === "unresolved" ? "unsupported" : "plan",
       request,
       plan: { ...plan, goal: task.original },
-      canonicalGoal: goal,
+      canonicalGoal: settingsDestination(task) || goal,
       reason: plan.reason,
     });
   }
@@ -611,6 +690,7 @@ export class NavigationCore {
       .filter(
         (c) =>
           c.eligible &&
+          compatibleSettingsScope(request.tasks[0], c.control) &&
           c.control.risk === "ordinary" &&
           c.control.enabled &&
           (c.control.visible ||

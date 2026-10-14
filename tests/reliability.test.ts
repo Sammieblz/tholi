@@ -14,6 +14,12 @@ import {
 import { recognizeWithFallback } from "../packages/vision/processing";
 import { scrollTarget } from "../packages/browser-adapter/scroll-target";
 
+test("a declared icon name identifies its menu without using hidden decoration", () => {
+  document.body.innerHTML =
+    '<button aria-haspopup="menu"><svg role="img" aria-label="User menu"></svg><svg aria-hidden="true" aria-label="Delete account"></svg></button>';
+  expect(accessibleName(document.querySelector("button")!)).toBe("User menu");
+});
+
 test("fresh target scrolling centers the target and yields to user scrolling", () => {
   document.body.innerHTML = "<button>Control</button>";
   const target = document.querySelector("button")!;

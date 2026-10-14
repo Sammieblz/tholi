@@ -36,6 +36,8 @@ Tesseract OCR runs locally when refreshed discovery lacks an eligible next step 
 
 Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub checks remain pending. Fixture passes establish fixture behavior, not reliable completion on every website. See [the cleanup record](docs/maintenance.md) and [archived v0.9.1 validation](docs/v0.9.1-validation.md).
 
+The current **0.9.2** build adds grounded account-menu exploration and preserves account versus repository settings context. See [the dashboard fix and focused verification](docs/dashboard-navigation.md).
+
 ## Architecture and privacy
 
 | Component                                | Responsibility                                                                                   |

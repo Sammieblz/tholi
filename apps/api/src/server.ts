@@ -342,6 +342,7 @@ export async function createApi(options: ApiOptions) {
     ocrEngines: ["tesseract-6.0.1-eng-fast"],
     capabilities: [
       "continuous-journeys",
+      "settings-navigation",
       "return-routing",
       "cpu-ocr",
       "contextual-workflows",

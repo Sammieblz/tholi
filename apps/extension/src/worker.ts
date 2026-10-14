@@ -530,6 +530,7 @@ async function attachSession() {
         "search" &&
       session.view.goalPlan?.status === "guiding" &&
       session.view.goalPlan.steps.length <= 1 &&
+      !session.view.goalPlan.exploration &&
       session.view.goalPlan.source !== "memory"
     )
       session.view.goalPlan = {

@@ -78,10 +78,24 @@ export function accessibleName(element: HTMLElement): string {
   return sanitizeText(
     element.getAttribute("aria-label") ||
       element.getAttribute("title") ||
-      [...element.querySelectorAll("img[alt],svg title")]
+      [
+        ...element.querySelectorAll(
+          'img[alt],svg title,svg[aria-label],[role="img"][aria-label]',
+        ),
+      ]
         .slice(0, 4)
-        .filter((e) => !isSensitiveElement(e))
-        .map((e) => e.getAttribute("alt") || e.textContent || "")
+        .filter(
+          (e) =>
+            !isSensitiveElement(e) &&
+            !e.closest('[aria-hidden="true"],[hidden],[inert]'),
+        )
+        .map(
+          (e) =>
+            e.getAttribute("aria-label") ||
+            e.getAttribute("alt") ||
+            e.textContent ||
+            "",
+        )
         .join(" "),
   );
 }

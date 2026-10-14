@@ -455,6 +455,20 @@ select:disabled {
   margin-top: 12px;
   width: 100%;
 }
+[aria-label="Your destination"] input {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #dce3d7;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+}
+[aria-label="Your destination"] .primary {
+  width: 100%;
+  margin-top: 12px;
+}
 .control-destination {
   display: block;
   font-size: 10px;

@@ -87,7 +87,13 @@ export async function backendNlp(
       headers: { Authorization: "Bearer " + settings.token },
       signal: AbortSignal.timeout(2000),
     });
-    if (!capability.ok || !(await capability.json()).protocols?.includes(2))
+    if (!capability.ok) return undefined;
+    const health = await capability.json();
+    if (
+      !health.protocols?.includes(2) ||
+      (/\b(settings?|preferences?)\b/i.test(input.text) &&
+        !health.capabilities?.includes("settings-navigation"))
+    )
       return undefined;
   }
   if (memory && memory.origin === input.observation.origin)
