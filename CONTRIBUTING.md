@@ -4,6 +4,8 @@ Use Node **24.19.x** and its npm. Run `npm ci`, then `npm run check`. Builds fet
 
 ## Component boundaries
 
+Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/frontend-architecture.md). Keep feature CSS colocated and shared presentation free of Chrome APIs. Follow the [motion contract](docs/ui-refinement.md) for stable steps, reduced motion, and keyboard interactions.
+
 The shared navigation core owns validated requests, retrieval/planning orchestration, queues and workflows. NLP owns interpretation and CPU embeddings. The extension owns discovery, binding, permissions, lifecycle and outcome verification. The optional API uses the same core with inference outside its event loop. See [architecture](docs/live-navigation.md).
 
 Keep website-specific selectors in independent test oracles. Workflow packs may describe sourced semantic milestones, prerequisites and outcome predicates; they must not encode fixed selectors, account URLs or coordinates. Never read editable values or credentials into discovery, knowledge or embeddings. Similarity, OCR confidence and clicks cannot establish completion or bypass review boundaries.

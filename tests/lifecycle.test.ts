@@ -7,6 +7,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
 });
+it("resuming a review request clears paused guidance while preserving the boundary", () => {
+  const coach = new PageCoach(vi.fn());
+  coach.view.goalPlan = {
+    goal: "Deploy application",
+    status: "unresolved",
+    issue: "consequential",
+    source: "semantics",
+    confidence: 0,
+    steps: [],
+    reason: "Review the deployment on the website before continuing.",
+  };
+  coach.pause();
+  expect(coach.view.instruction).toContain("paused");
+  try {
+    coach.resume();
+    expect(coach.view.status).toBe("running");
+    expect(coach.view.instruction).not.toContain("Navigation paused");
+    expect(coach.view.goalPlan.issue).toBe("consequential");
+    expect(coach.view.goalPlan.status).not.toBe("completed");
+  } finally {
+    coach.stop();
+  }
+});
 it("disconnects DOM and open-shadow observers, every event subscription and pending timers", async () => {
   vi.useFakeTimers();
   const host = document.createElement("custom-box");

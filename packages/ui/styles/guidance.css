@@ -5,7 +5,7 @@
   max-width: 620px;
   margin: auto;
   padding: 20px;
-  gap: 16px;
+  gap: 20px;
   overflow: hidden;
   font-size: 16px;
   font-family: Inter, system-ui, sans-serif;
@@ -18,20 +18,24 @@
   align-items: center;
   justify-content: space-between;
   flex: none;
+  padding-bottom: 2px;
 }
 .tholi-header-actions {
   display: flex;
   gap: 8px;
 }
 .tholi-view-switch {
+  position: relative;
+  isolation: isolate;
   display: flex;
   gap: 4px;
   flex: none;
   background: var(--sage);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 4px;
 }
 .tholi-view-switch button {
+  position: relative;
   flex: 1;
   background: transparent;
   border-color: transparent;
@@ -42,18 +46,95 @@
   font-size: 14px;
 }
 .tholi-view-switch button[aria-pressed="true"] {
+  color: var(--jade);
+  font-weight: 600;
+}
+.tholi-view-indicator {
+  position: absolute;
+  z-index: -1;
+  inset: 4px auto 4px 4px;
+  width: calc(50% - 6px);
   background: var(--card);
-  border-color: var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px #1c25220d;
+  transition: transform 240ms var(--ease-in-out);
+}
+.tholi-view-switch[data-mode="conversation"] .tholi-view-indicator {
+  transform: translateX(calc(100% + 4px));
 }
 .tholi-current {
+  position: relative;
   flex: none;
-  padding: 20px;
-  background: var(--sage);
-  border-radius: 18px;
+  padding: 22px 20px 20px 38px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
   max-height: 55%;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+.tholi-step-content {
+  min-height: 0;
+  overflow: auto;
+  flex: 1 1 auto;
+}
+.tholi-step-content > .tholi-instruction {
+  overflow: visible;
+}
+.tholi-current .tholi-step-content > :last-child {
+  margin-bottom: 0;
+}
+.tholi-step-rail {
+  position: absolute;
+  left: 18px;
+  top: 28px;
+  bottom: 28px;
+  width: 1px;
+  background: var(--line);
+}
+.tholi-step-rail span {
+  position: absolute;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--jade);
+  background: var(--card);
+}
+.tholi-step-rail span:first-child {
+  top: 0;
+  background: var(--jade);
+}
+.tholi-step-rail span:last-child {
+  bottom: 0;
+}
+.tholi-current[data-phase="idle"] {
+  background: transparent;
+  border: 0;
+  padding: 16px 0 0;
+}
+.tholi-current[data-phase="idle"] .tholi-step-rail {
+  display: none;
+}
+.tholi-current[data-phase="idle"] .tholi-phase {
+  font-size: 26px;
+  font-weight: 550;
+  letter-spacing: -0.9px;
+  line-height: 1.2;
+  color: var(--ink);
+  max-width: 260px;
+}
+.tholi-current[data-phase="idle"] .tholi-instruction {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.tholi-current[data-phase="paused"] .tholi-step-rail {
+  opacity: 0.5;
+}
+.tholi-current[data-phase="arrived"] {
+  background: var(--sage);
 }
 .tholi-destination {
   display: flex;
@@ -76,11 +157,12 @@
   gap: 8px;
 }
 .tholi-instruction {
-  font-size: 20px;
+  font-size: 21px;
+  letter-spacing: -0.45px;
   line-height: 1.4;
   margin: 8px 0 16px;
   overflow-wrap: anywhere;
-  animation: tholi-step 160ms var(--ease-out);
+  animation: tholi-content-enter var(--duration-step) var(--ease-out);
   overflow: auto;
   min-height: 0;
 }
@@ -115,6 +197,12 @@
 .tholi-warning {
   border: 1px solid var(--warning);
 }
+.tholi-warning .tholi-step-rail span {
+  border-color: var(--warning);
+}
+.tholi-warning .tholi-step-rail span:first-child {
+  background: var(--warning);
+}
 .tholi-warning .tholi-phase {
   color: var(--warning);
 }
@@ -124,11 +212,13 @@
   margin: 10px 0;
 }
 .tholi-body {
+  position: relative;
   min-height: 0;
   overflow: auto;
   padding: 2px 3px 24px;
   scrollbar-width: thin;
   overscroll-behavior: contain;
+  flex: 1;
 }
 .tholi-composer label {
   font-weight: 600;
@@ -138,7 +228,10 @@
 .tholi-composer textarea {
   width: 100%;
   display: block;
-  min-height: 88px;
+  min-height: 104px;
+  line-height: 1.6;
+  font-size: 15px;
+  border-radius: 12px;
   resize: vertical;
 }
 .tholi-composer .primary {
@@ -162,7 +255,7 @@
 .tholi-body summary {
   cursor: pointer;
   color: var(--muted);
-  padding: 8px 0;
+  padding: 12px 0;
   font-size: 14px;
 }
 .tholi-body h2 {
@@ -182,14 +275,13 @@
   margin: 4px 4px 4px 0;
 }
 .tholi-messages {
-  max-height: 340px;
-  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 4px 0 16px;
 }
 .tholi-message {
+  flex-shrink: 0;
   padding: 12px 14px;
   font-size: 14px;
   line-height: 1.6;
@@ -199,6 +291,15 @@
   border-radius: 14px;
   background: var(--card);
   border: 1px solid var(--line);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+@starting-style {
+  .tholi-message:last-of-type {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 .tholi-message.user {
   align-self: flex-end;
@@ -217,23 +318,9 @@
 .tholi-arrival {
   animation: tholi-arrival 420ms var(--ease-out);
 }
-@keyframes tholi-arrival {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@keyframes tholi-step {
-  from {
-    opacity: 0.5;
-  }
-  to {
-    opacity: 1;
-  }
+.tholi-arrival path {
+  stroke-dasharray: 30;
+  animation: tholi-check 420ms var(--ease-out);
 }
 @container (max-width:300px) {
   .tholi-instruction {
@@ -246,17 +333,50 @@
     padding: 8px;
   }
   .tholi-current {
-    padding: 14px;
+    padding: 18px 14px 16px 32px;
+  }
+  .tholi-step-rail {
+    left: 14px;
   }
 }
+.tholi-widget-document,
+.tholi-widget-document body,
+.tholi-widget-document #root {
+  height: 100%;
+  min-height: 0;
+  overflow: clip;
+}
 .tholi-widget-app {
+  height: 100%;
+  min-height: 0;
   padding: 10px;
   gap: 8px;
   font-size: 14px;
 }
 .tholi-widget-app .tholi-current {
-  padding: 12px;
-  max-height: 65%;
+  padding: 12px 12px 12px 28px;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+.tholi-widget-app .tholi-body {
+  flex: 1 0 64px;
+  min-height: 64px;
+  padding-bottom: 12px;
+}
+.tholi-widget-app .tholi-session-actions {
+  margin-top: 8px;
+}
+.tholi-widget-app .tholi-step-rail {
+  left: 12px;
+  top: 20px;
+  bottom: 20px;
+}
+.tholi-widget-app .tholi-current[data-phase="idle"] {
+  padding: 8px 4px 0;
+}
+.tholi-widget-app .tholi-current[data-phase="idle"] .tholi-phase {
+  font-size: 21px;
 }
 .tholi-widget-app .tholi-instruction {
   font-size: 16px;
@@ -288,6 +408,9 @@
     max-height: none;
     padding: 6px 10px;
   }
+  .tholi-widget-app .tholi-step-rail {
+    display: none;
+  }
   .tholi-widget-app .tholi-phase {
     font-size: 12px;
   }
@@ -305,6 +428,16 @@
   .tholi-widget-app .tholi-phase {
     display: none;
   }
+  .tholi-widget-app .tholi-header .icon-button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 6px;
+  }
+  .tholi-widget-app .tholi-header .tholi-logo {
+    width: 68px;
+    height: 28px;
+  }
   .tholi-widget-app .tholi-current {
     padding: 4px 8px;
   }
@@ -321,6 +454,12 @@
   }
   .tholi-view-switch {
     flex-direction: column;
+  }
+  .tholi-view-indicator {
+    display: none;
+  }
+  .tholi-view-switch button[aria-pressed="true"] {
+    background: var(--card);
   }
   .tholi-session-actions {
     flex-wrap: wrap;

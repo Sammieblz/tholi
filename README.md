@@ -38,7 +38,7 @@ Tesseract OCR runs locally when refreshed discovery lacks an eligible next step 
 
 Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub checks remain pending. Fixture passes establish fixture behavior, not reliable completion on every website. See [the cleanup record](docs/maintenance.md) and [archived v0.9.1 validation](docs/v0.9.1-validation.md).
 
-The current **0.10.0** build adds the Tholi UI while retaining the 0.9.2 grounded account-menu routing fix. See [the dashboard fix and focused verification](docs/dashboard-navigation.md).
+The current **0.10.1** source build refines Tholi's hierarchy, website/widget motion, and frontend structure while retaining the grounded account-menu routing fix. See [UI refinement](docs/ui-refinement.md), [frontend architecture](docs/frontend-architecture.md), and [the dashboard fix](docs/dashboard-navigation.md). The website download remains the gated 0.10.0 archive until a newer release is packaged.
 
 ## Architecture and privacy
 

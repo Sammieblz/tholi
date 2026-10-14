@@ -156,28 +156,42 @@ describe("highlight lifecycle", () => {
     const { target, overlay, animate, root } = setup(),
       halo = root.shadowRoot!.querySelector(".halo");
     vi.advanceTimersByTime(4000);
-    expect(animate).toHaveBeenCalledTimes(1);
-    expect(animate.mock.calls[0][1]).toMatchObject({
+    const glowCalls = () =>
+      animate.mock.calls.filter(
+        (call) => (call[1] as { iterations?: number }).iterations,
+      );
+    expect(glowCalls()).toHaveLength(1);
+    expect(glowCalls()[0][1]).toMatchObject({
       iterations: 4,
       duration: 1200,
     });
     overlay.show(target, "Open Account");
     expect(root.shadowRoot!.querySelector(".halo")).toBe(halo);
     vi.advanceTimersByTime(10000);
-    expect(animate).toHaveBeenCalledTimes(1);
+    expect(glowCalls()).toHaveLength(1);
+    // Two entry fades plus the reminder. Geometry updates start neither again.
+    expect(animate).toHaveBeenCalledTimes(3);
     overlay.clear();
   });
   it("cancels the reminder on interaction and suppresses review encouragement", () => {
     const { overlay, animate, target } = setup();
     window.dispatchEvent(new Event("pointerdown"));
     vi.advanceTimersByTime(4000);
-    expect(animate).not.toHaveBeenCalled();
+    expect(
+      animate.mock.calls.some(
+        (call) => (call[1] as { iterations?: number }).iterations,
+      ),
+    ).toBe(false);
     overlay.show(target, "Review before canceling", {
       attention: false,
       warning: true,
     });
     vi.advanceTimersByTime(8000);
-    expect(animate).not.toHaveBeenCalled();
+    expect(
+      animate.mock.calls.some(
+        (call) => (call[1] as { iterations?: number }).iterations,
+      ),
+    ).toBe(false);
     overlay.clear();
   });
 });

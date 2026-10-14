@@ -1792,6 +1792,11 @@ export class PageCoach {
     if (this.view.status !== "paused") return;
     this.view.status = "running";
     if (this.view.request) this.view.request = resumeQueue(this.view.request);
+    // Blocked review requests may not start another plan immediately. Do not
+    // leave their prior Pause instruction attached to a running session.
+    this.view.instruction =
+      this.view.goalPlan?.reason ||
+      "Checking the current page. Your destination is retained.";
     this.planningRevision = "";
     this.observe();
     this.refresh();

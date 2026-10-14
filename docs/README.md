@@ -18,6 +18,8 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Dashboard settings navigation fix and verification](dashboard-navigation.md)
 - [Cleanup scope and verification](maintenance.md)
 - [Contribution and release procedure](../CONTRIBUTING.md)
+- [Frontend structure and ownership](frontend-architecture.md)
+- [Current UI refinement, motion, and installed skills](ui-refinement.md)
 
 ## Historical evidence and specialized fixtures
 

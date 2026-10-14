@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tholi",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Your next step, made clear. Local website guidance while you stay in control.",
   "permissions": [
     "activeTab",

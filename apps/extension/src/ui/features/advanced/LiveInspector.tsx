@@ -1,5 +1,5 @@
-import type { SessionView } from "../../../packages/shared-types";
-import { hash } from "../../../packages/page-model";
+import type { SessionView } from "../../../../../../packages/shared-types";
+import { hash } from "../../../../../../packages/page-model";
 
 export function LiveInspector({
   view,

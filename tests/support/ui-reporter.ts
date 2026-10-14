@@ -34,8 +34,8 @@ export default class UIReporter implements Reporter {
     const end = await buildProvenance();
     const passed =
       result.status === "passed" &&
-      this.expected === 9 &&
-      this.cases.length === 9 &&
+      this.expected === 10 &&
+      this.cases.length === 10 &&
       this.cases.every((c) => c.status === "passed") &&
       JSON.stringify(end) === JSON.stringify(this.start);
     await mkdir("output/qa", { recursive: true });
@@ -45,7 +45,7 @@ export default class UIReporter implements Reporter {
         {
           ...this.start,
           passed,
-          expected: 9,
+          expected: 10,
           cases: this.cases,
           evaluatedAt: new Date().toISOString(),
         },

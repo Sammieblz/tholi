@@ -1,5 +1,9 @@
-import { currentGuidanceRect } from "../../../packages/overlay-ui";
+import { currentGuidanceRect } from "../../../../../packages/overlay-ui";
+import { widgetStyles } from "./widget-styles";
 let host: HTMLElement | undefined, frame: HTMLIFrameElement | undefined;
+let movement: Animation | undefined;
+const reducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 let size = { width: 360, height: 420, x: 16, y: 16 },
   focused = false,
   dragging = false,
@@ -43,11 +47,25 @@ export function moveWidgetAside() {
         Math.hypot(b.x - size.x, b.y - size.y),
     )[0];
   if (next) {
+    const previous = { ...size };
     size = { ...size, ...next };
     clamp();
+    movement?.cancel();
+    if (!reducedMotion() && host?.animate)
+      movement = host.animate(
+        [
+          {
+            transform: `translate(${previous.x - size.x}px,${previous.y - size.y}px)`,
+          },
+          { transform: "translate(0,0)" },
+        ],
+        { duration: 240, easing: "cubic-bezier(0.77,0,0.175,1)" },
+      );
   }
 }
 export function unmountWidget() {
+  movement?.cancel();
+  movement = undefined;
   cleanup?.();
   cleanup = undefined;
   host?.remove();
@@ -67,16 +85,23 @@ export async function mountWidgetShell(
   host.id = "tholi-widget";
   host.dataset.tholiUi = "";
   host.style.cssText =
-    "position:fixed;z-index:2147483646;box-sizing:border-box;border:1px solid #bdcdbf;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px #0003;background:#faf7f0;";
+    "position:fixed;z-index:2147483646;box-sizing:border-box;border:1px solid #809087;border-radius:14px;overflow:hidden;box-shadow:0 4px 12px #0001,0 16px 40px #0003;background:#faf7f0;";
   const shadow = host.attachShadow({ mode: "closed" });
-  shadow.innerHTML =
-    '<style>*{box-sizing:border-box}.handle{height:28px;background:#e5ede5;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font:12px system-ui;color:#1c2522;cursor:move;touch-action:none}.handle:focus-visible,.resize:focus-visible{outline:2px solid #1f6b57;outline-offset:-2px}.resize{position:absolute;bottom:0;right:0;width:28px;height:28px;cursor:nwse-resize;touch-action:none;background:#e5ede5;border:0;color:#1f6b57;border-radius:8px 0 0}.handle button{background:transparent;border:0;color:inherit;cursor:pointer}iframe{border:0;width:100%;height:calc(100% - 28px);display:block}</style><div class="handle" tabindex="0" role="group" aria-label="Move widget. Use arrow keys. Shift and arrow keys resize."><span>Tholi</span><button aria-label="Reset widget position">Reset</button></div><button class="resize" aria-label="Resize widget. Use arrow keys."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 20 20 8M14 20l6-6"/></svg></button>';
+  shadow.innerHTML = `<style>${widgetStyles}</style><div class="handle" tabindex="0" role="group" aria-label="Move widget. Use arrow keys. Shift and arrow keys resize."><span>Tholi</span><div><button aria-label="Reset widget position">Reset</button><button class="layout-toggle" aria-label="Widget layout" aria-expanded="false">Layout</button></div></div><div class="layout" hidden role="group" aria-label="Widget position and size"><p>Position</p><div><button data-move="left">Left</button><button data-move="right">Right</button><button data-move="up">Up</button><button data-move="down">Down</button></div><p>Size</p><div><button data-size="smaller">Smaller</button><button data-size="larger">Larger</button></div><button class="layout-close">Done</button></div><button class="resize" aria-label="Resize widget. Use arrow keys."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 20 20 8M14 20l6-6"/></svg></button>`;
   frame = document.createElement("iframe");
   frame.title = "Tholi guidance widget";
   frame.src = url;
   shadow.append(frame);
   document.documentElement.append(host);
   clamp();
+  if (!reducedMotion() && host.animate)
+    movement = host.animate(
+      [
+        { opacity: 0, transform: "translateY(6px) scale(.98)" },
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+      ],
+      { duration: 180, easing: "cubic-bezier(0.23,1,0.32,1)" },
+    );
   const handle = shadow.querySelector<HTMLElement>(".handle")!,
     resize = shadow.querySelector<HTMLElement>(".resize")!;
   const persist = () =>
@@ -91,6 +116,7 @@ export async function mountWidgetShell(
     )
       return;
     e.preventDefault();
+    movement?.cancel();
     dragging = true;
     const el = e.currentTarget as HTMLElement,
       begin = { ...size },
@@ -123,8 +149,10 @@ export async function mountWidgetShell(
   handle.onpointerdown = (e) => pointer(e, false);
   resize.onpointerdown = (e) => pointer(e, true);
   const keys = (e: KeyboardEvent, resizing: boolean) => {
+    if ((e.target as Element).closest("button") && !resizing) return;
     if (!e.key.startsWith("Arrow")) return;
     e.preventDefault();
+    movement?.cancel();
     const dx = e.key === "ArrowRight" ? 16 : e.key === "ArrowLeft" ? -16 : 0,
       dy = e.key === "ArrowDown" ? 16 : e.key === "ArrowUp" ? -16 : 0;
     if (resizing || e.shiftKey) {
@@ -140,10 +168,58 @@ export async function mountWidgetShell(
   handle.onkeydown = (e) => keys(e, false);
   resize.onkeydown = (e) => keys(e, true);
   shadow.querySelector(".handle button")!.addEventListener("click", () => {
+    movement?.cancel();
     size = { width: 360, height: 420, x: innerWidth - 376, y: 16 };
     clamp();
     persist();
   });
+  const layout = shadow.querySelector<HTMLElement>(".layout")!,
+    toggle = shadow.querySelector<HTMLButtonElement>(".layout-toggle")!;
+  const closeLayout = () => {
+    layout.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.focus();
+  };
+  toggle.onclick = () => {
+    layout.hidden = !layout.hidden;
+    toggle.setAttribute("aria-expanded", String(!layout.hidden));
+    if (!layout.hidden)
+      layout.querySelector<HTMLButtonElement>("button")!.focus();
+  };
+  layout.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      closeLayout();
+    }
+  });
+  layout.querySelector(".layout-close")!.addEventListener("click", closeLayout);
+  layout
+    .querySelectorAll<HTMLButtonElement>("[data-move],[data-size]")
+    .forEach((button) => {
+      button.onclick = () => {
+        movement?.cancel();
+        if (button.dataset.move) {
+          size.x +=
+            button.dataset.move === "left"
+              ? -48
+              : button.dataset.move === "right"
+                ? 48
+                : 0;
+          size.y +=
+            button.dataset.move === "up"
+              ? -48
+              : button.dataset.move === "down"
+                ? 48
+                : 0;
+        } else {
+          const delta = button.dataset.size === "larger" ? 48 : -48;
+          size.width += delta;
+          size.height += delta;
+        }
+        clamp();
+        persist();
+      };
+    });
   const focus = () => {
     focused = document.activeElement === host;
   };

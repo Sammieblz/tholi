@@ -163,6 +163,18 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     await expect.poll(async () => (await app.view())?.status).toBe("paused");
     expect((await app.view()).request.id).toBe(id);
     const bounds = () => app.page.locator("#tholi-widget").boundingBox();
+    // The closed-shadow shell offers a click alternative to dragging.
+    const layoutStart = (await bounds())!;
+    await app.page.mouse.click(
+      layoutStart.x + layoutStart.width - 30,
+      layoutStart.y + 14,
+    );
+    await app.page.keyboard.press("Enter");
+    await expect
+      .poll(async () => (await bounds())!.x)
+      .toBeLessThan(layoutStart.x);
+    await app.page.keyboard.press("Escape");
+    expect((await app.view()).request.id).toBe(id);
     const before = (await bounds())!;
     await app.page.mouse.move(before.x + 60, before.y + 14);
     await app.page.mouse.down();

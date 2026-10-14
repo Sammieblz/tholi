@@ -5,7 +5,7 @@ for (const width of [375, 768, 1440])
     page,
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto("http://127.0.0.1:5174/");
+    await page.goto("/");
     await expect(
       page.getByRole("heading", { name: "Find your way forward." }),
     ).toBeVisible();
@@ -14,6 +14,13 @@ for (const width of [375, 768, 1440])
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    if (width === 375) {
+      const navigation = page.getByRole("button", { name: "Open navigation" });
+      await navigation.click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(navigation).toBeFocused();
+    }
     await page
       .getByRole("button", { name: "Account menu", exact: true })
       .click();
@@ -26,8 +33,9 @@ for (const width of [375, 768, 1440])
     await page.screenshot({
       path: info.outputPath(`home-${width}.png`),
       fullPage: true,
+      animations: "disabled",
     });
-    await page.goto("http://127.0.0.1:5174/signup");
+    await page.goto("/signup");
     await page.getByLabel("Name", { exact: true }).fill("Ada");
     await page.getByLabel("Email", { exact: true }).fill("ada@example.com");
     await page.getByLabel("Demo password").fill("demo-only-password");
@@ -51,10 +59,8 @@ for (const width of [375, 768, 1440])
     expect(
       await page.evaluate(() => sessionStorage.getItem("tholi-demo-account")),
     ).toBeNull();
-    await page.goto("http://127.0.0.1:5174/download");
-    const metadata = await page.request.get(
-      "http://127.0.0.1:5174/downloads/manifest.json",
-    );
+    await page.goto("/download");
+    const metadata = await page.request.get("/downloads/manifest.json");
     const manifest =
       metadata.ok() &&
       metadata.headers()["content-type"]?.includes("application/json")
@@ -68,9 +74,7 @@ for (const width of [375, 768, 1440])
         }),
       ).toHaveAttribute("href", manifest.url);
       if (width === 375) {
-        const archive = await page.request.get(
-          "http://127.0.0.1:5174" + manifest.url,
-        );
+        const archive = await page.request.get(manifest.url);
         expect(
           createHash("sha256")
             .update(await archive.body())
@@ -98,7 +102,7 @@ test("reduced motion, dark theme, sign-in and long content", async ({
   page,
 }, info) => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto("http://127.0.0.1:5174/signin");
+  await page.goto("/signin");
   await page.getByLabel("Email", { exact: true }).fill("you@example.com");
   await page.getByLabel("Demo password").fill("short");
   await page.getByRole("button", { name: "Sign in to demo" }).click();

@@ -2,7 +2,7 @@ import {
   mountWidgetShell,
   unmountWidget,
   moveWidgetAside,
-} from "./widget-shell";
+} from "./ui/widget/widget-shell";
 import {
   captureMetadata,
   restoreOverlay,

@@ -1,0 +1,54 @@
+.onboarding fieldset {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 28px 0;
+}
+.onboarding fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 24px;
+}
+.onboarding > button {
+  margin: 20px 8px 20px 0;
+}
+.onboarding-step > button {
+  margin-top: 24px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  max-width: 200px;
+  margin: 20px 0 32px;
+}
+.onboarding-progress span {
+  position: relative;
+  width: 80px;
+  height: 3px;
+  background: var(--line);
+  overflow: hidden;
+  border-radius: 3px;
+}
+.onboarding-progress span::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--jade);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.onboarding-progress .complete::before {
+  transform: scaleX(1);
+}
+.onboarding .demo {
+  margin-top: 30px;
+}
+@media (max-width: 600px) {
+  .onboarding fieldset label {
+    margin: 8px 16px 8px 0;
+  }
+}

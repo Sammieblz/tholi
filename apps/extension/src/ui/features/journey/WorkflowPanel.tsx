@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { WorkflowContext } from "../../../packages/navigation-core/workflow-contracts";
-import { workflowGuides } from "../../../packages/navigation-core/guides";
+import type { WorkflowContext } from "../../../../../../packages/navigation-core/workflow-contracts";
+import { workflowGuides } from "../../../../../../packages/navigation-core/guides";
 
 export function WorkflowPanel({
   workflow,

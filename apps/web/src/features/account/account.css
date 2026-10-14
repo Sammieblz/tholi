@@ -1,0 +1,121 @@
+.auth-card {
+  padding: 40px 48px;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: 0.9fr 1fr;
+  max-width: 1040px;
+  margin: 48px auto 80px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--card);
+}
+.auth-aside {
+  background: var(--sage);
+  padding: 64px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 580px;
+}
+.auth-aside p {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  line-height: 1.25;
+}
+.auth-aside > span:last-child {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.route-glyph {
+  height: 100px;
+  width: 60px;
+  position: relative;
+  border-left: 1px solid var(--jade);
+  margin: 8px 0 24px 12px;
+}
+.route-glyph i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--jade);
+  background: var(--sage);
+  position: absolute;
+  left: -5px;
+}
+.route-glyph i:first-child {
+  top: 0;
+  background: var(--jade);
+}
+.route-glyph i:nth-child(2) {
+  top: 48px;
+}
+.route-glyph i:last-child {
+  bottom: 0;
+  border-color: var(--warning);
+  background: var(--amber);
+}
+.auth-card .primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.auth-card h1 {
+  font-size: 32px;
+}
+.auth-card label {
+  display: block;
+  font-size: 14px;
+  margin: 18px 0;
+}
+.auth-card input {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+.auth-card .primary {
+  width: 100%;
+  margin-top: 10px;
+}
+.auth-card > p:last-of-type {
+  font-size: 13px;
+}
+.auth-card > a {
+  font-size: 13px;
+}
+.auth-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+.welcome-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 28px 0 40px;
+}
+@media (max-width: 900px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+    margin-top: 24px;
+  }
+  .auth-aside {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 24px;
+    margin: 0;
+  }
+  .welcome h1 {
+    overflow-wrap: anywhere;
+  }
+}

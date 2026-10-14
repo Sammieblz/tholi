@@ -1,0 +1,166 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 72px;
+  align-items: center;
+  min-height: 620px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.hero h1 {
+  font-size: clamp(48px, 5.4vw, 78px);
+  line-height: 1.02;
+  letter-spacing: -3px;
+  margin: 24px 0;
+  font-weight: 510;
+  text-wrap: balance;
+}
+.hero h1 span {
+  color: var(--jade);
+}
+.hero-description {
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 24px 0;
+}
+.hero-actions {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin: 30px 0 20px;
+}
+.story-band {
+  margin: 72px 0 80px;
+  border-block: 1px solid var(--line);
+  padding: 48px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+.story-band p {
+  color: var(--muted);
+}
+.use-cases {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: start;
+  margin-bottom: 70px;
+}
+.example-requests p {
+  font-size: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+  color: var(--jade);
+  letter-spacing: -0.4px;
+}
+.principles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin: 64px 0;
+}
+.principles h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.principles p {
+  font-size: 15px;
+  color: var(--muted);
+}
+.faq {
+  max-width: 780px;
+  margin: 100px auto;
+}
+.faq p {
+  color: var(--muted);
+}
+.closing {
+  text-align: center;
+  background: var(--sage);
+  border-radius: 16px;
+  padding: 64px 40px;
+}
+.closing h2 {
+  margin-top: 0;
+}
+.reading {
+  max-width: 760px;
+  margin: 50px auto;
+}
+.reading > p {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 24px 0;
+}
+.reading h2 {
+  margin-top: 44px;
+}
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .hero-copy {
+    max-width: 650px;
+  }
+  .hero h1 br {
+    display: none;
+  }
+  .hero h1 span {
+    margin-left: 0.18em;
+  }
+  .story-band,
+  .use-cases {
+    gap: 30px;
+  }
+  .principles {
+    gap: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .hero {
+    min-height: auto;
+  }
+  .hero h1 {
+    font-size: 48px;
+    letter-spacing: -2px;
+  }
+  .hero-description {
+    font-size: 16px;
+  }
+  .hero-actions {
+    gap: 18px;
+  }
+  .story-band {
+    margin: 48px 0;
+    padding: 24px 0;
+  }
+  .use-cases {
+    margin-bottom: 36px;
+  }
+  .principles {
+    margin: 32px 0;
+  }
+  .faq {
+    margin: 56px 0;
+  }
+  .closing {
+    padding: 30px 20px;
+  }
+  .reading {
+    margin: 24px 0;
+  }
+  .reading > p {
+    font-size: 16px;
+  }
+}
