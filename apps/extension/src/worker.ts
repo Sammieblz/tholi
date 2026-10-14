@@ -1,3 +1,13 @@
+import {
+  trustedUi,
+  isWidget,
+  isPanel,
+  widgetCommands,
+  uiMessage,
+  invalidateUi,
+  mountWidget,
+  preferredSurface,
+} from "./ui-transport";
 import { browserOcr } from "./nlp-client";
 import { backendOcr } from "./backend-client";
 import { recognizeWithFallback } from "../../../packages/vision/processing";
@@ -356,10 +366,13 @@ chrome.runtime.onInstalled.addListener((details) => {
   });
 });
 const save = async () => {
+  invalidateUi();
+  void mountWidget(session);
   await chrome.storage.session.set({ navigatorJourneys: suspended });
   if (session) await chrome.storage.session.set({ navigatorSession: session });
   else await chrome.storage.session.remove("navigatorSession");
 };
+void ready.then(() => mountWidget(session, true));
 const live = () => session?.routeId === LIVE_ROUTE_ID;
 const activeTab = async () =>
   (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
@@ -611,7 +624,7 @@ async function stopSession(reason = "Navigation stopped.") {
   await save();
 }
 chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
+  .setPanelBehavior({ openPanelOnActionClick: false })
   .catch(() => {});
 let queue: Promise<unknown> = ready;
 function enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -620,6 +633,19 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   return next;
 }
 chrome.runtime.onMessage.addListener((raw, sender, respond) => {
+  if (raw?.type?.startsWith("UI_")) {
+    const operation =
+      raw.type === "UI_OPEN_SIDEBAR"
+        ? uiMessage(raw, sender, session)
+        : enqueue(() => uiMessage(raw, sender, session));
+    void operation.then(respond).catch((e) => respond({ error: e.message }));
+    return true;
+  }
+  if (isWidget(sender, session) && !widgetCommands.has(raw?.type)) {
+    respond({ error: "This setting is only available in the sidebar." });
+    return;
+  }
+
   if (raw?.target === "offscreen") return;
   if (raw?.type === "FRAME_VISIBILITY") {
     void enqueue(() => frameVisibilityMessage(raw, sender, session))
@@ -688,7 +714,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
   }
   if (
     sender.id === chrome.runtime.id &&
-    sender.url === chrome.runtime.getURL("sidepanel.html") &&
+    trustedUi(sender, session) &&
     ["SET_GOAL", "CLARIFY", "STOP", "PAUSE", "RESUME_JOURNEY"].includes(
       raw?.type,
     )
@@ -710,7 +736,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
   if (raw?.type === "GET_MEMORY") {
     if (
       sender.id !== chrome.runtime.id ||
-      sender.url !== chrome.runtime.getURL("sidepanel.html") ||
+      !trustedUi(sender, session) ||
       !messageSchema.safeParse(raw).success
     ) {
       respond({ error: "Trusted extension panel required." });
@@ -840,7 +866,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       await save();
       return { ok: true };
     }
-    if (sender.url !== chrome.runtime.getURL("sidepanel.html"))
+    if (!trustedUi(sender, session))
       return { error: "Extension panel required." };
     const parsed = messageSchema.safeParse(raw);
     if (!parsed.success) return { error: "Invalid command." };
@@ -947,7 +973,11 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
           error:
             "Return to the indicated website tab first. The destination is still retained.",
         };
-      if (session.tabId !== tab.id) {
+      if (
+        session.tabId !== tab.id ||
+        !session.documentId ||
+        session.navigationPending
+      ) {
         session.tabId = tab.id;
         session.documentId = undefined;
       }
@@ -961,8 +991,14 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         };
       return session;
     }
-    if (command.type === "GET_BACKEND") return backendSettings();
-    if (command.type === "SET_BACKEND") return setBackendSettings(command);
+    if (command.type === "GET_BACKEND")
+      return isPanel(sender)
+        ? backendSettings()
+        : { error: "Sidebar required." };
+    if (command.type === "SET_BACKEND")
+      return isPanel(sender)
+        ? setBackendSettings(command)
+        : { error: "Sidebar required." };
     if (command.type === "GET_SESSION") return session || {};
     if (command.type === "GET_TASKS" || command.type === "DELETE_TASK") {
       const tab = await activeTab(),
@@ -1267,7 +1303,7 @@ async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
   const startedGeneration = goalGeneration;
   if (sender.id !== chrome.runtime.id) throw new Error("Invalid sender.");
   const fromContent = raw.type === "NLP_REPLAN";
-  if (!fromContent && sender.url !== chrome.runtime.getURL("sidepanel.html"))
+  if (!fromContent && !trustedUi(sender, session))
     throw new Error("Trusted extension panel required.");
   if (!fromContent && !messageSchema.safeParse(raw).success)
     throw new Error("Invalid request.");
@@ -1637,8 +1673,19 @@ async function recoverWebsiteAccess() {
       void attemptVision(session.sessionId, session.view.request.id);
   }
 }
-chrome.action.onClicked.addListener(() => {
-  void recoverWebsiteAccess().catch(() => {});
+chrome.action.onClicked.addListener((tab) => {
+  if (
+    tab.windowId !== undefined &&
+    (preferredSurface() !== "widget" ||
+      !session ||
+      session.tabId !== tab.id ||
+      !session.documentId ||
+      session.navigationPending)
+  )
+    void chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
+  void recoverWebsiteAccess()
+    .then(() => mountWidget(session, true))
+    .catch(() => {});
 });
 // Follow browser-confirmed server redirects only for the active authentication
 // task. This permission supplies navigation metadata, not access to the new DOM.

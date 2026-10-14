@@ -1,6 +1,6 @@
-# Internet Navigator
+# Tholi
 
-Navigator guides you through live website controls while retaining your destination across menus, dialogs, page changes and authentication. You perform website clicks, typing and submissions. Navigator can scroll a freshly bound target into view and highlight it.
+Tholi guides you through live website controls while retaining your destination across menus, dialogs, page changes and authentication. You perform website clicks, typing and submissions. Tholi can scroll a freshly bound target into view and highlight it.
 
 ## Install and run
 
@@ -14,13 +14,15 @@ npm run build:extension
 The build fetches and verifies the pinned MiniLM and English Tesseract assets automatically. Models are packaged locally; the installed extension requires no runtime model downloads or backend.
 
 1. Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose `dist/extension`.
-2. Open an HTTP/HTTPS website and click the Navigator toolbar icon.
+2. Open an HTTP/HTTPS website and click the Tholi toolbar icon.
 3. Enter a destination, such as **Help me cancel my Amazon Prime membership**, and select **Guide me**. Approve access to that website if Chrome requests it.
 4. Follow the current instruction and highlight. Login and two-factor verification retain the request. Pause retains it; Stop cancels it.
 
 After rebuilding, select **Reload** in `chrome://extensions` and refresh the website tab. For permission recovery and native checks, see [Chrome setup and verification](docs/chrome-handoff.md).
 
-Route estimates, saved routes, workflow parameters, control search and diagnostics are expandable. **Explore page controls** starts discovery without a destination. The controlled Northstar demo remains available with `npm run dev:demo` at `http://127.0.0.1:5173`.
+Guide and Conversation share the same journey. Use settings to choose a movable/resizable widget or reveal Advanced controls. Route details and saved journeys are expandable; backend credentials remain in the sidebar. The controlled Northstar demo remains available with `npm run dev:demo` at `http://127.0.0.1:5173`.
+
+Run `npm run dev:web` for the local Tholi website at **http://127.0.0.1:5174**. It includes a real packaged-preview download, setup instructions, and mock accounts/onboarding. No hosting, real authentication, or account requirement is added. See [UI setup, motion, and verification](docs/tholi-ui.md).
 
 ## What currently works
 
@@ -36,7 +38,7 @@ Tesseract OCR runs locally when refreshed discovery lacks an eligible next step 
 
 Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub checks remain pending. Fixture passes establish fixture behavior, not reliable completion on every website. See [the cleanup record](docs/maintenance.md) and [archived v0.9.1 validation](docs/v0.9.1-validation.md).
 
-The current **0.9.2** build adds grounded account-menu exploration and preserves account versus repository settings context. See [the dashboard fix and focused verification](docs/dashboard-navigation.md).
+The current **0.10.0** build adds the Tholi UI while retaining the 0.9.2 grounded account-menu routing fix. See [the dashboard fix and focused verification](docs/dashboard-navigation.md).
 
 ## Architecture and privacy
 
@@ -48,8 +50,10 @@ The current **0.9.2** build adds grounded account-menu exploration and preserves
 | `packages/goal-planner`                  | Grounded targets, observed routes, return routing and journey checkpoints                        |
 | `packages/site-memory`                   | Browser IndexedDB knowledge, parameterized saved routes and derived indexes                      |
 | `packages/vision`                        | Recognition, bounded queues, visual evidence and backend fallback                                |
+| `packages/ui`                            | Shared presentation states, guidance components, tokens, and motion                              |
 | `apps/extension`                         | Permissions, session lifecycle, worker inference, scrolling, highlights and outcome verification |
 | `apps/api`                               | Optional authenticated Fastify/SQLite adapter with inference outside the event loop              |
+| `apps/web`                               | Local product website, verified downloads, and mock onboarding                                   |
 
 The browser remains authoritative. Reusable interface semantics are persisted locally; private entity names, supplied values and authenticated status remain session-only. Field values, raw HTML and screenshots are not stored. Forget/Clear delete learned knowledge. See [privacy](docs/privacy.md) and [security](docs/security.md).
 

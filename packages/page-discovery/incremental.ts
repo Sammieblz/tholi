@@ -90,7 +90,7 @@ export class IncrementalControlIndex {
     if (
       (!e.matches(controlSelector + ', [role="slider"]') &&
         !customInteraction(e)) ||
-      e.closest("#internet-navigator-overlay")
+      e.closest("#internet-navigator-overlay,[data-tholi-ui]")
     )
       return;
     if (!this.elements.has(e) && this.elements.size >= this.limit) {
@@ -160,7 +160,7 @@ export class IncrementalControlIndex {
             : r.target instanceof ShadowRoot
               ? r.target.host
               : r.target.parentElement;
-        if (!e || e.closest("#internet-navigator-overlay")) continue;
+        if (!e || e.closest("#internet-navigator-overlay,[data-tholi-ui]")) continue;
         if (
           r.type === "attributes" &&
           [
@@ -257,7 +257,7 @@ export class IncrementalControlIndex {
         this.walkers.shift();
         continue;
       }
-      if (node.closest("#internet-navigator-overlay")) continue;
+      if (node.closest("#internet-navigator-overlay,[data-tholi-ui]")) continue;
       this.add(node);
       if (node.shadowRoot) {
         this.attach(node.shadowRoot);

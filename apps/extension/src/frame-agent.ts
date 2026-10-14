@@ -135,7 +135,10 @@ if (!(globalThis as any)[marker]) {
       }
       selected = target;
       before = p;
-      overlay.show(target.geometry, raw.instruction);
+      overlay.show(target.geometry, raw.instruction, {
+        attention: target.control.risk === "ordinary",
+        warning: target.control.risk !== "ordinary",
+      });
       respond({ ok: true });
       return;
     }

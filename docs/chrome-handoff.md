@@ -1,8 +1,10 @@
 # Chrome setup and native verification
 
-Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload and refresh existing website tabs to replace injected scripts. The footer displays the manifest version.
+Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload for **Tholi** and refresh existing website tabs to replace injected scripts. Confirm version **0.10.0** in Chrome's extension details.
 
-On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. **Explore page controls** starts discovery without a task. Authored Northstar tasks retain their separate Start button.
+On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
+
+Switch between Guide and Conversation during the same task. Try Pause, Resume, Stop, and “Why this step?” in Conversation. Use **Tholi settings → Use floating widget** to check dragging, resizing, keyboard controls, Expand, and **Use sidebar**. Confirm the destination survives each view/surface change and a website reload. Compact widgets must keep readable instructions and Pause/Stop available. Check four idle reminders, their cancellation, reduced motion, and absence of arrival feedback until the requested result is verified.
 
 ## Access recovery
 

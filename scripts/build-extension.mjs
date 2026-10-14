@@ -13,6 +13,7 @@ import {
 import { resolve, join } from "node:path";
 import { thirdParty } from "./third-party.mjs";
 import { opencvCsp } from "./opencv-csp.mjs";
+import { buildBrand } from "./build-brand.mjs";
 const out = "dist/extension";
 const withPaddle = process.argv.includes("--with-paddle");
 const visionPolicy = JSON.parse(
@@ -63,6 +64,7 @@ await build({
   target: "chrome120",
   sourcemap: true,
   define: { "process.env.NODE_ENV": '"production"' },
+  loader: { ".woff2": "file" },
 });
 await build({
   entryPoints: ["apps/extension/src/inference.ts"],
@@ -109,6 +111,8 @@ for (const name of [
 await copyFile("assets/model-lock.json", out + "/model-lock.json");
 await copyFile("apps/extension/manifest.json", out + "/manifest.json");
 await copyFile("apps/extension/sidepanel.html", out + "/sidepanel.html");
+await copyFile("apps/extension/widget.html", out + "/widget.html");
+await buildBrand(out);
 await thirdParty(out);
 
 await build({

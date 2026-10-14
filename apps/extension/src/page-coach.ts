@@ -541,7 +541,16 @@ export class PageCoach {
           return;
         }
       } else if (!this.pending)
-        this.overlay.show(fresh.geometry, this.view.instruction);
+        this.overlay.show(fresh.geometry, this.view.instruction, {
+          key:
+            (this.view.request?.id || this.view.journey?.id || "") +
+            ":" +
+            fresh.control.id +
+            ":" +
+            this.view.verifiedSteps,
+          attention: fresh.control.risk === "ordinary",
+          warning: fresh.control.risk !== "ordinary",
+        });
     } else if (
       !this.view.request &&
       (this.view.goalPlan?.status === "unresolved" ||
@@ -1052,7 +1061,16 @@ export class PageCoach {
                 this.view.status === "running" &&
                 !target.control.occluded,
             );
-          this.overlay.show(target.geometry, this.view.instruction);
+          this.overlay.show(target.geometry, this.view.instruction, {
+            key:
+              (this.view.request?.id || this.view.journey?.id || "") +
+              ":" +
+              target.control.id +
+              ":" +
+              this.view.verifiedSteps,
+            attention: target.control.risk === "ordinary",
+            warning: target.control.risk !== "ordinary",
+          });
           this.publish(this.view);
         }
         const external = this.view.page?.controls.find(
@@ -1264,7 +1282,16 @@ export class PageCoach {
         target.control.kind === "focus"
           ? `Enter “${value}” using the highlighted field and the website's controls. Input contents are not read.`
           : `Use the highlighted “${target.control.label}” control to choose “${value}”. The requested state is checked.`;
-    this.overlay.show(target.geometry, this.view.instruction);
+    this.overlay.show(target.geometry, this.view.instruction, {
+      key:
+        (this.view.request?.id || this.view.journey?.id || "") +
+        ":" +
+        target.control.id +
+        ":" +
+        this.view.verifiedSteps,
+      attention: target.control.risk === "ordinary",
+      warning: target.control.risk !== "ordinary",
+    });
     this.publish(this.view, observed);
     return { view: this.view };
   }

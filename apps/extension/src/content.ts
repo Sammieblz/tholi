@@ -1,4 +1,9 @@
 import {
+  mountWidgetShell,
+  unmountWidget,
+  moveWidgetAside,
+} from "./widget-shell";
+import {
   captureMetadata,
   restoreOverlay,
   viewportRevision,
@@ -23,7 +28,7 @@ import {
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded092";
+const marker = "__internetNavigatorLoaded0100";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
@@ -155,6 +160,23 @@ if (!host[marker]) {
   };
   chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     if (sender.id !== chrome.runtime.id) return;
+    if (raw.sessionId === sessionId && raw.type === "MOUNT_WIDGET") {
+      void mountWidgetShell(raw.url, sessionId!, raw.bounds).then(() =>
+        respond({ ok: true }),
+      );
+      return true;
+    }
+    if (raw.sessionId === sessionId && raw.type === "MOVE_WIDGET") {
+      moveWidgetAside();
+      respond({ ok: true });
+      return;
+    }
+    if (raw.sessionId === sessionId && raw.type === "UNMOUNT_WIDGET") {
+      unmountWidget();
+      respond({ ok: true });
+      return;
+    }
+
     if (
       raw.type === "RESTORE_JOURNEY" &&
       raw.sessionId === sessionId &&

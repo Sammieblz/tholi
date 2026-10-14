@@ -4,7 +4,7 @@ import {
   validatePng,
 } from "../../../packages/vision/contracts";
 import Fastify from "fastify";
-import apiPackage from "../package.json";
+import apiPackage from "../package.json" with { type: "json" };
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import { timingSafeEqual } from "node:crypto";

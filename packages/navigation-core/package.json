@@ -1,11 +1,11 @@
 {
   "name": "@internet-navigator/navigation-core",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "type": "module",
   "private": true,
   "license": "MIT",
   "dependencies": {
-    "@internet-navigator/nlp": "0.9.2",
+    "@internet-navigator/nlp": "0.10.0",
     "zod": "^3.24.0"
   }
 }

@@ -23,6 +23,16 @@ if (!report.passed || report.extensionVersion !== manifest.version)
   );
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const files = await artifactFiles(extension);
+const ui = JSON.parse(await readFile("output/qa/ui-build.json", "utf8"));
+if (
+  !ui.passed ||
+  ui.expected !== 9 ||
+  ui.extensionVersion !== manifest.version ||
+  JSON.stringify(ui.artifactFiles) !== JSON.stringify(files)
+)
+  throw Error(
+    "Run the full Tholi UI suite on these exact build bytes before packaging",
+  );
 const multiApp = await multiAppEvidence(files);
 const vision = await visionEvidence(files);
 const reliability = await reliabilityEvidence(files);
@@ -128,6 +138,12 @@ await writeFile(
       matrixSha256: report.matrixSha256,
       metrics: report.summaries,
       regressions,
+      ui: {
+        cases: ui.cases.length,
+        evaluatedAt: ui.evaluatedAt,
+        motion: ui.cases.find((c) => c.motion)?.motion,
+        nativeChrome: "pending user-assisted verification",
+      },
       multiApp,
       vision,
       reliability,
@@ -155,3 +171,4 @@ await writeFile(
   ) + "\n",
 );
 console.log(`Verified candidate: ${archive}\nSHA256: ${archiveSha256}`);
+await (await import("./sync-downloads.mjs")).syncDownloads();

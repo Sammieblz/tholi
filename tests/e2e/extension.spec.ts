@@ -48,6 +48,12 @@ test.beforeAll(async ({}, testInfo) => {
   panel = await context.newPage();
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
   await panel.setViewportSize({ width: 380, height: 1000 });
+  await panel.evaluate(() =>
+    chrome.runtime.sendMessage({
+      type: "UI_SAVE",
+      preferences: { mode: "guide", surface: "sidebar", advanced: true },
+    }),
+  );
 });
 test.afterAll(async () => {
   await context?.close();
@@ -73,17 +79,33 @@ async function start(routeId = "demo.subscription.cancel") {
     .getByRole("button", { name: "Start navigation" })
     .evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("#internet-navigator-overlay")).toBeVisible();
-  await expect(panel.locator(".indicator")).toHaveText("ON");
+  await expect(
+    panel.getByRole("button", { name: "Pause navigation", exact: true }),
+  ).toBeVisible();
   await expect(panel.locator(".error")).toHaveCount(0);
 }
 async function status(value: string) {
-  await expect(panel.locator(".current .eyebrow")).toHaveText(value);
+  const phases: Record<string, string> = {
+    "REVIEW REQUIRED": "review",
+    REROUTING: "recovering",
+    PAUSED: "paused",
+    STOPPED: "idle",
+    CHECKPOINT: "paused",
+    "WAITING FOR THE WEBSITE": "verifying",
+    GUIDING: "guiding",
+    COMPLETED: "arrived",
+  };
+  await expect(panel.locator(".tholi-current")).toHaveAttribute(
+    "data-phase",
+    phases[value],
+  );
 }
 async function reset() {
   await panel.evaluate(
     async () => await chrome.runtime.sendMessage({ type: "STOP" }),
   );
   await page.goto("http://127.0.0.1:5173");
+  await page.bringToFront();
   await expect(
     panel.getByRole("button", { name: "Start navigation" }),
   ).toBeVisible();
@@ -194,7 +216,7 @@ test("ambiguous duplicates and unknown screens stop instead of guessing", async 
   await next("Account", "Account overview");
   await next("Billing", "Billing & subscription");
   await status("STOPPED");
-  await expect(panel.locator(".current")).toContainText(
+  await expect(panel.locator(".tholi-current")).toContainText(
     "Multiple controls match",
   );
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
@@ -278,8 +300,10 @@ test("two origin-filtered tasks have independent previews and billing completion
   await next("Account", "Account overview");
   await next("Billing", "Billing & subscription");
   await status("COMPLETED");
-  await expect(panel.locator(".current")).toContainText("You reached Billing");
-  await expect(panel.locator(".current")).not.toContainText("canceled");
+  await expect(panel.locator(".tholi-current")).toContainText(
+    "You reached Billing",
+  );
+  await expect(panel.locator(".tholi-current")).not.toContainText("canceled");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await expect(panel.locator(".evidence")).toContainText(
     "2 verified transitions",
@@ -372,7 +396,7 @@ test("unsupported tabs offer no tasks and cannot replace a pinned session", asyn
   );
   expect(current.routes).toEqual([]);
   await expect(
-    panel.getByRole("heading", { name: "No supported tasks" }),
+    panel.getByRole("heading", { name: "Open a website" }),
   ).toBeVisible();
   await expect(panel.locator(".tab-warning")).toContainText("another tab");
   const rejected = await panel.evaluate(
@@ -396,7 +420,10 @@ test("unsupported tabs offer no tasks and cannot replace a pinned session", asyn
 test("debug inspector renders scoring and exports bounded diagnostics", async () => {
   await reset();
   await start();
-  await panel.locator("summary").evaluate((e) => (e as HTMLElement).click());
+  await panel
+    .locator("summary")
+    .filter({ hasText: /^Local route tools$/ })
+    .evaluate((e) => (e as HTMLElement).click());
   await panel.getByLabel("Show route debug inspector").evaluate((e) => {
     (e as HTMLInputElement).click();
   });

@@ -74,6 +74,13 @@ export async function openNavigatorExtension(
     );
   };
   const start = async (routeId = "navigator.live") => {
+    await panel
+      .getByRole("button", { name: "Tholi settings", exact: true })
+      .click();
+    await panel
+      .getByRole("checkbox", { name: "Advanced controls", exact: true })
+      .check();
+    await panel.keyboard.press("Escape");
     await page.bringToFront();
     await expect(
       panel

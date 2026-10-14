@@ -71,7 +71,7 @@ export class StructureIndex {
       for (const heading of root.querySelectorAll(headings)) {
         if (
           heading.closest(
-            '[contenteditable],[data-sensitive="true"],#internet-navigator-overlay',
+            '[contenteditable],[data-sensitive="true"],#internet-navigator-overlay,[data-tholi-ui]',
           )
         )
           continue;

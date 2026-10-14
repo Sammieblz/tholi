@@ -32,3 +32,5 @@ CI runs the focused suites plus `npm run test:e2e -- --workers=1`, `npm run test
 Frozen corpora live in `tests/nlp`, `tests/multi-app`, `tests/continuity`, `tests/reliability-vision` and `tests/acceptance`. Keep existing inputs, splits, hashes and thresholds intact. Tune only calibration data; corpus changes need explicit versioning and independent annotation review. Do not regenerate expectations from predictions.
 
 Store no authenticated screenshots or traces by default. Private entity text and values stay session-only, including their vectors. Original knowledge and reusable routes survive migrations; derived data can be rebuilt. See [privacy](docs/privacy.md) and [security](docs/security.md).
+
+Run `npm run test:ui` for the shared sidebar/widget experience and local website. It records `output/qa/ui-build.json` against the current extension bytes. UI-only selector updates must preserve navigation, privacy, and outcome assertions in the existing suites. The website is served locally by `npm run dev:web`; it has mock accounts only.

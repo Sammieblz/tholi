@@ -17,7 +17,10 @@ const own = (node: Node) =>
   node instanceof Element &&
   (node.id === "navigator-visual-suggestion" ||
     node.id === "internet-navigator-overlay" ||
-    !!node.closest("#internet-navigator-overlay,#navigator-visual-suggestion"));
+    node.hasAttribute("data-tholi-ui") ||
+    !!node.closest(
+      "#internet-navigator-overlay,[data-tholi-ui],#navigator-visual-suggestion",
+    ));
 const observer = new MutationObserver((records) => {
   if (
     records.some(
@@ -79,8 +82,11 @@ export function captureMetadata() {
       if (element.shadowRoot) walk(element.shadowRoot);
   };
   walk(document);
-  const overlay = document.getElementById("internet-navigator-overlay");
-  if (overlay) overlay.style.visibility = "hidden";
+  document
+    .querySelectorAll<HTMLElement>(
+      "[data-tholi-ui],#internet-navigator-overlay",
+    )
+    .forEach((e) => (e.style.visibility = "hidden"));
   visual?.remove();
   visual = undefined;
   return {
@@ -92,8 +98,11 @@ export function captureMetadata() {
   };
 }
 export function restoreOverlay() {
-  const overlay = document.getElementById("internet-navigator-overlay");
-  if (overlay) overlay.style.visibility = "";
+  document
+    .querySelectorAll<HTMLElement>(
+      "[data-tholi-ui],#internet-navigator-overlay",
+    )
+    .forEach((e) => (e.style.visibility = ""));
 }
 export function viewportRevision() {
   return revision;

@@ -6,10 +6,12 @@ export function WorkflowPanel({
   workflow,
   disabled,
   onMessage,
+  compact = false,
 }: {
   workflow: WorkflowContext;
   disabled: boolean;
   onMessage: (message: Record<string, unknown>) => Promise<void>;
+  compact?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   useEffect(
@@ -26,7 +28,10 @@ export function WorkflowPanel({
     ...new Set(
       guide.milestones
         .map((m) => m.entity)
-        .filter((v): v is NonNullable<typeof v> => !!v),
+        .filter(
+          (v): v is NonNullable<typeof v> =>
+            !!v && (!compact || v === milestone?.entity),
+        ),
     ),
   ];
   const labels: Record<string, string> = {
@@ -40,17 +45,21 @@ export function WorkflowPanel({
   };
   return (
     <section className="goal-plan" aria-label="Workflow navigation">
-      <h2>{workflow.objective}</h2>
-      <p role="status">
-        {workflow.status === "completed"
-          ? "Outcome verified"
-          : milestone?.purpose || "Checking the outcome"}
-      </p>
-      <p>
-        {workflow.verified.length} verified milestones · {workflow.status}
-      </p>
+      {!compact && <h2>{workflow.objective}</h2>}
+      {!compact && (
+        <p role="status">
+          {workflow.status === "completed"
+            ? "Outcome verified"
+            : milestone?.purpose || "Checking the outcome"}
+        </p>
+      )}
+      {!compact && (
+        <p>
+          {workflow.verified.length} verified milestones · {workflow.status}
+        </p>
+      )}
       {slots.length > 0 && (
-        <details>
+        <details open={compact}>
           <summary>Task details</summary>
           <p className="small">
             These details stay in this browser session. Saved routes ask for
@@ -133,22 +142,24 @@ export function WorkflowPanel({
           Review the error and retry
         </button>
       )}
-      <details>
-        <summary>Upcoming milestones</summary>
-        <ol>
-          {guide.milestones
-            .slice(workflow.activeMilestone + 1)
-            .filter(
-              (m) =>
-                !m.branch ||
-                m.branch ===
-                  workflow.entities.find((e) => e.type === "method")?.value,
-            )
-            .map((m) => (
-              <li key={m.id}>{m.purpose} · checked when reached</li>
-            ))}
-        </ol>
-      </details>
+      {!compact && (
+        <details>
+          <summary>Upcoming milestones</summary>
+          <ol>
+            {guide.milestones
+              .slice(workflow.activeMilestone + 1)
+              .filter(
+                (m) =>
+                  !m.branch ||
+                  m.branch ===
+                    workflow.entities.find((e) => e.type === "method")?.value,
+              )
+              .map((m) => (
+                <li key={m.id}>{m.purpose} · checked when reached</li>
+              ))}
+          </ol>
+        </details>
+      )}
     </section>
   );
 }

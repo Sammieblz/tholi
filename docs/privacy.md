@@ -27,3 +27,9 @@ MiniLM and default Tesseract assets are packaged locally. Experimental Paddle as
 The optional single-owner API receives knowledge/context only when explicitly connected. Temporary masked images go there only when backend OCR is enabled. SQLite follows the same reusable/private persistence policy. It does not persist OCR payloads or private session context. Backend failure falls back to browser processing. A failed mirror deletion is reported for retry after reconnecting.
 
 Diagnostics are local, bounded and redacted. Do not capture authenticated screenshots or traces by default. Diagnostic exports omit labels, goals, paths, raw DOM and field values. See [security](security.md), [API setup](api-setup.md) and [native verification](chrome-handoff.md).
+
+## Tholi presentation data
+
+Presentation preferences and widget bounds are stored locally. Composer drafts and at most 80 conversation messages use trusted extension-session storage and are not synchronized to the website or cloud. The widget uses a session/document-bound command allowlist and does not receive backend credentials. Guidance surfaces are excluded from discovery and hidden for OCR capture.
+
+The local Tholi website has explicitly mocked accounts. Name/email and onboarding state live in browser-session storage; passwords are neither persisted nor transmitted. Signing out clears the mock account. No analytics or real authentication service is added.
