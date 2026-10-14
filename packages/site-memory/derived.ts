@@ -3,7 +3,7 @@ import type {
   CachedEmbedding,
   IndexEntry,
 } from "../nlp/retrieval";
-import { MODEL_REVISION } from "../nlp/constants";
+import { MODEL_REVISION, INDEX_REVISION } from "../nlp/constants";
 import { upgradePrivateMemory, upgradeRouteActions } from "./migration";
 import { boundedTransaction } from "./transaction";
 import { BackgroundMemory } from "./background";
@@ -49,7 +49,7 @@ export class IndexedDBDerivedStore implements DerivedStore {
             indexes.onsuccess = () => {
               const cursor = indexes.result;
               if (cursor) {
-                if (cursor.value.revision !== MODEL_REVISION) cursor.delete();
+                if (cursor.value.revision !== INDEX_REVISION) cursor.delete();
                 cursor.continue();
               }
             };
@@ -150,7 +150,7 @@ export class IndexedDBDerivedStore implements DerivedStore {
           store.put({
             origin,
             entries: [...merged.values()].slice(-5000),
-            revision: MODEL_REVISION,
+            revision: INDEX_REVISION,
             updatedAt: Date.now(),
           });
         };

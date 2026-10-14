@@ -39,13 +39,22 @@ export const visualObservationSchema = visualStampSchema
           .object({
             text: z.string().min(1).max(160),
             confidence: z.number().min(0).max(100),
+            polygon: z
+              .array(
+                z
+                  .object({ x: z.number().finite(), y: z.number().finite() })
+                  .strict(),
+              )
+              .min(4)
+              .max(8)
+              .optional(),
             box: boxSchema,
           })
           .strict(),
       )
       .max(300),
     elapsedMs: z.number().finite().nonnegative(),
-    engine: z.literal("tesseract-6.0.1-eng-fast"),
+    engine: z.enum(["tesseract-6.0.1-eng-fast", "paddle-0.4.2-v6-tiny"]),
   })
   .strict();
 export type RecognitionInput = z.infer<typeof recognitionInputSchema>;

@@ -1,0 +1,552 @@
+{
+  "version": 1,
+  "description": "Authored UI fixtures; no authenticated screenshots.",
+  "cases": [
+    {
+      "id": 1,
+      "file": "ui-01.png",
+      "sha256": "282d60279a91dc54050c96c19d2cc66a3926e94a2ca2cd193c0efd85b2ebef8d",
+      "split": "calibration",
+      "category": "supported",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 2,
+      "file": "ui-02.png",
+      "sha256": "1fcd1360c58c4c0f9a7c3cb115a7f5dfa5a819a9f42a8c0c4536e69bdf9e0888",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 3,
+      "file": "ui-03.png",
+      "sha256": "03cd0da8e37d3405878484597a0295cbc9794a30bd9b4c967f2b89e9c70a8902",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 4,
+      "file": "ui-04.png",
+      "sha256": "1931dcdcf2bb5b702c705e30dca53bfc9ac82f2d05571a73725f2812dba743ed",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 5,
+      "file": "ui-05.png",
+      "sha256": "53f6737f5df95d7c95e106880689059ea1fdf9bcd0ac49d85aa5594088ac7e6f",
+      "split": "calibration",
+      "category": "supported",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 6,
+      "file": "ui-06.png",
+      "sha256": "1fcd1360c58c4c0f9a7c3cb115a7f5dfa5a819a9f42a8c0c4536e69bdf9e0888",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 7,
+      "file": "ui-07.png",
+      "sha256": "32ef316fb69e6dbacdd5045ba6e871c94a8995ed65a31eceaca489deb97418ba",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 8,
+      "file": "ui-08.png",
+      "sha256": "16b2b90dd2e6caf1a1f8b10fae5b2088012ed0045e1a06e6e6a1942cdd5b4d3e",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 9,
+      "file": "ui-09.png",
+      "sha256": "53f6737f5df95d7c95e106880689059ea1fdf9bcd0ac49d85aa5594088ac7e6f",
+      "split": "calibration",
+      "category": "supported",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 10,
+      "file": "ui-10.png",
+      "sha256": "fbc54344b7f4076354ee3a30d3282d214420de9e6bc8e6de5ebe711c368c89e5",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 11,
+      "file": "ui-11.png",
+      "sha256": "03cd0da8e37d3405878484597a0295cbc9794a30bd9b4c967f2b89e9c70a8902",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 12,
+      "file": "ui-12.png",
+      "sha256": "16b2b90dd2e6caf1a1f8b10fae5b2088012ed0045e1a06e6e6a1942cdd5b4d3e",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 13,
+      "file": "ui-13.png",
+      "sha256": "282d60279a91dc54050c96c19d2cc66a3926e94a2ca2cd193c0efd85b2ebef8d",
+      "split": "calibration",
+      "category": "supported",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 14,
+      "file": "ui-14.png",
+      "sha256": "1fcd1360c58c4c0f9a7c3cb115a7f5dfa5a819a9f42a8c0c4536e69bdf9e0888",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 15,
+      "file": "ui-15.png",
+      "sha256": "03cd0da8e37d3405878484597a0295cbc9794a30bd9b4c967f2b89e9c70a8902",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 16,
+      "file": "ui-16.png",
+      "sha256": "1931dcdcf2bb5b702c705e30dca53bfc9ac82f2d05571a73725f2812dba743ed",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 17,
+      "file": "ui-17.png",
+      "sha256": "53f6737f5df95d7c95e106880689059ea1fdf9bcd0ac49d85aa5594088ac7e6f",
+      "split": "calibration",
+      "category": "supported",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 18,
+      "file": "ui-18.png",
+      "sha256": "1fcd1360c58c4c0f9a7c3cb115a7f5dfa5a819a9f42a8c0c4536e69bdf9e0888",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 19,
+      "file": "ui-19.png",
+      "sha256": "32ef316fb69e6dbacdd5045ba6e871c94a8995ed65a31eceaca489deb97418ba",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 20,
+      "file": "ui-20.png",
+      "sha256": "16b2b90dd2e6caf1a1f8b10fae5b2088012ed0045e1a06e6e6a1942cdd5b4d3e",
+      "split": "held-out",
+      "category": "supported",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 21,
+      "file": "ui-21.png",
+      "sha256": "455352318222eeb3978f4af77a7ca443230dacf3ce0706cea0029fe0d31bcfcf",
+      "split": "calibration",
+      "category": "ambiguous",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 22,
+      "file": "ui-22.png",
+      "sha256": "88ea2acef91f10d40ffeaa57aaaa74af345ff51497af60a62f4e5e83c647bcba",
+      "split": "held-out",
+      "category": "ambiguous",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 23,
+      "file": "ui-23.png",
+      "sha256": "5627d7c75cc2243cc2088c15e3c0dbb3b970f879e4f255ae637eb3103a5019c5",
+      "split": "held-out",
+      "category": "ambiguous",
+      "target": "Privacy policy",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 24,
+      "file": "ui-24.png",
+      "sha256": "d53c84b6244a6f6ecdfe1be297cfddedf6530c9a37f61475be9f19ebc74872fb",
+      "split": "held-out",
+      "category": "ambiguous",
+      "target": "Deploy website",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 25,
+      "file": "ui-25.png",
+      "sha256": "46f66dfac8c4069fc2c2da2a6b517f746f04bf333e19417c594aa81d5a06f365",
+      "split": "calibration",
+      "category": "ambiguous",
+      "target": "Manage Membership",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 26,
+      "file": "ui-26.png",
+      "sha256": "c939eb28771433b97a985b06508c27fab2d8349a2858e725e26f52bc61ee9440",
+      "split": "held-out",
+      "category": "ambiguous",
+      "target": "Continue to cancel",
+      "expectedBox": {
+        "x": 300,
+        "y": 190,
+        "width": 300,
+        "height": 45
+      },
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 27,
+      "file": "ui-27.png",
+      "sha256": "e8ddcbc1bbd2f1448b30d5405b10a153439c76bc8d666d37b1358d8232179184",
+      "split": "held-out",
+      "category": "absent",
+      "target": "Privacy policy",
+      "expectedBox": null,
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 28,
+      "file": "ui-28.png",
+      "sha256": "13de434d3a21577acc61d76e519e84838b989b76e020a66e1b823a88e8454eb9",
+      "split": "held-out",
+      "category": "absent",
+      "target": "Deploy website",
+      "expectedBox": null,
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 29,
+      "file": "ui-29.png",
+      "sha256": "e8ddcbc1bbd2f1448b30d5405b10a153439c76bc8d666d37b1358d8232179184",
+      "split": "calibration",
+      "category": "absent",
+      "target": "Manage Membership",
+      "expectedBox": null,
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 30,
+      "file": "ui-30.png",
+      "sha256": "7bf47d46bf03df4902889ffcf3712c1262194cf2f5f44baabec737ff29cc6d17",
+      "split": "held-out",
+      "category": "absent",
+      "target": "Continue to cancel",
+      "expectedBox": null,
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 31,
+      "file": "ui-31.png",
+      "sha256": "aa9fa755aa1e25cfa1e2d874635305e61ab87ad734427af190c3a78da7ac2aa1",
+      "split": "held-out",
+      "category": "absent",
+      "target": "Privacy policy",
+      "expectedBox": null,
+      "theme": "light",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    },
+    {
+      "id": 32,
+      "file": "ui-32.png",
+      "sha256": "7bf47d46bf03df4902889ffcf3712c1262194cf2f5f44baabec737ff29cc6d17",
+      "split": "held-out",
+      "category": "absent",
+      "target": "Deploy website",
+      "expectedBox": null,
+      "theme": "dark",
+      "width": 960,
+      "height": 600,
+      "canvas": true
+    }
+  ]
+}

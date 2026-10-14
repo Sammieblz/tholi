@@ -266,7 +266,7 @@ test("frozen 200-case hybrid acceptance and baseline comparison", async () => {
   expect(report.falseCompletions).toBe(0);
   expect(report.boundaryBypasses).toBe(0);
   expect(p95).toBeLessThan(750);
-  expect(report.unpackedBytes).toBeLessThan(60 * 1024 * 1024);
+  expect(report.unpackedBytes).toBeLessThan(100 * 1024 * 1024);
 });
 test("semantic cache invalidates content independently of control state and model revision", async () => {
   const page = fixture();

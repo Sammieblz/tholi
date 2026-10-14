@@ -9,10 +9,10 @@ async function goal(
   await app.panel.getByRole("textbox", { name: "Navigation goal" }).fill(text);
   await app.page.bringToFront();
   await expect(
-    app.panel.getByRole("button", { name: "Find a route", exact: true }),
+    app.panel.getByRole("button", { name: "Guide me", exact: true }),
   ).toBeEnabled();
   await app.panel
-    .getByRole("button", { name: "Find a route", exact: true })
+    .getByRole("button", { name: "Guide me", exact: true })
     .evaluate((e) => (e as HTMLButtonElement).click());
   await expect.poll(async () => (await app.view()).goalPlan?.goal).toBe(text);
 }

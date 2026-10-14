@@ -1,5 +1,6 @@
 import { browserOcr } from "./nlp-client";
 import { backendOcr } from "./backend-client";
+import { recognizeWithFallback } from "../../../packages/vision/processing";
 import { needsVision } from "../../../packages/vision/fusion";
 import {
   visualObservationSchema,
@@ -127,12 +128,13 @@ async function attemptVision(sessionId: string, requestId: string) {
     !session.view.page ||
     session.view.status !== "running" ||
     session.view.journey.workflow?.status === "review" ||
+    (session.view.goalPlan?.recoveryStage &&
+      session.view.goalPlan.recoveryStage !== "vision") ||
     !needsVision(session.view.goalPlan, !!session.view.clarification)
   )
     return;
   const captured = structuredClone(session),
-    view = captured.view!,
-    task = view.request!.tasks[view.request!.active];
+    view = captured.view!;
   const controller = new AbortController();
   visionJob = controller;
   const generation = goalGeneration;
@@ -144,24 +146,9 @@ async function attemptVision(sessionId: string, requestId: string) {
       originOf(tab.url) !== captured.origin
     )
       return;
-    const frames = await chrome.webNavigation.getAllFrames({
-      tabId: captured.tabId,
-    });
-    const allowedFrameUrls: string[] = [];
-    for (const frame of frames || [])
-      if (frame.frameId !== 0 && supportsLiveUrl(frame.url)) {
-        const origin = new URL(frame.url);
-        if (
-          await chrome.permissions.contains({
-            origins: [origin.protocol + "//" + origin.hostname + "/*"],
-          })
-        )
-          allowedFrameUrls.push(frame.url);
-      }
     const metadata = await chrome.tabs.sendMessage(captured.tabId, {
       type: "PREPARE_CAPTURE",
       sessionId,
-      allowedFrameUrls,
     });
     if (!metadata?.width || !metadata?.height) return;
     const key = [
@@ -196,22 +183,12 @@ async function attemptVision(sessionId: string, requestId: string) {
       captureId: crypto.randomUUID(),
     };
     const settings = (await chrome.storage.local.get("vision")).vision;
-    let value;
-    if (settings?.backend) {
-      const input = await browserOcr({
-        image,
-        metadata,
-        stamp,
-        prepareOnly: true,
-      });
-      controller.signal.throwIfAborted();
-      try {
-        value = await backendOcr(input, controller.signal);
-      } catch {
-        value = undefined;
-      }
-    }
-    value ??= await browserOcr({ image, metadata, stamp });
+    const value = await recognizeWithFallback(
+      { image, metadata, stamp },
+      { browser: browserOcr, backend: backendOcr },
+      !!settings?.backend,
+      controller.signal,
+    );
     controller.signal.throwIfAborted();
     const observation = visualObservationSchema.parse(value);
     if (
@@ -846,7 +823,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
       }
       // A click publication may arrive after Chrome's loading event. Preserve its intent
       // without restoring the previous document's running state or controls.
-      if (session.navigationPending) {
+      if (session.navigationPending && live()) {
         await save();
         return { ok: true };
       }
@@ -1619,6 +1596,48 @@ chrome.webNavigation.onCompleted.addListener((details) => {
 chrome.permissions.onAdded.addListener(() => {
   if (session && live() && session.view?.status === "running")
     void startFrames(session).catch(() => {});
+  void recoverWebsiteAccess().catch(() => {});
+});
+async function recoverWebsiteAccess() {
+  const tab = await activeTab();
+  if (!session?.view?.request || !live() || !tab?.url || tab.id === undefined)
+    return;
+  const origin = originOf(tab.url);
+  const expected = session.view.continuationOrigin;
+  if (
+    expected &&
+    origin === expected &&
+    (tab.id === session.tabId || tab.openerTabId === session.tabId)
+  ) {
+    const url = new URL(tab.url);
+    if (
+      !(await chrome.permissions.contains({
+        origins: [url.protocol + "//" + url.hostname + "/*"],
+      }))
+    )
+      return;
+    await enqueue(async () => {
+      if (!session?.view || session.view.continuationOrigin !== expected)
+        return;
+      session.tabId = tab.id!;
+      session.origin = origin;
+      session.view.status = "running";
+      session.view.continuationOrigin = undefined;
+      await attachSession();
+    });
+  }
+  if (
+    session?.tabId === tab.id &&
+    session.view?.status === "running" &&
+    origin === session.origin
+  ) {
+    lastVisionKey = "";
+    if (session.view.request)
+      void attemptVision(session.sessionId, session.view.request.id);
+  }
+}
+chrome.action.onClicked.addListener(() => {
+  void recoverWebsiteAccess().catch(() => {});
 });
 // Follow browser-confirmed server redirects only for the active authentication
 // task. This permission supplies navigation metadata, not access to the new DOM.
@@ -1794,12 +1813,8 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
           return;
         }
         session.navigationPending = false;
-        const reply = await chrome.tabs.sendMessage(tabId, {
-          type: "CONTROL_SESSION",
-          sessionId: session.sessionId,
-          action: "RESUME",
-        });
-        await acceptView(reply.view);
+        // Same-document authored routes already publish their observed state.
+        // Resuming here could release a login checkpoint or an explicit Pause.
         await save();
       } catch {
         await stopSession("Page unavailable. Start navigation again.");

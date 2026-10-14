@@ -32,7 +32,7 @@ export async function multiAppEvidence(files, apiFiles) {
     initialMs: reports.performance.initialMs,
     refreshP95Ms: reports.performance.refreshP95Ms,
     warmP95Ms: reports.performance.warmP95Ms,
-    capabilityMatrix: "docs/v0.9.0-validation.md",
+    capabilityMatrix: "docs/v0.8.0-capabilities.md",
     authenticatedChecks: "pending user-assisted signed-in verification",
   };
 }

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { writeFile, mkdir } from "node:fs/promises";
 import { openNavigatorExtension } from "../support/navigator-extension";
-import { inspectOverlay, aligned } from "../support/overlay-inspection";
+import { aligned } from "../support/overlay-inspection";
 
 for (const width of [1420, 720]) {
   test(
@@ -64,15 +64,12 @@ for (const width of [1420, 720]) {
         });
         expect(v.goalPlan.status).toBe("guiding");
         expect(v.page.partial).toBe(true);
-        await expect
-          .poll(async () => (await inspectOverlay(cdp))?.arrow)
-          .toContain("Scroll up");
-        expect((await inspectOverlay(cdp))?.halo).toBeUndefined();
         const references = app.page.getByRole("heading", {
           name: "References",
           exact: true,
         });
-        await references.scrollIntoViewIfNeeded();
+        // Navigator now scrolls freshly bound destinations automatically.
+        await expect(references).toBeInViewport();
         await expect
           .poll(async () => (await app.view()).goalPlan.status)
           .toBe("completed");

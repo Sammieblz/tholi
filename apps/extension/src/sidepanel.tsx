@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import type { RoutePreview } from "../../../packages/route-registry";
 import type { SessionView } from "../../../packages/shared-types";
@@ -133,16 +133,18 @@ function App() {
           reading = false;
         });
     };
-    const previousRefresh = refresh;
-    const refreshJourneys = () => {
-      previousRefresh();
-      void chrome.runtime
-        .sendMessage({ type: "GET_JOURNEYS" })
-        .then((r) => setJourneys(r.journeys || []))
-        .catch(() => {});
+    const refreshJourneys = async () => {
+      if (!current) return;
+      refresh();
+      try {
+        const r = await chrome.runtime.sendMessage({ type: "GET_JOURNEYS" });
+        if (current) setJourneys(r.journeys || []);
+      } catch {
+        // The worker may be restarting.
+      }
     };
-    refreshJourneys();
-    const timer = setInterval(refreshJourneys, 2000);
+    void refreshJourneys();
+    const timer = setInterval(() => void refreshJourneys(), 2000);
     return () => {
       current = false;
       clearInterval(timer);
@@ -255,17 +257,23 @@ function App() {
   const controlsMode = route?.id === LIVE_ROUTE_ID;
   const statusLabel =
     displayedView?.status === "running"
-      ? !controlsMode
-        ? "Guiding"
-        : displayedView.goalPlan?.status === "completed"
-          ? "Goal verified"
-          : displayedView.goalPlan?.status === "awaiting-choice"
-            ? "Choose an option"
-            : displayedView.goalPlan?.status === "unresolved"
-              ? unresolvedTitle(displayedView.goalPlan)
-              : displayedView.selectedControlId
-                ? "Guiding"
-                : "Ready to guide"
+      ? controlsMode && displayedView.page?.screen?.kind === "two-factor"
+        ? "Waiting for verification"
+        : controlsMode && displayedView.page?.screen?.kind === "credentials"
+          ? "Waiting for sign-in"
+          : controlsMode && displayedView.goalPlan?.recoveryStage
+            ? "Finding your next step"
+            : !controlsMode
+              ? "Guiding"
+              : displayedView.goalPlan?.status === "completed"
+                ? "Goal verified"
+                : displayedView.goalPlan?.status === "awaiting-choice"
+                  ? "Choose an option"
+                  : displayedView.goalPlan?.status === "unresolved"
+                    ? unresolvedTitle(displayedView.goalPlan)
+                    : displayedView.selectedControlId
+                      ? "Guiding"
+                      : "Ready to guide"
       : displayedView?.status === "waiting"
         ? "Waiting for the website"
         : displayedView?.status === "boundary"
@@ -282,8 +290,9 @@ function App() {
       !["running", "waiting"].includes(previous || "")
     )
       (controlsMode ? goalField.current : sessionAction.current)?.focus();
-    else if (status === "paused" || status === "stopped")
-      sessionAction.current?.focus();
+    else if (status === "paused") sessionAction.current?.focus();
+    else if (status === "stopped")
+      (controlsMode ? goalField.current : sessionAction.current)?.focus();
   }, [displayedView?.status, otherTab, controlsMode, busy]);
   const memoryStats =
     active ||
@@ -300,6 +309,17 @@ function App() {
     setBusy(true);
     setError("");
     try {
+      if (!active) {
+        const startTarget = await requestCurrentSiteAccess();
+        const started = await chrome.runtime.sendMessage({
+          type: "START",
+          routeId: LIVE_ROUTE_ID,
+          routeVersion: route?.version,
+          ...startTarget,
+        });
+        if (started.error) throw new Error(started.error);
+        if (started.view) setView(started.view);
+      }
       const context = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
       if (context.error) throw new Error(context.error);
       const page = pageSnapshotSchema.parse(context.page);
@@ -511,7 +531,7 @@ function App() {
       {controlsMode && (
         <h1 className="controls-heading">Navigate this website</h1>
       )}
-      {context?.routes.length ? (
+      {!!context?.routes.length && context.routes.length > 1 && (
         <label className="task-choice">
           Choose a task
           <select
@@ -530,7 +550,8 @@ function App() {
             ))}
           </select>
         </label>
-      ) : (
+      )}
+      {!context?.routes.length && (
         <section className="unsupported" role="status">
           <h2>No supported tasks</h2>
           <p>{context?.reason || "Checking the current website…"}</p>
@@ -542,7 +563,7 @@ function App() {
           or Stop before choosing a new task.
         </p>
       )}
-      {route && !(controlsMode && (active || paused)) && (
+      {route && !controlsMode && (
         <section className="route-card">
           <div className="route-top">
             <span className="site-icon">✦</span>
@@ -585,6 +606,51 @@ function App() {
           <p>{route.safetyNote}</p>
         </section>
       )}
+      {controlsMode && (
+        <section aria-label="Your destination">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitGoal();
+            }}
+          >
+            <label>
+              What would you like to do?
+              <input
+                aria-label="Navigation goal"
+                ref={goalField}
+                disabled={otherTab || paused}
+                value={goal}
+                maxLength={1000}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder="Help me cancel my Prime membership…"
+              />
+            </label>
+            <details>
+              <summary>Route preference</summary>
+              <label>
+                Route preference
+                <select
+                  aria-label="Route preference"
+                  value={strategy}
+                  disabled={busy || otherTab}
+                  onChange={(e) => setStrategy(e.target.value as RouteStrategy)}
+                >
+                  <option value="fastest">Fastest known route</option>
+                  <option value="fewest-clicks">Fewest clicks</option>
+                </select>
+              </label>
+            </details>
+            <button
+              className="primary"
+              disabled={busy || otherTab || paused || !goal.trim()}
+              type="submit"
+            >
+              Guide me
+            </button>
+          </form>
+        </section>
+      )}
       <section
         className={
           "current " + (displayedView?.status === "boundary" ? "boundary" : "")
@@ -600,7 +666,9 @@ function App() {
           <span className="sr-only">{statusLabel}. </span>
           {displayedView?.instruction ||
             (route
-              ? "Choose this task and Start when you are ready."
+              ? controlsMode
+                ? "Enter your destination and select Guide me."
+                : "Choose this task and Start when you are ready."
               : "Open a supported website to choose a task.")}
           {displayedView && (
             <span className="sr-only">
@@ -645,7 +713,7 @@ function App() {
             Continue task here
           </button>
         )}
-        {!active && !paused && (
+        {!active && !paused && !controlsMode && (
           <button
             className="primary"
             ref={sessionAction}
@@ -688,9 +756,20 @@ function App() {
           </button>
         )}
       </div>
+      {controlsMode && !active && !paused && (
+        <details>
+          <summary>Explore page controls</summary>
+          <p className="small">
+            Scan this page without choosing a destination.
+          </p>
+          <button disabled={busy || otherTab} onClick={() => command("START")}>
+            Start navigation
+          </button>
+        </details>
+      )}
       {view?.request && view.request.status !== "canceled" && (
-        <section aria-label="Task queue" className="goal-plan">
-          <h2>Your tasks</h2>
+        <details aria-label="Task queue" className="goal-plan">
+          <summary>Your tasks</summary>
           <ol>
             {view.request.tasks.map((task) => (
               <li key={task.id}>
@@ -715,7 +794,7 @@ function App() {
           <p className="small">
             Each requested result is checked before the next task starts.
           </p>
-        </section>
+        </details>
       )}
       {view?.clarification && (
         <section className="goal-plan" aria-label="Clarification">
@@ -767,76 +846,82 @@ function App() {
         </section>
       )}
       {view?.journey?.workflow && (
-        <WorkflowPanel
-          workflow={view.journey.workflow}
-          disabled={busy || otherTab || view.status !== "running"}
-          onMessage={async (message) => {
-            const r = await chrome.runtime.sendMessage(message);
-            if (r.view) setView(r.view);
-            if (r.error) setError(r.error);
-          }}
-        />
+        <details>
+          <summary>Workflow details</summary>
+          <WorkflowPanel
+            workflow={view.journey.workflow}
+            disabled={busy || otherTab || view.status !== "running"}
+            onMessage={async (message) => {
+              const r = await chrome.runtime.sendMessage(message);
+              if (r.view) setView(r.view);
+              if (r.error) setError(r.error);
+            }}
+          />
+        </details>
       )}
       {controlsMode && view?.journey && (
-        <section className="goal-plan" aria-label="Task journey">
-          <h2>{view.journey.goal}</h2>
-          <p>
-            {view.journey.progress.length} verified steps ·{" "}
-            {view.journey.reroutes} route recalculations
-          </p>
-          {view.goalPlan?.route &&
-            (view.goalPlan.route.available !== false &&
-            (view.goalPlan.route.clicks > 0 ||
-              view.goalPlan.status === "completed") ? (
-              <p aria-label="Route estimate">
-                {view.goalPlan.route.clicks}{" "}
-                {view.goalPlan.route.complete
-                  ? "remaining"
-                  : "currently estimated"}{" "}
-                clicks · about {view.goalPlan.route.minSeconds}–
-                {view.goalPlan.route.maxSeconds} seconds (
-                {view.goalPlan.route.basis}).
-                {!view.goalPlan.route.complete &&
-                  " Further screens may add steps."}
-              </p>
-            ) : (
-              <p aria-label="Route estimate">
-                Route estimate unavailable until a usable next step is found.
-              </p>
-            ))}
-          {view.goalPlan?.status === "unresolved" && (
-            <p role="status">{view.goalPlan.reason}</p>
-          )}
-          {!!view.goalPlan?.route?.predictions.length && (
+        <details className="goal-plan">
+          <summary>Route details · Live discovery</summary>
+          <section aria-label="Task journey">
+            <h2>{view.journey.goal}</h2>
+            <p>
+              {view.journey.progress.length} verified steps ·{" "}
+              {view.journey.reroutes} route recalculations
+            </p>
+            {view.goalPlan?.route &&
+              (view.goalPlan.route.available !== false &&
+              (view.goalPlan.route.clicks > 0 ||
+                view.goalPlan.status === "completed") ? (
+                <p aria-label="Route estimate">
+                  {view.goalPlan.route.clicks}{" "}
+                  {view.goalPlan.route.complete
+                    ? "remaining"
+                    : "currently estimated"}{" "}
+                  clicks · about {view.goalPlan.route.minSeconds}–
+                  {view.goalPlan.route.maxSeconds} seconds (
+                  {view.goalPlan.route.basis}).
+                  {!view.goalPlan.route.complete &&
+                    " Further screens may add steps."}
+                </p>
+              ) : (
+                <p aria-label="Route estimate">
+                  Route estimate unavailable until a usable next step is found.
+                </p>
+              ))}
+            {view.goalPlan?.status === "unresolved" && (
+              <p role="status">{view.goalPlan.reason}</p>
+            )}
+            {!!view.goalPlan?.route?.predictions.length && (
+              <details>
+                <summary>Upcoming steps</summary>
+                <ol>
+                  {view.goalPlan.route.predictions.map((p, i) => (
+                    <li key={i}>
+                      {p.label}{" "}
+                      <small>
+                        {p.evidence === "observed"
+                          ? "Previously observed; rechecked on arrival"
+                          : "Predicted; awaiting live evidence"}
+                      </small>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
             <details>
-              <summary>Upcoming steps</summary>
+              <summary>Journey so far</summary>
               <ol>
-                {view.goalPlan.route.predictions.map((p, i) => (
-                  <li key={i}>
-                    {p.label}{" "}
-                    <small>
-                      {p.evidence === "observed"
-                        ? "Previously observed; rechecked on arrival"
-                        : "Predicted; awaiting live evidence"}
-                    </small>
-                  </li>
+                {view.journey.progress.map((p, i) => (
+                  <li key={i}>{p.label} · verified</li>
                 ))}
               </ol>
             </details>
-          )}
-          <details>
-            <summary>Journey so far</summary>
-            <ol>
-              {view.journey.progress.map((p, i) => (
-                <li key={i}>{p.label} · verified</li>
-              ))}
-            </ol>
-          </details>
-        </section>
+          </section>
+        </details>
       )}
       {controlsMode && !!savedTasks.length && (
-        <section aria-label="Saved routes">
-          <h2>Saved routes</h2>
+        <details aria-label="Saved routes">
+          <summary>Saved routes</summary>
           <p className="small">
             Routes are checked against the current website before reuse.
           </p>
@@ -870,11 +955,15 @@ function App() {
               </button>
             </div>
           ))}
-        </section>
+        </details>
       )}
       {controlsMode && (
         <details>
           <summary>Local site memory and AI</summary>
+          <p className="small">
+            OCR uses Tesseract. PaddleOCR evaluation is available in an
+            experimental build and has not passed promotion gates.
+          </p>
           <p>
             {memoryStats.pages} pages · {memoryStats.templates} layouts ·{" "}
             {memoryStats.observedTransitions} observed transitions
@@ -1017,18 +1106,10 @@ function App() {
             Make the interaction yourself. Navigator will check fresh website
             evidence; the highlighted text does not establish its effect.
           </p>
-          <button
-            disabled={busy}
-            onClick={() => command("CHECK_VISUAL_ACTION")}
-          >
-            Check the current page
-          </button>
+          <p className="small">
+            I’ll observe your next interaction and check the page automatically.
+          </p>
         </section>
-      )}
-      {active && view?.goalPlan?.issue === "no-match" && (
-        <button disabled={busy} onClick={() => command("REQUEST_VISION")}>
-          Try visual assistance
-        </button>
       )}
       {journeys.length > 0 && (
         <section aria-label="Resume previous task">
@@ -1056,56 +1137,15 @@ function App() {
           <section aria-label="Return navigation">
             <h2>Your destination is retained</h2>
             <p>{view.goalPlan.reason}</p>
-            <button
-              disabled={busy}
-              onClick={() => command("CHECK_ROUTE_ACTION")}
-            >
-              I returned — check this page
-            </button>
+            <p className="small">
+              Guidance resumes when the indicated page is observed.
+            </p>
           </section>
         )}
       {controlsMode && active && (
-        <section className="page-controls" aria-label="Live page controls">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submitGoal();
-            }}
-          >
-            <label>
-              What would you like to do?
-              <input
-                aria-label="Navigation goal"
-                ref={goalField}
-                disabled={otherTab || view?.status === "waiting"}
-                value={goal}
-                maxLength={1000}
-                onChange={(e) => setGoal(e.target.value)}
-                placeholder="Make the text larger, find references…"
-              />
-            </label>
-            <label>
-              Route preference
-              <select
-                aria-label="Route preference"
-                value={strategy}
-                disabled={busy || otherTab}
-                onChange={(e) => setStrategy(e.target.value as RouteStrategy)}
-              >
-                <option value="fastest">Fastest known route</option>
-                <option value="fewest-clicks">Fewest clicks</option>
-              </select>
-            </label>
-            <button
-              className="primary"
-              disabled={
-                busy || otherTab || view?.status === "waiting" || !goal.trim()
-              }
-              type="submit"
-            >
-              Find a route
-            </button>
-          </form>
+        <details className="page-controls" aria-label="Live page controls">
+          <summary>Advanced controls and route evidence</summary>
+
           {!!suggestions.length && (
             <div aria-label="Request suggestions">
               {suggestions.map((s) => (
@@ -1246,7 +1286,7 @@ function App() {
             Open menus to reveal more controls. The list refreshes as you
             browse. You make every click.
           </p>
-        </section>
+        </details>
       )}
       <details>
         <summary>Local route tools</summary>
@@ -1369,7 +1409,7 @@ function App() {
       </details>
       <footer>
         <span>LOCAL FIRST</span>
-        <span>PROTOTYPE 0.7</span>
+        <span>VERSION {chrome.runtime.getManifest().version}</span>
       </footer>
     </main>
   );

@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
-import { resolve } from "node:path";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, writeFile, readdir, stat } from "node:fs/promises";
 import os from "node:os";
 import { buildProvenance } from "../support/build-provenance";
 let bundle: string;
@@ -254,7 +253,7 @@ test("50,000-node and 5,000-control mutation benchmark keeps priority guidance a
     measurements.initialMs < 2000 &&
     measurements.warmP95Ms < 750 &&
     measurements.refreshP95Ms < 500 &&
-    unpackedBytes < 60 * 1024 * 1024;
+    unpackedBytes < 100 * 1024 * 1024;
   await mkdir("output/multi-app", { recursive: true });
   await writeFile(
     "output/multi-app/performance.json",

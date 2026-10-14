@@ -60,6 +60,7 @@ export const controlSchema = z
       .object({
         key: z.string().max(100),
         authentication: z.enum(["login", "register", "credentials"]).optional(),
+        stage: z.enum(["credentials", "two-factor"]).optional(),
       })
       .strict()
       .optional(),
@@ -138,6 +139,21 @@ export const pageSnapshotSchema = z
     signals: z.array(outcomeEvidenceSchema).max(30).optional(),
     busy: z.boolean().optional(),
     indexedControls: z.number().int().nonnegative().max(5000).optional(),
+    screen: z
+      .object({
+        kind: z.enum([
+          "normal",
+          "credentials",
+          "two-factor",
+          "authorization",
+          "loading",
+          "review",
+          "outcome",
+        ]),
+        evidence: z.string().max(80),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export const goalPlanSchema = z
@@ -162,6 +178,16 @@ export const goalPlanSchema = z
     action: navigationActionSchema.optional(),
     exploration: z.boolean().optional(),
     budgetPending: z.boolean().optional(),
+    recoveryStage: z
+      .enum([
+        "priority",
+        "retrieval",
+        "structure",
+        "vision",
+        "waiting",
+        "access",
+      ])
+      .optional(),
     route: z
       .object({
         strategy: z.enum(["fastest", "fewest-clicks"]),

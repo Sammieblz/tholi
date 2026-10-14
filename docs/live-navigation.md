@@ -2,36 +2,47 @@
 
 ```mermaid
 flowchart LR
-  DOM[Rendered page] --> Discovery[Generic semantic discovery]
-  Discovery --> Snapshot[Validated observation]
-  Snapshot --> Planner[Goal planner]
-  Memory[(Extension IndexedDB)] --> Planner
-  Model[Optional on-device model] --> Planner
-  Planner --> Coach[Fresh DOM binding and passive highlight]
-  User[User action] --> DOM
-  DOM --> Verification[Observed result verification]
+  DOM[Live DOM and permitted frames] --> Discovery[Incremental discovery]
+  Discovery --> Observation[Validated observation]
+  Observation --> Core[Navigation core]
+  NLP[Compromise / BM25 / MiniLM] --> Core
+  Guides[Semantic workflow guides] --> Core
+  Memory[(Browser knowledge)] --> Core
+  Core --> Binding[Fresh binding and highlight]
+  Core --> OCR[Low-evidence viewport OCR]
+  OCR --> Core
+  User[User interaction] --> DOM
+  DOM --> Verification[Task-specific outcome checks]
+  Verification --> Core
   Verification --> Memory
-  Snapshot --> Memory
 ```
 
-PageDiscovery extracts fields, buttons, links, toggles, choices, selects, summaries and headings using HTML/ARIA semantics. Labels come from associated labels, aria-label/labelledby, title/alt and safe control text. Accessibility descriptions follow aria-describedby, aria-description and title precedence; references to form values are excluded. Grouping uses landmarks, fieldsets and nearby headings. aria-haspopup identifies popup buttons, including checkbox-backed buttons and links that open menus. aria-controls/popover relationships and nearby containment identify menu reveal steps. References are resolved within the document or shadow root that owns them. No site IDs/classes or Wikipedia URL allowlists participate.
+## Discovery
 
-A document control ID binds only to one actual element. Stable signatures use role, action kind, label, description, popup type, context and destination identity; they omit IDs/classes and coordinates. Each semantic/element change updates the observation revision, so changed descriptions also invalidate pending guidance and stored controls. A pending plan must match that revision and document. The coach observes mutations, scroll, resize, focus, change and navigation through the shared BrowserAdapter observer.
+`packages/page-discovery` maintains an incremental control index in cooperative work slices. Discovery covers semantic controls, named custom interactive candidates, open shadow roots and authorized frames. It prioritizes active dialogs/menus, global navigation, task regions, headings and footer controls. Up to 5,000 controls remain in the session; planning uses bounded projections of at most 600. Coverage reports omissions. An omitted or unmounted control is not evidence that the website has no route.
 
-Goals use English token/synonym matching, regular singular/plural equivalence, thresholds and ambiguity checks. Requested qualifiers need evidence in labels, descriptions or context. Hidden targets require clear opening relationships. Match strength is heuristic, displayed qualitatively. Checked choices and arrived sections complete with observed evidence. Persistent journeys retain destination values and verified progress across screens. Weighted Dijkstra routing uses active observed transitions and timing samples, rebinds the current first step and replans on arrival. Inferred links and predicted destinations never become verified history. See [task routing](task-routing.md).
+Accessible-name and role algorithms are adapted from pinned Playwright browser-side code, with source hashes and attribution. Input values and editable contents are excluded. Heading/region ancestry, form metadata and reveal relationships provide context. Geometry, visibility, occlusion, availability and risk are checked independently from semantic embedding identity.
 
-Detached popups are associated through declared ownership/label relationships, or matching purpose plus focus or nearby geometry. An unrelated dialog is not evidence that a selected menu opened. Reveal inference respects declared ownership and stays within a single local widget; shared toolbar/header ancestors do not establish a route. A verified final menu-opening step enters awaiting-choice rather than claiming the requested preference changed. Asking again while that menu is observed open preserves the choice state instead of guiding the user to close it.
+A document control ID binds to an actual element. Changed meaning or recycled nodes invalidate signatures and bindings. Only a fresh eligible target can be highlighted or scrolled into view; user input cancels pending scrolling. Each frame owns its discovery and overlay, with explicit host access.
 
-Repeated navigation links are interchangeable only when their complete destination matches, including query and fragment. The snapshot uses an ephemeral URL fingerprint for this comparison; persistent memory omits that field. Combined control signatures still invalidate when a destination changes. Equivalent entries in suggested/all choices do not create false ambiguity, while distinct destinations remain ambiguous.
+## Interpretation and planning
 
-Chrome's optional Prompt API runs in the side panel, not the service worker. The context and intent pipeline is described in [page-context.md](page-context.md). Observations are untrusted data; model output cannot supply selectors, effects or completion claims. Invalid, empty, unsafe or conflicting suggestions preserve an existing clear semantic route or action boundary. Model accuracy still needs evaluation on supported hardware; deterministic adapter tests establish the contract rather than language understanding quality.
+`packages/navigation-core` coordinates Compromise interpretation, BM25/MiniLM retrieval, grounded goal planning, task queues and contextual workflows. Desired values, exclusions and compatible references survive replanning. Semantic scores rank candidates; they cannot override scope, consequential boundaries or verification. Ambiguous meanings produce grounded choices.
 
-IndexedDBSiteMemory implements SiteMemoryStore. Database version 2 preserves the sites store and adds bounded saved task routes in a tasks store. Site records retain latest pages, state snapshots, templates and transitions; old version-1 site records remain compatible. Layout/language/path-family keys distinguish templates. Complete scans inactivate absent controls and affected transitions; partial scans cannot prove removal. Hidden controls remain discoverable. Counts, saved routes and Forget/Clear actions appear in the panel. A future SQLite implementation can implement the storage interface.
+Journeys preserve an objective independently of current controls. Bounded graph search uses verified transitions and documented milestones. Future steps are predictions requiring live binding. Return actions use observed dismissal controls, relevant session predecessors or associated tabs; forward actions are never presumed reversible. Missing evidence enters bounded recovery rather than inventing a route.
 
-The navigator learns progressively from the user's visits and verified interactions. It does not background-spider the site or invent routes through unloaded pages. The current adapter operates in the top document and open shadow roots. Opaque frames/canvas controls and poorly labeled controls require additional adapters or user interpretation.
+Optional Chrome model interpretation is experimental. It returns current control IDs and structured intent, without selectors, actions or completion authority. The default NLP path works offline without it. The optional HTTP adapter uses the same core; transport and browser lifecycle remain outside it.
 
-Local heading ownership identifies repeated section controls; navigation landmarks identify page scope. Scope stays absent when the DOM does not declare enough structure. An unqualified goal gives a small preference to the general entry point over repeated section controls; explicit heading context can select that section instead. Scope is also supplied to optional model interpretation.
+## Guidance, OCR and outcomes
 
-Risk checks use the individual control's label, description, declared operation endpoint and effective native form submission behavior. They do not inherit committing words from nearby headings or a containing form's URL. Opening an editor through navigation or a declared popup is separate from submitting/publishing a change. A POST submit control remains a boundary, including a button whose type defaults to submit or whose form is associated through `form="..."`. An opaque Edit action retains an unknown-effect boundary rather than asserting that it certainly commits data. These are conservative heuristics; HTML does not prove arbitrary JavaScript or server-side effects. Scope and risk reasons participate in fingerprints and revisions, so a changed form method invalidates pending guidance. The panel distinguishes action boundaries, unknown effects, ambiguity and absent routes through structured issue codes.
+The extension owns binding and verification. Users click, type, authenticate and submit. Navigator observes normal interactions automatically. Authentication retains context without expiry; ordinary waiting and recovery retain an incomplete task. Review clicks start verification and never prove success.
 
-API references: [accessible names and descriptions](https://www.w3.org/TR/accname-1.2/), [menu button semantics](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/), [Chrome Prompt API](https://developer.chrome.com/docs/ai/prompt-api), [extension storage](https://developer.chrome.com/docs/extensions/develop/concepts/storage-and-cookies), [optional permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions).
+Tesseract viewport OCR runs in a separate local worker only when discovery evidence is insufficient. Editable fields and all iframe pixels are masked. Fresh DOM bindings take precedence. OCR-only suggestions require unambiguous text and retain unknown effects. Paddle is available only in an explicit experimental build and has not passed startup/promotion gates.
+
+Task-specific results, such as the requested selected value, destination, created item, deployment status or Prime membership state, establish completion. Wrong outcomes and unrelated toasts cannot advance the task queue.
+
+## Storage and compatibility
+
+IndexedDB v5 preserves site knowledge and parameterized saved routes. Incompatible derived indexes are rebuilt independently of original records. Session context holds private names, supplied values, unfinished journeys and the task-scoped navigation ledger. Screenshots, private OCR text and image coordinates are not persisted.
+
+The optional Fastify/SQLite service mirrors explicitly connected reusable knowledge; the browser remains authoritative. v1 remains compatible, and v2 adds workflow/visual contracts and capability negotiation. An unavailable or older backend falls back locally. See [NLP](nlp-architecture.md), [privacy](privacy.md), [API setup](api-setup.md) and [lifecycle](session-lifecycle.md).

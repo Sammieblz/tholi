@@ -10,9 +10,7 @@ import {
 import {
   structuralObservation,
   structuralTransition,
-  structuralKnowledge,
   parameterizedTask,
-  privatePlatform,
 } from "../navigation-core/privacy";
 import { upgradePrivateMemory, upgradeRouteActions } from "./migration";
 import { boundedTransaction } from "./transaction";

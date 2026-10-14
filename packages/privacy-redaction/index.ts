@@ -29,7 +29,13 @@ export function isSensitiveElement(element: Element): boolean {
     .join(" ");
   return (
     input.type === "password" ||
-    sensitiveWords.test(hint) ||
+    (sensitiveWords.test(hint) &&
+      (element.matches(
+        'input,textarea,select,[contenteditable],[role="textbox"],[role="searchbox"]',
+      ) ||
+        !element.matches(
+          'button,a[href],summary,[role="button"],[role="link"],[role="menuitem"]',
+        ))) ||
     element.closest('[data-sensitive="true"]') !== null
   );
 }

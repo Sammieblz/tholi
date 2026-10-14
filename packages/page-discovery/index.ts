@@ -19,8 +19,14 @@ import {
   controlSelector,
   surfaceSelector,
 } from "./incremental";
-import { platformFor, interfaceVocabulary } from "../navigation-core/guides";
+import { interfaceVocabulary } from "../navigation-core/guides";
 import { discoverOutcomes } from "./outcomes";
+import { discoverScreen } from "./screen-state";
+import {
+  accessibleName,
+  accessibleRole,
+  customInteraction,
+} from "./accessibility";
 export interface BoundControl {
   control: PageControl;
   element: HTMLElement;
@@ -82,7 +88,35 @@ export function presented(
         return label;
     }
   }
-  return visible(element, geometry) ? element : undefined;
+  if (visible(element, geometry)) return element;
+  if (element.closest('[hidden],[aria-hidden="true"],[inert]')) return;
+  const r = geometry.rect(element);
+  if (!r.width || !r.height) return;
+  let scrollable = false;
+  for (
+    let parent: HTMLElement | null = element;
+    parent;
+    parent =
+      parent.parentElement ||
+      ((parent.getRootNode() as ShadowRoot).host as HTMLElement) ||
+      null
+  ) {
+    const style = geometry.style(parent);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.opacity === "0"
+    )
+      return;
+    if (
+      parent !== element &&
+      /auto|scroll/.test(style.overflow + style.overflowX + style.overflowY) &&
+      (parent.scrollHeight > parent.clientHeight ||
+        parent.scrollWidth > parent.clientWidth)
+    )
+      scrollable = true;
+  }
+  return scrollable ? element : undefined;
 }
 function nameOf(element: HTMLElement) {
   const root = element.getRootNode() as Document | ShadowRoot;
@@ -92,7 +126,7 @@ function nameOf(element: HTMLElement) {
     )
   )
     return (
-      safeName(element) ||
+      accessibleName(element) ||
       sanitizeText(
         element.getAttribute("title") ||
           element.querySelector("img")?.getAttribute("alt") ||
@@ -239,24 +273,7 @@ function contextOf(
   }
   return "";
 }
-function roleOf(e: HTMLElement): string {
-  return (
-    e.getAttribute("role") ||
-    (e.matches("a")
-      ? "link"
-      : e.matches("h1,h2,h3,h4,h5,h6")
-        ? "heading"
-        : e.matches("select")
-          ? "combobox"
-          : e.matches('input[type="radio"]')
-            ? "radio"
-            : e.matches('input[type="checkbox"]')
-              ? "checkbox"
-              : e.matches("input,textarea")
-                ? "textbox"
-                : "button")
-  );
-}
+const roleOf = accessibleRole;
 function scopeOf(
   element: HTMLElement,
   childHeadings = new Map<Element, Element | undefined>(),
@@ -600,7 +617,7 @@ export class PageDiscovery {
         kind = "section";
         destination = e;
       } else if (e.matches("input[type=range],[role=slider]")) kind = "range";
-      else if (role === "button" && popup) kind = "expand";
+      else if (popup) kind = "expand";
       else if (e.matches('[role="treeitem"][aria-expanded]')) kind = "expand";
       else if (
         e.matches(
@@ -740,7 +757,13 @@ export class PageDiscovery {
                 ),
           )
         : undefined;
-      const risk = interactionRisk(e, kind, rawLabel, description);
+      const risk =
+        customInteraction(e) && role === "generic" && kind === "action"
+          ? {
+              risk: "consequential" as const,
+              riskReason: "unknown-edit-effect" as const,
+            }
+          : interactionRisk(e, kind, rawLabel, description);
       const structure = structureIndex.of(e);
       const form = formContext(e, forms);
       const scope =
@@ -1089,6 +1112,7 @@ export class PageDiscovery {
         presented(e as HTMLElement),
       ),
     );
+    const screen = discoverScreen(roots, controls, busy, signals);
     const state =
       controls
         .map((c) =>
@@ -1108,7 +1132,9 @@ export class PageDiscovery {
       "|" +
       JSON.stringify(signals.map(({ revision, ...s }) => s)) +
       "|busy:" +
-      busy;
+      busy +
+      "|screen:" +
+      screen.kind;
     const fingerprint = hash(state);
     const freshness = hash(
       state +
@@ -1194,6 +1220,7 @@ export class PageDiscovery {
       signals: signals.map((s) => ({ ...s, revision: this.revision })),
       busy,
       indexedControls: Math.min(5000, elements.length),
+      screen,
     };
   }
 }

@@ -1,4 +1,3 @@
-import { BrowserAdapter } from "../../../packages/browser-adapter";
 import { fullyUnclipped } from "../../../packages/browser-adapter/geometry";
 import { GuidanceOverlay } from "../../../packages/overlay-ui";
 import {
@@ -60,11 +59,11 @@ import type {
   ControlReference,
 } from "../../../packages/navigation-core/workflow-contracts";
 import { frameElement } from "./frame-visibility";
+import { scrollTarget } from "../../../packages/browser-adapter/scroll-target";
 export class PageCoach {
   view: SessionView;
   private discovery = new PageDiscovery();
   private overlay = new GuidanceOverlay();
-  private adapter = new BrowserAdapter();
   private cleanup?: () => void;
   private selected?: BoundControl;
   private before?: PageSnapshot;
@@ -80,6 +79,11 @@ export class PageCoach {
   private planningRevision = "";
   private verifiedDestination?: string;
   private workflowWaitTimer?: ReturnType<typeof setTimeout>;
+  private cancelScroll?: () => void;
+  private recoveryKey = "";
+  private recoveryStep = 0;
+  private recoveryTimer?: ReturnType<typeof setTimeout>;
+  private inputHandoff?: BoundControl;
   private frames = new Map<
     number,
     { documentId: string; tabId: number; page: PageSnapshot }
@@ -159,9 +163,12 @@ export class PageCoach {
     this.cleanup = this.discovery.observe(() => this.refresh());
     document.addEventListener("click", this.clicked, true);
     document.addEventListener("focusin", this.focused, true);
+    document.addEventListener("pointerover", this.hovered, true);
     document.addEventListener("change", this.changed, true);
   }
   private clearTarget() {
+    this.cancelScroll?.();
+    this.cancelScroll = undefined;
     if (this.view.status === "waiting") this.view.status = "running";
     this.selected = undefined;
     if (this.externalControl)
@@ -178,10 +185,13 @@ export class PageCoach {
     this.overlay.clear();
   }
   private teardown() {
+    this.inputHandoff = undefined;
+    clearTimeout(this.recoveryTimer);
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener("click", this.clicked, true);
     document.removeEventListener("focusin", this.focused, true);
+    document.removeEventListener("pointerover", this.hovered, true);
     document.removeEventListener("change", this.changed, true);
     clearTimeout(this.eventTick);
     clearTimeout(this.workflowWaitTimer);
@@ -287,6 +297,52 @@ export class PageCoach {
     }
     this.view.controls = page.controls.filter((c) => c.visible && c.enabled);
     this.view.confidence = page.controls.length ? 1 : 0;
+    if (
+      this.pending &&
+      this.selected?.control.kind === "expand" &&
+      this.selected.control.popup &&
+      this.before &&
+      this.view.journey?.workflow?.status !== "review"
+    ) {
+      const workflow = this.view.journey?.workflow;
+      const guide =
+        workflow && workflowGuides.find((g) => g.id === workflow.guideId);
+      const method = workflow?.entities.find((e) => e.type === "method")?.value;
+      const next = guide?.milestones
+        .slice((workflow?.activeMilestone || 0) + 1)
+        .find((m) => !m.branch || m.branch === method);
+      const value = workflow?.entities.find(
+        (e) => e.type === next?.entity,
+      )?.value;
+      const targets = [value, ...(next?.targets || [])].filter(
+        (v): v is string => !!v,
+      );
+      const matching = page.controls.filter(
+        (c) =>
+          c.visible &&
+          c.enabled &&
+          !c.occluded &&
+          c.kind !== "section" &&
+          (c.reference?.frameId || 0) ===
+            (this.selected!.control.reference?.frameId || 0) &&
+          targets.some((t) => t.toLowerCase() === c.label.toLowerCase()) &&
+          !this.before!.controls.some(
+            (old) => old.signature === c.signature && old.visible,
+          ) &&
+          page.coverage?.some(
+            (s) =>
+              s.surfaceId === c.surfaceId &&
+              ["menu", "listbox", "dialog"].includes(s.role),
+          ),
+      );
+      // A fresh, uniquely task-relevant control inside the declared popup can
+      // verify the reveal even when a framework portals it outside the trigger.
+      // This verifies only the opening, never the next action or task outcome.
+      if (workflow && matching.length === 1) {
+        this.verified(page);
+        return;
+      }
+    }
     if (
       this.externalControl &&
       !page.controls.some(
@@ -512,6 +568,7 @@ export class PageCoach {
     const requestTask = this.view.request?.tasks[this.view.request.active];
     if (this.view.journey?.workflow) {
       const focused = selected.control.kind === "focus";
+      if (focused) this.inputHandoff = selected;
       this.view.journey.workflow = recordWorkflowAction(
         this.view.journey.workflow,
         selected.control,
@@ -837,6 +894,7 @@ export class PageCoach {
       this.view.journey.workflow = result.workflow;
     if (
       result.workflow?.pendingAction?.acted &&
+      !result.workflow.pendingAction.milestone.startsWith("handoff:") &&
       !result.workflow.waitExpired &&
       !this.workflowWaitTimer
     ) {
@@ -882,6 +940,57 @@ export class PageCoach {
         }
       }, 100);
     if (result.plan) {
+      if (
+        result.plan.issue === "no-match" &&
+        !result.clarification &&
+        !["credentials", "two-factor", "authorization"].includes(
+          this.view.page.screen?.kind || "",
+        )
+      ) {
+        const key =
+          (result.request?.id || "") + ":" + this.view.page.fingerprint;
+        if (key !== this.recoveryKey) {
+          this.recoveryKey = key;
+          this.recoveryStep = 0;
+        }
+        const stages = [
+          "priority",
+          "retrieval",
+          "structure",
+          "vision",
+        ] as const;
+        const stage = stages[Math.min(this.recoveryStep, 3)];
+        result.plan.recoveryStage = stage;
+        if (this.recoveryStep < 3) {
+          this.recoveryStep++;
+          clearTimeout(this.recoveryTimer);
+          this.recoveryTimer = setTimeout(() => {
+            if (
+              this.view.request?.id !== result.request?.id ||
+              this.view.status !== "running"
+            )
+              return;
+            const guide =
+              result.workflow &&
+              workflowGuides.find((g) => g.id === result.workflow!.guideId);
+            const targets =
+              guide?.milestones[result.workflow?.activeMilestone || 0]
+                ?.targets || [];
+            this.discovery.setQuery(
+              [
+                result.canonicalGoal || result.request?.original || "",
+                ...targets,
+              ].join(" "),
+            );
+            this.discovery.invalidate();
+            this.refresh();
+            this.planningRevision = "";
+            this.requestReplan();
+          }, 100);
+          result.plan.reason =
+            "Finding your next step… Your destination is retained.";
+        }
+      }
       if (result.plan.status === "completed" && this.view.journey)
         this.view.journey.status = "completed";
       this.installPlan(result.plan);
@@ -902,6 +1011,15 @@ export class PageCoach {
           this.selectedAt = Date.now();
           this.view.selectedControlId = target.control.id;
           this.view.instruction = result.plan.reason;
+          this.cancelScroll?.();
+          if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+            this.cancelScroll = scrollTarget(
+              target.geometry,
+              () =>
+                this.selected === target &&
+                this.view.status === "running" &&
+                !target.control.occluded,
+            );
           this.overlay.show(target.geometry, this.view.instruction);
           this.publish(this.view);
         }
@@ -1044,6 +1162,11 @@ export class PageCoach {
       return { view: this.view };
     }
     this.selected = target;
+    if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+      this.cancelScroll = scrollTarget(
+        target.geometry,
+        () => this.selected === target,
+      );
     this.discovery.setPriority(target.element);
     this.selectedAt = Date.now();
     this.before = this.view.page;
@@ -1205,32 +1328,21 @@ export class PageCoach {
         };
     }
     this.publish(this.view, undefined, navigation);
-    this.deadline = setTimeout(
-      () => {
-        if (this.view.journey?.workflow) {
-          this.view.journey.workflow.waitExpired = true;
-          this.view.journey.workflow.revision++;
-          this.view.instruction =
-            "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
-          this.publish(this.view);
-          return;
-        }
-        this.record("timeout", "deadline-expired");
-        this.clearTarget();
-        this.state("choosing");
+    this.deadline = setTimeout(() => {
+      if (this.view.journey?.workflow) {
+        this.view.journey.workflow.waitExpired = true;
+        this.view.journey.workflow.revision++;
         this.view.instruction =
-          "The expected result was not observed. Check the page and choose a control again.";
-        if (this.view.goalPlan)
-          this.view.goalPlan = {
-            ...this.view.goalPlan,
-            status: "unresolved",
-            reason: this.view.instruction,
-            steps: [],
-          };
+          "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
         this.publish(this.view);
-      },
-      this.view.journey?.workflow ? 120000 : 8000,
-    );
+        return;
+      }
+      this.record("timeout", "deadline-expired");
+      this.view.status = "running";
+      this.view.instruction =
+        "Still waiting for the website. Your destination is retained.";
+      this.publish(this.view);
+    }, 120000);
     this.eventTick = setTimeout(() => this.refresh(), 0);
   }
   private clicked = (event: MouseEvent) => {
@@ -1253,7 +1365,33 @@ export class PageCoach {
     )
       this.interacted();
   };
+  private hovered = (event: PointerEvent) => {
+    if (
+      this.selected?.control.kind === "expand" &&
+      event.composedPath().includes(this.selected.element)
+    )
+      this.interacted();
+  };
   private changed = (event: Event) => {
+    if (
+      this.inputHandoff?.element === event.target &&
+      this.view.journey?.workflow
+    ) {
+      const workflow = this.view.journey.workflow;
+      const guide = workflowGuides.find((g) => g.id === workflow.guideId);
+      if (
+        guide?.milestones[workflow.activeMilestone]?.kind === "input" &&
+        workflow.pendingAction?.signature ===
+          this.inputHandoff.control.signature
+      ) {
+        // A native change is an input handoff, not proof of the entered value
+        // or the task outcome. Verification still happens on later screens.
+        this.view.journey.workflow = continueWorkflow(workflow, guide);
+        this.inputHandoff = undefined;
+        this.planningRevision = "";
+        this.requestReplan();
+      }
+    }
     if (this.selected && event.target === this.selected.element) {
       this.interacted();
       this.refresh();

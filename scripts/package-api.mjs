@@ -4,22 +4,20 @@ import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { thirdParty } from "./third-party.mjs";
-import { readdir } from "node:fs/promises";
+import { artifactFiles } from "./artifact-files.mjs";
 import { multiAppEvidence } from "./verify-multi-app-release.mjs";
+import { reliabilityEvidence } from "./verify-reliability-release.mjs";
 const report = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
 if (!report.passed)
   throw new Error(
     "Run passing real-model and API validation before packaging.",
   );
-const apiFiles = {};
-for (const file of (await readdir("apps/api/dist")).sort())
-  apiFiles[file] = createHash("sha256")
-    .update(await readFile("apps/api/dist/" + file))
-    .digest("hex");
+const apiFiles = await artifactFiles("apps/api/dist");
 if (JSON.stringify(apiFiles) !== JSON.stringify(report.apiArtifactFiles))
   throw new Error("API bytes differ from the passing evaluation.");
 const multiApp = await multiAppEvidence(report.artifactFiles, apiFiles);
 const vision = await visionEvidence(report.artifactFiles, apiFiles);
+const reliability = await reliabilityEvidence(report.artifactFiles);
 const version = JSON.parse(
   await readFile("apps/api/package.json", "utf8"),
 ).version;
@@ -104,6 +102,7 @@ await writeFile(
       apiTestsPassed: report.passed,
       multiApp,
       vision,
+      reliability,
       setup: "docs/api-setup.md",
     },
     null,

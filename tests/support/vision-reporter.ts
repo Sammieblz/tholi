@@ -1,6 +1,6 @@
 import type { Reporter, TestModule, TestRunEndReason } from "vitest/node";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { artifactFiles } from "../../scripts/artifact-files.mjs";
 import { buildProvenance } from "./build-provenance";
 export default class VisionReporter implements Reporter {
   private start?: Awaited<ReturnType<typeof buildProvenance>>;
@@ -13,11 +13,7 @@ export default class VisionReporter implements Reporter {
     reason: TestRunEndReason,
   ) {
     const end = await buildProvenance(),
-      apiArtifactFiles: Record<string, string> = {};
-    for (const name of (await readdir("apps/api/dist")).sort())
-      apiArtifactFiles[name] = createHash("sha256")
-        .update(await readFile("apps/api/dist/" + name))
-        .digest("hex");
+      apiArtifactFiles = await artifactFiles("apps/api/dist");
     const tests = modules.flatMap((m) => [...m.children.allTests()]);
     await mkdir("output/vision", { recursive: true });
     await writeFile(

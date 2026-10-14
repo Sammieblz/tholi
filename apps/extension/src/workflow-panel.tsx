@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkflowContext } from "../../../packages/navigation-core/workflow-contracts";
 import { workflowGuides } from "../../../packages/navigation-core/guides";
 
@@ -87,20 +87,10 @@ export function WorkflowPanel({
         </details>
       )}
       {workflow.status === "review" && (
-        <>
-          <p>
-            Review this action on the website and make the click yourself.
-            Navigator checks the result afterward.
-          </p>
-          <button
-            disabled={disabled}
-            onClick={() =>
-              void onMessage({ type: "WORKFLOW_ACTION", action: "CONTINUE" })
-            }
-          >
-            I performed the action — check the result
-          </button>
-        </>
+        <p>
+          Review this action on the website and make the click yourself.
+          Navigator checks the result afterward.
+        </p>
       )}
       {milestone?.kind === "input" && workflow.status !== "completed" && (
         <button

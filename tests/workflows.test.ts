@@ -11,7 +11,7 @@ import {
 } from "../packages/navigation-core/privacy";
 import { beginJourney, saveTask } from "../packages/goal-planner/task-journey";
 import { fixture } from "./nlp/fixtures";
-import type { PageSnapshot, PageControl } from "../packages/page-model";
+import type { PageSnapshot } from "../packages/page-model";
 import { interpretRequest } from "../packages/nlp/interpret";
 import { advanceJourney } from "../packages/goal-planner/task-journey";
 const embedder = {

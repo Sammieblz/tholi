@@ -14,22 +14,14 @@ test("panel exposes distinct status announcements, stable polling and usable key
     );
     await app.page.goto("http://localhost:5173/accessibility");
     await app.page.bringToFront();
-    await expect(
-      app.panel.getByRole("combobox", { name: "Choose a task" }),
-    ).toBeEnabled();
-    await app.panel
-      .getByRole("combobox", { name: "Choose a task" })
-      .selectOption("navigator.live");
+    await app.panel.getByLabel("Navigation goal").fill("Show search");
     await app.page.bringToFront();
     await app.panel
-      .getByRole("button", { name: "Start navigation", exact: true })
+      .getByRole("button", { name: "Guide me", exact: true })
       .press("Enter");
     await expect.poll(async () => (await app.view())?.status).toBe("running");
     const status = app.panel.getByRole("status", { name: "Navigation status" });
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
-    await app.panel.getByLabel("Navigation goal").fill("Show search");
-    await app.page.bringToFront();
-    await app.panel.getByLabel("Navigation goal").press("Enter");
     await expect(status).toContainText("Guiding.");
     const text = await status.textContent();
     // Polling/geometry-only updates must not rewrite the live announcement.
@@ -64,7 +56,8 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await expect(status).toContainText("Waiting for the website.");
     await expect(status).toContainText("Choose an option.");
     await setGoal(app, "Missing feature");
-    await expect(status).toContainText("No clear route found.");
+    await expect(status).toContainText("Finding your next step.");
+    expect((await app.view()).request.status).not.toBe("completed");
     await setGoal(app, "Delete account");
     await expect(status).toContainText("Review required.");
     await expect(status).toContainText("consequential");
@@ -86,9 +79,7 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await app.panel.getByRole("button", { name: "Stop", exact: true }).focus();
     await app.panel.keyboard.press("Enter");
     await expect(status).toContainText("stopped.");
-    await expect(
-      app.panel.getByRole("button", { name: "Start navigation", exact: true }),
-    ).toBeFocused();
+    await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await app.panel.setViewportSize({ width: 300, height: 800 });
     const width = await app.panel.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,

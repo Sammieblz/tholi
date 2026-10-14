@@ -12,7 +12,10 @@ import type {
 } from "../../../packages/page-model";
 import { savedTaskSchema } from "../../../packages/page-model";
 import { mergeObservation } from "../../../packages/site-memory";
-import { MODEL_REVISION } from "../../../packages/nlp/constants";
+import {
+  MODEL_REVISION,
+  INDEX_REVISION,
+} from "../../../packages/nlp/constants";
 import type { KnowledgeStore } from "../../../packages/navigation-core/storage";
 import {
   structuralObservation,
@@ -43,6 +46,15 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
     const routeVersion = this.db
       .prepare("SELECT value FROM metadata WHERE key='route_actions'")
       .get();
+    const indexVersion = this.db
+      .prepare("SELECT value FROM metadata WHERE key='index_revision'")
+      .get();
+    if (indexVersion?.value !== INDEX_REVISION) {
+      this.db.exec("DELETE FROM indexes");
+      this.db
+        .prepare("INSERT OR REPLACE INTO metadata VALUES('index_revision',?)")
+        .run(INDEX_REVISION);
+    }
     if (routeVersion?.value !== "5") {
       for (const row of this.db
         .prepare("SELECT origin,data FROM sites")

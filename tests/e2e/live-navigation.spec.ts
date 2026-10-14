@@ -578,7 +578,7 @@ test("goal form uses semantic fallback, model proposals are checked, and consequ
     await app.panel.getByLabel("Navigation goal").fill("Search library");
     await app.page.bringToFront();
     await app.panel
-      .getByRole("button", { name: "Find a route", exact: true })
+      .getByRole("button", { name: "Guide me", exact: true })
       .evaluate((e) => (e as HTMLButtonElement).click());
     await expect
       .poll(async () => (await app.view()).goalPlan?.source)

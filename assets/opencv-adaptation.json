@@ -1,0 +1,11 @@
+{
+  "package": "@techstark/opencv-js",
+  "version": "4.10.0-release.1",
+  "sourceSha256": "19b46167b59efbef9cc3836264b0b657110833e4b1df84282004b8b3141c048d",
+  "license": "Apache-2.0",
+  "changes": [
+    "Named function construction uses static closures",
+    "dynCall construction uses static closures preserving arity"
+  ],
+  "paddleSdkSha256": "8610d82fdc539e48fa0147763be4b676c699d646a8db75fbceb627d9d37deb94"
+}

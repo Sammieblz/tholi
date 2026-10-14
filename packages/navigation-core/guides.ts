@@ -57,8 +57,8 @@ const sources = {
     "6b217bb5faaaa977745117ec8b5251116e41b234f24e31f94d3074f4faff5ea8",
   ],
   prime: [
-    "https://digprjsurvey.amazon.co.uk/csad/help/node/GTJQ7QZY7QL2HK4Y",
-    "18209e970201582bcc129189f92c52cf58221c3e26a577c30b679eb49a6d80b7",
+    "https://www.aboutamazon.com/news/retail/how-to-cancel-amazon-prime-membership",
+    "b234e8a3967b7491896aad0ce9acc1cd6ea62e518f85e0d68b48716e031ad823",
   ],
 } as const;
 type Milestone = WorkflowGuide["milestones"][number];
@@ -89,7 +89,12 @@ const guide = (
     platform,
     purpose,
     intents,
-    version: id === "cloudflare.pages.deploy" ? "1.1.0" : "1.0.0",
+    version:
+      id === "amazon.prime.cancel"
+        ? "2.0.0"
+        : id === "cloudflare.pages.deploy"
+          ? "1.1.0"
+          : "1.0.0",
     sources: source.map((key) => ({
       url: sources[key][0],
       sha256: sources[key][1],
@@ -577,7 +582,18 @@ export const workflowGuides: WorkflowGuide[] = [
       step(
         "account",
         "Open your account membership area",
-        ["Account & Lists", "Account", "Prime", "Prime membership"],
+        ["Account & Lists", "Accounts & Lists", "Your Account", "Account"],
+        "navigate",
+      ),
+      step(
+        "prime",
+        "Open Prime membership",
+        [
+          "Prime",
+          "Prime membership",
+          "Your Prime Membership",
+          "Manage Prime Membership",
+        ],
         "navigate",
       ),
       step(
@@ -594,6 +610,12 @@ export const workflowGuides: WorkflowGuide[] = [
           "End benefits",
           "Confirm cancellation",
           "Cancel membership",
+          "Continue to cancel",
+          "Continue with cancellation",
+          "Cancel My Benefits",
+          "End My Benefits",
+          "End on renewal",
+          "End Now",
         ],
         "review",
       ),
@@ -608,6 +630,8 @@ export const workflowGuides: WorkflowGuide[] = [
             "membership cancelled",
             "membership ends",
             "cancellation confirmed",
+            "prime membership has ended",
+            "prime membership will end",
           ],
         },
       ),

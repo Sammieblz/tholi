@@ -6,7 +6,7 @@ import {
   type Page,
   type Worker,
 } from "@playwright/test";
-import { mkdtemp, readFile, writeFile, cp, rm, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, cp, rm, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep, basename } from "node:path";
 let context: BrowserContext,

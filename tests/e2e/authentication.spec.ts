@@ -158,6 +158,9 @@ test("an unmatched destination reports an unavailable estimate instead of zero c
     await app.page.goto("http://localhost:5173/unmatched");
     await app.start();
     await setGoal(app, "create account");
+    await app.panel
+      .getByText("Route details · Live discovery", { exact: true })
+      .click();
     await expect(app.panel.getByLabel("Route estimate")).toContainText(
       "unavailable",
     );

@@ -1,10 +1,54 @@
 import { build } from "esbuild";
-import { mkdir, copyFile, cp } from "node:fs/promises";
+import {
+  mkdir,
+  copyFile,
+  cp,
+  readdir,
+  unlink,
+  realpath,
+  readFile,
+  writeFile,
+  rm,
+} from "node:fs/promises";
+import { resolve, join } from "node:path";
 import { thirdParty } from "./third-party.mjs";
+import { opencvCsp } from "./opencv-csp.mjs";
 const out = "dist/extension";
+const withPaddle = process.argv.includes("--with-paddle");
+const visionPolicy = JSON.parse(
+  await readFile("assets/vision-policy.json", "utf8"),
+);
+if (visionPolicy.paddleDefault && !withPaddle)
+  throw Error("Default Paddle inference requires a build with Paddle assets");
 await import("./fetch-model.mjs");
 await import("./fetch-ocr.mjs");
+if (withPaddle) await import("./fetch-paddle.mjs");
 await mkdir(out, { recursive: true });
+// Remove obsolete generated chunks before building reproducible asset bytes.
+const resolvedOut = resolve(out);
+if (
+  resolvedOut !== join(resolve("."), "dist", "extension") ||
+  (await realpath(out)) !== resolvedOut
+)
+  throw Error("Unexpected extension output path");
+for (const entry of await readdir(out, { withFileTypes: true }))
+  if (entry.isFile() && /\.(?:js|js\.map)$/.test(entry.name))
+    await unlink(join(resolvedOut, entry.name));
+// Switching from an experimental build must not leave inactive models behind.
+if (!withPaddle) {
+  const paddleDirectory = join(resolvedOut, "paddle");
+  const actual = await realpath(paddleDirectory).catch((error) => {
+    if (error.code !== "ENOENT") throw error;
+  });
+  if (actual) {
+    if (actual !== paddleDirectory) throw Error("Unexpected Paddle asset path");
+    await rm(paddleDirectory, { recursive: true });
+  }
+  for (const name of ["paddle-lock.json", "opencv-adaptation.json"])
+    await unlink(join(resolvedOut, name)).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+}
 await build({
   entryPoints: {
     worker: "apps/extension/src/worker.ts",
@@ -66,7 +110,6 @@ await copyFile("assets/model-lock.json", out + "/model-lock.json");
 await copyFile("apps/extension/manifest.json", out + "/manifest.json");
 await copyFile("apps/extension/sidepanel.html", out + "/sidepanel.html");
 await thirdParty(out);
-console.log("Unpacked extension ready: dist/extension");
 
 await build({
   entryPoints: ["apps/extension/src/ocr-worker.ts"],
@@ -74,8 +117,29 @@ await build({
   bundle: true,
   format: "esm",
   platform: "browser",
+  splitting: true,
+  plugins: [
+    ...(withPaddle ? [opencvCsp] : []),
+    {
+      name: "opencv-browser-only",
+      setup(build) {
+        build.onResolve({ filter: /^(fs|path)$/ }, (args) => ({
+          path: args.path,
+          namespace: "node-unavailable",
+        }));
+        build.onLoad({ filter: /.*/, namespace: "node-unavailable" }, () => ({
+          contents: "export default {};",
+          loader: "js",
+        }));
+      },
+    },
+  ],
   target: "chrome120",
   minify: true,
+  define: {
+    __PADDLE_BUNDLED__: String(withPaddle),
+    __PADDLE_DEFAULT__: String(visionPolicy.paddleDefault),
+  },
 });
 await cp("assets/ocr", out + "/ocr", { recursive: true });
 await copyFile("assets/ocr-lock.json", out + "/ocr-lock.json");
@@ -91,3 +155,23 @@ await copyFile(
   "node_modules/tesseract.js/dist/worker.min.js",
   out + "/ocr/worker.min.js",
 );
+if (withPaddle) {
+  await cp("assets/paddle", out + "/paddle", { recursive: true });
+  await copyFile("assets/paddle-lock.json", out + "/paddle-lock.json");
+  await copyFile(
+    "assets/opencv-adaptation.json",
+    out + "/opencv-adaptation.json",
+  );
+}
+await writeFile(
+  out + "/vision-policy.json",
+  JSON.stringify({ ...visionPolicy, paddleBundled: withPaddle }, null, 2) +
+    "\n",
+);
+await copyFile("assets/discovery-lock.json", out + "/discovery-lock.json");
+await copyFile(
+  "node_modules/playwright-core/LICENSE",
+  out + "/licenses/playwright-discovery-Apache-2.0.txt",
+);
+
+console.log("Unpacked extension ready: dist/extension");

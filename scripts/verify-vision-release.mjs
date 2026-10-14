@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 export async function visionEvidence(files, apiFiles) {
+  const manifest = JSON.parse(
+    await readFile("dist/extension/manifest.json", "utf8"),
+  );
   const reports = {};
   for (const name of ["runtime", "routes", "browser", "performance"]) {
     const report = JSON.parse(
@@ -7,7 +10,7 @@ export async function visionEvidence(files, apiFiles) {
     );
     if (
       !report.passed ||
-      report.extensionVersion !== "0.9.0" ||
+      report.extensionVersion !== manifest.version ||
       JSON.stringify(report.artifactFiles) !== JSON.stringify(files)
     )
       throw new Error(

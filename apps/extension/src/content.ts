@@ -23,7 +23,7 @@ import {
   LIVE_VERSION,
   type SiteMemory,
 } from "../../../packages/page-model";
-const marker = "__internetNavigatorLoaded090";
+const marker = "__internetNavigatorLoaded091";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
@@ -33,15 +33,28 @@ if (!host[marker]) {
   let coach: PageCoach | undefined;
   let sessionId: string | undefined;
   let visualNotification: ReturnType<typeof setTimeout> | undefined;
-  onVisualInvalidation(() => {
-    if (!sessionId || visualNotification) return;
-    visualNotification = setTimeout(() => {
-      visualNotification = undefined;
-      void chrome.runtime
-        .sendMessage({ type: "VISION_INVALIDATED", sessionId })
-        .catch(() => {});
-    }, 50);
-  });
+  let visualCleanup: (() => void) | undefined;
+  const observeVisual = () => {
+    visualCleanup?.();
+    visualCleanup = onVisualInvalidation(() => {
+      if (!sessionId || visualNotification) return;
+      visualNotification = setTimeout(() => {
+        visualNotification = undefined;
+        if (coach?.view.goalPlan?.action?.kind === "visual")
+          coach.recheckJourney();
+        void chrome.runtime
+          .sendMessage({ type: "VISION_INVALIDATED", sessionId })
+          .catch(() => {});
+      }, 50);
+    });
+  };
+  const stopVisual = () => {
+    visualCleanup?.();
+    visualCleanup = undefined;
+    clearTimeout(visualNotification);
+    visualNotification = undefined;
+    clearVisual();
+  };
   let frameNonce = "";
   let frameVisibilityCleanup: (() => void) | undefined;
   let cleanup: (() => void) | undefined;
@@ -161,16 +174,14 @@ if (!host[marker]) {
       raw.type === "CONTROL_SESSION" &&
       ["STOP", "PAUSE"].includes(raw.action)
     )
-      clearVisual();
+      stopVisual();
     if (raw.sessionId === sessionId && coach) {
       if (raw.type === "RECHECK_JOURNEY") {
         respond(coach.recheckJourney());
         return;
       }
       if (raw.type === "PREPARE_CAPTURE") {
-        const metadata = captureMetadata(
-          Array.isArray(raw.allowedFrameUrls) ? raw.allowedFrameUrls : [],
-        );
+        const metadata = captureMetadata();
         requestAnimationFrame(() =>
           requestAnimationFrame(() => respond(metadata)),
         );
@@ -210,6 +221,7 @@ if (!host[marker]) {
         return;
       }
       teardown();
+      stopVisual();
       coach?.unload();
       coach = undefined;
       engine = undefined;
@@ -246,6 +258,7 @@ if (!host[marker]) {
             });
           },
         );
+        observeVisual();
         respond({ view: coach.start() });
         return;
       }
@@ -372,7 +385,10 @@ if (!host[marker]) {
           frameNonce = "";
         }
         if (message.action === "PAUSE") coach.pause();
-        if (message.action === "RESUME") coach.resume();
+        if (message.action === "RESUME") {
+          observeVisual();
+          coach.resume();
+        }
         if (message.action === "STOP") coach.stop();
         respond({ view: coach.view });
         return;
@@ -400,6 +416,7 @@ if (!host[marker]) {
     respond({ view: engine?.view });
   });
   window.addEventListener("pagehide", () => {
+    stopVisual();
     if (coach) {
       coach.unload();
       return;

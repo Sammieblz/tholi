@@ -182,6 +182,16 @@ test("saved routes persist across browser restart and rebind after a website cha
     );
     await app.page.goto("http://localhost:5173/saved");
     await app.start();
+    const savedRoutes = app.panel
+      .locator("summary")
+      .filter({ hasText: /^Saved routes$/ });
+    await expect(savedRoutes).toBeVisible();
+    if (
+      !(await savedRoutes.evaluate((e) =>
+        e.parentElement?.hasAttribute("open"),
+      ))
+    )
+      await savedRoutes.click();
     await app.page.bringToFront();
     await expect(
       app.panel.getByRole("button", {

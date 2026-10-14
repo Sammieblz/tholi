@@ -2,9 +2,7 @@ import type { NavigationAction } from "../../../packages/navigation-core/navigat
 let revision = 0;
 let visual: HTMLElement | undefined;
 let notify: (() => void) | undefined;
-export function onVisualInvalidation(callback: () => void) {
-  notify = callback;
-}
+let stopWatching: (() => void) | undefined;
 export function clearVisual() {
   visual?.remove();
   visual = undefined;
@@ -14,15 +12,7 @@ const invalidate = () => {
   clearVisual();
   notify?.();
 };
-for (const event of [
-  "scroll",
-  "resize",
-  "click",
-  "input",
-  "keydown",
-  "focusin",
-])
-  window.addEventListener(event, invalidate, true);
+const events = ["scroll", "resize", "click", "input", "keydown", "focusin"];
 const own = (node: Node) =>
   node instanceof Element &&
   (node.id === "navigator-visual-suggestion" ||
@@ -42,23 +32,40 @@ const observer = new MutationObserver((records) => {
   )
     invalidate();
 });
-observer.observe(document.documentElement, {
-  subtree: true,
-  childList: true,
-  attributes: true,
-  characterData: true,
-});
-export function captureMetadata(allowedFrameUrls: string[] = []) {
+export function onVisualInvalidation(callback: () => void) {
+  stopWatching?.();
+  revision++;
+  notify = callback;
+  events.forEach((event) => window.addEventListener(event, invalidate, true));
+  observer.observe(document.documentElement, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    characterData: true,
+  });
+  const stop = () => {
+    if (stopWatching !== stop) return;
+    observer.disconnect();
+    events.forEach((event) =>
+      window.removeEventListener(event, invalidate, true),
+    );
+    notify = undefined;
+    stopWatching = undefined;
+    revision++;
+    clearVisual();
+  };
+  stopWatching = stop;
+  return stop;
+}
+export function captureMetadata() {
   const masks: { x: number; y: number; width: number; height: number }[] = [];
   const walk = (root: Document | ShadowRoot) => {
     for (const element of root.querySelectorAll(
       "input,textarea,[contenteditable],iframe",
     )) {
-      if (
-        element instanceof HTMLIFrameElement &&
-        allowedFrameUrls.includes(element.src)
-      )
-        continue;
+      // Host permission enables frame-local DOM discovery, but does not supply
+      // trustworthy field-mask geometry. Keep the entire frame masked until
+      // such metadata is available; permission alone must not expose editors.
       const r = element.getBoundingClientRect();
       if (r.width && r.height)
         masks.push({

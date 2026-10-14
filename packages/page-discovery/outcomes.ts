@@ -64,6 +64,27 @@ export function discoverOutcomes(
     });
   };
   for (const root of roots) {
+    // Read bounded receipt text adjacent to a semantic heading, never whole-page prose.
+    for (const heading of [
+      ...root.querySelectorAll<HTMLElement>(
+        "main h1,main h2,[role=main] [role=heading]",
+      ),
+    ].slice(0, 20)) {
+      const subject = safeName(heading),
+        sibling = heading.nextElementSibling as HTMLElement | null;
+      if (
+        sibling?.matches("p") &&
+        /membership|subscription|deployment|repository/i.test(subject)
+      ) {
+        const text = boundedText(sibling);
+        if (
+          /canceled|cancelled|ends|will end|has ended|cancellation confirmed|deployed|created|no (?:active )?(?:prime )?membership|not (?:an? )?prime member|membership (?:is )?(?:unavailable|inactive)/i.test(
+            text,
+          )
+        )
+          add(sibling, subject, text);
+      }
+    }
     for (const e of root.querySelectorAll<HTMLElement>(
       "[role=status],[role=alert],[aria-live=polite],[aria-live=assertive]",
     )) {

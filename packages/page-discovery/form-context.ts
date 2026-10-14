@@ -1,6 +1,7 @@
 import { hash, type PageControl } from "../page-model";
 import { safeName, sanitizeText } from "../privacy-redaction";
 import { authenticationIntent } from "../goal-planner/task-intent";
+import { authenticationStage, presentedMetadataField } from "./screen-state";
 
 export function formContext(
   element: HTMLElement,
@@ -42,7 +43,10 @@ export function formContext(
   // Inspect authored input types/autocomplete hints only. Never read a field's
   // current value or include password controls in the discovered control list.
   const password = [...form.elements].filter(
-    (e) => e instanceof HTMLInputElement && e.type === "password",
+    (e) =>
+      e instanceof HTMLInputElement &&
+      e.type === "password" &&
+      presentedMetadataField(e),
   );
   // A page heading alone cannot turn appearance/search forms into login forms.
   const localName = [
@@ -65,9 +69,11 @@ export function formContext(
         : password.length
           ? "credentials"
           : undefined);
+  const stage = authenticationStage(form, name);
   const context: NonNullable<PageControl["form"]> = {
     key: hash(name + "|" + [...root.querySelectorAll("form")].indexOf(form)),
-    authentication,
+    authentication: authentication || (stage ? "credentials" : undefined),
+    stage,
   };
   cache.set(form, context);
   return context;

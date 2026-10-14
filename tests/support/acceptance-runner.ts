@@ -170,9 +170,28 @@ export async function runGoal(
   else if (oracle.kind === "section" && selected.role === "link")
     await oracle.sectionLink!.click();
   else await oracle.target.click();
-  await expect
-    .poll(async () => (await app.view()).verifiedSteps, { timeout: 10000 })
-    .toBe(before + 1);
+  try {
+    await expect
+      .poll(async () => (await app.view()).verifiedSteps, { timeout: 10000 })
+      .toBe(before + 1);
+  } catch (error) {
+    const current = await app.view();
+    throw new Error(
+      String(error) +
+        "\nOutcome diagnostics: " +
+        JSON.stringify({
+          status: current.status,
+          instruction: current.instruction,
+          verifiedSteps: current.verifiedSteps,
+          plan: current.goalPlan,
+          selected: current.page.controls.find(
+            (c: any) => c.id === current.selectedControlId,
+          ),
+          box: await oracle.target.boundingBox(),
+          actual: await oracle.outcome(),
+        }),
+    );
+  }
   await expect
     .poll(async () => (await app.view()).goalPlan?.status)
     .toBe(oracle.picker ? "awaiting-choice" : "completed");

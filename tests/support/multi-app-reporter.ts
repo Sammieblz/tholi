@@ -1,6 +1,6 @@
 import type { Reporter, TestModule, TestRunEndReason } from "vitest/node";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { artifactFiles } from "../../scripts/artifact-files.mjs";
 import { buildProvenance } from "./build-provenance";
 export default class MultiAppReporter implements Reporter {
   private start?: Awaited<ReturnType<typeof buildProvenance>>;
@@ -14,11 +14,7 @@ export default class MultiAppReporter implements Reporter {
   ) {
     const end = await buildProvenance(),
       tests = modules.flatMap((m) => [...m.children.allTests()]),
-      apiArtifactFiles: Record<string, string> = {};
-    for (const name of (await readdir("apps/api/dist")).sort())
-      apiArtifactFiles[name] = createHash("sha256")
-        .update(await readFile("apps/api/dist/" + name))
-        .digest("hex");
+      apiArtifactFiles = await artifactFiles("apps/api/dist");
     const suites = modules.map((m) =>
       m.moduleId.replaceAll("\\", "/").split("/").at(-1),
     );

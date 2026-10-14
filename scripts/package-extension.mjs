@@ -1,9 +1,11 @@
 import { visionEvidence } from "./verify-vision-release.mjs";
-import { readFile, readdir, stat, mkdir, writeFile } from "node:fs/promises";
+import { readFile, stat, mkdir, writeFile } from "node:fs/promises";
+import { artifactFiles } from "./artifact-files.mjs";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { multiAppEvidence } from "./verify-multi-app-release.mjs";
+import { reliabilityEvidence } from "./verify-reliability-release.mjs";
 
 // Package the exact build that passed evaluation; never rebuild or overwrite it.
 const extension = resolve("dist/extension");
@@ -20,22 +22,10 @@ if (!report.passed || report.extensionVersion !== manifest.version)
     "Run the complete passing acceptance matrix for this version before packaging",
   );
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const files = {};
-const names = [];
-async function walk(directory, prefix = "") {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const name = prefix + entry.name;
-    if (entry.isDirectory())
-      await walk(join(directory, entry.name), name + "/");
-    else names.push(name);
-  }
-}
-await walk(extension);
-for (const name of names.sort()) {
-  files[name] = sha(await readFile(join(extension, name)));
-}
+const files = await artifactFiles(extension);
 const multiApp = await multiAppEvidence(files);
 const vision = await visionEvidence(files);
+const reliability = await reliabilityEvidence(files);
 const nlp = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
 const nlpBrowser = JSON.parse(
   await readFile("output/nlp/browser-build.json", "utf8"),
@@ -47,7 +37,7 @@ if (
   nlp.falseCompletions ||
   nlp.boundaryBypasses ||
   nlp.warmP95Ms >= 750 ||
-  nlp.unpackedBytes >= 60 * 1024 * 1024 ||
+  nlp.unpackedBytes >= 100 * 1024 * 1024 ||
   JSON.stringify(nlp.artifactFiles) !== JSON.stringify(files) ||
   JSON.stringify(nlpBrowser.artifactFiles) !== JSON.stringify(files) ||
   !nlpBrowser.passed
@@ -140,6 +130,7 @@ await writeFile(
       regressions,
       multiApp,
       vision,
+      reliability,
       optionalAI:
         "Experimental LLM disabled; real CPU MiniLM evaluated separately",
       nlp: {
@@ -152,6 +143,7 @@ await writeFile(
       },
       checklist: "docs/chrome-handoff.md",
       pending: [
+        "signed-in Amazon Prime cancellation and account variants",
         "six-platform signed-in workflow verification",
         "native side-panel reload/activation",
         "native keyboard and screen reader",

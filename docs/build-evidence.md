@@ -1,6 +1,8 @@
 # Archived build verification — October 11, 2026
 
-Current release evidence: [v0.7.0 validation and installation](v0.7.0-validation.md).
+This file preserves historical build evidence. Current setup is in the
+[README](../README.md); current cleanup status is in [maintenance](maintenance.md).
+The [v0.9.1 validation](v0.9.1-validation.md) records pre-cleanup archived bytes.
 
 Production extension candidate: **0.6.9**. Source baseline: `1b9d7f06a7fd2caf19ed1bdc933db3a72fb94e3d`. These fixes are local, uncommitted and unpublished.
 

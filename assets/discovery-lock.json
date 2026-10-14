@@ -1,0 +1,17 @@
+{
+  "repository": "microsoft/playwright",
+  "revision": "a69a313712e43e09a53c57ae04ed6f110621875d",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "name": "roleUtils.ts",
+      "url": "https://raw.githubusercontent.com/microsoft/playwright/a69a313712e43e09a53c57ae04ed6f110621875d/packages/injected/src/roleUtils.ts",
+      "sha256": "6592b3fa09d084fc326dd2de5b9430e457078a25c7112b056932f0da892581b6"
+    },
+    {
+      "name": "ariaSnapshot.ts",
+      "url": "https://raw.githubusercontent.com/microsoft/playwright/a69a313712e43e09a53c57ae04ed6f110621875d/packages/injected/src/ariaSnapshot.ts",
+      "sha256": "3e2d747818f752185e4153cf0670205caaf83c9c2f70e2c855907d51be9a46be"
+    }
+  ]
+}

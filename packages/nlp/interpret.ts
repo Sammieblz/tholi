@@ -3,7 +3,7 @@ import type {
   NavigationRequest,
   TaskIntent,
 } from "../navigation-core/contracts";
-import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
+import { sanitizeGoal } from "../privacy-redaction";
 const clean = (s: string) =>
   s
     .trim()

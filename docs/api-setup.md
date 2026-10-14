@@ -1,4 +1,5 @@
-Install Node **24.19.x**, run `npm ci`, `npm run fetch:model` and
+The API is optional; the extension runs NLP and OCR locally without it.
+Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, `npm run fetch:ocr` and
 `npm run build:api`. Start the optional API with `npm run start:api`.
 It listens at `http://127.0.0.1:8787`. First startup writes a random bearer
 token to `.navigator-api/connection.json`, with no allowed browser origins.
@@ -51,3 +52,10 @@ a fresh projection (409). Older backends fall back to local processing. Session
 context and private names are processed in memory only; SQLite mirrors reusable
 interface semantics and parameterized routes. See the workflow architecture for
 contracts and migration details.
+
+Authenticated `POST /v2/ocr` accepts bounded PNG recognition input (4 MB decoded,
+4 megapixels) and revision stamps. Recognition runs in a worker with the engine
+advertised by `/v2/health`; the current backend uses Tesseract. Images and private
+recognized text are not persisted or payload-logged. Enable backend OCR
+explicitly in the extension to send temporary masked images; older or failed
+backends fall back locally. Paddle is a browser experiment, not an API capability.

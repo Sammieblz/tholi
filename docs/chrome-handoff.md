@@ -1,49 +1,36 @@
-# Native Chrome handoff — candidate 0.7.1
+# Chrome setup and native verification
 
-This candidate is for the dynamic Wikipedia proof of concept. It has not been published or committed. The versioned archive, SHA256 and evaluation provenance are generated in `output/releases` by `npm run package:extension`. Packaging requires a complete passing benchmark and byte-for-byte agreement with its evaluated build. The archive contains the production extension; extract it to a new folder and load that folder, or reload the evaluated `dist/extension` folder.
+Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload and refresh existing website tabs to replace injected scripts. The footer displays the manifest version.
 
-Native computer APIs are disabled in this work session. Automated Chromium extension pages are not the native Chrome side panel. Actual screen-reader speech and Chrome permission dialogs remain unverified. Record the browser version, date and pass/fail details below before closing #10/#17/#18. The POC handoff remains pending until these checks pass, even when #14's measured gates pass.
+On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. **Explore page controls** starts discovery without a task. Authored Northstar tasks retain their separate Start button.
 
-| Native check                                                                                                                                                                        | Result / details |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| Chrome version, extension version 0.7.1, date                                                                                                                                       | Pending          |
-| `chrome://extensions`: Reload or Load unpacked; toolbar icon opens native panel without starting observation                                                                        | Pending          |
-| Refresh existing Wikipedia tab to replace its old injected script; Start/Pause/Resume/Stop use the new build                                                                        | Pending          |
-| Keyboard only: choose task, Start, enter goal, Find a route, Pause, Resume, Stop; visible focus, usable order and no trap                                                           | Pending          |
-| Screen reader (name/version): guiding, waiting, choose an option, unresolved, verified, paused and stopped are announced once per meaningful change; polling does not repeat speech | Pending          |
-| Narrow panel: read instructions/warnings and use controls without horizontal scrolling; consequential controls clearly require review                                               | Pending          |
-| Browser zoom 80%, 125%, 200%: actual Wikipedia language highlight remains aligned and instruction readable                                                                          | Pending          |
-| Ordinary HTTPS site without a prior grant: decline per-site access, see recovery text, retry granting only that origin; no all-sites grant needed                                   | Pending          |
-| Restricted page (for example `chrome://extensions`): unsupported explanation and usable recovery                                                                                    | Pending          |
-| English Wikipedia → explicit Français link: correct French article arrives, old-origin session stops, toolbar invocation/Start enables fresh destination observation                | Pending          |
-| One **Change language to Spanish** task: correct opener/option, retained context at Spanish origin, Continue task here grant/denial/retry, actual Spanish document verification     | Pending          |
-| Saved routes: visible estimates/progress, reuse after reload/site change, per-route Forget, fastest/fewest-click preference and keyboard use                                        | Pending          |
-| A task link opening a popup tab: continue only in its expected tab, retain goal and observe destination after permission                                                            | Pending          |
-| Stop clears guidance; Disable at `chrome://extensions` followed by website refresh removes injected content                                                                         | Pending          |
+## Access recovery
 
-## Repeatable demo
+DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Navigator requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
 
-1. Open `https://en.wikipedia.org/wiki/Casino_Royale_(novel)`, click the Navigator toolbar icon and Start **Navigate this website**. Keep optional AI off.
-2. Enter **Make text larger**. Click the highlighted Appearance opener if needed, then Large. Confirm the website's selected option and Navigator's verified result agree.
-3. Try **Switch to dark mode**, **Set width to wide**, **Find references**, and **Show search**. Search completion means the field is focused; you type and submit yourself.
-4. Enter **Change language to Spanish** once. Click the actual language button. Navigator must retain Spanish and guide the actual Español option when it appears. Opening the picker is intermediate progress.
-5. Click the highlighted Spanish link. On the Spanish destination, choose **Continue task here** and allow only that site's access. Denial must preserve context for retry. After the grant, Navigator must observe the actual Spanish document and verify the same task. Check **Saved routes**, return to an English article and reuse the task; its controls must be discovered afresh.
-6. Pause/Resume and Stop. Inspect **Local site memory and AI**, and use Forget this website to stop observation and delete its learned structure.
+Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted Chrome pages cannot be scanned.
 
-The declared measured matrix is five English Wikipedia articles × six goal families × two layouts. Its URLs/oracles are test data, not product routes. The navigator uses the live page's semantic labels, descriptions and relationships and refreshes bounded IndexedDB knowledge. The Northstar cancellation/billing tasks remain controlled demo regression cases (`npm run dev:demo`, `http://127.0.0.1:5173`).
+## Pending native checks
 
-Candidate 0.6.7 adds heading/region context and grounded optional model intent. Retest **Edit Plot** as well as **Edit**; the section goal should highlight Plot's own edit link, not Plot inspirations. On compatible hardware, enable on-device AI and try paraphrased goals independently of the semantic-mode matrix. Verify the intended control and actual website result yourself and record incorrect interpretations; the automated model adapter uses deterministic responses and does not establish real Gemini Nano accuracy. See [page-context.md](page-context.md).
+Record Chrome version, manifest version, build provenance, date and result. Automated extension-page tests do not establish native permission dialogs, side-panel behavior or actual screen-reader speech.
 
-Candidate 0.6.9 adds persistent destination journeys, model follow-up task context, weighted observed routing, provisional estimates/predictions, saved task routes and guarded origin/popup continuation. Automated fixtures verify permitted-origin continuation and popup tabs. Live Wikipedia independently reaches Spanish but leaves Navigator verification pending its actual native host-permission grant. See [task-routing.md](task-routing.md). Fastest routing optimizes known observations, with broad time estimates; it is not a guarantee over unseen screens.
+| Check                                                                           | Status  |
+| ------------------------------------------------------------------------------- | ------- |
+| Toolbar opening, reload and tab refresh                                         | Pending |
+| Per-site grant, denial, retry and restricted-page explanation                   | Pending |
+| Screenshot activation and recovery after origin changes                         | Pending |
+| Keyboard goal submission, Pause/Resume/Stop, expandable details and focus       | Pending |
+| Screen reader: meaningful status changes without repeated polling announcements | Pending |
+| Narrow panel and 80%, 125%, 200% browser zoom                                   | Pending |
+| Related popup/authentication handoff and unrelated navigation                   | Pending |
+| Restart, saved-route reuse, Forget/Clear and observer teardown                  | Pending |
 
-Reported Edit regression: enter **Edit** or **How do I edit this page?** on the article. The highlight should target the article toolbar's Edit link, rather than a section's edit link or an action-boundary refusal. A section-specific request uses its heading context. Opening an editor is distinct from publishing changes; committing controls still require the user to review the website. An opaque Edit button without declared navigation/popup behavior should say **Control effect unclear**. The live test verifies target/geometry; complete native editor behavior remains a hands-on check. Do not publish an edit as part of the handoff.
+## Real-site checks
 
-Top-document/open-shadow-root HTML and ARIA controls and English goal phrasing are supported. Scans retain up to 600 prioritized controls and disclose partial observations. Closed shadow roots, cross-origin frames, canvas controls, unlabeled/ambiguous controls, consequential actions and unobserved whole-site workflows are not established by this POC. Experimental Chrome LLM interpretation is contract-tested with mocks. The default CPU MiniLM path has separate real-model, frozen-corpus and offline browser tests; those measurements do not establish Gemini Nano accuracy. Full three-site beta coverage and distribution are outside this milestone.
+On Amazon.com, enter **Help me cancel my Amazon Prime membership** once. Follow website highlights through login, delayed 2FA, account navigation, Prime management, retention offers and review. The user enters credentials and performs any intended final cancellation. Neither a click nor an unrelated success message may complete the task; fresh Prime membership status must confirm the requested outcome. Already-canceled and unavailable memberships require their own state evidence.
 
-Stop ends observers, timers and the overlay. Pause suspends observation. Forget/Clear stop the session before deleting knowledge. Disabling the extension stops future injection; refresh an already-open website to remove its previous injected content. Site-memory deletion is independent of uninstalling the extension.
+On Wikipedia, try text size, dark mode, width, references, privacy policy, search and language changes. Check the actual bound control and destination, including scrolling and clipped menus. Missing sections must receive no invented substitute. **Show search** can finish at a focused field; **Search for Saturn** requires its requested result. Opening a language picker is intermediate progress.
 
-For account/login context: grant the navigation-metadata permission on reload if Chrome requests it. Enter create account or How to log in on a Wikipedia article, follow the entry link, then Continue task here on the actual authentication host and grant only that host. Confirm the original goal and journey remain, Username is highlighted, and private credentials/submission remain an explicit review boundary. Native permission grant, denial/retry and subsequent live coach activation require manual verification.
+Signed-in Amazon, Cloudflare deployment and GitHub settings-to-repository journeys remain pending user-assisted verification. Do not record credentials, authenticated screenshots or private traces by default. Do not perform a subscription cancellation, deployment or publication merely to satisfy a test.
 
-Candidate 0.7.0 adds offline Compromise/MiniLM hybrid search, 1,000-character requests, three ordered tasks, clarification, grounded suggestions, persistent derived indexes, and an optional single-owner API. Try **Could you help me change language to Spanish?**, two or three ordered requests, and **Please search for Saturn**. Verify that search-field focus alone does not finish the article task, Pause retains context, Stop cancels it, and Skip records skipped. Native permission denial/recovery, toolbar activation and actual screen-reader speech remain hands-on checks.
-
-Candidate 0.7.1 fixes dense-page heading/footer coverage, nested overflow geometry, invalid fragment destinations and generic question framing. On DreamWorks Pictures, try Help me find references and Could you show me the privacy policy? independently. Check that the actual destination is highlighted, a clipped sidebar entry cannot paint over the footer, and missing sections receive no route. See [v0.7.1 validation](v0.7.1-navigation-fixes.md).
+Release archives and provenance live under `output/releases`. Use the archive's adjacent report for its tested-byte claims; the current working tree may differ. See [maintenance](maintenance.md) and [historical validation](v0.9.1-validation.md).

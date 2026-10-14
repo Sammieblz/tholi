@@ -1,0 +1,5 @@
+{
+  "paddleDefault": false,
+  "status": "experimental",
+  "reason": "Not promoted: the packaged Paddle pipeline did not finish initialization within the 30-second deadline. Tesseract remains the verified default."
+}

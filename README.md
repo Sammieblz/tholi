@@ -1,69 +1,62 @@
 # Internet Navigator
 
-A local-first Chrome navigation coach. It discovers the live page, builds routes from semantic controls and observed transitions, and remembers site structure in the user's browser. You make every click.
+Navigator guides you through live website controls while retaining your destination across menus, dialogs, page changes and authentication. You perform website clicks, typing and submissions. Navigator can scroll a freshly bound target into view and highlight it.
 
-## Run it
+## Install and run
 
-1. Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, then `npm run build:extension`.
-2. Open `chrome://extensions`, enable Developer mode, and load unpacked `dist/extension`. After an update, Reload the extension and refresh the website tab.
-3. Open a website and click the Navigator toolbar icon. Choose **Navigate this website**, then **Allow website access and start** for a new site, or **Start navigation** for a granted site. Chrome requests access to this specific website.
-4. Describe a goal, such as **change language to Spanish**, **make text larger**, **find references**, **How to log in**, **create account**, or **Edit**, choose fastest/fewest clicks, then **Find a route**. Alternatively, filter the discovered controls and choose one to highlight.
-5. Follow the highlight yourself. Navigator rescans after changes and verifies each expected result. Pause suspends observation; Stop ends it.
+Use Node **24.19.x**.
 
-Wikipedia remains the live case study, with no article allowlist, Wikipedia DOM selectors, or fixed References task. Site access already covers English Wikipedia and local development hosts. Other HTTP/HTTPS websites use an optional per-site grant. An expected task destination on another origin/tab retains context and offers **Continue task here** with site-specific access. Unrelated navigation pauses a contextual journey until you reconnect it.
+```sh
+npm ci
+npm run build:extension
+```
 
-**v0.8.0** understands full English requests with Compromise, BM25 and bundled CPU-only MiniLM. Requests support up to 1,000 characters and three ordered tasks, grounded clarification choices, exclusions and compatible references. “Search for Saturn” retains Saturn until a result destination is verified; finding Search alone does not finish it. The extension works offline with no hosted inference bill. Scans preserve heading/footer coverage on dense pages, respect nested clipping and refuse broken section destinations. See [the References/Privacy fixes and validation](docs/v0.7.1-navigation-fixes.md).
+The build fetches and verifies the pinned MiniLM and English Tesseract assets automatically. Models are packaged locally; the installed extension requires no runtime model downloads or backend.
 
-**v0.8.0** adds milestone journeys and official-documentation guides for Cloudflare Pages, GitHub, Jira Cloud, YouTube, Netflix and Amazon. It retains named destinations through menus, dialogs, document changes and supported authorization handoffs. Final actions have a manual review stage followed by fresh outcome verification. See [the per-platform capability matrix](docs/v0.8.0-capabilities.md) and [workflow architecture](docs/v0.8.0-architecture.md). Signed-in workflow checks remain pending user-assisted validation.
+1. Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose `dist/extension`.
+2. Open an HTTP/HTTPS website and click the Navigator toolbar icon.
+3. Enter a destination, such as **Help me cancel my Amazon Prime membership**, and select **Guide me**. Approve access to that website if Chrome requests it.
+4. Follow the current instruction and highlight. Login and two-factor verification retain the request. Pause retains it; Stop cancels it.
 
-Navigation is offered on every ordinary HTTP/HTTPS website, including sites without a guide. The `tabs` permission identifies the current website before access is granted; **Allow website access and start** then requests that site's scanning permission. Navigator does not collect browser history or scan every open tab. Reload the unpacked extension and refresh website tabs after upgrading.
+After rebuilding, select **Reload** in `chrome://extensions` and refresh the website tab. For permission recovery and native checks, see [Chrome setup and verification](docs/chrome-handoff.md).
 
-**Local site memory and AI** shows knowledge and embedding activity, provides Forget/Clear, and offers an optional private backend plus experimental opt-in Chrome LLM support. MiniLM works without the LLM. See [NLP architecture](docs/nlp-architecture.md), [backend setup](docs/api-setup.md) and [contributing](CONTRIBUTING.md).
+Route estimates, saved routes, workflow parameters, control search and diagnostics are expandable. **Explore page controls** starts discovery without a destination. The controlled Northstar demo remains available with `npm run dev:demo` at `http://127.0.0.1:5173`.
 
-Controls now carry nested heading and region context. Optional AI interprets paraphrases into a structured intent grounded in fresh controls, uses goal-ranked context instead of a flat prefix, and replans after menu rerenders. See [page context and intent](docs/page-context.md) for behavior, limits and evaluation scope. OCR remains deferred.
+## What currently works
 
-Tasks now retain their destination through menus and screens. The panel shows route estimates, verified progress, predicted upcoming steps and reusable **Saved routes**. Weighted observed-state routing compares fastest and fewest-interaction paths; every saved route revalidates against the current website. See [persistent task routing](docs/task-routing.md). Estimates cover known/predicted steps and are not a guaranteed whole-site shortest path.
+The default English NLP pipeline combines Compromise, BM25 and packaged CPU-only MiniLM. It supports requests up to 1,000 characters, up to three ordered tasks, exclusions, contextual references and grounded clarification. A similarity score never proves completion. Finding a search box does not complete a search for an article.
 
-Login and account tasks retain context through their entry menus, linked pages and server redirects. Continue task here requests access to the actual redirected host. Navigator guides safe form fields, then stops at credential/submission review; it does not claim that login or account creation succeeded. Unknown routes show an unavailable estimate.
+Incremental discovery handles rendered semantic/custom controls, open shadow roots and authorized frames. It retains up to 5,000 session controls and projects at most 600 per planning operation. Mounted targets outside the viewport can be scrolled into view; missing or unmounted content does not prove a route is absent.
 
-For the controlled Northstar demo, run `npm run dev:demo` and open `http://127.0.0.1:5173`. Its two authored regression tasks remain available: cancellation confirmation (final hard stop) and read-only billing details.
+Journeys retain their objective through supported handoffs, preserve unfinished tasks for resumption, and rebind predictions against each fresh screen. Guides describe semantic milestones for Cloudflare, GitHub, Jira Cloud, YouTube, Netflix and Amazon. General live discovery also works on other ordinary HTTP/HTTPS sites. These guides are not trained website models or proof that every signed-in workflow works.
 
-## Architecture
+Tesseract OCR runs locally when refreshed discovery lacks an eligible next step or confidence is below 0.60. It masks editable fields and all iframe pixels. OCR-only targets are unverified visual suggestions; they cannot prove an action's effect or completion. Closed shadow roots, icon-only/canvas controls without recognizable text, unseen screens and native file pickers remain limitations.
 
-- `packages/navigation-core`: shared validated contracts, interpretation/retrieval/planning orchestration, ordered task queues and storage ports.
-- `packages/nlp`: lightweight NLP, lexical ranking, incremental embedding cache and pinned pretrained CPU inference.
-- `apps/api`: optional authenticated Fastify/SQLite adapter with inference in a worker thread.
+**PaddleOCR is an unfinished experiment and is excluded from normal builds.** To evaluate its pinned assets and CSP adaptation, use `npm run build:extension:experimental:paddle`, then `npm run test:reliability:browser`. This overwrites `dist/extension` with the experimental variant. Run the normal build again to restore Tesseract-only assets. The prior Paddle startup test failed; it has not passed promotion gates.
 
-- `packages/page-discovery`: generic rendered DOM/open-shadow-root discovery, semantic labels and relationships, ephemeral control IDs, fresh element bindings.
-- `packages/page-model`: validated observations, goal plans and evidence contracts.
-- `packages/goal-planner`: goal matching, menu reveal steps, ambiguity rejection and routes through observed site transitions.
-- `packages/site-memory`: extension-owned IndexedDB persistence, versioned observations, invalidation, retention and a replaceable storage interface.
-- `apps/extension/src/page-coach.ts`: passive guidance and verification; no clicking, filling or automatic scrolling.
-- `apps/extension/src/local-model.ts`: optional Chrome on-device model, structured control-ID output, cancellation and validation.
-- Existing route engine/registry, browser adapter and demo routes support controlled authored regression cases.
+Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub checks remain pending. Fixture passes establish fixture behavior, not reliable completion on every website. See [the cleanup record](docs/maintenance.md) and [archived v0.9.1 validation](docs/v0.9.1-validation.md).
 
-Private applications persist only reusable interface semantics and parameterized routes; unknown item names, supplied values, statuses and their embeddings stay in trusted session memory. IndexedDB v4 preserves Wikipedia knowledge and sanitizes older indexes for the six platform families.
+## Architecture and privacy
 
-Memory stores sanitized control metadata, page/layout fingerprints and inferred/observed transitions. It excludes form values, raw HTML, coordinates and document control IDs. URL queries are excluded from stored paths. Limits: 50 sites, 100 pages and 30 layout templates per site, 5,000 control records and 400 transitions per site, 90-day retention checked during reads/writes. Closed menus are distinct from removed controls. Partial scans never prove removal.
+| Component                                | Responsibility                                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `packages/navigation-core`               | Shared contracts, task queues, workflow context, recovery and planning orchestration             |
+| `packages/nlp`                           | Compromise interpretation, lexical/semantic retrieval and bounded embedding caches               |
+| `packages/page-discovery` / `page-model` | Incremental discovery, accessible structure, fresh bindings and observation contracts            |
+| `packages/goal-planner`                  | Grounded targets, observed routes, return routing and journey checkpoints                        |
+| `packages/site-memory`                   | Browser IndexedDB knowledge, parameterized saved routes and derived indexes                      |
+| `packages/vision`                        | Recognition, bounded queues, visual evidence and backend fallback                                |
+| `apps/extension`                         | Permissions, session lifecycle, worker inference, scrolling, highlights and outcome verification |
+| `apps/api`                               | Optional authenticated Fastify/SQLite adapter with inference outside the event loop              |
 
-## Verification and current limits
+The browser remains authoritative. Reusable interface semantics are persisted locally; private entity names, supplied values and authenticated status remain session-only. Field values, raw HTML and screenshots are not stored. Forget/Clear delete learned knowledge. See [privacy](docs/privacy.md) and [security](docs/security.md).
 
-Run `npm run check` for TypeScript, unit tests and builds; `npm run test:e2e` for production-extension browser fixtures and demo regressions; and `npm run test:live:wikipedia` for live Wikipedia goals at wide/compact widths. Install Chromium once with `npx playwright install chromium`. Tests use the production manifest unchanged. Exact article URLs belong to the test fixtures only. QA artifacts are written under `output/qa`.
+The optional backend is not needed to use NLP or OCR. See [API setup](docs/api-setup.md). Experimental Chrome LLM support is also optional and separate from MiniLM; enabling it may download Chrome's own model.
 
-The incremental scanner retains up to 5,000 session controls and projects at most 600 controls per planning observation and reports partial scans on larger pages. It prioritizes interface controls, navigation and sections over dense body links. Discovery covers the top document, open shadow roots and authorized frames, with frame-local overlays and selective permission recovery. Closed shadow roots, canvas-only controls and native file pickers remain explicit limitations. Unlabeled controls and uncertain goals need manual selection or a model interpretation. Semantic fallback currently targets English goal phrasing. Unknown workflows are learned progressively through user navigation; a scan does not establish every route on the entire site. Risk classification is heuristic and is not a security audit.
+## Development and validation
 
-Run `npm run test:acceptance` for the predeclared accuracy matrix and denominator report. After a complete passing evaluation, `npm run package:extension` packages and verifies those exact build bytes, with a SHA256 and provenance file in `output/releases`. Native Chrome handoff remains a separate checklist.
+Run `npm run check` for strict TypeScript checks, unit tests and builds. Install test Chromium once with `npx playwright install chromium`. [CONTRIBUTING.md](CONTRIBUTING.md) lists focused and release suites, frozen corpora and packaging requirements.
 
-Run `npm run test:multi-app` and `npm run test:multi-app:browser` for the frozen 360-case platform corpus, v2 API/privacy/migration, workflow, frame and dynamic-page performance gates. See [v0.8.0 validation and installation](docs/v0.8.0-validation.md) for measured results and pending native/signed-in checks.
+`npm run package:extension` and `npm run package:api` require passing reports for the exact build bytes. Existing archives are immutable. Rebuilding invalidates earlier build-specific reports; historical validation does not certify a cleaned build.
 
-See [v0.7.0 validation and installation](docs/v0.7.0-validation.md), [architecture](docs/live-navigation.md), [diagnostics](docs/live-diagnostics.md), [lifecycle](docs/session-lifecycle.md), [guidance/accessibility](docs/passive-guidance.md), [accuracy benchmark](docs/accuracy-benchmark.md), [Chrome handoff](docs/chrome-handoff.md), [privacy](docs/privacy.md), [security](docs/security.md), and [earlier build evidence](docs/build-evidence.md). Current Wikipedia POC tracker: https://github.com/Sammieblz/web-navigator/issues/1.
-
-### v0.9 continuous journeys and visual assistance
-
-Journeys retain the requested outcome through documents and menus, checkpoint every 25 verified interactions, and keep unfinished tasks under **Resume previous task**. A return route can ask you to close an observed menu, use browser Back, or switch to an associated tab. Navigator checks the new surface before continuing.
-
-English OCR runs offline when refreshed discovery cannot identify an eligible next step or confidence is below 0.60. A dashed visual highlight is an unverified suggestion: review it and make the interaction yourself. Chrome may require clicking the extension icon again to grant screenshot access after navigation. The backend is optional; sending temporary masked images there requires the OCR backend setting.
-
-Setup: `npm ci`, `npm run fetch:model`, `npm run fetch:ocr`, `npm run build:extension`. Reload the unpacked extension from `dist/extension` in `chrome://extensions`, refresh the website, then start navigation. Optional API: `npm run build:api`, `npm run start:api` (see `docs/api-setup.md`).
-
-Verification: `npm run test:vision` and `npm run test:continuity:browser`, alongside the existing NLP, multi-app, Wikipedia and regression gates. See [v0.9 validation](docs/v0.9.0-validation.md). Signed-in Cloudflare/GitHub workflows and native toolbar screenshot permission checks require user-assisted verification; fixture passes do not establish those checks.
+Start with the [documentation index](docs/README.md) for current architecture, lifecycle, troubleshooting and historical release evidence.

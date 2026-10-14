@@ -1,4 +1,3 @@
-import React from "react";
 import type { SessionView } from "../../../packages/shared-types";
 import { hash } from "../../../packages/page-model";
 

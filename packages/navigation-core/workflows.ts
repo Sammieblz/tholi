@@ -1,5 +1,4 @@
 import {
-  hash,
   type PageControl,
   type PageSnapshot,
   type GoalPlan,
@@ -282,6 +281,17 @@ function subjectMatches(w: WorkflowContext, signal: OutcomeEvidence) {
     );
   }
   // Without an object name, the signal must identify the actual workflow.
+  if (w.guideId === "amazon.prime.cancel")
+    return (
+      /\bprime\b/i.test(signal.subject + " " + signal.text) ||
+      (/^(membership|subscription)$/i.test(signal.subject.trim()) &&
+        /^(?:your )?membership (?:was |is |has been )?(?:cancelled|canceled|ends|will end)/i.test(
+          signal.text.trim(),
+        ) &&
+        w.verified.some(
+          (v) => /\bprime\b/i.test(v.evidence.text) && v.milestone !== "result",
+        ))
+    );
   return w.guideId.includes("membership") || w.guideId.includes("prime")
     ? /membership|subscription|prime/i.test(signal.subject + " " + signal.text)
     : false;
@@ -478,6 +488,12 @@ export function recordWorkflowAction(
   if (verified && control.kind !== "focus") {
     const guide = workflowGuides.find((g) => g.id === next.guideId),
       milestone = guide?.milestones[next.activeMilestone];
+    // Arriving at another screen after a review click is not the requested
+    // outcome. Keep review active so retention/confirmation branches can bind.
+    if (milestone?.kind === "review") {
+      next.status = "verifying";
+      return next;
+    }
     const value = entityValue(next, milestone?.entity),
       fresh = page?.controls.find((c) => c.signature === control.signature);
     if (
@@ -639,7 +655,12 @@ export async function planWorkflow(
   if (guide.platform === "amazon") {
     const accepted = new Set(
       words(
-        [...guide.intents, ...(guide.subjects || []), guide.platform].join(" "),
+        [
+          ...guide.intents,
+          ...(guide.subjects || []),
+          guide.platform,
+          "account",
+        ].join(" "),
       ),
     );
     const unknown = words(task.target).filter(
@@ -652,7 +673,7 @@ export async function planWorkflow(
         status: "unsupported",
         request,
         reason:
-          "This documented guide does not match your named subscription. Keep its full name when searching the live controls.",
+          "The named subscription is outside this guide; no Prime route is assumed.",
         plan: {
           ...base,
           status: "unresolved",
@@ -661,6 +682,120 @@ export async function planWorkflow(
           issue: "no-match",
         },
       };
+    if (
+      !/\bprime\b/i.test(positiveText(task.original)) &&
+      !task.contextTarget &&
+      !w.verified.length &&
+      !["credentials", "two-factor"].includes(
+        input.observation.screen?.kind || "",
+      )
+    ) {
+      if (
+        input.choice === "workflow:subscription:prime" ||
+        input.observation.controls.some(
+          (c) => c.visible && /\bprime\b/i.test(contextText(c)),
+        )
+      ) {
+        task.contextTarget = "Prime membership";
+        request.status = "active";
+        w.status = "active";
+      } else if (input.choice === "workflow:subscription:other") {
+        w.status = "waiting";
+        return emit(
+          {
+            ...base,
+            reason:
+              "Include the subscription’s name in your destination so I can find its own controls. I won’t use the Prime cancellation route.",
+          },
+          "unsupported",
+        );
+      } else {
+        request.status = "clarification";
+        w.status = "clarification";
+        return emit(
+          { ...base, reason: "Which subscription would you like to cancel?" },
+          "clarification",
+          {
+            question: "Which subscription would you like to cancel?",
+            choices: [
+              {
+                id: "workflow:subscription:prime",
+                signature: "workflow:subscription:prime",
+                target: "Prime membership",
+                label: "Amazon Prime membership",
+              },
+              {
+                id: "workflow:subscription:other",
+                signature: "workflow:subscription:other",
+                target: "Another subscription",
+                label: "Another subscription",
+              },
+            ],
+          },
+        );
+      }
+    }
+    const unavailable = input.observation.signals?.find(
+      (s) =>
+        subjectMatches(w, s) &&
+        /\b(?:not (?:an? )?(?:active )?prime member|no (?:active )?(?:prime )?membership|(?:do not|don't) have (?:an? )?(?:active )?prime membership|(?:prime )?membership (?:is )?(?:unavailable|inactive))\b/i.test(
+          s.text,
+        ) &&
+        !/\b(?:if|when|unless|would|could)\b/i.test(s.text),
+    );
+    if (
+      unavailable &&
+      !input.observation.busy &&
+      !w.pendingAction &&
+      !["credentials", "two-factor"].includes(
+        input.observation.screen?.kind || "",
+      )
+    ) {
+      w.status = "waiting";
+      w.reason =
+        "Amazon reports no active Prime membership. Your cancellation task remains unverified.";
+      return emit({
+        ...base,
+        confidence: 1,
+        recoveryStage: "waiting",
+        reason: w.reason,
+      });
+    }
+    const state = input.observation.signals?.find(
+      (s) =>
+        s.kind !== "failure" &&
+        subjectMatches(w, s) &&
+        /(?:membership (?:has |was |is )?cancel[le]+d|membership (?:has ended|will end|ends)|cancellation confirmed)/i.test(
+          s.text,
+        ) &&
+        !/\b(?:not|unable|cannot|failed|pending|if|when|unless|would|could)\b/i.test(
+          s.text,
+        ),
+    );
+    if (
+      state &&
+      !task.desiredValue &&
+      !task.qualifiers.length &&
+      !w.pendingAction &&
+      !input.observation.busy &&
+      !["credentials", "two-factor"].includes(
+        input.observation.screen?.kind || "",
+      )
+    ) {
+      w.status = "completed";
+      w.verified.push({
+        milestone: "result",
+        revision: input.revision,
+        evidence: state,
+      });
+      return emit({
+        ...base,
+        status: "completed",
+        confidence: 1,
+        reason:
+          "The current Prime membership status already confirms cancellation.",
+      });
+    }
   }
   const authentication = input.observation.controls.find(
     (c) => c.visible && c.enabled && c.form?.authentication,
@@ -683,6 +818,18 @@ export async function planWorkflow(
         c.risk === "consequential",
     );
   const handoff = authSubmit || (permission.length === 1 && permission[0]);
+  const authScreen = ["credentials", "two-factor"].includes(
+    input.observation.screen?.kind || "",
+  );
+  if (authScreen && !handoff) {
+    w.status = "waiting";
+    w.waitExpired = false;
+    w.reason =
+      input.observation.screen?.kind === "two-factor"
+        ? "Complete verification on the website. I’ll continue your task afterward."
+        : "Sign in on the website. I’ll continue your task afterward.";
+    return emit({ ...base, reason: w.reason });
+  }
   if (handoff) {
     const prior = w.pendingAction;
     w.status =
@@ -708,15 +855,23 @@ export async function planWorkflow(
       beforeDocumentId: handoff.reference?.documentId || input.documentId,
     };
     w.reason = authentication
-      ? "Complete private credentials on the website, then review sign-in. Your original task is retained; credentials are never read."
+      ? input.observation.screen?.kind === "two-factor"
+        ? "Complete verification on the website. I’ll continue your task afterward."
+        : "Sign in on the website. I’ll continue your task afterward."
       : "Review this provider's access request on the website. Your original task will continue after the handoff.";
     return emit({ ...base, reason: w.reason });
   }
-  if (w.pendingAction?.milestone.startsWith("handoff:") && !authentication) {
+  if (
+    w.pendingAction?.milestone.startsWith("handoff:") &&
+    !authentication &&
+    !authScreen
+  ) {
     w.pendingAction = undefined;
     w.status = "active";
     w.revision++;
   }
+  if (w.status === "waiting" && !w.pendingAction && !authScreen)
+    w.status = "active";
   for (const type of guide.scopeEntities || []) {
     const value = entityValue(w, type);
     if (!value) continue;
@@ -978,6 +1133,9 @@ export async function planWorkflow(
       : milestone.targets;
   const usable = (c: PageControl) =>
     allowed(w, c) &&
+    (milestone.kind !== "navigate" ||
+      w.outcome !== "result" ||
+      c.kind !== "section") &&
     (!milestone.context ||
       milestone.context.some((ctx) => matches(contextText(c), ctx))) &&
     (milestone.kind !== "choose" ||
@@ -1102,7 +1260,7 @@ export async function planWorkflow(
         c.risk === "ordinary" &&
         c.kind === "expand" &&
         !c.expanded &&
-        /menu|navigation|create|applications|projects/i.test(c.label) &&
+        /menu|navigation|create|applications|projects|account/i.test(c.label) &&
         !w.verified.some((v) => v.milestone === "route:explore:" + c.signature),
     );
     if (exploration) {

@@ -4,6 +4,7 @@ import {
   validatePng,
 } from "../../../packages/vision/contracts";
 import Fastify from "fastify";
+import apiPackage from "../package.json";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import { timingSafeEqual } from "node:crypto";
@@ -213,7 +214,7 @@ export async function createApi(options: ApiOptions) {
       .send({ error: invalid ? "Invalid API request." : e.message });
   });
   app.get("/v1/health", { schema: { tags: ["capabilities"] } }, async () => ({
-    version: "0.9.0",
+    version: apiPackage.version,
     status: "ok",
     capabilities: [
       "english-nlp",
@@ -335,9 +336,10 @@ export async function createApi(options: ApiOptions) {
     return { ok: true };
   });
   app.get("/v2/health", { schema: { tags: ["capabilities"] } }, async () => ({
-    version: "0.9.0",
+    version: apiPackage.version,
     status: "ok",
     protocols: [1, 2],
+    ocrEngines: ["tesseract-6.0.1-eng-fast"],
     capabilities: [
       "continuous-journeys",
       "return-routing",

@@ -171,6 +171,26 @@ export class NavigationCore {
         memory,
       );
       if (workflow) return result(workflow);
+      if (
+        input.observation.screen?.kind === "two-factor" ||
+        (input.observation.screen?.kind === "credentials" &&
+          !authenticationIntent(input.text))
+      )
+        return result({
+          status: "plan",
+          request,
+          reason:
+            "Complete sign-in or verification on the website. Your destination is retained.",
+          plan: {
+            goal: input.text,
+            status: "awaiting-choice",
+            source: "semantics",
+            confidence: 0,
+            steps: [],
+            reason:
+              "Complete sign-in or verification on the website. Your destination is retained.",
+          },
+        });
     }
     // Revealing a picker does not imply that the user wants its search field.
     // Keep the verified menu handoff until a choice/value is supplied. Require

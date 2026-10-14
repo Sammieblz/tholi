@@ -8,7 +8,7 @@ import {
   hash,
 } from "../page-model";
 import { sanitizeText, sanitizeGoal } from "../privacy-redaction";
-import { searchRoute, shortestRoute } from "./route-graph";
+import { searchRoute } from "./route-graph";
 import { taskWords } from "./task-intent";
 import {
   memoryDiagnostics,
@@ -485,7 +485,7 @@ function planGoalInternal(
               inScope(c, targetScope) &&
               goalScore(goal, c) >= 0.7,
           )
-          .map((c) => p.stateKey),
+          .map(() => p.stateKey),
       ),
     );
     const search = searchRoute(page, memory, desired);

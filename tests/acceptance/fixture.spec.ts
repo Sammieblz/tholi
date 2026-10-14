@@ -112,7 +112,7 @@ test("declared generic positive and negative cases", async ({}, info) => {
         );
         expect(result.secretLeaks).toBe(0);
       } catch (error) {
-        errors.push(contract.id + ": " + String(error).slice(0, 200));
+        errors.push(contract.id + ": " + String(error).slice(0, 4000));
       } finally {
         await attachCase(info, result);
       }

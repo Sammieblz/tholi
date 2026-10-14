@@ -1,4 +1,7 @@
+import { customControlSelector, customInteraction } from "./accessibility";
 export const controlSelector =
+  customControlSelector +
+  "," +
   'a[href],button,input:not([type="hidden"]),select,textarea,summary,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="combobox"],[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"],[role="option"],[role="treeitem"],[role="textbox"],[role="searchbox"],[contenteditable="true"],h1,h2,h3,h4,h5,h6,[role="heading"]';
 export const surfaceSelector =
   'dialog,[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover],nav,header,footer,[role="navigation"],[role="banner"],[role="contentinfo"],main,[role="main"]';
@@ -85,7 +88,8 @@ export class IncrementalControlIndex {
   }
   private add(e: HTMLElement) {
     if (
-      !e.matches(controlSelector + ', [role="slider"]') ||
+      (!e.matches(controlSelector + ', [role="slider"]') &&
+        !customInteraction(e)) ||
       e.closest("#internet-navigator-overlay")
     )
       return;
