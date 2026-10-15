@@ -122,6 +122,9 @@ try {
     "Actual extension Guide interface, captured from its extension page while the public page remains active.",
   );
   await widget
+    .getByRole("button", { name: "Widget menu", exact: true })
+    .evaluate((element) => element.click());
+  await widget
     .getByRole("button", { name: "Conversation", exact: true })
     .evaluate((element) => element.click());
   await widget.getByLabel("Navigation goal").fill("Why this step?");
@@ -147,6 +150,9 @@ try {
     app.panel,
     "Actual local Conversation interface answering Why this step from the current route evidence.",
   );
+  await widget
+    .getByRole("button", { name: "Widget menu", exact: true })
+    .evaluate((element) => element.click());
   await widget
     .getByRole("button", { name: "Guide", exact: true })
     .evaluate((element) => element.click());

@@ -1,156 +1,313 @@
 .hero {
-  padding-top: 22px;
+  padding-top: 28px;
 }
 .hero-copy {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 64px;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 70px;
   align-items: end;
-  padding-bottom: 40px;
-}
-.hero-overview {
-  padding-bottom: 14px;
-}
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  letter-spacing: 1.4px;
-  color: var(--muted);
-  font-weight: 600;
+  padding-bottom: 44px;
 }
 .hero h1 {
-  font-size: clamp(48px, 5.4vw, 78px);
-  line-height: 1.02;
-  letter-spacing: -3px;
-  margin: 24px 0;
-  font-weight: 510;
-  text-wrap: balance;
+  font-size: clamp(56px, 7.3vw, 94px);
+  line-height: 1.01;
+  margin: 24px 0 10px;
 }
 .hero h1 span {
   color: var(--jade);
 }
 .hero-description {
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.8;
   color: var(--muted);
-  margin: 24px 0;
+  margin: 20px 0;
 }
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 24px;
   align-items: center;
-  margin: 30px 0 20px;
+  margin: 28px 0 20px;
+}
+.hero-overview {
+  padding-bottom: 8px;
+}
+.hero-overview .small {
+  font-size: 12px;
 }
 .story-band {
-  margin: 72px 0 80px;
-  border-block: 1px solid var(--line);
-  padding: 48px 0;
+  margin-block: var(--web-space);
+  padding: 44px;
+  background: var(--jade);
+  color: var(--on-jade);
+  border-radius: 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 50px;
+  gap: 56px;
   align-items: center;
 }
+.story-band h2 {
+  margin: 0;
+}
 .story-band p {
-  color: var(--muted);
+  margin: 0;
+  color: var(--on-jade);
+  opacity: 0.85;
+  font-size: 16px;
 }
 .use-cases {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 64px;
+  gap: 72px;
   align-items: start;
-  margin-bottom: 70px;
+  margin-bottom: var(--web-space);
+}
+.use-cases h2 {
+  max-width: 420px;
+}
+.use-case-intro {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 43ch;
+}
+.example-requests {
+  display: grid;
+  gap: 0;
 }
 .example-requests p {
   font-size: 20px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
   color: var(--jade);
-  letter-spacing: -0.4px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 0;
+  margin: 0;
+}
+.example-requests .small {
+  margin-top: 16px;
+  font-size: 12px;
+}
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 32px;
+}
+.section-heading h2 {
+  max-width: 600px;
+  margin-bottom: 0;
+}
+.section-heading > p {
+  max-width: 370px;
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0;
+}
+.try-demo {
+  display: block;
+  margin-block: var(--web-space);
+}
+.try-demo .demo {
+  margin-top: 32px;
 }
 .faq {
-  max-width: 780px;
-  margin: 100px auto;
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 72px;
+  margin-block: var(--web-space);
+}
+.faq h2 {
+  max-width: 280px;
 }
 .faq p {
   color: var(--muted);
+  font-size: 15px;
+}
+.faq details:first-child {
+  border-top: 1px solid var(--line);
 }
 .closing {
-  text-align: center;
+  position: relative;
+  overflow: hidden;
+  padding: 56px;
+  border-radius: 20px;
   background: var(--sage);
-  border-radius: 16px;
-  padding: 64px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
 }
 .closing h2 {
-  margin-top: 0;
+  max-width: 600px;
+  margin: 0;
 }
-.reading {
-  max-width: 760px;
-  margin: 50px auto;
-}
-.reading > p {
-  font-size: 18px;
+.closing p {
   color: var(--muted);
-  margin: 24px 0;
+  margin: 14px 0 0;
 }
-.reading h2 {
-  margin-top: 44px;
+.closing .web-primary {
+  flex: none;
+}
+.about-hero {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 60px;
+  align-items: center;
+  margin-bottom: 72px;
+}
+.about-hero .web-intro {
+  max-width: 42ch;
+}
+.about-mark {
+  min-height: 280px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background: var(--sage);
+  position: relative;
+}
+.about-mark::before,
+.about-mark::after {
+  content: "";
+  position: absolute;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 180px;
+  height: 180px;
+}
+.about-mark::after {
+  width: 240px;
+  height: 240px;
+}
+.about-mark .tholi-wayfinder {
+  z-index: 1;
+}
+.about-mark .tholi-wayfinder-host {
+  position: relative;
+  z-index: 1;
+}
+.about-mark .tholi-wayfinder {
+  width: 90px;
+  height: 90px;
+}
+.about-story {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 44px;
+  padding-block: 40px;
+  border-top: 1px solid var(--line);
+}
+.about-story > span {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--jade);
+  padding-top: 7px;
+}
+.about-story p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 60ch;
+}
+.about-story h2 {
+  font-size: 34px;
+}
+.about-story:last-of-type {
+  padding-bottom: 56px;
 }
 @media (max-width: 900px) {
   .hero-copy {
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding-bottom: 24px;
+    gap: 32px;
   }
-  .hero-overview {
-    max-width: 620px;
-    padding: 0;
+  .hero h1 {
+    font-size: 70px;
+  }
+  .story-band {
+    padding: 32px;
+    gap: 32px;
+  }
+  .use-cases,
+  .faq {
+    gap: 36px;
+  }
+  .about-hero {
+    gap: 32px;
+  }
+  .about-mark {
+    min-height: 250px;
+  }
+  .about-mark::before {
+    width: 140px;
+    height: 140px;
+  }
+  .about-mark::after {
+    width: 200px;
+    height: 200px;
+  }
+  .closing {
+    padding: 40px;
+  }
+}
+@media (max-width: 650px) {
+  .hero {
+    padding-top: 12px;
+  }
+  .hero-copy {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: clamp(50px, 13.5vw, 74px);
+    margin-block: 20px 0;
   }
   .hero h1 br {
     display: none;
   }
   .hero h1 span {
-    margin-left: 0.18em;
-  }
-  .story-band,
-  .use-cases {
-    gap: 30px;
-  }
-}
-@media (max-width: 600px) {
-  .story-band,
-  .use-cases {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .hero h1 {
-    font-size: 48px;
-    letter-spacing: -2px;
+    margin-left: 0.15em;
   }
   .hero-description {
     font-size: 16px;
   }
   .hero-actions {
-    gap: 18px;
+    gap: 20px;
   }
   .story-band {
-    margin: 48px 0;
-    padding: 24px 0;
+    grid-template-columns: 1fr;
+    padding: 28px;
+    gap: 20px;
   }
-  .use-cases {
-    margin-bottom: 36px;
-  }
+  .use-cases,
   .faq {
-    margin: 56px 0;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .section-heading {
+    display: block;
+  }
+  .section-heading > p {
+    margin-top: 20px;
   }
   .closing {
-    padding: 30px 20px;
+    display: block;
+    padding: 32px 28px;
   }
-  .reading {
-    margin: 24px 0;
+  .closing .web-primary {
+    margin-top: 24px;
   }
-  .reading > p {
-    font-size: 16px;
+  .about-hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 44px;
+  }
+  .about-mark {
+    min-height: 220px;
+  }
+  .about-story {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-block: 28px;
+  }
+  .about-story h2 {
+    font-size: 30px;
   }
 }

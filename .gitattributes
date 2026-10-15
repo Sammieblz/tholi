@@ -2,3 +2,4 @@
 tests/continuity/corpus.json text eol=lf
 tests/continuity/corpus.sha256 text eol=lf
 tests/reliability-vision/corpus.json text eol=lf
+.codex/skills/** -text

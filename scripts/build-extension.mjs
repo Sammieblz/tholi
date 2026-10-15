@@ -33,7 +33,7 @@ if (
 )
   throw Error("Unexpected extension output path");
 for (const entry of await readdir(out, { withFileTypes: true }))
-  if (entry.isFile() && /\.(?:js|js\.map)$/.test(entry.name))
+  if (entry.isFile() && /\.(?:js|js\.map|woff2)$/.test(entry.name))
     await unlink(join(resolvedOut, entry.name));
 // Switching from an experimental build must not leave inactive models behind.
 if (!withPaddle) {

@@ -1,6 +1,8 @@
 import type { RouteStrategy } from "../../../../../../packages/page-model";
 import { LiveInspector } from "./LiveInspector";
 import { unresolvedTitle } from "../../app/presentationLabels";
+import { ConfirmAction } from "../../components/ConfirmAction";
+import { Disclosure } from "../../components/Disclosure";
 import type { useGuidanceController } from "../../app/useGuidanceController";
 export function AdvancedTools({
   controller,
@@ -45,10 +47,11 @@ export function AdvancedTools({
     enableAI,
     guideControl,
     downloadReport,
+    resetCurrentSession,
   } = controller;
   return !widget ? (
-    <>
-      <p className="small">
+    <div className="tholi-advanced-tools">
+      <p className="small tholi-tool-context">
         {statusLabel} · {chrome.runtime.getManifest().version}
       </p>
       <label>
@@ -195,15 +198,6 @@ export function AdvancedTools({
             </button>
           </details>
           {view?.memoryError && <p role="status">{view.memoryError}</p>}
-          <button
-            disabled={busy || otherTab}
-            onClick={() => command("FORGET_SITE")}
-          >
-            Forget this website
-          </button>
-          <button disabled={busy} onClick={() => command("CLEAR_MEMORY")}>
-            Clear all site memory
-          </button>
           {aiEnabled ? (
             <label className="debug-toggle">
               <input
@@ -382,6 +376,12 @@ export function AdvancedTools({
       )}
       <details>
         <summary>Local route tools</summary>
+        {view?.journey && (
+          <p className="small">
+            {view.journey.reroutes} route recalculations ·{" "}
+            {view.journey.progress.length} verified steps
+          </p>
+        )}
         <label className="debug-toggle">
           <input
             type="checkbox"
@@ -499,6 +499,37 @@ export function AdvancedTools({
           Reports stay local. No browsing history or field values are included.
         </p>
       </details>
-    </>
+      <Disclosure
+        title="Your data"
+        description="Session and local knowledge controls"
+      >
+        <p className="small">
+          Resetting this session clears its unfinished tasks, draft and
+          conversation. Learned website knowledge and saved routes have separate
+          controls.
+        </p>
+        <div className="tholi-danger-zone">
+          <ConfirmAction
+            title="Reset current session"
+            icon="reset"
+            disabled={busy}
+            description="Clear current and unfinished journeys, the draft and conversation from this browser session. Website knowledge and saved routes stay available."
+            action={resetCurrentSession}
+          />
+          <ConfirmAction
+            title="Forget this website"
+            disabled={busy || otherTab}
+            description="Delete this website’s learned structure and reusable routes. Active guidance on it will stop."
+            action={() => command("FORGET_SITE")}
+          />
+          <ConfirmAction
+            title="Clear all site memory"
+            disabled={busy}
+            description="Delete all learned website knowledge and reusable routes from this browser and the connected mirror. Active guidance will stop."
+            action={() => command("CLEAR_MEMORY")}
+          />
+        </div>
+      </Disclosure>
+    </div>
   ) : undefined;
 }

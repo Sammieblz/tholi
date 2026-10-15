@@ -1,6 +1,8 @@
 import { clippedRect, type PresentedRect } from "../browser-adapter/geometry";
 import { contrastPageTheme } from "../ui/page-theme";
+import { wayfinderMarkup, wayfinderStyles } from "../ui/wayfinder";
 import { overlayStyles } from "./overlay-styles";
+import { guidanceVisible, onGuidanceVisibility } from "./presentation-gate";
 let activeRect: PresentedRect | undefined;
 export function currentGuidanceRect() {
   return activeRect;
@@ -25,6 +27,15 @@ export class GuidanceOverlay {
   private reminder?: ReturnType<typeof setTimeout>;
   private pulse?: Animation;
   private entrance: Animation[] = [];
+  private stopVisibility?: () => void;
+  private updateMarkerMotion = () => {
+    const marker = this.tip?.querySelector<HTMLElement>(".tholi-wayfinder");
+    if (marker)
+      marker.dataset.animate = String(
+        document.visibilityState !== "hidden" &&
+          marker.dataset.state === "guiding",
+      );
+  };
   private cancelReminder = () => {
     clearTimeout(this.reminder);
     this.reminder = undefined;
@@ -41,6 +52,10 @@ export class GuidanceOverlay {
     });
   };
   show(target: HTMLElement, instruction: string, options: OverlayOptions = {}) {
+    if (!guidanceVisible()) {
+      this.clear();
+      return;
+    }
     const changed =
       target !== this.target ||
       [options.key || "", instruction].join("|") !== this.identity;
@@ -49,6 +64,9 @@ export class GuidanceOverlay {
     if (!this.root) this.mount();
     if (options.attention === false || options.warning) this.cancelReminder();
     this.tip!.classList.toggle("warning", !!options.warning);
+    this.tip!.querySelector<HTMLElement>(".tholi-wayfinder")!.dataset.state =
+      options.warning ? "attention" : "guiding";
+    this.updateMarkerMotion();
     if (changed) {
       this.entrance.forEach((animation) => animation.cancel());
       this.entrance = [];
@@ -96,6 +114,9 @@ export class GuidanceOverlay {
     this.refresh();
   }
   private mount() {
+    this.stopVisibility = onGuidanceVisibility((visible) => {
+      if (!visible) this.clear();
+    });
     this.root = document.createElement("div");
     this.root.id = "internet-navigator-overlay";
     this.root.setAttribute("aria-hidden", "true");
@@ -104,12 +125,13 @@ export class GuidanceOverlay {
     this.root.style.cssText =
       "position:fixed;inset:0;z-index:2147483647;pointer-events:none";
     this.shadow = this.root.attachShadow({ mode: "closed" });
-    this.shadow.innerHTML = `<style>${overlayStyles}</style><div class="halo"></div><div class="glow"></div><div class="tip"><span class="brand">Tholi · Your next step</span><span class="instruction"></span></div><div class="arrow" hidden></div>`;
+    this.shadow.innerHTML = `<style>${wayfinderStyles}${overlayStyles}</style><div class="halo"></div><div class="glow"></div><div class="tip"><span class="brand">${wayfinderMarkup({ state: "guiding", instance: "coach", animate: false })}<span>Tholi · Your next step</span></span><span class="instruction"></span></div><div class="arrow" hidden></div>`;
     this.tip = this.shadow.querySelector(".tip")!;
     this.halo = this.shadow.querySelector(".halo")!;
     this.glow = this.shadow.querySelector(".glow")!;
     this.arrow = this.shadow.querySelector(".arrow")!;
     document.documentElement.append(this.root);
+    document.addEventListener("visibilitychange", this.updateMarkerMotion);
     window.addEventListener("scroll", this.refresh, true);
     window.addEventListener("resize", this.refresh);
     for (const event of [
@@ -269,6 +291,8 @@ export class GuidanceOverlay {
     tip.style.top = p.y + "px";
   }
   clear() {
+    this.stopVisibility?.();
+    this.stopVisibility = undefined;
     this.entrance.forEach((animation) => animation.cancel());
     this.entrance = [];
     activeRect = undefined;
@@ -278,6 +302,7 @@ export class GuidanceOverlay {
     this.drawn = "";
     window.removeEventListener("scroll", this.refresh, true);
     window.removeEventListener("resize", this.refresh);
+    document.removeEventListener("visibilitychange", this.updateMarkerMotion);
     for (const event of [
       "pointerdown",
       "keydown",

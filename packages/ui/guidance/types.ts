@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { RouteProgress } from "../route-progress";
+import type { WidgetLayoutAction } from "../widget-density";
 import type {
   ConversationMessage,
   GuidancePresentation,
@@ -28,12 +30,26 @@ export type GuidanceProps = {
   disabled?: boolean;
   error?: string;
   verifiedSteps?: number;
+  progress?: RouteProgress;
   onCommand: (type: string) => void;
   primary?: ReactNode;
   details?: ReactNode;
   advanced?: ReactNode;
   widget?: boolean;
-  onExpand?: () => void;
+  onExpand?: (focusComposer?: boolean) => void;
   onMoveAside?: () => void;
+  onWidgetLayout?: (action: WidgetLayoutAction) => void;
+  onDock?: () => void;
+  onMinimize?: () => void;
+  onNewDestination?: () => void;
+  onResetSession?: () => void;
+  /** Render inside an isolated product demonstration without a second main landmark. */
+  embedded?: boolean;
+  hideSettings?: boolean;
+  showHeader?: boolean;
+  /** Blocking decisions stay in the attention region, outside secondary scrolling. */
+  attention?: ReactNode;
+  attentionRequired?: boolean;
+  notice?: { id: string; text: string; tone?: "info" | "success" };
   children?: ReactNode;
 };

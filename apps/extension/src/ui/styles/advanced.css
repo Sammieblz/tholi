@@ -1,29 +1,317 @@
-/* Shared tokens and guidance layout are defined in packages/ui. */
+/* Extension-only detail tools. Shared layout, palettes, and motion remain in packages/ui. */
 .goal-plan {
-  margin: 12px 0;
+  margin: 8px 0;
+}
+.tholi-disclosures {
+  margin: 8px 0;
+}
+.tholi-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: clip;
+}
+.tholi-disclosure h3 {
+  margin: 0;
+}
+.tholi-disclosure-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  padding: 13px 14px;
+  margin: 0 !important;
+  min-height: 54px;
+}
+.tholi-disclosure-trigger > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.tholi-disclosure-trigger strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.tholi-disclosure-trigger small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.tholi-disclosure-trigger > svg {
+  flex: none;
+  transition: transform 180ms var(--ease-out);
+}
+.tholi-disclosure-trigger[data-panel-open] > svg {
+  transform: rotate(180deg);
+}
+.tholi-disclosure-panel {
+  height: var(--accordion-panel-height);
+  overflow: hidden;
+  transition:
+    height 200ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+}
+.tholi-disclosure-panel[data-starting-style],
+.tholi-disclosure-panel[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.tholi-disclosure-panel > div {
+  padding: 0 14px 14px;
+}
+.tholi-disclosure-panel h3 {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+.detail-destination {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 5px 0 10px;
+}
+.detail-verified {
+  color: var(--jade);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.tholi-path,
+.tholi-task-list,
+.tholi-saved-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.tholi-path li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.tholi-path li > svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--jade);
+}
+.tholi-path small,
+.tholi-saved-action small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 3px;
+}
+.tholi-path.upcoming {
+  color: var(--muted);
+}
+.tholi-task-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+  font-size: 13px;
+}
+.tholi-task-list small {
+  color: var(--muted);
+  font-size: 11px;
+  flex: none;
+}
+.tholi-saved-list li + li {
+  border-top: 1px solid var(--line);
+}
+.tholi-saved-list li > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.tholi-saved-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 9px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tholi-saved-action > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tholi-saved-action > svg {
+  flex: none;
+}
+.tholi-quiet-action {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12px;
+  background: transparent;
+}
+.tholi-danger-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--danger);
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+.tholi-danger-action > svg {
+  flex: none;
+}
+.tholi-danger-action.compact {
+  flex: none;
+  width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 8px;
+  border: 0;
+}
+.tholi-danger-action.compact > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+.tholi-danger-zone {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+.tholi-danger-zone .tholi-danger-action {
+  justify-content: flex-start;
+}
+.tholi-tool-context {
+  font-size: 11px !important;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 14px;
+}
+.tholi-advanced-tools label {
+  font-size: 13px;
+  display: block;
 }
 .control-group button {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   width: 100%;
   text-align: left;
+  font-size: 13px;
+  padding: 12px;
+  min-width: 0;
+}
+.control-group button > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .control-group small {
   display: block;
   color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 4px;
 }
-.control-group .selected {
+.control-group .control-selected {
   border-color: var(--jade);
   background: var(--sage);
 }
 .inspector {
   overflow: auto;
+  scrollbar-gutter: stable;
+}
+.inspector td,
+.inspector th {
+  padding: 7px 4px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 11px;
 }
 .debug-toggle {
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 8px;
 }
-.tholi-body footer {
-  font-size: 12px;
+.tholi-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #0b1712a6;
+  transition: opacity 180ms var(--ease-out);
+}
+.tholi-confirm {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 41;
+  width: min(380px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  transition: opacity 180ms var(--ease-out);
+}
+.tholi-confirm h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.tholi-confirm p {
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--muted);
+}
+.tholi-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.tholi-confirm-backdrop[data-starting-style],
+.tholi-confirm-backdrop[data-ending-style],
+.tholi-confirm[data-starting-style],
+.tholi-confirm[data-ending-style] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tholi-disclosure-panel {
+    transition: opacity 80ms ease;
+  }
+  .tholi-disclosure-trigger > svg {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .tholi-disclosure,
+  .tholi-confirm {
+    border-color: CanvasText;
+  }
+  .tholi-danger-action {
+    color: LinkText;
+  }
 }

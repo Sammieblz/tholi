@@ -1,4 +1,8 @@
+import { ArrowRight, Check, FastArrowRight } from "iconoir-react";
 import type { useGuidanceController } from "../../app/useGuidanceController";
+import { Disclosure } from "../../components/Disclosure";
+import { ConfirmAction } from "../../components/ConfirmAction";
+
 export function JourneyDetails({
   controller,
 }: {
@@ -22,171 +26,217 @@ export function JourneyDetails({
     controlsMode,
     submitGoal,
   } = controller;
+  const arrived = controller.presentation.phase === "arrived";
+  const progress = view?.journey?.progress || [];
+  const predictions = arrived ? [] : view?.goalPlan?.route?.predictions || [];
+  const estimate = view?.goalPlan?.route;
   return (
-    <>
+    <div className="tholi-journey-details">
       {route && !controlsMode && (
-        <details className="route-card">
-          <summary>Route details</summary>
-          <h2>{route.title}</h2>
-          <p className="evidence">
+        <Disclosure
+          title="Route details"
+          description={arrived ? "Destination verified" : "Your guidance path"}
+        >
+          <p className="detail-destination">{route.title}</p>
+          <p className="small">
             {displayedView?.verifiedSteps || 0} verified transitions
           </p>
-          <p className="notice">{route.safetyNote}</p>
-        </details>
+          <p className="small">{route.safetyNote}</p>
+        </Disclosure>
+      )}
+      {controlsMode && view?.journey && (
+        <Disclosure
+          title="Route details"
+          description={arrived ? "Destination verified" : "Live discovery"}
+        >
+          <section aria-label="Task journey">
+            <p className="detail-destination">{view.journey.goal}</p>
+            {arrived ? (
+              <p className="detail-verified">
+                <Check width={17} aria-hidden="true" />
+                Requested outcome verified
+              </p>
+            ) : (
+              estimate && (
+                <p className="small" aria-label="Route estimate">
+                  {estimate.available !== false && estimate.clicks > 0 ? (
+                    <>
+                      {estimate.clicks}{" "}
+                      {estimate.complete ? "remaining" : "currently estimated"}{" "}
+                      clicks · about {estimate.minSeconds}–{estimate.maxSeconds}{" "}
+                      seconds.{" "}
+                      {!estimate.complete && "More screens may add steps."}
+                    </>
+                  ) : (
+                    "An estimate is available once a usable next step is found."
+                  )}
+                </p>
+              )
+            )}
+            <h3>Verified path</h3>
+            {progress.length ? (
+              <ol className="tholi-path">
+                {progress.map((step, i) => (
+                  <li key={i}>
+                    <Check width={15} aria-hidden="true" />
+                    <span>{step.label}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="small">Your verified steps will appear here.</p>
+            )}
+            {!!predictions.length && (
+              <>
+                <h3>Upcoming steps</h3>
+                <ol className="tholi-path upcoming">
+                  {predictions.map((step, i) => (
+                    <li key={i}>
+                      <ArrowRight width={15} aria-hidden="true" />
+                      <span>
+                        {step.label}
+                        <small>
+                          {step.evidence === "observed"
+                            ? "Observed before, checked again on arrival"
+                            : "Predicted, awaiting live evidence"}
+                        </small>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+            {view.goalPlan?.status === "unresolved" && (
+              <p className="small" role="status">
+                {view.goalPlan.reason}
+              </p>
+            )}
+          </section>
+        </Disclosure>
       )}
       {view?.request && view.request.status !== "canceled" && (
-        <details aria-label="Task queue" className="goal-plan">
-          <summary>Your tasks</summary>
-          <ol>
+        <Disclosure
+          title="Your tasks"
+          label="Task queue"
+          description={`${view.request.tasks.length} ordered ${view.request.tasks.length === 1 ? "destination" : "destinations"}`}
+        >
+          <ol className="tholi-task-list">
             {view.request.tasks.map((task) => (
               <li key={task.id}>
-                {task.original} · {task.status}
+                <span>{task.original}</span>
+                <small>{task.status.replaceAll("-", " ")}</small>
               </li>
             ))}
           </ol>
           {view.request.status !== "completed" && (
             <button
+              className="tholi-quiet-action"
               disabled={otherTab || view.status !== "running"}
               onClick={async () => {
-                const r = await chrome.runtime.sendMessage({
+                const result = await chrome.runtime.sendMessage({
                   type: "SKIP_TASK",
                 });
-                if (r.view) setView(r.view);
-                else if (r.error) setError(r.error);
+                if (result.view) setView(result.view);
+                else if (result.error) setError(result.error);
               }}
             >
+              <FastArrowRight width={17} aria-hidden="true" />
               Skip this task
             </button>
           )}
           <p className="small">
             Each requested result is checked before the next task starts.
+            Skipping does not mark it successful.
           </p>
-        </details>
-      )}
-      {controlsMode && view?.journey && (
-        <details className="goal-plan">
-          <summary>Route details · Live discovery</summary>
-          <section aria-label="Task journey">
-            <h2>{view.journey.goal}</h2>
-            <p>
-              {view.journey.progress.length} verified steps ·{" "}
-              {view.journey.reroutes} route recalculations
-            </p>
-            {view.goalPlan?.route &&
-              (view.goalPlan.route.available !== false &&
-              (view.goalPlan.route.clicks > 0 ||
-                view.goalPlan.status === "completed") ? (
-                <p aria-label="Route estimate">
-                  {view.goalPlan.route.clicks}{" "}
-                  {view.goalPlan.route.complete
-                    ? "remaining"
-                    : "currently estimated"}{" "}
-                  clicks · about {view.goalPlan.route.minSeconds}–
-                  {view.goalPlan.route.maxSeconds} seconds (
-                  {view.goalPlan.route.basis}).
-                  {!view.goalPlan.route.complete &&
-                    " Further screens may add steps."}
-                </p>
-              ) : (
-                <p aria-label="Route estimate">
-                  Route estimate unavailable until a usable next step is found.
-                </p>
-              ))}
-            {view.goalPlan?.status === "unresolved" && (
-              <p role="status">{view.goalPlan.reason}</p>
-            )}
-            {!!view.goalPlan?.route?.predictions.length && (
-              <details>
-                <summary>Upcoming steps</summary>
-                <ol>
-                  {view.goalPlan.route.predictions.map((p, i) => (
-                    <li key={i}>
-                      {p.label}{" "}
-                      <small>
-                        {p.evidence === "observed"
-                          ? "Previously observed; rechecked on arrival"
-                          : "Predicted; awaiting live evidence"}
-                      </small>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            )}
-            <details>
-              <summary>Journey so far</summary>
-              <ol>
-                {view.journey.progress.map((p, i) => (
-                  <li key={i}>{p.label} · verified</li>
-                ))}
-              </ol>
-            </details>
-          </section>
-        </details>
+        </Disclosure>
       )}
       {controlsMode && !!savedTasks.length && (
-        <details aria-label="Saved routes">
-          <summary>Saved routes</summary>
-          <p className="small">
-            Routes are checked against the current website before reuse.
-          </p>
-          {savedTasks.map((task) => (
-            <div key={task.id}>
-              <button
-                disabled={
-                  !active || busy || otherTab || view?.status === "waiting"
-                }
-                onClick={() => {
-                  setGoal(task.goal);
-                  setStrategy(task.strategy);
-                  void submitGoal(task);
-                }}
-              >
-                {task.goal} ·{" "}
-                {task.completed ? "Reached before" : "Learning route"}
-              </button>
-              <button
-                aria-label={"Forget route: " + task.goal}
-                disabled={busy}
-                onClick={async () => {
-                  const r = await chrome.runtime.sendMessage({
-                    type: "DELETE_TASK",
-                    id: task.id,
-                  });
-                  setSavedTasks(r.tasks || []);
-                }}
-              >
-                Forget
-              </button>
-            </div>
-          ))}
-        </details>
-      )}
-      {journeys.length > 0 && (
-        <details>
-          <summary>Resume previous task</summary>{" "}
-          {journeys.length > 0 && (
-            <section aria-label="Resume previous task">
-              <h2>Resume previous task</h2>
-              {journeys.map((j) => (
-                <div key={j.id}>
+        <Disclosure
+          title="Saved routes"
+          label="Saved routes"
+          description="Rechecked against the current website"
+        >
+          <ul className="tholi-saved-list">
+            {savedTasks.map((task) => (
+              <li key={task.id}>
+                <div>
                   <button
-                    disabled={busy}
-                    onClick={() => command("RESUME_JOURNEY", { id: j.id })}
+                    className="tholi-saved-action"
+                    disabled={
+                      !active || busy || otherTab || view?.status === "waiting"
+                    }
+                    onClick={() => {
+                      setGoal(task.goal);
+                      setStrategy(task.strategy);
+                      void submitGoal(task);
+                    }}
                   >
-                    {j.goal}
+                    <span>
+                      {task.goal}
+                      <small>
+                        {task.completed ? "Reached before" : "Learning route"}
+                      </small>
+                    </span>
+                    <ArrowRight width={17} aria-hidden="true" />
                   </button>
-                  <button
+                  <ConfirmAction
+                    title="Forget route"
+                    label={`Forget route: ${task.goal}`}
+                    compact
                     disabled={busy}
-                    onClick={() => command("DELETE_JOURNEY", { id: j.id })}
-                  >
-                    Remove
-                  </button>
+                    description="Remove this reusable route from local knowledge. Your current destination stays with you."
+                    action={async () => {
+                      const result = await chrome.runtime.sendMessage({
+                        type: "DELETE_TASK",
+                        id: task.id,
+                      });
+                      if (result.error) setError(result.error);
+                      else setSavedTasks(result.tasks || []);
+                    }}
+                  />
                 </div>
-              ))}
-            </section>
-          )}
-        </details>
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
       )}
-    </>
+      {!!journeys.length && (
+        <Disclosure
+          title="Resume previous task"
+          description="Unfinished destinations from this session"
+        >
+          <section aria-label="Resume previous task">
+            <ul className="tholi-saved-list">
+              {journeys.map((journey) => (
+                <li key={journey.id}>
+                  <div>
+                    <button
+                      className="tholi-saved-action"
+                      disabled={busy}
+                      onClick={() =>
+                        command("RESUME_JOURNEY", { id: journey.id })
+                      }
+                    >
+                      <span>{journey.goal}</span>
+                      <ArrowRight width={17} aria-hidden="true" />
+                    </button>
+                    <ConfirmAction
+                      title="Remove task"
+                      label={`Remove task: ${journey.goal}`}
+                      compact
+                      disabled={busy}
+                      description="Remove this unfinished task from this browser session. Saved routes and website knowledge are kept."
+                      action={() =>
+                        command("DELETE_JOURNEY", { id: journey.id })
+                      }
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </Disclosure>
+      )}
+    </div>
   );
 }

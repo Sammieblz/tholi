@@ -1,5 +1,7 @@
 # Tholi 0.10.1 interface refinement
 
+Historical record of the first refinement pass. Current layouts, fonts, project-local skills, and verification are described in [the subsequent audit and redesign](ui-audit-redesign.md) and [current interface guide](tholi-ui.md).
+
 The design thesis is a guide that keeps one destination and one next step in view. A quiet route line connects the current guidance; a connected marker anchors the website demonstration. The supplied palette stays authoritative. Inter remains bundled, with lighter display weights and tighter tracking reserved for headlines. Iconoir remains the functional icon set.
 
 Computed contrast: charcoal on ivory 14.68:1, secondary text on ivory 6.26:1, white on jade buttons 6.37:1, and dark-theme secondary text on its background 9.86:1. The editable-field boundary is 3.30:1 against the card surface. These are token checks; native screen-reader and real-device checks remain separate.

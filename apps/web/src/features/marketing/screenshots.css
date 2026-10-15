@@ -116,16 +116,6 @@
 .verified-preview-copy > p:not(.eyebrow) {
   color: var(--muted);
 }
-.try-demo {
-  margin: 80px 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: 64px;
-}
-.try-demo > div > p:not(.eyebrow) {
-  color: var(--muted);
-}
 .capture-credits {
   font-size: 12px;
   color: var(--muted);
@@ -204,9 +194,6 @@
   .verified-preview {
     gap: 32px;
   }
-  .try-demo {
-    gap: 32px;
-  }
 }
 @media (max-width: 600px) {
   .hero-product {
@@ -239,8 +226,7 @@
     padding: 16px;
     margin-inline: auto;
   }
-  .verified-preview,
-  .try-demo {
+  .verified-preview {
     grid-template-columns: 1fr;
     gap: 24px;
     margin-block: 56px;

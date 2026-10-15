@@ -80,10 +80,10 @@ test("retains create-account context through a dynamic account menu, a new docum
     expect(final.journey.progress).toHaveLength(4);
     expect(JSON.stringify(final)).not.toContain("USER_VALUE_SENTINEL");
     await expect(
-      app.panel.getByRole("region", { name: "Task journey" }),
+      app.panel.getByRole("region", { name: "Goal plan" }),
     ).toContainText("Complete private credentials");
     await expect(app.panel.getByLabel("Route estimate")).toContainText(
-      "unavailable",
+      "once a usable next step",
     );
     expect(app.page.url()).toContain("/auth/enrol");
     await app.panel.screenshot({
@@ -158,11 +158,9 @@ test("an unmatched destination reports an unavailable estimate instead of zero c
     await app.page.goto("http://localhost:5173/unmatched");
     await app.start();
     await setGoal(app, "create account");
-    await app.panel
-      .getByText("Route details · Live discovery", { exact: true })
-      .click();
+    await app.view();
     await expect(app.panel.getByLabel("Route estimate")).toContainText(
-      "unavailable",
+      "once a usable next step",
     );
     await expect(
       app.panel.getByRole("region", { name: "Task journey" }),

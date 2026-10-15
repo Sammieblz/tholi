@@ -107,10 +107,10 @@ test("page contrast follows visible surfaces, changes, documents and tabs across
     await expect
       .poll(() =>
         widget
-          .getByRole("button", { name: "Pause navigation", exact: true })
+          .locator(".tholi-app")
           .evaluate((e) => getComputedStyle(e).backgroundColor),
       )
-      .toBe("rgb(28, 44, 37)");
+      .toBe("rgb(17, 27, 23)");
     expect((await app.view()).request.id).toBe(request);
     await app.page.screenshot({
       path: info.outputPath("dark-on-light-widget.png"),

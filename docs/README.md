@@ -19,7 +19,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Cleanup scope and verification](maintenance.md)
 - [Contribution and release procedure](../CONTRIBUTING.md)
 - [Frontend structure and ownership](frontend-architecture.md)
-- [Current UI refinement, motion, and installed skills](ui-refinement.md)
+- [Current UI audit, implementation, skills, and validation](ui-audit-redesign.md)
 - [Adaptive website contrast and theme detection](adaptive-appearance.md)
 - [Real website screenshot sources and regeneration](product-screenshots.md)
 

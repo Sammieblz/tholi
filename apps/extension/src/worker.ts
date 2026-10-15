@@ -8,6 +8,11 @@ import {
   invalidateUi,
   mountWidget,
   preferredSurface,
+  getSurfacePresentation,
+  presentationVisible,
+  restoreSurface,
+  clearSurfacePresentation,
+  watchNativePanels,
 } from "./ui-transport";
 import { browserOcr } from "./nlp-client";
 import { backendOcr } from "./backend-client";
@@ -72,12 +77,13 @@ import {
 import { sanitizeGoal } from "../../../packages/privacy-redaction";
 import { returnFromHandoff } from "../../../packages/route-registry/handoff";
 import {
-  startFrames,
+  startFrames as observeFrames,
   stopFrames,
   frameMessage,
   routeFrameGuide,
   clearFrames,
   frameVisibilityMessage,
+  setFramePresentation,
 } from "./frames";
 import {
   backendNlp,
@@ -144,6 +150,8 @@ async function attemptVision(sessionId: string, requestId: string) {
     !needsVision(session.view.goalPlan, !!session.view.clarification)
   )
     return;
+  const candidate = session;
+  if (!(await presentationVisible(candidate)) || session !== candidate) return;
   const captured = structuredClone(session),
     view = captured.view!;
   const controller = new AbortController();
@@ -502,6 +510,7 @@ async function acceptView(raw: unknown) {
 }
 async function attachSession() {
   if (!session) throw new Error("No pinned session.");
+  const uiPresentation = await getSurfacePresentation(session);
   if (live()) refreshMemory(session.origin!);
   const previousDocument = session.documentId;
   const injected = await chrome.scripting.executeScript({
@@ -560,6 +569,8 @@ async function attachSession() {
   const reply = await chrome.tabs.sendMessage(session.tabId, {
     type: "BEGIN_SESSION",
     sessionId: session.sessionId,
+    presentationVisible: uiPresentation?.visibility !== "launcher",
+    presentationRevision: uiPresentation?.revision || 0,
     routeId: session.routeId,
     routeVersion: session.routeVersion,
     verifiedSteps: session.view?.verifiedSteps || 0,
@@ -583,6 +594,20 @@ async function attachSession() {
         }
       : {}),
   });
+  const freshPresentation = await getSurfacePresentation(session);
+  if (freshPresentation !== uiPresentation)
+    await chrome.tabs
+      .sendMessage(
+        session.tabId,
+        {
+          type: "PRESENTATION_CHANGED",
+          sessionId: session.sessionId,
+          visible: freshPresentation?.visibility !== "launcher",
+          revision: freshPresentation?.revision || 0,
+        },
+        { frameId: 0 },
+      )
+      .catch(() => {});
   await acceptView(reply?.view);
   if (verified && navigation && session.view?.page)
     await remember({
@@ -596,6 +621,21 @@ async function attachSession() {
   await save();
   if (live()) void startFrames(session).catch(() => {});
   return session;
+}
+async function startFrames(current: PinnedSession) {
+  const presentation = await getSurfacePresentation(current);
+  await observeFrames(
+    current,
+    presentation?.visibility !== "launcher",
+    presentation?.revision || 0,
+  );
+  const fresh = await getSurfacePresentation(current);
+  if (fresh !== presentation)
+    await setFramePresentation(
+      current,
+      fresh?.visibility !== "launcher",
+      fresh?.revision || 0,
+    );
 }
 async function stopSession(reason = "Navigation stopped.") {
   await stopFrames();
@@ -634,6 +674,40 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   return next;
 }
 chrome.runtime.onMessage.addListener((raw, sender, respond) => {
+  if (raw?.type === "UI_RESET_SESSION") {
+    if (!trustedUi(sender, session)) {
+      respond({ error: "Trusted Tholi interface required." });
+      return;
+    }
+    const captured = session;
+    void enqueue(async () => {
+      if (captured !== session)
+        throw Error(
+          "The task changed. Review the current session before resetting.",
+        );
+      cancelVision();
+      goalGeneration++;
+      await stopSession();
+      const prior = session;
+      session = undefined;
+      await clearSurfacePresentation(prior);
+      suspended = [];
+      await chrome.storage.session.remove([
+        "navigatorSession",
+        "navigatorJourneys",
+        "tholiConversation",
+        "tholiDraft",
+      ]);
+      await chrome.storage.session.set({
+        tholiSessionReset: crypto.randomUUID(),
+      });
+      invalidateUi();
+      return { ok: true };
+    })
+      .then(respond)
+      .catch((error) => respond({ error: error.message }));
+    return true;
+  }
   if (raw?.type === "UI_APPEARANCE") {
     // Appearance must stay responsive while navigation/inference owns the queue.
     void (async () => {
@@ -666,11 +740,23 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     return true;
   }
   if (raw?.type?.startsWith("UI_")) {
-    const operation =
-      raw.type === "UI_OPEN_SIDEBAR"
-        ? uiMessage(raw, sender, session)
-        : enqueue(() => uiMessage(raw, sender, session));
-    void operation.then(respond).catch((e) => respond({ error: e.message }));
+    if (raw.type === "UI_MINIMIZE" && trustedUi(sender, session))
+      cancelVision();
+    const operation = [
+      "UI_OPEN_SIDEBAR",
+      "UI_DOCK",
+      "UI_MINIMIZE",
+      "UI_DISMISS",
+      "UI_RESTORE",
+    ].includes(raw.type)
+      ? uiMessage(raw, sender, session)
+      : enqueue(() => uiMessage(raw, sender, session));
+    void operation
+      .then((result) => {
+        if (raw.type === "UI_DISMISS") cancelVision();
+        respond(result);
+      })
+      .catch((e) => respond({ error: e.message }));
     return true;
   }
   if (isWidget(sender, session) && !widgetCommands.has(raw?.type)) {
@@ -1708,7 +1794,7 @@ async function recoverWebsiteAccess() {
 chrome.action.onClicked.addListener((tab) => {
   if (
     tab.windowId !== undefined &&
-    (preferredSurface() !== "widget" ||
+    (preferredSurface(session) !== "widget" ||
       !session ||
       session.tabId !== tab.id ||
       !session.documentId ||
@@ -1716,9 +1802,14 @@ chrome.action.onClicked.addListener((tab) => {
   )
     void chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
   void recoverWebsiteAccess()
-    .then(() => mountWidget(session, true))
+    .then(async () => {
+      const current = session;
+      if (current && current.tabId === tab.id) await restoreSurface(current);
+      await mountWidget(session, true);
+    })
     .catch(() => {});
 });
+watchNativePanels(() => session);
 // Follow browser-confirmed server redirects only for the active authentication
 // task. This permission supplies navigation metadata, not access to the new DOM.
 // Ignore unrelated tabs/subframes before parsing URLs; never persist raw queries.

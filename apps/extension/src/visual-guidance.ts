@@ -1,4 +1,8 @@
 import type { NavigationAction } from "../../../packages/navigation-core/navigation-actions";
+import {
+  guidanceVisible,
+  onGuidanceVisibility,
+} from "../../../packages/overlay-ui/presentation-gate";
 let revision = 0;
 let visual: HTMLElement | undefined;
 let notify: (() => void) | undefined;
@@ -7,6 +11,9 @@ export function clearVisual() {
   visual?.remove();
   visual = undefined;
 }
+onGuidanceVisibility((visible) => {
+  if (!visible) clearVisual();
+});
 const invalidate = () => {
   revision++;
   clearVisual();
@@ -113,6 +120,7 @@ export function showVisual(
   capturedAt: number,
 ) {
   if (
+    !guidanceVisible() ||
     action.kind !== "visual" ||
     revision !== capturedRevision ||
     Date.now() - capturedAt > 15000

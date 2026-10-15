@@ -37,7 +37,10 @@
   }
 }
 /* Pointer motion never adds delay to keyboard navigation. */
-html[data-input="keyboard"] *,
+html[data-input="keyboard"]
+  *:not(.wf-seed):not(.wf-piece):not(.wf-route-orbit):not(.wf-checking):not(
+    .tholi-route-signal
+  ),
 html[data-input="keyboard"] *::before,
 html[data-input="keyboard"] *::after {
   animation-duration: 0ms !important;

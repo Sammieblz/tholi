@@ -32,4 +32,6 @@ Diagnostics are local, bounded and redacted. Do not capture authenticated screen
 
 Presentation preferences and widget bounds are stored locally. Composer drafts and at most 80 conversation messages use trusted extension-session storage and are not synchronized to the website or cloud. The widget uses a session/document-bound command allowlist and does not receive backend credentials. Guidance surfaces are excluded from discovery and hidden for OCR capture.
 
+Closing the widget minimizes it to a launcher and keeps authorized observation and verification active. Expanded highlights and automatic guidance scrolling are suppressed until restoration. The launcher does not show the private destination. Stop cancels the task; Reset current session clears unfinished tasks, draft and conversation. These controls do not delete saved website knowledge unless its separate deletion controls are used. Private continuity ends with the browser session.
+
 The local Tholi website has explicitly mocked accounts. Name/email and onboarding state live in browser-session storage; passwords are neither persisted nor transmitted. Signing out clears the mock account. No analytics or real authentication service is added.

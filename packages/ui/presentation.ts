@@ -1,4 +1,5 @@
 import type { SessionView } from "../shared-types";
+import type { WayfinderState } from "./wayfinder";
 
 export type PresentationPhase =
   | "idle"
@@ -21,6 +22,7 @@ export interface GuidancePresentation {
   destination?: string;
   warning: boolean;
   busy: boolean;
+  marker?: WayfinderState;
 }
 export function present(
   view?: SessionView,
@@ -97,15 +99,40 @@ export function present(
     view?.verifiedSteps || 0,
     instruction,
   ].join("|");
+  const settledUnresolved =
+    phase === "recovering" &&
+    view?.goalPlan?.status === "unresolved" &&
+    !view.goalPlan.budgetPending &&
+    (!view.goalPlan.recoveryStage || view.goalPlan.recoveryStage === "waiting");
   return {
     phase,
     stepId,
-    title: view?.status === "stopped" ? "Stopped" : titles[phase],
+    title:
+      view?.status === "stopped"
+        ? "Stopped"
+        : settledUnresolved
+          ? "No clear route yet"
+          : titles[phase],
     instruction,
     destination,
     warning: ["review", "access", "clarification"].includes(phase),
     busy: ["initializing", "planning", "verifying"].includes(phase),
+    marker: settledUnresolved ? "unresolved" : markerForPhase(phase),
   };
+}
+export function markerForPhase(phase: PresentationPhase): WayfinderState {
+  if (["initializing", "planning", "recovering"].includes(phase))
+    return "planning";
+  if (["authentication", "clarification", "access", "review"].includes(phase))
+    return "attention";
+  if (
+    phase === "guiding" ||
+    phase === "verifying" ||
+    phase === "paused" ||
+    phase === "arrived"
+  )
+    return phase;
+  return "idle";
 }
 export interface ConversationMessage {
   id: string;

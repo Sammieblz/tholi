@@ -3,6 +3,7 @@ import {
   readdir,
   mkdir,
   copyFile,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,6 +11,11 @@ export async function thirdParty(out) {
   const lock = JSON.parse(await readFile("package-lock.json", "utf8")),
     records = [];
   await mkdir(join(out, "licenses"), { recursive: true });
+  // Generated notices must not retain dependencies removed from the build.
+  for (const entry of await readdir(join(out, "licenses"), {
+    withFileTypes: true,
+  }))
+    if (entry.isFile()) await unlink(join(out, "licenses", entry.name));
   for (const [path, metadata] of Object.entries(lock.packages)) {
     if (!path.includes("node_modules/") || metadata.dev || metadata.link)
       continue;

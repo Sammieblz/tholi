@@ -1,5 +1,5 @@
 import { fullyUnclipped } from "../../../packages/browser-adapter/geometry";
-import { GuidanceOverlay } from "../../../packages/overlay-ui";
+import { GuidanceOverlay, guidanceVisible } from "../../../packages/overlay-ui";
 import {
   PageDiscovery,
   type BoundControl,
@@ -163,6 +163,14 @@ export class PageCoach {
       this.replan();
     if (this.view.request?.status === "active") this.requestReplan();
     return this.view;
+  }
+  presentationChanged(visible: boolean) {
+    this.cancelScroll?.();
+    this.cancelScroll = undefined;
+    this.overlay.clear();
+    // Retain the selected control for outcome observation while minimized.
+    // Restoring always checks the current document before showing it again.
+    if (visible) this.refresh();
   }
   private observe() {
     this.cleanup = this.discovery.observe(() => this.refresh());
@@ -1053,11 +1061,15 @@ export class PageCoach {
           this.view.selectedControlId = target.control.id;
           this.view.instruction = result.plan.reason;
           this.cancelScroll?.();
-          if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+          if (
+            guidanceVisible() &&
+            (!target.control.inViewport || !fullyUnclipped(target.geometry))
+          )
             this.cancelScroll = scrollTarget(
               target.geometry,
               () =>
                 this.selected === target &&
+                guidanceVisible() &&
                 this.view.status === "running" &&
                 !target.control.occluded,
             );
@@ -1212,10 +1224,13 @@ export class PageCoach {
       return { view: this.view };
     }
     this.selected = target;
-    if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+    if (
+      guidanceVisible() &&
+      (!target.control.inViewport || !fullyUnclipped(target.geometry))
+    )
       this.cancelScroll = scrollTarget(
         target.geometry,
-        () => this.selected === target,
+        () => guidanceVisible() && this.selected === target,
       );
     this.discovery.setPriority(target.element);
     this.selectedAt = Date.now();

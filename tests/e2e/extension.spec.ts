@@ -154,9 +154,9 @@ test("explicit activation, verified steps, retention branch and final hard stop"
   await next("Continue cancellation", "Confirm cancellation");
   await status("REVIEW REQUIRED");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
-  await expect(panel.locator(".evidence")).toContainText(
-    "5 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("5 verified control interactions");
   await page
     .getByRole("button", { name: "Confirm cancellation", exact: true })
     .click();
@@ -243,9 +243,9 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
     }),
   ).toBeVisible();
   await status("WAITING FOR THE WEBSITE");
-  await expect(panel.locator(".evidence")).toContainText(
-    "0 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("0 verified control interactions");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Account overview", exact: true }),
@@ -259,9 +259,9 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
       ),
     )
     .toBe("account");
-  await expect(panel.locator(".evidence")).toContainText(
-    "1 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("1 verified control interactions");
   await page.goto("about:blank");
   await status("STOPPED");
 });
@@ -290,10 +290,24 @@ test("two origin-filtered tasks have independent previews and billing completion
   const choice = panel.getByRole("combobox", { name: "Choose a task" });
   await expect(choice.locator("option")).toHaveCount(3);
   await choice.selectOption("demo.billing.overview");
-  await expect(panel.locator(".route-card h2")).toHaveText(
+  const journeyDetails = panel.getByRole("button", {
+    name: "Journey summary and details",
+  });
+  if ((await journeyDetails.getAttribute("aria-expanded")) !== "true")
+    await journeyDetails.evaluate((element) =>
+      (element as HTMLButtonElement).click(),
+    );
+  const routeDetails = panel.getByRole("button", { name: /^Route details/ });
+  if ((await routeDetails.getAttribute("aria-expanded")) !== "true")
+    await routeDetails.evaluate((element) =>
+      (element as HTMLButtonElement).click(),
+    );
+  await expect(panel.locator(".detail-destination")).toHaveText(
     "Find billing details",
   );
-  await expect(panel.locator(".notice")).toContainText("read-only route");
+  await expect(panel.locator(".tholi-journey-details")).toContainText(
+    "read-only route",
+  );
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await start("demo.billing.overview");
   await expect(choice).toBeDisabled();
@@ -305,9 +319,9 @@ test("two origin-filtered tasks have independent previews and billing completion
   );
   await expect(panel.locator(".tholi-current")).not.toContainText("canceled");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
-  await expect(panel.locator(".evidence")).toContainText(
-    "2 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("2 verified control interactions");
   const pin = await panel.evaluate(
     async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
   );

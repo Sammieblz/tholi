@@ -58,7 +58,29 @@ export async function openNavigatorExtension(
   };
   await initialize();
   const view = async () => {
-    if (inspectDetails)
+    if (inspectDetails) {
+      await panel
+        .locator('.tholi-journey-summary[aria-expanded="false"]')
+        .evaluateAll((nodes) => {
+          for (const node of nodes) {
+            const previous = document.activeElement as HTMLElement | null;
+            (node as HTMLButtonElement).click();
+            if (document.activeElement === node && previous?.isConnected)
+              previous.focus({ preventScroll: true });
+          }
+        });
+      await panel
+        .locator('.tholi-disclosure-trigger[aria-expanded="false"]')
+        .evaluateAll((nodes) => {
+          for (const node of nodes) {
+            if (!/^(Route details|Saved routes)/.test(node.textContent || ""))
+              continue;
+            const previous = document.activeElement as HTMLElement | null;
+            (node as HTMLButtonElement).click();
+            if (document.activeElement === node && previous?.isConnected)
+              previous.focus({ preventScroll: true });
+          }
+        });
       await panel.locator("details").evaluateAll((nodes) => {
         for (const node of nodes)
           if (
@@ -68,6 +90,7 @@ export async function openNavigatorExtension(
           )
             (node as HTMLDetailsElement).open = true;
       });
+    }
     return panel.evaluate(
       async () =>
         (await chrome.runtime.sendMessage({ type: "GET_SESSION" }))?.view,

@@ -1,51 +1,70 @@
-# Tholi UI
+# Tholi interface and local website
 
-The current source is **0.10.1**. See [the refinement record](ui-refinement.md) for installed skill provenance and motion decisions, and [frontend architecture](frontend-architecture.md) for source ownership. The existing downloadable ZIP remains 0.10.0.
+The current source is **0.10.1**. See the [audit and implementation record](ui-audit-redesign.md), [frontend ownership](frontend-architecture.md), and [project-local skills](../.codex/README.md). The gated website download remains **0.10.0**, labeled separately from source.
 
-Tholi uses the supplied brand artwork and a warm minimal design across the sidebar, floating widget, and local website. The default is Guide mode in Chrome's sidebar, with Advanced off. Internal package identifiers, API contracts, IndexedDB knowledge, and saved routes remain compatible.
+## Build and use
 
-The extension automatically uses a light palette on dark websites and a dark palette on light websites. The sidebar, widget, and page guidance follow live website changes while retaining the task. Restricted pages use the system palette. See [adaptive appearance](adaptive-appearance.md) for detection, permissions, privacy, and limitations.
+```sh
+npm ci
+npm run build:extension
+npm run dev:web
+```
 
-## Use the extension
+Load `dist/extension` using **Load unpacked** in `chrome://extensions`. After rebuilding, reload Tholi and refresh the website tab. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
 
-Build with `npm run build:extension`, then load `dist/extension` in `chrome://extensions`. After rebuilding, reload **Tholi** and refresh the website tab. Confirm version **0.10.1**.
+Guide/sidebar with Advanced off remains the default. Enter a destination and select **Guide me**. The 56-pixel journey summary expands into verified progress and route details. Required decisions stay above the instruction and the composer stays below it. Verified arrival offers **New destination**, without Pause or remaining-click estimates.
 
-Enter a destination and select **Guide me**. The current instruction, notices, and Pause/Stop stay together. Saved journeys and route details are disclosures. The settings button reveals an explicit Advanced toggle and the surface choice.
+Conversation centers the transcript rather than repeating the Guide card. It uses existing local NLP and actual navigation events. Enter sends; Shift+Enter adds a line. Navigation commands, compatible corrections/references, grounded clarification replies, copying guidance, and **Why this step?** are supported. Unsupported questions do not produce invented answers. Switching modes retains the draft and task. The latest 80 messages remain in trusted browser-session storage.
 
-**Conversation** uses the existing local NLP and verified navigation events. It accepts destinations, supported corrections and references, grounded clarification replies, and navigation commands. “Why this step?” explains available route evidence. It does not simulate a cloud LLM or stream invented reasoning. The draft survives view changes; the last 80 messages remain in trusted browser-session storage. Stop cancels navigation without deleting conversation history.
+## Widget and continuity
 
-**Floating widget** starts at 360 × 420 CSS pixels, with a minimum of 240 × 180 where the viewport permits. Drag its top bar or resize its corner. The focused move handle supports arrow keys, and Shift plus arrow keys resize. The resize handle also supports arrow keys. The shell’s Layout menu offers position and size buttons without dragging. Reset restores the standard bounds; Expand restores the standard size. The settings menu offers Move aside and Use sidebar. Compact layouts retain the instruction and Pause/Stop and collapse secondary content.
+Choose **Use floating widget** in settings. Default size is 360 × 420 CSS pixels, minimum 240 × 180 where the viewport permits. The shell contains the drag handle, name and Close action. Drag the handle, use arrow keys to move, Shift+arrow keys to resize, or open **Widget menu** for labeled placement and size controls. **Reset position** restores the default bounds. **Expand widget** requests 420 × 620, clamped to the viewport.
 
-The widget registers with a fresh capability mounted inside the authorized top document's closed shadow root. Chrome's runtime tab, frame, and document identity are checked against the session. Extension frames are omitted from Chrome's website frame inventory, so their identity comes from the runtime sender, with the parent document separately checked. Widget commands cannot access backend settings or credentials. Local extension storage is restricted to trusted contexts; the authorized page shell saves only validated widget bounds through the worker. If the frame cannot load, Tholi keeps the task in the sidebar. Old Chrome versions without native panel close show a specific closing instruction.
+Layout uses both available width and height inside the shell. Shrinking removes secondary controls immediately; growing requires a 12-pixel buffer beyond the next threshold to avoid flicker near a boundary.
 
-## Motion and feedback
+| Layout   | Available width and height     | Visible priorities                                                                                           |
+| -------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Expanded | At least 400 × 560             | Mode switch, journey summary, step nodes or transcript, instruction, composer and session actions            |
+| Standard | At least 340 × 360             | Compact destination summary, estimated step caption, instruction or transcript, composer and session actions |
+| Compact  | At least 280 × 240             | One current message, composer, inline Send and Widget menu                                                   |
+| Minimal  | Either dimension below Compact | One current message, short composer, inline Send and Widget menu                                             |
 
-Highlight nodes remain stable while geometry updates. Entry is 180 ms; exit is 120 ms. Four gentle 1.2-second glow cycles begin after four idle seconds, once per fresh step. Interaction and review boundaries cancel the reminder. Scroll arrows travel in the relevant direction for three 900 ms cycles and then remain static. Instruction changes use a 160 ms fade with a small entry movement; the activity indicator waits 200 ms to avoid flicker. Verified arrival uses one short 420 ms animation.
+Pause/Resume/Stop move into Widget menu in Compact and Minimal. Mode selection, route details, settings, placement, resizing and docking remain in that menu. Enter sends in the compact composer; Shift+Enter adds a line. Draft, focus, selection, mode and conversation survive resizing. Stopped/idle widgets remove the old journey card, route progress and return instructions instead of repeating an obsolete task.
 
-Reduced motion replaces movement and repeated cues with static guidance. Animation never determines completion. Tholi surfaces are excluded from discovery and outcome evidence and hidden during OCR capture. Fields and inaccessible frames retain their existing masking.
+Required questions and access notices take the message area. **Review details** opens their full controls and requests usable expanded bounds, without automatically resizing when the prompt first arrives. The composer remains mounted. Secondary content scrolls independently; the widget frame itself cannot scroll under its title bar.
 
-### Widget scrolling and pause recovery
+The shell's **X minimizes to a 44-pixel launcher**. Objective, queue, milestones, draft, and conversation remain in the current browser session. Authorized observation and verification continue; expanded highlights, coach bubbles, reminders, and automatic guidance scrolling are suppressed. The launcher indicates attention or arrival without displaying the destination. Restore reacquires fresh observation before guidance. Session updates and supported document transitions do not reopen the minimized widget.
 
-The widget document is confined to its iframe. Conversation following updates only the secondary content scroll area, so it cannot scroll the header or current guidance out of view. History no longer introduces a second nested scrollbar. The current instruction has its own bounded content area with Pause/Resume and Stop outside it. Compact mode keeps those actions visible.
+**Double-click the floating widget launcher** to reveal **Remove**. Right-click or focus it and press **Shift+F10** also opens its controls; Escape dismisses them. Remove hides the launcher entirely and retains the task, draft and conversation. This hidden state survives reloads and worker restart. Click Tholi's Chrome toolbar icon to reopen it. Single-click widget restoration waits 400 ms to distinguish it from a double-click; keyboard activation remains immediate. A native sidebar launcher opens immediately to preserve Chrome's required user gesture, with removal available through right-click or Shift+F10.
 
-Resuming a review-blocked live request replaces the previous paused instruction with the retained plan reason before fresh observation. This changes feedback only; it does not clear the review boundary or establish completion. The widget regression includes long persisted history, composer focus, visible header/current guidance, and paused-state controls. The full UI suite now contains eleven cases, including adaptive appearance.
+Dragging within 24 pixels of the right viewport edge shows a docking preview. Release requests the native sidebar immediately; the widget disappears only after Chrome accepts. Chrome uses the browser's configured panel side. Rejected activation retains the widget and an explicit **Dock to sidebar** action. Native lifecycle events are feature-detected; a disconnected UI port is not treated as dismissal.
 
-Before adaptive appearance was added, 179 unit tests and all ten UI browser checks passed on the rebuilt 0.10.1 extension. With adaptive appearance, strict TypeScript checks, 182 unit tests, and all eleven UI browser checks pass. The UI report binds to the current extension build bytes. Native Chrome and signed-in workflow verification remain separate.
+**Stop** cancels navigation while keeping visible history. **Reset current session** clears unfinished journeys, draft, and conversation after confirmation. Learned website knowledge and saved routes have separate trash actions. Closing Chrome ends private session continuity.
 
-## Local website
+The extension-origin iframe is capability-bound to the authorized tab, top document, frame, and session. Stale commands are rejected. Backend credentials remain sidebar-only. Tholi surfaces stay excluded from discovery/outcome evidence and hidden during OCR capture; existing field/frame masking remains.
 
-Run `npm run dev:web` and open **http://127.0.0.1:5174**. Build the static site with `npm run build:web` into `dist/web`.
+## Appearance and motion
 
-The website includes product information, an explicitly labeled interactive demonstration, installation instructions, sign-up/sign-in mocks, optional onboarding, and a welcome area. Mock account state uses browser-session storage. Passwords are never persisted or sent. Website preview preferences do not configure an installed extension. No account is required to download or use Tholi.
+The supplied wordmark remains intact. Manrope is bundled for interface/body text and Outfit for marketing headlines. Iconoir and Base UI supply functional icons and interaction primitives. No font CDN or general animation framework is added.
 
-Download metadata is generated from existing gated archives by `scripts/sync-downloads.mjs`. The archive's SHA-256 is checked before copying. The page identifies its actual version and whether it precedes the current UI. New archives become eligible only after the unchanged release gates plus the new UI gate pass. Existing archives are not overwritten. There is no Chrome Web Store listing or deployment in this pass.
+The shared Wayfinder uses a slow 3.6-second idle breath that settles while typing. Planning and guidance show a continuous amber waypoint orbit, with a short fading trail, compass ticks and a shaded center. Planning uses a 1.8-second orbit; guidance uses 2.8 seconds. Verification has separate checking activity. On verified arrival or a settled unsuccessful search, the ball separates into two amber pieces and unfolds into a standalone check or X over 420 ms. No ball or contact shadow remains behind the symbol. The resulting shape becomes still. Returning to the view, polling and theme changes do not replay the morph; reduced motion shows the final shape directly. Attention and pause keep their distinct still markers. Automatic recovery and pending indexing keep searching. Progress never invents percentages.
 
-## Design references and verification
+A compact horizontal step path stays below the journey summary in both Guide and Conversation. Numbered nodes represent known live/predicted steps; verified interactions become checks. The current segment carries a continuous 2.4-second signal. Finite counts are labeled estimated; incomplete forecasts include an open-ended node and “More may appear.” Long journeys show the latest verified step, a summary of earlier steps, and a bounded window of upcoming steps. The destination becomes a check only on verified arrival. Pause, review, authentication, unresolved recovery and hidden surfaces stop activity. Reduced motion keeps static nodes and lines. Keyboard use suppresses interaction transitions without disabling necessary navigation activity.
 
-The design follows the supplied Tholi brand direction and reviewed [Apple design skill](https://github.com/dickwu/apple-design-skill), [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), and [Emil Kowalski's animation skills](https://github.com/emilkowalski/skills). The UI Pro Max design-system search supported minimal layouts; the supplied brand palette takes precedence over its generic palette. Runtime dependencies are pinned: Iconoir React 7.12.1, Base UI 1.9.0, and Inter via Fontsource 5.3.0. No motion framework or runtime font CDN is used.
+Highlight DOM nodes remain stable while geometry updates. Entry/exit use 180/120 ms, instructions 160 ms, and disclosures approximately 200 ms. Four 1.2-second reminder cycles begin after four idle seconds on a fresh step, then stop. Directional arrows travel three 900 ms cycles. Arrival lasts at most 450 ms. Geometry, polling, and theme updates do not replay transitions. Reduced motion uses static shapes and brief fades; interaction never waits for animation.
 
-`npm run test:ui` covers view continuity, real widget pointer interaction, frame isolation, capture exclusion, interrupted widget-mount recovery, busy-page motion, responsive layouts, large text, reduced motion, mock onboarding, and download integrity. Its report binds to recursive extension asset hashes in `output/qa/ui-build.json`. Run final release suites after the last build; rebuilding invalidates prior byte-specific reports.
+Required decisions remain until resolved. Passive notices use a four-second toast. Scrollbars retain stable gutters and appear on scroll, hover, or keyboard focus, with accessibility fallbacks. [Inverse website-theme adaptation](adaptive-appearance.md) remains unchanged.
 
-Browser fixtures establish fixture behavior. Native Chrome permission/screen-reader checks and signed-in Amazon, Cloudflare, and GitHub checks remain pending. A UI redesign does not establish universal routing accuracy.
+## Website and demonstration
 
-The UI suite starts its own preview server. Leave port 5174 free before running it; it does not attach to or stop an existing user preview. See [the 0.10.0 validation record](v0.10.0-validation.md) for measured results and delivered artifacts.
+Home, About, Download, Sign-up, Sign-in, Onboarding, and Welcome are local routes. Mock accounts are visibly labeled; passwords are neither sent nor persisted. Downloads and extension use require no account.
+
+The demonstration mounts the actual shared guidance app inside an isolated shadow root. Its controlled workspace offers two tasks: find account settings and change the sample language to Spanish. Actual sample interactions verify the outcome. Guide/Conversation, Pause/Resume/Stop, and onboarding mode selection work without configuring an installed extension. The practice adapter does not establish live-site routing accuracy.
+
+Genuine extension screenshots include provenance and enlargement controls. Installation illustrations are annotated schematics rather than invented Chrome screenshots. Downloads distinguish loading, available, unavailable, and failed states, with retry on failure. Version and SHA-256 come from the gated archive manifest. New archives require all existing release gates against matching bytes.
+
+## Verification
+
+Run `npm run typecheck`, `npm test`, builds, and `npm run test:ui`. The UI suite owns its preview server; set `THOLI_UI_PORT=5188` when an existing 5174 preview must remain running. Its report binds to recursive extension asset hashes. Rebuilding invalidates earlier reports.
+
+See the [audit record](ui-audit-redesign.md) for measured evidence and pending checks. Native Chrome permissions/docking, screen readers, and signed-in workflows remain separate from fixtures. This redesign does not establish universal website routing accuracy.

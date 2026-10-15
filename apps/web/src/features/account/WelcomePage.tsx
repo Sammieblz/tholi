@@ -3,23 +3,33 @@ import { useState } from "react";
 import { SiteLink, useRouter } from "../../app/router";
 import { Demo } from "../demo/Demo";
 import { useAccount } from "./session";
+import { ArrowRight, Refresh, LogOut } from "iconoir-react";
+import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 export function WelcomePage() {
   const { account, signOut } = useAccount(),
     { go } = useRouter();
   const [error, setError] = useState("");
   return (
     <section className="welcome">
-      <p className="eyebrow">DEMO WELCOME AREA</p>
-      <h1>{account ? `Hello, ${account.name}.` : "Find your first step."}</h1>
+      <p className="eyebrow">YOUR LOCAL PREVIEW</p>
+      <div className="welcome-intro">
+        <Wayfinder state="idle" />
+        <h1>{account ? `Hello, ${account.name}.` : "Find your first step."}</h1>
+      </div>
       <p>
-        Your destination is the starting point. No route history or extension
-        data is connected to this demo account.
+        Make a little room for your guide. Install the extension, revisit setup,
+        or try a destination in the safe practice website below. This demo
+        account is not connected to extension data or route history.
       </p>
       <div className="welcome-actions">
         <SiteLink to="/download" className="web-primary">
           Install Tholi
+          <ArrowRight width={18} aria-hidden="true" />
         </SiteLink>
-        <button onClick={() => go("/onboarding")}>Replay onboarding</button>
+        <button onClick={() => go("/onboarding")}>
+          <Refresh width={17} aria-hidden="true" />
+          Replay onboarding
+        </button>
         {account && (
           <button
             onClick={() => {
@@ -34,6 +44,7 @@ export function WelcomePage() {
             }}
           >
             Sign out
+            <LogOut width={17} aria-hidden="true" />
           </button>
         )}
       </div>

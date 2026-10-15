@@ -2,7 +2,7 @@ import { useEffect } from "react";
 export function useSectionReveal(path: string) {
   useEffect(() => {
     if (
-      path !== "/" ||
+      !["/", "/about", "/download"].includes(path) ||
       matchMedia("(prefers-reduced-motion: reduce)").matches ||
       !window.IntersectionObserver
     )
@@ -20,7 +20,7 @@ export function useSectionReveal(path: string) {
                   { opacity: 0.3, transform: "translateY(16px)" },
                   { opacity: 1, transform: "translateY(0)" },
                 ],
-                { duration: 600, easing: "cubic-bezier(0.23,1,0.32,1)" },
+                { duration: 450, easing: "cubic-bezier(0.23,1,0.32,1)" },
               ),
             );
         }
@@ -28,7 +28,9 @@ export function useSectionReveal(path: string) {
       { threshold: 0.12 },
     );
     document
-      .querySelectorAll(".web-main > section:not(.hero)")
+      .querySelectorAll(
+        ".web-main > section:not(.hero), .about-story, .install-grid > li",
+      )
       .forEach((section) => observer.observe(section));
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
     const reduce = () => {

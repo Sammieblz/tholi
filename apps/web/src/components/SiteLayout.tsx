@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import { Menu, Xmark } from "iconoir-react";
+import { Menu, Xmark, ArrowRight } from "iconoir-react";
 import { SiteLink, useRouter } from "../app/router";
 import { useAccount } from "../features/account/session";
 export function SiteLayout({ children }: { children: ReactNode }) {
@@ -27,7 +27,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       </SiteLink>
       {!account && (
         <SiteLink to="/signup" className="web-primary">
-          Get started
+          Try the preview <ArrowRight width={17} aria-hidden="true" />
         </SiteLink>
       )}
     </>
@@ -86,7 +86,10 @@ export function SiteLayout({ children }: { children: ReactNode }) {
           <SiteLink to="/download">Download and setup</SiteLink>
           <a href="https://github.com/Sammieblz/web-navigator">Source</a>
         </div>
-        <small>Local preview · Mock accounts · No analytics</small>
+        <small>
+          Built for finding your way. Local preview · Mock accounts · No
+          analytics
+        </small>
       </footer>
     </>
   );

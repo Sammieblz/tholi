@@ -370,6 +370,8 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("BEGIN_SESSION"),
       sessionId: z.string().uuid(),
+      presentationVisible: z.boolean().optional(),
+      presentationRevision: z.number().int().nonnegative().optional(),
       routeId: z.string().min(1),
       routeVersion: z.string().min(1),
       verifiedSteps: z.number().int().nonnegative().optional(),

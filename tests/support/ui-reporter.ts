@@ -15,6 +15,7 @@ export default class UIReporter implements Reporter {
     id: string;
     status: string;
     motion?: { nodes: number; frameP95Ms: number; sameRoot: boolean };
+    routeMotion?: { workload: string; frameP95Ms: number };
   }[] = [];
   async onBegin(_config: FullConfig, suite: Suite) {
     this.start = await buildProvenance();
@@ -24,18 +25,24 @@ export default class UIReporter implements Reporter {
     const motion = result.attachments.find(
       (a) => a.name === "motion-benchmark",
     )?.body;
+    const routeMotion = result.attachments.find(
+      (a) => a.name === "route-motion-timing",
+    )?.body;
     this.cases.push({
       id: test.titlePath().join(" / "),
       status: result.status,
       ...(motion ? { motion: JSON.parse(motion.toString()) } : {}),
+      ...(routeMotion
+        ? { routeMotion: JSON.parse(routeMotion.toString()) }
+        : {}),
     });
   }
   async onEnd(result: FullResult) {
     const end = await buildProvenance();
     const passed =
       result.status === "passed" &&
-      this.expected === 11 &&
-      this.cases.length === 11 &&
+      this.expected === 18 &&
+      this.cases.length === 18 &&
       this.cases.every((c) => c.status === "passed") &&
       JSON.stringify(end) === JSON.stringify(this.start);
     await mkdir("output/qa", { recursive: true });
@@ -45,7 +52,7 @@ export default class UIReporter implements Reporter {
         {
           ...this.start,
           passed,
-          expected: 11,
+          expected: 18,
           cases: this.cases,
           evaluatedAt: new Date().toISOString(),
         },

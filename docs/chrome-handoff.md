@@ -6,6 +6,12 @@ On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination a
 
 Switch between Guide and Conversation during the same task. Try Pause, Resume, Stop, and “Why this step?” in Conversation. Use **Tholi settings → Use floating widget** to check dragging, resizing, Layout position/size buttons, keyboard controls, Expand, and **Use sidebar**. Confirm the destination survives each view/surface change and a website reload. Compact widgets must keep readable instructions and Pause/Stop available. Check four idle reminders, their cancellation, reduced motion, and absence of arrival feedback until the requested result is verified.
 
+## Widget continuity checks
+
+Close the widget with X and confirm it becomes a 44-pixel launcher. The task should continue observing without expanded highlights or automatic guidance scrolling. Reveal a relevant menu on the website, then restore Tholi: the same destination, draft and conversation should remain, with fresh guidance. Repeat through a recognized document transition and worker restart. Reset current session should clear unfinished tasks and conversation while preserving learned knowledge and saved routes.
+
+During a deliberate drag, approach within 24 pixels of the right viewport edge and release on the docking preview. Chrome should open its configured native panel side before the widget disappears. If Chrome rejects activation, the widget must remain and explain toolbar/Dock recovery. Test native panel close/reopen only on versions exposing the lifecycle events. These checks remain pending until performed in native Chrome.
+
 ## Access recovery
 
 DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Navigator requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.

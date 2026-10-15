@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { WorkflowContext } from "../../../../../../packages/navigation-core/workflow-contracts";
 import { workflowGuides } from "../../../../../../packages/navigation-core/guides";
+import {
+  workflowInputPending,
+  workflowRequiresAttention,
+} from "./workflow-presentation";
 
 export function WorkflowPanel({
   workflow,
@@ -23,7 +27,9 @@ export function WorkflowPanel({
   );
   const guide = workflowGuides.find((g) => g.id === workflow.guideId);
   if (!guide) return null;
+  if (compact && !workflowRequiresAttention(workflow)) return null;
   const milestone = guide.milestones[workflow.activeMilestone];
+  const awaitingInput = workflowInputPending(workflow);
   const slots = [
     ...new Set(
       guide.milestones
@@ -33,7 +39,15 @@ export function WorkflowPanel({
             !!v && (!compact || v === milestone?.entity),
         ),
     ),
-  ];
+  ].filter(
+    (type) =>
+      !compact ||
+      ((awaitingInput ||
+        (workflow.status === "active" && milestone?.kind !== "input")) &&
+        !workflow.entities.some(
+          (entity) => entity.type === type && entity.value.trim(),
+        )),
+  );
   const labels: Record<string, string> = {
     repository: "Repository name",
     project: "Project name",
@@ -97,11 +111,11 @@ export function WorkflowPanel({
       )}
       {workflow.status === "review" && (
         <p>
-          Review this action on the website and make the click yourself.
-          Navigator checks the result afterward.
+          Review this action on the website and make the click yourself. Tholi
+          checks the result afterward.
         </p>
       )}
-      {milestone?.kind === "input" && workflow.status !== "completed" && (
+      {awaitingInput && (
         <button
           disabled={disabled}
           onClick={() =>

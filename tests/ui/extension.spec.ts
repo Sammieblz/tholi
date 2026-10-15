@@ -139,6 +139,9 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     });
     await cdp.detach();
     await frame
+      .getByRole("button", { name: "Widget menu", exact: true })
+      .click();
+    await frame
       .getByRole("button", { name: "Conversation", exact: true })
       .click();
     await frame.getByLabel("Navigation goal").fill("Why this step?");
@@ -147,7 +150,24 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
       frame.getByLabel("Conversation", { exact: true }),
     ).toContainText((await app.view()).goalPlan.reason);
     expect((await app.view()).request.id).toBe(id);
+    await frame
+      .getByRole("button", { name: "Widget menu", exact: true })
+      .click();
     await frame.getByRole("button", { name: "Guide", exact: true }).click();
+    await expect
+      .poll(() => frame.locator(".tholi-body").evaluate((e) => e.scrollTop))
+      .toBe(0);
+    await expect
+      .poll(() =>
+        frame.locator(".tholi-instruction").evaluate((e) => {
+          const body = e.closest(".tholi-body")!.getBoundingClientRect();
+          const instruction = e.getBoundingClientRect();
+          return (
+            instruction.top >= body.top && instruction.bottom <= body.bottom
+          );
+        }),
+      )
+      .toBe(true);
     await app.page.screenshot({ path: info.outputPath("standard-widget.png") });
     const hostBox = (await app.page.locator("#tholi-widget").boundingBox())!;
     const buttonRect = await frame
@@ -163,13 +183,12 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     await expect.poll(async () => (await app.view())?.status).toBe("paused");
     expect((await app.view()).request.id).toBe(id);
     const bounds = () => app.page.locator("#tholi-widget").boundingBox();
-    // The closed-shadow shell offers a click alternative to dragging.
+    // Position controls use the same accessible menu as the other widget tools.
     const layoutStart = (await bounds())!;
-    await app.page.mouse.click(
-      layoutStart.x + layoutStart.width - 30,
-      layoutStart.y + 14,
-    );
-    await app.page.keyboard.press("Enter");
+    await frame
+      .getByRole("button", { name: "Widget menu", exact: true })
+      .click();
+    await frame.getByRole("button", { name: "Left", exact: true }).click();
     await expect
       .poll(async () => (await bounds())!.x)
       .toBeLessThan(layoutStart.x);
@@ -178,7 +197,8 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     const before = (await bounds())!;
     await app.page.mouse.move(before.x + 60, before.y + 14);
     await app.page.mouse.down();
-    await app.page.mouse.move(before.x + 110, before.y + 90);
+    // Move away from the docking edge; docking has separate activation checks.
+    await app.page.mouse.move(before.x + 10, before.y + 90);
     await app.page.mouse.up();
     const moved = (await bounds())!;
     expect(moved.y).toBeGreaterThan(before.y);
@@ -190,10 +210,14 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     await app.page.mouse.move(moved.x + 260, moved.y + 220);
     await app.page.mouse.up();
     await expect.poll(async () => (await bounds())!.height).toBeLessThan(300);
+    await expect(frame.getByLabel("Navigation goal")).toBeVisible();
+    await app.page.screenshot({ path: info.outputPath("compact-widget.png") });
+    await frame
+      .getByRole("button", { name: "Widget menu", exact: true })
+      .click();
     await expect(
       frame.getByRole("button", { name: "Resume navigation", exact: true }),
     ).toBeVisible();
-    await app.page.screenshot({ path: info.outputPath("compact-widget.png") });
     await frame
       .getByRole("button", { name: "Resume navigation", exact: true })
       .click();
@@ -208,36 +232,22 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     await app.page.mouse.up();
     expect((await bounds())!.width).toBe(240);
     expect((await bounds())!.height).toBe(180);
-    const pauseBox = await frame
-      .getByRole("button", { name: "Pause navigation", exact: true })
-      .boundingBox();
+    const inputBox = await frame.getByLabel("Navigation goal").boundingBox();
     const minimum = (await bounds())!;
-    expect(pauseBox!.y + pauseBox!.height).toBeLessThanOrEqual(
+    expect(inputBox!.y + inputBox!.height).toBeLessThanOrEqual(
       minimum.y + minimum.height,
     );
     await app.page.screenshot({ path: info.outputPath("minimum-widget.png") });
     await frame
+      .getByRole("button", { name: "Widget menu", exact: true })
+      .click();
+    await frame
       .getByRole("button", { name: "Expand widget", exact: true })
       .click();
-    await expect.poll(async () => (await bounds())!.width).toBe(360);
-    await expect.poll(async () => (await bounds())!.height).toBe(420);
-    await expect
-      .poll(() =>
-        app.page
-          .frames()
-          .some(
-            (f) =>
-              f.url().includes("/widget.html?grant=") &&
-              f.url() !== frame.url(),
-          ),
-      )
-      .toBe(true);
-    let expanded = app.page
-      .frames()
-      .find(
-        (f) =>
-          f.url().includes("/widget.html?grant=") && f.url() !== frame.url(),
-      )!;
+    await expect.poll(async () => (await bounds())!.width).toBe(420);
+    await expect.poll(async () => (await bounds())!.height).toBe(620);
+    // Size changes preserve the authorized frame and its composer focus.
+    let expanded = app.page.frames().find((f) => f.url() === frame.url())!;
     await expect(
       expanded.getByRole("button", { name: "Pause navigation", exact: true }),
     ).toBeVisible();
@@ -263,7 +273,7 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
           f.url() !== previousWidgetUrl,
       )!;
     await expect(
-      expanded.getByRole("button", { name: "Tholi settings", exact: true }),
+      expanded.getByRole("button", { name: "Widget menu", exact: true }),
     ).toBeVisible();
     expect((await app.view()).request.id).toBe(id);
     const data = await app.panel.evaluate(
@@ -313,13 +323,25 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     ).toContain("Trusted");
     await stranger.close();
     await app.page.bringToFront();
+    await expanded.getByLabel("Navigation goal").fill("Follow-up destination");
+    await expect
+      .poll(() =>
+        app.panel.evaluate(
+          async () =>
+            (await chrome.storage.session.get("tholiDraft")).tholiDraft,
+        ),
+      )
+      .toBe("Follow-up destination");
     await expanded
-      .getByRole("button", { name: "Tholi settings", exact: true })
+      .getByRole("button", { name: "Widget menu", exact: true })
       .click();
     await expanded
-      .getByRole("button", { name: "Use sidebar", exact: true })
+      .getByRole("button", { name: "Dock to sidebar", exact: true })
       .click();
     await expect(app.page.locator("#tholi-widget")).toHaveCount(0);
+    await expect(app.panel.getByLabel("Navigation goal")).toHaveValue(
+      "Follow-up destination",
+    );
     expect((await app.view()).request.id).toBe(id);
   } finally {
     await app.close();
@@ -413,6 +435,44 @@ test("interrupted widget mount falls back to sidebar without losing destination"
 test("busy page motion retains one highlight and reports frame timing", async ({}, info) => {
   const app = await fixture();
   try {
+    await app.panel.evaluate(async () => {
+      const context = await chrome.runtime.sendMessage({ type: "GET_CONTEXT" });
+      await chrome.scripting.executeScript({
+        target: { tabId: context.tabId },
+        func: () => {
+          const original = Element.prototype.animate;
+          (window as any).__reminderAnimations = [];
+          Element.prototype.animate = function (...args) {
+            const animation = original.apply(this, args);
+            if (typeof args[1] === "object" && args[1]?.iterations === 4)
+              (window as any).__reminderAnimations.push(animation);
+            return animation;
+          };
+        },
+      });
+    });
+    const reminders = () =>
+      app.panel.evaluate(async () => {
+        const session = await chrome.runtime.sendMessage({
+          type: "GET_SESSION",
+        });
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: session.tabId },
+          func: () => {
+            const animations = (window as any)
+              .__reminderAnimations as Animation[];
+            return {
+              count: animations.length,
+              timing: animations[0]?.effect?.getTiming(),
+              state: animations[0]?.playState,
+            };
+          },
+        });
+        return result.result!;
+      });
+    // Establish a grounded step first. This measures motion under mutation load,
+    // independently of model cold startup and initial discovery benchmarks.
+    await destination(app, "Account settings");
     await app.page.evaluate(() => {
       const region = document.createElement("section");
       region.id = "storm";
@@ -425,7 +485,6 @@ test("busy page motion retains one highlight and reports frame timing", async ({
       region.append(batch);
       document.body.append(region);
     });
-    await destination(app, "Account settings");
     const stats = await app.page.evaluate(async () => {
       const root = document.getElementById("internet-navigator-overlay")!,
         times: number[] = [];
@@ -457,6 +516,17 @@ test("busy page motion retains one highlight and reports frame timing", async ({
     });
     expect(stats.sameRoot).toBe(true);
     expect(stats.nodes).toBe(50000);
+    await expect
+      .poll(async () => (await reminders()).count, { timeout: 10000 })
+      .toBe(1);
+    expect((await reminders()).timing).toMatchObject({
+      duration: 1200,
+      iterations: 4,
+    });
+    await app.page.evaluate(() => window.dispatchEvent(new Event("resize")));
+    await app.page.keyboard.press("Escape");
+    await expect.poll(async () => (await reminders()).state).toBe("idle");
+    expect((await reminders()).count).toBe(1);
     await info.attach("motion-benchmark", {
       body: JSON.stringify(stats),
       contentType: "application/json",

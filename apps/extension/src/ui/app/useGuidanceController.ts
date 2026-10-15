@@ -34,6 +34,7 @@ export function useGuidanceController(widget = false) {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const preferencesPending = useRef(false);
+  const lastSurface = useRef<"sidebar" | "widget" | undefined>(undefined);
   const [view, setView] = useState<SessionView>();
   const [context, setContext] = useState<{
     tabId?: number;
@@ -47,7 +48,38 @@ export function useGuidanceController(widget = false) {
   }>();
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<{
+    id: string;
+    text: string;
+    tone?: "info" | "success";
+  }>();
   const [busy, setBusy] = useState(false);
+  const focusIntent = useRef<"composer" | "resume" | undefined>(undefined);
+  useEffect(() => {
+    if (busy || !focusIntent.current) return;
+    const frame = requestAnimationFrame(() => {
+      let target =
+        focusIntent.current === "resume"
+          ? document.querySelector<HTMLButtonElement>(
+              'button[aria-label="Resume navigation"]',
+            )
+          : (document.getElementById(
+              "tholi-destination-input",
+            ) as HTMLTextAreaElement | null);
+      if (
+        focusIntent.current === "resume" &&
+        (!target || !target.getClientRects().length)
+      )
+        target = document.querySelector<HTMLButtonElement>(
+          'button[aria-label="Widget menu"]',
+        );
+      if (target && !target.disabled && target.getClientRects().length) {
+        target.focus();
+        focusIntent.current = undefined;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [busy, view?.status, hydrated]);
   const [visionBackend, setVisionBackend] = useState(false);
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
@@ -248,19 +280,9 @@ export function useGuidanceController(widget = false) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Command failed.");
     } finally {
+      if (["STOP", "RESUME"].includes(type)) focusIntent.current = "composer";
+      if (type === "PAUSE") focusIntent.current = "resume";
       setBusy(false);
-      if (["STOP", "RESUME"].includes(type))
-        requestAnimationFrame(() =>
-          document.getElementById("tholi-destination-input")?.focus(),
-        );
-      if (type === "PAUSE")
-        requestAnimationFrame(() =>
-          document
-            .querySelector<HTMLButtonElement>(
-              'button[aria-label="Resume navigation"]',
-            )
-            ?.focus(),
-        );
     }
   };
   const active =
@@ -382,9 +404,7 @@ export function useGuidanceController(widget = false) {
       if (reply.view) {
         setView(reply.view);
         if (preferences.mode === "conversation") setGoal("");
-        requestAnimationFrame(() =>
-          document.getElementById("tholi-destination-input")?.focus(),
-        );
+        focusIntent.current = "composer";
       }
     } catch (error) {
       if (!controller.signal.aborted)
@@ -547,7 +567,12 @@ export function useGuidanceController(widget = false) {
           if (r.error) return;
           if (!preferencesPending.current) setPreferences(r.preferences);
           setMessages(r.messages);
-          if (!hydrated) {
+          const becomingVisible =
+            lastSurface.current !== r.preferences.surface &&
+            r.preferences.surface === (widget ? "widget" : "sidebar");
+          lastSurface.current = r.preferences.surface;
+          // Handoffs hydrate the destination without overwriting active typing.
+          if (!hydrated || becomingVisible) {
             setGoal(r.draft);
             setHydrated(true);
           }
@@ -558,9 +583,20 @@ export function useGuidanceController(widget = false) {
       changes: Record<string, chrome.storage.StorageChange>,
       area: string,
     ) => {
+      if (area === "session" && changes.tholiSessionReset) {
+        planning.current?.abort();
+        setGoal("");
+        setMessages([]);
+        setView(undefined);
+        setJourneys([]);
+        setError("");
+      }
       if (
         (area === "session" &&
-          (changes.tholiConversation || changes.tholiDraft)) ||
+          (changes.tholiConversation ||
+            changes.tholiDraft ||
+            changes.tholiSurfacePresentation ||
+            changes.tholiSessionReset)) ||
         (area === "local" && changes.tholiPreferences)
       )
         refresh();
@@ -584,6 +620,47 @@ export function useGuidanceController(widget = false) {
     const message = { id, role, text: text.slice(0, 1500), at: Date.now() };
     setMessages((m) => appendMessage(m, message));
     await chrome.runtime.sendMessage({ type: "UI_APPEND", message });
+  };
+  const explainCurrentStep = async () => {
+    await addMessage("guide", explainStep(view));
+  };
+  const newDestination = () => {
+    setGoal("");
+    setError("");
+    requestAnimationFrame(() =>
+      document.getElementById("tholi-destination-input")?.focus(),
+    );
+  };
+  const resetCurrentSession = async () => {
+    planning.current?.abort();
+    setBusy(true);
+    try {
+      const reply = await chrome.runtime.sendMessage({
+        type: "UI_RESET_SESSION",
+      });
+      if (reply.error) throw Error(reply.error);
+      setView(undefined);
+      setGoal("");
+      setMessages([]);
+      setJourneys([]);
+      setError("");
+      setNotice({
+        id: crypto.randomUUID(),
+        text: "Session reset. Your saved routes and website knowledge are kept.",
+        tone: "success",
+      });
+      requestAnimationFrame(() =>
+        document.getElementById("tholi-destination-input")?.focus(),
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not reset this session.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
   useEffect(() => {
     if (!hydrated || !displayedView) return;
@@ -714,6 +791,7 @@ export function useGuidanceController(widget = false) {
     context,
     setSelectedId,
     error,
+    notice,
     setError,
     busy,
     setBusy,
@@ -755,5 +833,8 @@ export function useGuidanceController(widget = false) {
     presentation,
     submit,
     changePreferences,
+    explainCurrentStep,
+    newDestination,
+    resetCurrentSession,
   };
 }

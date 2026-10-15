@@ -1,6 +1,9 @@
 import { startPageAppearance } from "./ui/theme/theme-agent";
 import { PageDiscovery } from "../../../packages/page-discovery";
-import { GuidanceOverlay } from "../../../packages/overlay-ui";
+import {
+  GuidanceOverlay,
+  setGuidanceVisible,
+} from "../../../packages/overlay-ui";
 import type { BoundControl } from "../../../packages/page-discovery";
 import type { PageSnapshot } from "../../../packages/page-model";
 import { frameVisibilityBridge } from "./frame-visibility";
@@ -16,8 +19,10 @@ if (!(globalThis as any)[marker]) {
     frameId = 0,
     documentId = "",
     selected: BoundControl | undefined,
+    selectedInstruction = "",
     before: PageSnapshot | undefined;
   let visibilityCleanup: (() => void) | undefined;
+  let presentationRevision = 0;
   const send = (type: string, extra: Record<string, unknown>) =>
     chrome.runtime
       .sendMessage({ type, sessionId, nonce, frameId, documentId, ...extra })
@@ -86,6 +91,8 @@ if (!(globalThis as any)[marker]) {
       nonce = raw.nonce;
       frameId = raw.frameId;
       documentId = raw.documentId;
+      presentationRevision = raw.presentationRevision || 0;
+      setGuidanceVisible(raw.presentationVisible !== false);
       visibilityCleanup = frameVisibilityBridge(() =>
         sessionId ? { sessionId, nonce } : undefined,
       );
@@ -120,6 +127,35 @@ if (!(globalThis as any)[marker]) {
       respond({ page: snapshot() });
       return;
     }
+    if (raw.type === "FRAME_PRESENTATION") {
+      if (
+        !Number.isInteger(raw.revision) ||
+        raw.revision < presentationRevision ||
+        typeof raw.visible !== "boolean"
+      ) {
+        respond({ error: "Stale frame presentation" });
+        return;
+      }
+      presentationRevision = raw.revision;
+      setGuidanceVisible(raw.visible);
+      if (raw.visible && selected) {
+        const control = selected.control;
+        snapshot();
+        const fresh = discovery.bindings.get(control.id);
+        if (
+          fresh?.control.signature === control.signature &&
+          fresh.control.visible &&
+          fresh.control.enabled &&
+          !fresh.control.occluded
+        )
+          overlay.show(fresh.geometry, selectedInstruction, {
+            attention: fresh.control.risk === "ordinary",
+            warning: fresh.control.risk !== "ordinary",
+          });
+      }
+      respond({ ok: true });
+      return;
+    }
     if (raw.type === "FRAME_GUIDE") {
       clear();
       const p = snapshot(),
@@ -136,6 +172,7 @@ if (!(globalThis as any)[marker]) {
         return;
       }
       selected = target;
+      selectedInstruction = raw.instruction;
       before = p;
       overlay.show(target.geometry, raw.instruction, {
         attention: target.control.risk === "ordinary",

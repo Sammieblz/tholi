@@ -8,9 +8,11 @@ import { OnboardingPage } from "../features/onboarding/OnboardingPage";
 import { SiteLink, useRouter } from "./router";
 import { useInputModality } from "../../../../packages/ui/motion/useInputModality";
 import { useSectionReveal } from "./useSectionReveal";
+import { useScrollIntent } from "./useScrollIntent";
 export function App() {
   const { path } = useRouter();
   useInputModality();
+  useScrollIntent();
   useSectionReveal(path);
   const page =
     path === "/" ? (

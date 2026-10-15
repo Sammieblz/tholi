@@ -1,6 +1,13 @@
 @font-face {
-  font-family: Inter;
-  src: url("../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
+  font-family: Manrope;
+  src: url("../../../node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: Outfit;
+  src: url("../../../node_modules/@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2")
     format("woff2");
   font-weight: 100 900;
   font-display: swap;
@@ -23,7 +30,9 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --radius: 12px;
   --shadow: 0 4px 8px #1c252206, 0 16px 40px #1c252216;
-  font-family: Inter, system-ui, sans-serif;
+  --font-body: Manrope, system-ui, sans-serif;
+  --font-display: Outfit, Manrope, system-ui, sans-serif;
+  font-family: var(--font-body);
   color: var(--ink);
   color-scheme: light dark;
 }
@@ -70,7 +79,7 @@
 body {
   margin: 0;
   background: var(--surface);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 button,
 input,

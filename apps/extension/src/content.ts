@@ -3,6 +3,9 @@ import {
   mountWidgetShell,
   unmountWidget,
   moveWidgetAside,
+  updateWidgetShell,
+  expandWidgetShell,
+  applyWidgetLayout,
 } from "./ui/widget/widget-shell";
 import {
   captureMetadata,
@@ -16,7 +19,10 @@ import { navigationActionSchema } from "../../../packages/navigation-core/naviga
 import { journeySchema } from "../../../packages/page-model";
 import { requestSchema } from "../../../packages/navigation-core/contracts";
 import { BrowserAdapter } from "../../../packages/browser-adapter";
-import { GuidanceOverlay } from "../../../packages/overlay-ui";
+import {
+  GuidanceOverlay,
+  setGuidanceVisible,
+} from "../../../packages/overlay-ui";
 import { RouteEngine } from "../../../packages/route-engine";
 import { routeRegistry } from "../../../packages/route-registry";
 import { allowedOrigin } from "../../../packages/safety-policy";
@@ -39,6 +45,7 @@ if (!host[marker]) {
   let engine: RouteEngine | undefined;
   let coach: PageCoach | undefined;
   let sessionId: string | undefined;
+  let presentationRevision = 0;
   let visualNotification: ReturnType<typeof setTimeout> | undefined;
   let visualCleanup: (() => void) | undefined;
   const observeVisual = () => {
@@ -163,10 +170,45 @@ if (!host[marker]) {
   chrome.runtime.onMessage.addListener((raw, sender, respond) => {
     if (sender.id !== chrome.runtime.id) return;
     if (raw.sessionId === sessionId && raw.type === "MOUNT_WIDGET") {
-      void mountWidgetShell(raw.url, sessionId!, raw.bounds).then(() =>
-        respond({ ok: true }),
-      );
+      void mountWidgetShell(
+        raw.url,
+        sessionId!,
+        raw.bounds,
+        raw.visibility,
+        raw.phase,
+        raw.surface,
+        raw.marker,
+      ).then(() => respond({ ok: true }));
       return true;
+    }
+    if (raw.sessionId === sessionId && raw.type === "UPDATE_WIDGET") {
+      updateWidgetShell(raw.phase, raw.marker);
+      respond({ ok: true });
+      return;
+    }
+    if (raw.sessionId === sessionId && raw.type === "EXPAND_WIDGET") {
+      respond({ ok: true, bounds: expandWidgetShell() });
+      return;
+    }
+    if (raw.sessionId === sessionId && raw.type === "LAYOUT_WIDGET") {
+      respond({ ok: true, bounds: applyWidgetLayout(raw.action) });
+      return;
+    }
+    if (raw.sessionId === sessionId && raw.type === "PRESENTATION_CHANGED") {
+      if (
+        typeof raw.visible !== "boolean" ||
+        !Number.isInteger(raw.revision) ||
+        raw.revision < presentationRevision
+      ) {
+        respond({ error: "Stale interface presentation." });
+        return;
+      }
+      presentationRevision = raw.revision;
+      setGuidanceVisible(raw.visible);
+      coach?.presentationChanged(raw.visible);
+      if (raw.visible && engine) update();
+      respond({ ok: true });
+      return;
     }
     if (raw.sessionId === sessionId && raw.type === "MOVE_WIDGET") {
       moveWidgetAside();
@@ -250,6 +292,10 @@ if (!host[marker]) {
       coach = undefined;
       engine = undefined;
       sessionId = message.sessionId;
+      presentationRevision = Number.isInteger(raw.presentationRevision)
+        ? raw.presentationRevision
+        : 0;
+      setGuidanceVisible(raw.presentationVisible !== false);
       if (dynamic) {
         coach = new PageCoach(
           (view, observed, navigation) => {

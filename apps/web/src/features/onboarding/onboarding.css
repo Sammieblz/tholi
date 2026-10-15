@@ -1,54 +1,154 @@
-.onboarding fieldset {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 28px 0;
-}
-.onboarding fieldset label {
-  display: inline-flex;
+.onboarding-heading {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin-right: 24px;
+  justify-content: space-between;
+  gap: 32px;
 }
-.onboarding > button {
-  margin: 20px 8px 20px 0;
+.onboarding-heading > div {
+  max-width: 720px;
 }
-.onboarding-step > button {
-  margin-top: 24px;
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
+.onboarding-heading > .tholi-wayfinder-host {
+  padding-right: 20px;
+}
+.onboarding-heading .tholi-wayfinder {
+  width: 72px;
+  height: 72px;
 }
 .onboarding-progress {
   display: flex;
-  gap: 6px;
-  max-width: 200px;
-  margin: 20px 0 32px;
+  gap: 32px;
+  list-style: none;
+  padding: 0;
+  margin: 32px 0 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
 }
-.onboarding-progress span {
-  position: relative;
-  width: 80px;
-  height: 3px;
-  background: var(--line);
+.onboarding-progress li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.onboarding-progress li > span {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+.onboarding-progress li[aria-current="step"] {
+  color: var(--jade);
+  font-weight: 800;
+}
+.onboarding-progress li[aria-current="step"] > span {
+  border-color: var(--jade);
+  background: var(--sage);
+}
+.onboarding-install {
+  display: grid;
+  grid-template-columns: 1fr 0.75fr;
+  align-items: center;
+  gap: 48px;
+  margin-bottom: 32px;
+}
+.onboarding-install h2 {
+  font-size: 36px;
+}
+.onboarding-install p {
+  color: var(--muted);
+  max-width: 48ch;
+  font-size: 15px;
+}
+.onboarding-install .web-text-link {
+  display: flex;
+  margin-top: 16px;
+}
+.onboarding-capture {
+  height: 320px;
   overflow: hidden;
-  border-radius: 3px;
+  background: var(--sage);
+  border-radius: 18px;
+  padding: 24px 30px 0;
 }
-.onboarding-progress span::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--jade);
-  transform: scaleX(0);
-  transform-origin: left;
+.onboarding-capture img {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  margin: auto;
 }
-.onboarding-progress .complete::before {
-  transform: scaleX(1);
+.onboarding-step > button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 28px;
 }
-.onboarding .demo {
-  margin-top: 30px;
+.onboarding > .text-button {
+  margin-top: 16px;
+  margin-right: 24px;
+  font-size: 13px;
 }
-@media (max-width: 600px) {
-  .onboarding fieldset label {
-    margin: 8px 16px 8px 0;
+.onboarding-caption {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.preview-mode {
+  margin: 0 0 28px;
+  border: 1px solid var(--line);
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: var(--card);
+}
+.preview-mode legend {
+  font-size: 13px;
+  font-weight: 700;
+  padding-inline: 8px;
+}
+.preview-mode > .small {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.preview-mode > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 20px 8px 0;
+  font-size: 13px;
+  min-height: 44px;
+}
+.preview-mode input {
+  accent-color: var(--jade);
+}
+@media (max-width: 650px) {
+  .onboarding-heading > .tholi-wayfinder-host {
+    display: none;
+  }
+  .onboarding-progress {
+    gap: 16px;
+    margin-block: 24px 32px;
+  }
+  .onboarding-progress li {
+    font-size: 11px;
+    gap: 8px;
+  }
+  .onboarding-progress li > span {
+    flex: none;
+  }
+  .onboarding-install {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .onboarding-install h2 {
+    font-size: 30px;
+  }
+  .onboarding-capture {
+    max-height: 260px;
   }
 }
