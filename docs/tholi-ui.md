@@ -4,6 +4,8 @@ The current source is **0.10.1**. See [the refinement record](ui-refinement.md) 
 
 Tholi uses the supplied brand artwork and a warm minimal design across the sidebar, floating widget, and local website. The default is Guide mode in Chrome's sidebar, with Advanced off. Internal package identifiers, API contracts, IndexedDB knowledge, and saved routes remain compatible.
 
+The extension automatically uses a light palette on dark websites and a dark palette on light websites. The sidebar, widget, and page guidance follow live website changes while retaining the task. Restricted pages use the system palette. See [adaptive appearance](adaptive-appearance.md) for detection, permissions, privacy, and limitations.
+
 ## Use the extension
 
 Build with `npm run build:extension`, then load `dist/extension` in `chrome://extensions`. After rebuilding, reload **Tholi** and refresh the website tab. Confirm version **0.10.1**.
@@ -26,9 +28,9 @@ Reduced motion replaces movement and repeated cues with static guidance. Animati
 
 The widget document is confined to its iframe. Conversation following updates only the secondary content scroll area, so it cannot scroll the header or current guidance out of view. History no longer introduces a second nested scrollbar. The current instruction has its own bounded content area with Pause/Resume and Stop outside it. Compact mode keeps those actions visible.
 
-Resuming a review-blocked live request replaces the previous paused instruction with the retained plan reason before fresh observation. This changes feedback only; it does not clear the review boundary or establish completion. The widget regression includes long persisted history, composer focus, visible header/current guidance, and paused-state controls. The full UI suite now contains ten cases.
+Resuming a review-blocked live request replaces the previous paused instruction with the retained plan reason before fresh observation. This changes feedback only; it does not clear the review boundary or establish completion. The widget regression includes long persisted history, composer focus, visible header/current guidance, and paused-state controls. The full UI suite now contains eleven cases, including adaptive appearance.
 
-After this fix, 179 unit tests and all ten UI browser checks passed on the rebuilt 0.10.1 extension. The UI report binds to those build bytes. Native Chrome and signed-in workflow verification remain separate.
+Before adaptive appearance was added, 179 unit tests and all ten UI browser checks passed on the rebuilt 0.10.1 extension. With adaptive appearance, strict TypeScript checks, 182 unit tests, and all eleven UI browser checks pass. The UI report binds to the current extension build bytes. Native Chrome and signed-in workflow verification remain separate.
 
 ## Local website
 

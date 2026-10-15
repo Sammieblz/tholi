@@ -1,38 +1,56 @@
 import "./marketing.css";
 import { SiteLink } from "../../app/router";
 import { Demo } from "../demo/Demo";
+import { ProductCapture } from "./ProductCapture";
 export function HomePage() {
   return (
     <>
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">
-            <span className="tholi-dot" />
-            YOUR GUIDE THROUGH THE WEB
-          </p>
-          <h1>
-            Find your way
-            <br />
-            <span>forward.</span>
-          </h1>
-          <p className="hero-description">
-            Unfamiliar menus. Hidden settings. One clear next step.
-            <br />
-            Tell Tholi where you want to go, and follow the guide.
-          </p>
-          <div className="hero-actions">
-            <SiteLink to="/download" className="web-primary">
-              Get Tholi
-            </SiteLink>
-            <SiteLink to="/about" className="web-text-link">
-              Meet your guide
-            </SiteLink>
+          <div className="hero-heading">
+            <p className="eyebrow">
+              <span className="tholi-dot" />
+              YOUR GUIDE THROUGH THE WEB
+            </p>
+            <h1>
+              Find your way
+              <br />
+              <span>forward.</span>
+            </h1>
           </div>
-          <p className="small">
-            Chrome extension · Local processing · You make every click
-          </p>
+          <div className="hero-overview">
+            <p className="hero-description">
+              Unfamiliar menus. Hidden settings. One clear next step.
+              <br />
+              Tell Tholi where you want to go, and follow the guide.
+            </p>
+            <div className="hero-actions">
+              <SiteLink to="/download" className="web-primary">
+                Get Tholi
+              </SiteLink>
+              <SiteLink to="/about" className="web-text-link">
+                Meet your guide
+              </SiteLink>
+            </div>
+            <p className="small">
+              Chrome extension · Local processing · You make every click
+            </p>
+          </div>
         </div>
-        <Demo />
+        <div className="hero-product">
+          <div className="capture-context">
+            <span>FROM THE RUNNING EXTENSION · WIKIPEDIA</span>
+            <span>“Make the text larger”</span>
+          </div>
+          <ProductCapture
+            name="live-guidance"
+            title="The next step, right where you need it."
+            description="A real Tholi session on Wikipedia. The movable widget keeps the request in view while the highlight points to the text-size control."
+            width={1440}
+            height={960}
+            eager
+          />
+        </div>
       </section>
       <section className="story-band">
         <h2>Your destination stays with you.</h2>
@@ -55,28 +73,84 @@ export function HomePage() {
           </span>
         </div>
       </section>
-      <section className="principles">
-        <article>
-          <h3>A guide beside you</h3>
+      <section className="product-views">
+        <div className="product-views-copy">
+          <p className="eyebrow">TWO WAYS TO FIND YOUR WAY</p>
+          <h2>
+            Less interface.
+            <br />
+            More direction.
+          </h2>
           <p>
-            One instruction and a visual highlight. You choose and perform the
-            website action.
+            Keep one clear instruction in Guide, or ask about the current step
+            in Conversation. Both follow the same journey.
           </p>
-        </article>
-        <article>
-          <h3>Room for your preferences</h3>
           <p>
-            A sidebar or a movable widget. A direct guide or a conversation.
-            Advanced tools when you want them.
+            These are captures of the actual extension interfaces, with the same
+            public-page request.
           </p>
-        </article>
-        <article>
-          <h3>Local by default</h3>
+        </div>
+        <ProductCapture
+          name="guide-panel"
+          title="One step at a time"
+          description="The extension’s Guide view keeps the destination, current instruction, and Pause / Stop together."
+          width={420}
+          height={760}
+          panel
+        />
+        <ProductCapture
+          name="conversation-panel"
+          title="A little more context"
+          description="“Why this step?” shows the available route evidence. Conversation runs locally, without a cloud chatbot."
+          width={420}
+          height={760}
+          panel
+        />
+      </section>
+      <section className="verified-preview">
+        <ProductCapture
+          name="verified-arrival"
+          title="A change checked on the page"
+          description="In this captured session, selecting Large changes Wikipedia’s text size. Tholi verifies the preference before showing Arrived."
+          width={1440}
+          height={960}
+        />
+        <div className="verified-preview-copy">
+          <p className="eyebrow">PROGRESS YOU CAN SEE</p>
+          <h2>
+            A click is a step.
+            <br />A checked outcome is arrival.
+          </h2>
           <p>
-            The installed extension processes requests locally. An account and a
-            backend are optional.
+            You make the website changes. Tholi checks for evidence of the
+            requested result and keeps an unfinished destination in view.
           </p>
-        </article>
+          <p className="capture-credits">
+            Captured with Tholi 0.10.1 on public Wikipedia.{" "}
+            <a
+              href="https://en.wikipedia.org/wiki/Ada_Lovelace"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Article and image credits
+            </a>
+            . These screenshots demonstrate this preference change, not
+            reliability on every website.
+          </p>
+        </div>
+      </section>
+      <section className="try-demo">
+        <div>
+          <p className="eyebrow">TRY THE FEEL OF IT</p>
+          <h2>A small practice run.</h2>
+          <p>
+            Open the account menu and follow the guide. This interactive sample
+            is a safe demonstration, separate from the extension screenshots
+            above.
+          </p>
+          <p className="small">No installation or account needed.</p>
+        </div>
+        <Demo />
       </section>
       <section className="faq">
         <h2>A few things to know</h2>

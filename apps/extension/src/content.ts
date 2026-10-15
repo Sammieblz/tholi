@@ -1,3 +1,4 @@
+import { startPageAppearance } from "./ui/theme/theme-agent";
 import {
   mountWidgetShell,
   unmountWidget,
@@ -32,6 +33,7 @@ const marker = "__internetNavigatorLoaded0100";
 const host = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!host[marker]) {
   host[marker] = true;
+  startPageAppearance();
   let adapter = new BrowserAdapter();
   const overlay = new GuidanceOverlay();
   let engine: RouteEngine | undefined;

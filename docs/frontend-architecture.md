@@ -26,12 +26,14 @@ apps/extension/src/
       advanced/               Model/backend settings, diagnostics, inspector
       journey/                Queue, saved journeys, workflow details
     widget/                   Isolated page shell, bounds, gestures, styles
+    theme/                    Page agent, document handshake, palette updates
     styles/                   Extension-only advanced controls
   ui-transport.ts             Trusted worker commands and presentation storage
 
 packages/ui/
   guidance.tsx                Stable component/preferences exports
   presentation.ts             Pure presentation and conversation helpers
+  page-theme.ts               CSS background sampling and tone classification
   guidance/                   Header, current step, composer, conversation
   motion/                     Shared input-modality behavior
   styles/                     Theme tokens, guidance layout, motion grammar
@@ -39,6 +41,7 @@ packages/ui/
 
 packages/overlay-ui/
   guidance-overlay.ts         Page-bound highlight, reminder, scroll direction
+  overlay-styles.ts           Scoped overlay palette and visual styling
 ```
 
 ## Ownership and extension points
@@ -46,7 +49,7 @@ packages/overlay-ui/
 - Website features own components and styles. Shared layout belongs in `styles/site.css`; brand tokens and easing come from `packages/ui`. Marketing entrances belong on the website, not daily guidance controls.
 - Mock passwords remain component-local and are discarded after form completion. Only name, email, and onboarding state enter website session storage. Downloads require no account.
 - The extension controller hook owns transport and lifecycle. Feature components receive typed state/actions without opening duplicate polling or inference sessions. Privileged configuration remains sidebar-only.
-- `packages/ui` has no Chrome calls or discovery. Both surfaces receive the same presentation and callbacks. Keep the stable `guidance` and `tokens.css` entries when adding shared components.
+- `packages/ui` has no Chrome calls or navigation discovery. Its appearance helper samples computed CSS backgrounds only. Both surfaces receive the same presentation and callbacks. Keep the stable `guidance` and `tokens.css` entries when adding shared components.
 - Widget shell code owns geometry and pointer capture. The extension-origin iframe owns guidance. The shell's closed-shadow styles remain isolated; Layout buttons and keyboard controls complement dragging.
 - The overlay owns fresh geometry. Never interpolate between unrelated website controls. Tholi surfaces remain excluded from discovery and OCR captures.
 - Keep API contracts, storage, and outcome criteria outside UI features. A rendered state cannot establish success.

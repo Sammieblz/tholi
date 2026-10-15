@@ -1,5 +1,6 @@
 import { currentGuidanceRect } from "../../../../../packages/overlay-ui";
 import { widgetStyles } from "./widget-styles";
+import { contrastPageTheme } from "../../../../../packages/ui/page-theme";
 let host: HTMLElement | undefined, frame: HTMLIFrameElement | undefined;
 let movement: Animation | undefined;
 const reducedMotion = () =>
@@ -84,8 +85,9 @@ export async function mountWidgetShell(
   host = document.createElement("div");
   host.id = "tholi-widget";
   host.dataset.tholiUi = "";
+  host.dataset.tholiTheme = contrastPageTheme();
   host.style.cssText =
-    "position:fixed;z-index:2147483646;box-sizing:border-box;border:1px solid #809087;border-radius:14px;overflow:hidden;box-shadow:0 4px 12px #0001,0 16px 40px #0003;background:#faf7f0;";
+    "position:fixed;z-index:2147483646;box-sizing:border-box;border:1px solid #809087;border-radius:14px;overflow:hidden;box-shadow:0 4px 12px #0001,0 16px 40px #0003;";
   const shadow = host.attachShadow({ mode: "closed" });
   shadow.innerHTML = `<style>${widgetStyles}</style><div class="handle" tabindex="0" role="group" aria-label="Move widget. Use arrow keys. Shift and arrow keys resize."><span>Tholi</span><div><button aria-label="Reset widget position">Reset</button><button class="layout-toggle" aria-label="Widget layout" aria-expanded="false">Layout</button></div></div><div class="layout" hidden role="group" aria-label="Widget position and size"><p>Position</p><div><button data-move="left">Left</button><button data-move="right">Right</button><button data-move="up">Up</button><button data-move="down">Down</button></div><p>Size</p><div><button data-size="smaller">Smaller</button><button data-size="larger">Larger</button></div><button class="layout-close">Done</button></div><button class="resize" aria-label="Resize widget. Use arrow keys."><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 20 20 8M14 20l6-6"/></svg></button>`;
   frame = document.createElement("iframe");

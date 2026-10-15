@@ -1,3 +1,4 @@
+import { startPageAppearance } from "./ui/theme/theme-agent";
 import { PageDiscovery } from "../../../packages/page-discovery";
 import { GuidanceOverlay } from "../../../packages/overlay-ui";
 import type { BoundControl } from "../../../packages/page-discovery";
@@ -6,6 +7,7 @@ import { frameVisibilityBridge } from "./frame-visibility";
 const marker = "__internetNavigatorFrame080";
 if (!(globalThis as any)[marker]) {
   (globalThis as any)[marker] = true;
+  startPageAppearance();
   let discovery = new PageDiscovery(),
     overlay = new GuidanceOverlay(),
     stop: (() => void) | undefined;

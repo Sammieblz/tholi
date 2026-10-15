@@ -28,8 +28,8 @@
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root,
-  :host {
+  :root:not([data-tholi-theme]),
+  :host(:not([data-tholi-theme])) {
     --surface: #111b17;
     --card: #1c2c25;
     --sage: #243d32;
@@ -43,6 +43,26 @@
     --warning: #f0c779;
     --shadow: 0 10px 32px #0004;
   }
+}
+:root[data-tholi-theme="light"],
+:host([data-tholi-theme="light"]) {
+  color-scheme: light;
+}
+:root[data-tholi-theme="dark"],
+:host([data-tholi-theme="dark"]) {
+  color-scheme: dark;
+  --surface: #111b17;
+  --card: #1c2c25;
+  --sage: #243d32;
+  --ink: #faf7f0;
+  --muted: #b5c6bb;
+  --jade: #90c8b1;
+  --on-jade: #10261d;
+  --line: #496354;
+  --field-line: #819c8c;
+  --danger: #ffb4a7;
+  --warning: #f0c779;
+  --shadow: 0 10px 32px #0004;
 }
 * {
   box-sizing: border-box;
@@ -90,6 +110,9 @@ button {
 }
 button:active:not(:disabled) {
   transform: scale(0.98);
+}
+:root[data-tholi-theme-switching] button {
+  transition-property: opacity, transform;
 }
 input,
 textarea,

@@ -34,7 +34,8 @@
     "pretest:multi-app": "npm run build:api",
     "dev:web": "node scripts/sync-downloads.mjs && vite --config apps/web/vite.config.ts",
     "build:web": "node scripts/sync-downloads.mjs && vite build --config apps/web/vite.config.ts",
-    "test:ui": "playwright test --config playwright.ui.config.ts"
+    "test:ui": "playwright test --config playwright.ui.config.ts",
+    "capture:web": "node scripts/capture-product-screenshots.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

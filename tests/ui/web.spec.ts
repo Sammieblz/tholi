@@ -9,6 +9,27 @@ for (const width of [375, 768, 1440])
     await expect(
       page.getByRole("heading", { name: "Find your way forward." }),
     ).toBeVisible();
+    const captures = page.locator(".product-capture .capture-open img");
+    await expect(captures).toHaveCount(4);
+    for (const capture of await captures.all()) {
+      await capture.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          capture.evaluate((image: HTMLImageElement) => image.naturalWidth),
+        )
+        .toBeGreaterThan(0);
+    }
+    const enlarge = page.getByRole("button", {
+      name: "Enlarge screenshot: The next step, right where you need it.",
+    });
+    await enlarge.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog").locator("img")).toHaveJSProperty(
+      "naturalWidth",
+      1440,
+    );
+    await page.keyboard.press("Escape");
+    await expect(enlarge).toBeFocused();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

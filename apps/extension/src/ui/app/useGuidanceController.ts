@@ -1,4 +1,5 @@
 import { unresolvedTitle } from "./presentationLabels";
+import { applyAppearance } from "../theme/apply-appearance";
 import { useEffect, useState, useRef } from "react";
 import type { RoutePreview } from "../../../../../packages/route-registry";
 import type { SessionView } from "../../../../../packages/shared-types";
@@ -160,7 +161,27 @@ export function useGuidanceController(widget = false) {
   useEffect(() => {
     let current = true;
     let reading = false;
+    let readingAppearance = false;
+    const refreshAppearance = () => {
+      if (readingAppearance) return;
+      readingAppearance = true;
+      void chrome.runtime
+        .sendMessage({ type: "UI_APPEARANCE" })
+        .then((r) => {
+          if (current && !r?.error)
+            applyAppearance(
+              r?.appearance === "light" || r?.appearance === "dark"
+                ? r.appearance
+                : undefined,
+            );
+        })
+        .catch(() => {})
+        .finally(() => {
+          readingAppearance = false;
+        });
+    };
     const refresh = () => {
+      refreshAppearance();
       if (reading) return;
       reading = true;
       chrome.runtime
@@ -181,10 +202,12 @@ export function useGuidanceController(widget = false) {
       name: widget ? "tholi-widget" : "tholi-panel",
     });
     port?.onMessage.addListener(refresh);
+    chrome.tabs.onActivated.addListener(refresh);
     const interval = setInterval(refresh, 1000);
     return () => {
       current = false;
       clearInterval(interval);
+      chrome.tabs.onActivated.removeListener(refresh);
       port?.disconnect();
     };
   }, []);

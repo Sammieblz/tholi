@@ -1,3 +1,4 @@
+import { tabAppearance, validThemeSender } from "./ui/theme/theme-worker";
 import {
   trustedUi,
   isWidget,
@@ -633,6 +634,37 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   return next;
 }
 chrome.runtime.onMessage.addListener((raw, sender, respond) => {
+  if (raw?.type === "UI_APPEARANCE") {
+    // Appearance must stay responsive while navigation/inference owns the queue.
+    void (async () => {
+      if (!trustedUi(sender, session))
+        throw Error("Trusted Tholi interface required.");
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const pinned = isWidget(sender, session) ? session?.tabId : undefined;
+        const tab =
+          pinned === undefined
+            ? await activeTab()
+            : await chrome.tabs.get(pinned);
+        const appearance = tab ? await tabAppearance(tab) : undefined;
+        if (!trustedUi(sender, session)) throw Error("The website changed.");
+        if (pinned !== undefined || (await activeTab())?.id === tab?.id)
+          return { appearance };
+      }
+      return {};
+    })()
+      .then(respond)
+      .catch(() => respond({ error: "Appearance unavailable." }));
+    return true;
+  }
+  if (raw?.type === "PAGE_THEME_CHANGED") {
+    void validThemeSender(sender)
+      .then((valid) => {
+        if (valid) invalidateUi();
+        respond({ ok: valid });
+      })
+      .catch(() => respond({ ok: false }));
+    return true;
+  }
   if (raw?.type?.startsWith("UI_")) {
     const operation =
       raw.type === "UI_OPEN_SIDEBAR"

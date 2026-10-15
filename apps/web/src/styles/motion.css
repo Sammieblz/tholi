@@ -16,7 +16,7 @@
 .hero-copy > :nth-child(5) {
   animation-delay: 200ms;
 }
-.hero > .demo {
+.hero-product {
   animation: web-hero-enter 700ms var(--ease-out) 120ms both;
 }
 .onboarding-step {
@@ -67,7 +67,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-copy > *,
-  .hero > .demo {
+  .hero-product {
     transform: none;
   }
   .web-mobile-dialog[data-starting-style],

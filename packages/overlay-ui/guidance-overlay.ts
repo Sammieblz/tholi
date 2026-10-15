@@ -1,4 +1,6 @@
 import { clippedRect, type PresentedRect } from "../browser-adapter/geometry";
+import { contrastPageTheme } from "../ui/page-theme";
+import { overlayStyles } from "./overlay-styles";
 let activeRect: PresentedRect | undefined;
 export function currentGuidanceRect() {
   return activeRect;
@@ -98,10 +100,11 @@ export class GuidanceOverlay {
     this.root.id = "internet-navigator-overlay";
     this.root.setAttribute("aria-hidden", "true");
     this.root.dataset.tholiUi = "";
+    this.root.dataset.tholiTheme = contrastPageTheme();
     this.root.style.cssText =
       "position:fixed;inset:0;z-index:2147483647;pointer-events:none";
     this.shadow = this.root.attachShadow({ mode: "closed" });
-    this.shadow.innerHTML = `<style>:host{all:initial}*{box-sizing:border-box}.halo,.glow{position:fixed;border:3px solid #1f6b57;border-radius:10px;box-shadow:0 0 0 2px #fff,0 0 0 5px #1f6b5730;pointer-events:none}.glow{border-color:#e6af57;box-shadow:0 0 0 8px #e6af5740;opacity:0}.tip{position:fixed;width:min(278px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:hidden;padding:14px 16px;background:#faf7f0;color:#1c2522;border:1px solid #bdcdbf;border-radius:16px;font:14px/1.5 Inter,system-ui;box-shadow:0 8px 28px #0003;pointer-events:none;overflow-wrap:anywhere}.brand{display:block;color:#1f6b57;font-size:12px;font-weight:650;margin-bottom:6px}.brand::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#e6af57;margin-right:7px}.warning{border-color:#745014}.arrow{position:fixed;background:#faf7f0;color:#1c2522;border:2px solid #1f6b57;border-radius:14px;padding:12px;font:14px Inter,system-ui;display:flex;gap:8px;align-items:center}.arrow svg{width:22px;height:22px;animation:direction 900ms cubic-bezier(.77,0,.175,1) 3}.arrow[data-direction=up]{--dx:0px;--dy:-6px}.arrow[data-direction=down]{--dx:0px;--dy:6px}.arrow[data-direction=left]{--dx:-6px;--dy:0px}.arrow[data-direction=right]{--dx:6px;--dy:0px}@keyframes direction{50%{transform:translate(var(--dx),var(--dy))}}@media(prefers-reduced-motion:reduce){.halo,.tip,.arrow svg{animation:none}}[hidden]{display:none!important}</style><div class="halo"></div><div class="glow"></div><div class="tip"><span class="brand">Tholi · Your next step</span><span class="instruction"></span></div><div class="arrow" hidden></div>`;
+    this.shadow.innerHTML = `<style>${overlayStyles}</style><div class="halo"></div><div class="glow"></div><div class="tip"><span class="brand">Tholi · Your next step</span><span class="instruction"></span></div><div class="arrow" hidden></div>`;
     this.tip = this.shadow.querySelector(".tip")!;
     this.halo = this.shadow.querySelector(".halo")!;
     this.glow = this.shadow.querySelector(".glow")!;

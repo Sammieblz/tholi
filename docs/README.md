@@ -20,6 +20,8 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Contribution and release procedure](../CONTRIBUTING.md)
 - [Frontend structure and ownership](frontend-architecture.md)
 - [Current UI refinement, motion, and installed skills](ui-refinement.md)
+- [Adaptive website contrast and theme detection](adaptive-appearance.md)
+- [Real website screenshot sources and regeneration](product-screenshots.md)
 
 ## Historical evidence and specialized fixtures
 

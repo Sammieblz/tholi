@@ -26,7 +26,7 @@ const files = await artifactFiles(extension);
 const ui = JSON.parse(await readFile("output/qa/ui-build.json", "utf8"));
 if (
   !ui.passed ||
-  ui.expected !== 10 ||
+  ui.expected !== 11 ||
   ui.extensionVersion !== manifest.version ||
   JSON.stringify(ui.artifactFiles) !== JSON.stringify(files)
 )

@@ -1,9 +1,15 @@
 .hero {
+  padding-top: 22px;
+}
+.hero-copy {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 72px;
-  align-items: center;
-  min-height: 620px;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 64px;
+  align-items: end;
+  padding-bottom: 40px;
+}
+.hero-overview {
+  padding-bottom: 14px;
 }
 .eyebrow {
   display: flex;
@@ -63,20 +69,6 @@
   color: var(--jade);
   letter-spacing: -0.4px;
 }
-.principles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  margin: 64px 0;
-}
-.principles h3 {
-  font-size: 20px;
-  font-weight: 600;
-}
-.principles p {
-  font-size: 15px;
-  color: var(--muted);
-}
 .faq {
   max-width: 780px;
   margin: 100px auto;
@@ -106,12 +98,14 @@
   margin-top: 44px;
 }
 @media (max-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 36px;
-  }
   .hero-copy {
-    max-width: 650px;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-bottom: 24px;
+  }
+  .hero-overview {
+    max-width: 620px;
+    padding: 0;
   }
   .hero h1 br {
     display: none;
@@ -123,13 +117,12 @@
   .use-cases {
     gap: 30px;
   }
-  .principles {
-    gap: 24px;
-  }
 }
 @media (max-width: 600px) {
-  .hero {
-    min-height: auto;
+  .story-band,
+  .use-cases {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
   .hero h1 {
     font-size: 48px;
@@ -147,9 +140,6 @@
   }
   .use-cases {
     margin-bottom: 36px;
-  }
-  .principles {
-    margin: 32px 0;
   }
   .faq {
     margin: 56px 0;
