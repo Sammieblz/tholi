@@ -246,7 +246,7 @@ export const workflowGuides: WorkflowGuide[] = [
           branch: "git",
           entity: "project",
           instruction:
-            "Enter and review configuration on the website. Use your project's build command and output directory; Navigator does not invent them.",
+            "Enter and review configuration on the website. Use your project's build command and output directory; Tholi does not invent them.",
         },
       ),
       step(
@@ -262,7 +262,7 @@ export const workflowGuides: WorkflowGuide[] = [
         {
           branch: "upload",
           instruction:
-            "Select your prebuilt website files yourself. Native file pickers and file contents are outside Navigator's observation.",
+            "Select your prebuilt website files yourself. Native file pickers and file contents are outside Tholi's observation.",
         },
       ),
       step(

@@ -9,8 +9,9 @@ import architecture from "../../../../../docs/live-navigation.md?raw";
 import naturalLanguage from "../../../../../docs/nlp-architecture.md?raw";
 import backend from "../../../../../docs/api-setup.md?raw";
 import contributing from "../../../../../CONTRIBUTING.md?raw";
+import { repositorySourceUrl } from "../../config/project";
 
-export const repositoryUrl = "https://github.com/Sammieblz/web-navigator";
+export { repositoryUrl } from "../../config/project";
 export type DocumentationArticle = {
   slug: string;
   title: string;
@@ -159,9 +160,9 @@ export function resolveDocumentationLink(
   if (/^(?:https?:|mailto:)/i.test(href)) return { href, local: false };
   if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("//"))
     return { href: "", local: false };
-  const sourceBase = new URL(source, `${repositoryUrl}/blob/main/`);
+  const sourceBase = new URL(source, repositorySourceUrl);
   const target = new URL(href, sourceBase);
-  const prefix = "/Sammieblz/web-navigator/blob/main/";
+  const prefix = new URL(repositorySourceUrl).pathname;
   if (!target.pathname.startsWith(prefix))
     return { href: target.href, local: false };
   let relative: string;
@@ -174,7 +175,7 @@ export function resolveDocumentationLink(
   return registered
     ? { href: `/docs/${registered.slug}${target.hash}`, local: true }
     : {
-        href: `${repositoryUrl}/blob/main/${relative}${target.hash}`,
+        href: `${repositorySourceUrl}${relative}${target.hash}`,
         local: false,
       };
 }

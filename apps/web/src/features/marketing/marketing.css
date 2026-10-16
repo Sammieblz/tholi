@@ -64,16 +64,9 @@
   color: var(--jade);
 }
 .explanation-chapter {
-  --ink: #1c2522;
-  --muted: #525f58;
-  --jade: #1f6b57;
-  --line: #cbd6cc;
-  background: #faf7f0;
+  background: var(--web-explanation);
   color: var(--ink);
   padding-block: var(--web-space);
-}
-:root[data-tholi-theme="light"] .explanation-chapter {
-  background: #f0eee5;
 }
 .section-heading {
   display: grid;

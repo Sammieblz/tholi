@@ -7,6 +7,7 @@ apps/web/src/
   main.tsx                    React mount, global style order, providers
   app/                        Routing, browser history, section entrances
   components/SiteLayout.tsx    Header, accessible mobile navigation, footer
+  config/project.ts           Repository links derived from root package metadata
   features/
     account/                  Mock auth, session state, welcome, styles
     demo/                     Sample workspace and interactive walkthrough

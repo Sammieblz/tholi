@@ -60,7 +60,7 @@ export function rankTargets(
   if (candidates[1] && best.score - candidates[1].score < 0.08)
     return {
       confidence: best.score,
-      reason: "Multiple controls match. Navigator will not guess.",
+      reason: "Multiple controls match. Tholi will not guess.",
       candidates,
     };
   return {

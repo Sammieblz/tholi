@@ -80,9 +80,14 @@ for (const scope of ["e2e", "live"]) {
 }
 const release = resolve("output/releases");
 await mkdir(release, { recursive: true });
-const name = `internet-navigator-${manifest.version}`;
+const name = `tholi-${manifest.version}`;
 const archive = join(release, name + ".zip");
-if (await stat(archive).catch(() => undefined))
+if (
+  (await stat(archive).catch(() => undefined)) ||
+  (await stat(
+    join(release, `internet-navigator-${manifest.version}.zip`),
+  ).catch(() => undefined))
+)
   throw new Error(
     "Release archive already exists; preserve it and bump the version for changes",
   );

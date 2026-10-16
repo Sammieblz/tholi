@@ -426,7 +426,7 @@ export function livePreview(origin: string) {
     description:
       "Discover the current page, describe your goal, or choose any available control.",
     safetyNote:
-      "You make every click. Navigator verifies changes and stops before consequential actions.",
+      "You make every click. Tholi verifies changes and stops before consequential actions.",
     version: LIVE_VERSION,
     lastVerified: "Live page observations",
     milestones: ["Discover page", "Choose a goal", "Verify the result"],

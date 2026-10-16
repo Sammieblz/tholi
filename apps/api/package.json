@@ -1,5 +1,6 @@
 {
   "name": "@internet-navigator/api",
+  "description": "Tholi's optional single-owner local API for knowledge, navigation and OCR.",
   "version": "0.10.0",
   "type": "module",
   "private": false,

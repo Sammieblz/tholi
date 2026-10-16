@@ -248,8 +248,8 @@ function App() {
                   <section className="card">
                     <h2>Subscription</h2>
                     <p>
-                      Billing is in your account overview. Navigator should
-                      guide you back.
+                      Billing is in your account overview. Tholi should guide
+                      you back.
                     </p>
                     <button
                       className="primary"
@@ -287,9 +287,7 @@ function App() {
                     >
                       Complete demo sign in
                     </button>
-                    <p>
-                      Complete this manually, then select Resume in Navigator.
-                    </p>
+                    <p>Complete this manually, then select Resume in Tholi.</p>
                   </section>
                 </>
               )}
@@ -301,8 +299,8 @@ function App() {
                     <span className="pill">USER-CONTROLLED BOUNDARY</span>
                     <h2>Before you confirm</h2>
                     <p>
-                      Navigator must stop here. Reaching this screen does not
-                      mean your subscription is canceled.
+                      Tholi must stop here. Reaching this screen does not mean
+                      your subscription is canceled.
                     </p>
                     <p>This button only affects the fictional demo plan.</p>
                     <button
@@ -344,7 +342,7 @@ function App() {
                 <>
                   <h1>An unfamiliar screen</h1>
                   <section className="card">
-                    <p>Navigator must stop instead of guessing.</p>
+                    <p>Tholi must stop instead of guessing.</p>
                     <button onClick={reset}>Reset demo</button>
                   </section>
                 </>
@@ -375,9 +373,7 @@ function App() {
               </section>
             </div>
           )}
-          <footer>
-            Northstar is a fictional service for testing Internet Navigator.
-          </footer>
+          <footer>Northstar is a fictional service for testing Tholi.</footer>
         </main>
       </div>
       <details className="test-controls">

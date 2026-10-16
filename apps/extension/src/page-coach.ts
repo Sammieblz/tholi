@@ -1361,7 +1361,7 @@ export class PageCoach {
       this.clearTarget();
       this.state("choosing");
       this.view.instruction =
-        "Review the website's result yourself. This control does not declare an outcome Navigator can verify.";
+        "Review the website's result yourself. This control does not declare an outcome Tholi can verify.";
       if (this.view.goalPlan)
         this.view.goalPlan = {
           ...this.view.goalPlan,

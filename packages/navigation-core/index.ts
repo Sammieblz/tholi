@@ -338,7 +338,7 @@ export class NavigationCore {
           issue: "consequential",
           steps: [],
           reason:
-            "Review this consequential action on the website. Navigator stops before submission.",
+            "Review this consequential action on the website. Tholi stops before submission.",
         },
       });
     }

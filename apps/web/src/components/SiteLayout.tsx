@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu, Xmark } from "iconoir-react";
 import { SiteLink, useRouter } from "../app/router";
+import { repositoryUrl } from "../config/project";
+import { legalOperator } from "../features/legal/operator";
 import { useAccount } from "../features/account/session";
 import {
   CookieConsent,
@@ -23,15 +25,15 @@ const footerGroups = [
     links: [
       ["Documentation", "/docs"],
       ["Troubleshooting", "/docs/troubleshooting"],
-      ["Source code", "https://github.com/Sammieblz/web-navigator"],
+      ["Source code", repositoryUrl],
     ],
   },
   {
     title: "Company",
     links: [
       ["About Tholi", "/about"],
-      ["ILUNỌNSEN", "https://ilunonsen.com"],
-      ["Contact", "mailto:info@ilunonsen.com"],
+      ["ILUNỌNSEN", legalOperator.companyUrl],
+      ["Contact", `mailto:${legalOperator.email}`],
     ],
   },
   {

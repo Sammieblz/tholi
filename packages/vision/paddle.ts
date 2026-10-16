@@ -18,7 +18,7 @@ export class PaddleEngine {
       textRecognitionModelName: "PP-OCRv6_tiny_rec",
       textDetectionModelAsset: { url: this.root + "PP-OCRv6_tiny_det.tar" },
       textRecognitionModelAsset: { url: this.root + "PP-OCRv6_tiny_rec.tar" },
-      worker: false, // Already isolated in Navigator's dedicated worker.
+      worker: false, // Already isolated in Tholi's dedicated worker.
       ortOptions: {
         backend: "wasm",
         wasmPaths: this.runtime,

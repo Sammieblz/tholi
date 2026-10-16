@@ -1,5 +1,6 @@
 import "./downloads.css";
 import packageMetadata from "../../../../../package.json";
+import { repositoryUrl } from "../../config/project";
 import {
   ArrowRight,
   Download,
@@ -168,10 +169,7 @@ export function DownloadPage() {
           Load the generated <code>dist/extension</code> folder. After
           rebuilding, reload Tholi in Chrome and refresh your website tab.
         </p>
-        <a
-          className="web-text-link"
-          href="https://github.com/Sammieblz/web-navigator"
-        >
+        <a className="web-text-link" href={repositoryUrl}>
           View source repository
         </a>
       </details>

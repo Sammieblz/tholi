@@ -1,5 +1,6 @@
 {
   "name": "@internet-navigator/navigation-core",
+  "description": "Tholi's shared navigation contracts, task queues and planning orchestration.",
   "version": "0.10.0",
   "type": "module",
   "private": true,

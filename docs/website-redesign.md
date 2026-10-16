@@ -162,3 +162,9 @@ Earlier runs varied, including 16.8 ms normal website p95, 83.4 ms synthetic-loa
 ### Playback simplification, October 16, 2026
 
 Applied the local Animate skill’s explanatory-motion guidance: retain existing marker morphs, run the requested continuous sequence only while visible, preserve reduced-motion behavior, and clean up timers and media observers. Website playback uses the native video loop with one accessible Pause/Resume button; captions remain absent. Validation passed: TypeScript, the production website build, and both focused browser cases covering looping, pause retention, appearance changes, mobile playback, reduced motion and the complete marker sequence (2/2). This small change does not recertify the earlier full release gate.
+
+### Theme-aware explanation chapter, October 16, 2026
+
+The three-step section previously forced ivory and light-theme text colors in both appearances. It now uses the `--web-explanation` chapter token: the existing dark card surface in Dark mode, and warm ivory in Light mode. Text, accents and separators inherit the selected appearance. This applies Apple Design’s local `dark-mode.md` guidance to use adaptive colors and UI UX Pro Max’s contrast guidance, without adding motion or changing navigation.
+
+Disposable-browser checks and screenshots cover 1440 px and 375 px in both themes. Minimum measured text contrast is **7.94:1** in Dark and **5.48:1** in Light. The website build passes. The complete release suite was not rerun for this color-only fix; the preceding full audit remains historical evidence for its own bytes.

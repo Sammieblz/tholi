@@ -6,7 +6,7 @@ Discovery begins when you submit a destination with Guide me or explicitly start
 
 Discovery reads bounded labels, authored accessibility descriptions, roles, headings, form metadata, relationships and interaction state. It never reads input/textarea values, passwords, OTPs, editable contents or full page HTML. Geometry is transient. Sanitization redacts recognizable sensitive strings, but these heuristics cannot identify every private label on an arbitrary website.
 
-Authentication is detected using field metadata and bounded form/screen context. Credentials and two-factor waiting retain the objective without an expiry deadline. Navigator does not type, authenticate or submit for the user.
+Authentication is detected using field metadata and bounded form/screen context. Credentials and two-factor waiting retain the objective without an expiry deadline. Tholi does not type, authenticate or submit for the user.
 
 ## Persistence
 
@@ -20,7 +20,7 @@ Knowledge is bounded to 50 sites, 100 latest pages, 120 state snapshots, 30 temp
 
 ## Vision, models and optional backend
 
-Viewport capture requires an active authorized HTTP/HTTPS tab and Chrome screenshot access. Navigator hides its overlays and masks discovered editable fields, including open shadow roots, plus all iframe rectangles. Authorized frames support DOM guidance but their pixels remain masked. Images and recognized private text are temporary processing data, not saved evidence.
+Viewport capture requires an active authorized HTTP/HTTPS tab and Chrome screenshot access. Tholi hides its overlays and masks discovered editable fields, including open shadow roots, plus all iframe rectangles. Authorized frames support DOM guidance but their pixels remain masked. Images and recognized private text are temporary processing data, not saved evidence.
 
 MiniLM and default Tesseract assets are packaged locally. Experimental Paddle assets are included only by the explicit experimental build. The optional Chrome Prompt API is separate; enabling it may download Chrome's model. It receives bounded sanitized observations and task context. Predictions remain untrusted and cannot declare success.
 

@@ -148,7 +148,7 @@ export class RouteEngine {
     if (state.behavior === "checkpoint") {
       this.view.status = "checkpoint";
       this.view.instruction =
-        "Sign in manually. Navigator does not read authentication fields. Then select Resume.";
+        "Sign in manually. Tholi does not read authentication fields. Then select Resume.";
       return;
     }
     if (state.behavior === "success") {

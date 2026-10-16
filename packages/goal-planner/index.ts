@@ -246,7 +246,7 @@ export function actionBoundary(
     goal,
     control.riskReason === "unknown-edit-effect"
       ? "This edit control does not declare whether it opens an editor or changes data immediately. Review its effect on the website before continuing."
-      : "The matching control may submit or commit a change. Navigator stops before this consequential action; review it on the website.",
+      : "The matching control may submit or commit a change. Tholi stops before this consequential action; review it on the website.",
     control.riskReason === "unknown-edit-effect"
       ? "unknown-effect"
       : "consequential",

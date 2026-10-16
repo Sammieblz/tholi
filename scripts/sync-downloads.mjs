@@ -11,7 +11,8 @@ import { join, resolve, dirname } from "node:path";
 export async function syncDownloads() {
   const records = [];
   for (const name of await readdir("output/releases").catch(() => [])) {
-    if (!/^internet-navigator-\d+\.\d+\.\d+\.json$/.test(name)) continue;
+    if (!/^(?:tholi|internet-navigator)-\d+\.\d+\.\d+\.json$/.test(name))
+      continue;
     const evidence = JSON.parse(
       await readFile(join("output/releases", name), "utf8"),
     );
@@ -64,7 +65,7 @@ export async function syncDownloads() {
   const mirror = resolve("apps/public/downloads");
   for (const name of await readdir(mirror)) {
     if (
-      !/^internet-navigator-\d+\.\d+\.\d+\.zip$/.test(name) ||
+      !/^(?:tholi|internet-navigator)-\d+\.\d+\.\d+\.zip$/.test(name) ||
       name === latest.file
     )
       continue;

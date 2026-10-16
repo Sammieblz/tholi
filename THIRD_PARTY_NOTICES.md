@@ -1,4 +1,4 @@
-Tholi (internal package name Internet Navigator) code is MIT licensed. Bundled third-party components retain
+Tholi code is MIT licensed. Legacy `@internet-navigator/*` package identifiers are retained for compatibility. Bundled third-party components retain
 their own licenses. The extension includes the complete license texts under
 `licenses/` and the build-generated `third-party.json` with pinned versions.
 

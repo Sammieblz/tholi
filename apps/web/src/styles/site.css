@@ -12,6 +12,7 @@
   --jade: #90c8b1;
   --line: #405a4c;
   --web-product: #163c30;
+  --web-explanation: var(--card);
   --web-continuity: #1c3026;
   --web-faq: #1a2821;
   --web-closing: #204d3d;
@@ -25,6 +26,7 @@
   --jade: #1f6b57;
   --line: #cbd6cc;
   --web-product: #e5ede5;
+  --web-explanation: #f0eee5;
   --web-continuity: #edf0e9;
   --web-faq: #f0eee4;
   --web-closing: #e0e9df;

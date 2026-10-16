@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createApi } from "../../apps/api/src/server";
+import apiPackage from "../../apps/api/package.json";
 import { MiniLM, SemanticIndex, MemoryDerivedStore } from "../../packages/nlp";
 import { NavigationCore } from "../../packages/navigation-core";
 import { fixture } from "./fixtures";
@@ -81,11 +82,14 @@ test("authenticated API uses the shared real NLP core, explicit CORS, SQLite per
         operation: t.operation,
       })),
     );
-    expect(
-      (await app.inject({ url: "/v1/openapi.json", headers })).json().paths[
-        "/v1/plans"
-      ],
-    ).toBeDefined();
+    const specification = (
+      await app.inject({ url: "/v1/openapi.json", headers })
+    ).json();
+    expect(specification.paths["/v1/plans"]).toBeDefined();
+    expect(specification.info).toMatchObject({
+      title: "Tholi single-owner API",
+      version: apiPackage.version,
+    });
     const route = saveTask(beginJourney("Open Languages", observation.origin));
     expect(
       (

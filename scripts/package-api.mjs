@@ -18,15 +18,19 @@ if (JSON.stringify(apiFiles) !== JSON.stringify(report.apiArtifactFiles))
 const multiApp = await multiAppEvidence(report.artifactFiles, apiFiles);
 const vision = await visionEvidence(report.artifactFiles, apiFiles);
 const reliability = await reliabilityEvidence(report.artifactFiles);
-const version = JSON.parse(
-  await readFile("apps/api/package.json", "utf8"),
-).version;
+const apiPackage = JSON.parse(await readFile("apps/api/package.json", "utf8"));
+const version = apiPackage.version;
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid version");
 const release = resolve("output/releases"),
   staging = join(release, "backend-" + version),
-  name = "internet-navigator-api-" + version;
+  name = "tholi-api-" + version;
 await mkdir(release, { recursive: true });
-if (await stat(join(release, name + ".tgz")).catch(() => undefined))
+if (
+  (await stat(join(release, name + ".tgz")).catch(() => undefined)) ||
+  (await stat(join(release, `internet-navigator-api-${version}.tgz`)).catch(
+    () => undefined,
+  ))
+)
   throw new Error("Preserve the existing release; bump the version.");
 await mkdir(staging, { recursive: true });
 await cp("apps/api/dist", join(staging, "dist"), { recursive: true });
@@ -55,7 +59,8 @@ await writeFile(
   join(staging, "package.json"),
   JSON.stringify(
     {
-      name: "@internet-navigator/api",
+      name: apiPackage.name,
+      description: apiPackage.description,
       version,
       type: "module",
       license: "MIT",

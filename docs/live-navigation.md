@@ -35,7 +35,7 @@ Optional Chrome model interpretation is experimental. It returns current control
 
 ## Guidance, OCR and outcomes
 
-The extension owns binding and verification. Users click, type, authenticate and submit. Navigator observes normal interactions automatically. Authentication retains context without expiry; ordinary waiting and recovery retain an incomplete task. Review clicks start verification and never prove success.
+The extension owns binding and verification. Users click, type, authenticate and submit. Tholi observes normal interactions automatically. Authentication retains context without expiry; ordinary waiting and recovery retain an incomplete task. Review clicks start verification and never prove success.
 
 Tesseract viewport OCR runs in a separate local worker only when discovery evidence is insufficient. Editable fields and all iframe pixels are masked. Fresh DOM bindings take precedence. OCR-only suggestions require unambiguous text and retain unknown effects. Paddle is available only in an explicit experimental build and has not passed startup/promotion gates.
 

@@ -1,5 +1,11 @@
 {
-  "name": "internet-navigator",
+  "name": "tholi",
+  "description": "Local website guidance that keeps your destination in view while you stay in control.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sammieblz/web-navigator.git"
+  },
+  "author": "ILUNỌNSEN LLC",
   "private": true,
   "version": "0.10.1",
   "type": "module",

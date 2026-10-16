@@ -21,6 +21,6 @@ These browser checks use controlled Cloudflare-like and GitHub-like fixtures. Si
 
 1. Open `chrome://extensions` and select **Reload** on Tholi.
 2. Confirm its version is **0.9.2** and that its unpacked directory is this repository's `dist/extension`.
-3. Refresh the website tab, open Navigator, and enter **Account settings** once.
+3. Refresh the website tab, open Tholi, and enter **Account settings** once.
 
-Navigator should guide a relevant menu when the destination is not mounted, then replan against its live contents. The destination stays active until fresh evidence verifies arrival.
+Tholi should guide a relevant menu when the destination is not mounted, then replan against its live contents. The destination stays active until fresh evidence verifies arrival.

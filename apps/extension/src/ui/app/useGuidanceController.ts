@@ -541,7 +541,7 @@ export function useGuidanceController(widget = false) {
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = "navigator-route-report.json";
+    a.download = "tholi-route-report.json";
     a.hidden = true;
     document.body.append(a);
     a.click();

@@ -14,7 +14,7 @@ During a deliberate drag, approach within 24 pixels of the right viewport edge a
 
 ## Access recovery
 
-DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Navigator requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
+DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Tholi requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
 
 Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted Chrome pages cannot be scanned.
 

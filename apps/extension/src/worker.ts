@@ -367,7 +367,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       session.view.page = undefined;
       session.view.selectedControlId = undefined;
       session.view.instruction =
-        "Navigator was updated. Resume for a fresh page handshake.";
+        "Tholi was updated. Resume to refresh guidance on this page.";
       session.documentId = undefined;
       session.navigationPending = true;
       await save();
@@ -1283,7 +1283,7 @@ chrome.runtime.onMessage.addListener((raw, sender, respond) => {
         await save();
         return {
           error:
-            "Navigator could not access this page. Click the extension icon on the website, refresh the page, then Start again. If Chrome asks for this site's access, allow it to continue. Browser pages and documents without HTML controls are unsupported.",
+            "Tholi could not access this page. Click its toolbar icon on the website, refresh the page, then try again. If Chrome asks for this site's access, allow it to continue. Browser pages and documents without HTML controls are unsupported.",
         };
       }
     }
