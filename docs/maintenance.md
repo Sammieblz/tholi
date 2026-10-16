@@ -37,3 +37,13 @@ The README provides one current installation path. The documentation index separ
 The helper initially assumed the old chooser existed before the panel finished refreshing. Browser failures exposed this synchronization assumption. It now waits for the available destination/task UI and enabled exploration action; product assertions and frozen expectations remain unchanged.
 
 No replacement ZIP/backend archive is produced by this cleanup. Packaging still requires all release gates against matching bytes. Native Chrome and signed-in Amazon/Cloudflare/GitHub checks remain pending in [the current checklist](chrome-handoff.md).
+
+## Embedded access CI regression, October 16, 2026
+
+The ungranted-frame browser check failed consistently because the task-notice guard suppressed all notices during the idle presentation of an active page-exploration session. The worker still identified the denied origin and correctly excluded its controls. Increasing a timeout or changing the locator would not repair the missing UI.
+
+Current frame access now has a separate observation-scoped projection. Its actions remain available before a destination and while planning; stopped, paused, checkpoint, completed and canceled sessions still suppress obsolete prompts. Existing task-owned return, review and visual instructions retain their phase guards. No host-permission, discovery or outcome rule changes.
+
+Applied the project-local [Fixing Accessibility](../.codex/skills/fixing-accessibility/SKILL.md) guidance on minimal targeted fixes and reachable actions, and [Baseline UI](../.codex/skills/baseline-ui/SKILL.md)'s existing-primitives rule. No new controls or animations were added. The existing browser case now also checks Conversation mode, the exact requested origin, and denial without private-frame discovery. Unit coverage checks pre-goal recovery and terminal-session suppression.
+
+Verification passed: `npm run check` (strict TypeScript, **253 unit tests**, demo/extension/website builds), the full `npm run test:multi-app:browser` suite (**7/7**), and the complete UI regression (**29/29**, 5.7 minutes). Both browser reports bind to the same final extension assets. Frozen corpora, host permissions and release archives are unchanged. Native permission dialogs and signed-in checks remain separate pending work.

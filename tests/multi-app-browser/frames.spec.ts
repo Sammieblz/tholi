@@ -99,6 +99,33 @@ test("an ungranted embedded origin remains unscanned and exposes selective acces
     await expect(
       app.panel.getByRole("button", { name: "Allow https://ungranted.test" }),
     ).toBeVisible();
+    await app.panel
+      .getByRole("button", { name: "Conversation", exact: true })
+      .click();
+    const allow = app.panel.getByRole("button", {
+      name: "Allow https://ungranted.test",
+      exact: true,
+    });
+    await expect(allow).toBeVisible();
+    await app.panel.evaluate(() => {
+      (globalThis as any).__requestedFrameOrigins = [];
+      chrome.permissions.request = async (permissions) => {
+        (globalThis as any).__requestedFrameOrigins = permissions.origins;
+        return false;
+      };
+    });
+    await allow.click();
+    await expect(app.panel.getByRole("alert")).toContainText(
+      "Access was not granted",
+    );
+    expect(
+      await app.panel.evaluate(
+        () => (globalThis as any).__requestedFrameOrigins,
+      ),
+    ).toEqual(["https://ungranted.test/*"]);
+    expect(JSON.stringify((await app.view())?.controls)).not.toContain(
+      "Private embedded field",
+    );
   } finally {
     await app.close();
   }

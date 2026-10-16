@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { widgetDensity } from "../packages/ui/widget-density";
-import { currentTaskNotices } from "../apps/extension/src/ui/features/journey/current-task-notices";
+import {
+  currentFrameAccess,
+  currentTaskNotices,
+} from "../apps/extension/src/ui/features/journey/current-task-notices";
 import { present } from "../packages/ui/presentation";
 import type { SessionView } from "../packages/shared-types";
 
@@ -40,4 +43,47 @@ it("only exposes notices belonging to an actionable current task", () => {
   expect(
     currentTaskNotices(view, present(view, "Finding route")),
   ).toBeUndefined();
+});
+
+function pageExplorationView(): SessionView {
+  return {
+    status: "running",
+    routeId: "navigator.live",
+    routeVersion: "1.0.0",
+    confidence: 1,
+    frameAccess: ["https://ungranted.test"],
+    verifiedSteps: 0,
+    history: [],
+    instruction: "Choose a destination",
+  };
+}
+
+it("keeps current frame-access recovery available before a goal and during planning", () => {
+  const view = pageExplorationView();
+  expect(present(view).phase).toBe("idle");
+  expect(currentTaskNotices(view, present(view))).toBeUndefined();
+  expect(
+    currentTaskNotices(view, present(view, "Finding route")),
+  ).toBeUndefined();
+  expect(currentFrameAccess(view)).toEqual(["https://ungranted.test"]);
+  expect(currentFrameAccess({ ...view, frameAccess: [] })).toEqual([]);
+  expect(currentFrameAccess(undefined)).toEqual([]);
+});
+
+it("does not resurrect frame prompts from paused, stopped or completed sessions", () => {
+  const view = pageExplorationView();
+  for (const status of [
+    "stopped",
+    "completed",
+    "paused",
+    "checkpoint",
+  ] as const)
+    expect(currentFrameAccess({ ...view, status })).toEqual([]);
+  for (const status of ["completed", "canceled", "paused"] as const)
+    expect(
+      currentFrameAccess({
+        ...view,
+        request: { status } as SessionView["request"],
+      }),
+    ).toEqual([]);
 });

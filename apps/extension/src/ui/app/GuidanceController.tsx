@@ -9,7 +9,10 @@ import { GuidanceApp } from "../../../../../packages/ui/guidance";
 import "../styles/advanced.css";
 import { useGuidanceController } from "./useGuidanceController";
 import { presentRouteProgress } from "../../../../../packages/ui/route-progress";
-import { currentTaskNotices } from "../features/journey/current-task-notices";
+import {
+  currentFrameAccess,
+  currentTaskNotices,
+} from "../features/journey/current-task-notices";
 
 export function GuidanceController({ widget = false }: { widget?: boolean }) {
   const controller = useGuidanceController(widget);
@@ -42,6 +45,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
   } = controller;
   const attentionWorkflow = currentAttentionWorkflow(displayedView, busy, goal);
   const noticeView = currentTaskNotices(displayedView, presentation);
+  const frameAccess = currentFrameAccess(displayedView);
   return (
     <GuidanceApp
       presentation={presentation}
@@ -64,7 +68,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
           error ||
           otherTab ||
           noticeView?.continuationOrigin ||
-          noticeView?.frameAccess?.length ||
+          frameAccess.length ||
           noticeView?.clarification ||
           noticeView?.goalPlan?.action?.kind === "visual" ||
           (attentionWorkflow && workflowRequiresAttention(attentionWorkflow))
@@ -138,7 +142,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
         <>
           {!otherTab &&
             !noticeView?.continuationOrigin &&
-            !noticeView?.frameAccess?.length &&
+            !frameAccess.length &&
             noticeView?.clarification && (
               <section
                 className="goal-plan tholi-clarification"
@@ -170,7 +174,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
             )}
           {!otherTab &&
             !noticeView?.continuationOrigin &&
-            !!noticeView?.frameAccess?.length && (
+            !!frameAccess.length && (
               <section
                 className="goal-plan"
                 aria-label="Embedded application access"
@@ -179,7 +183,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
                 <p>
                   Allow access to an embedded website to guide its controls.
                 </p>
-                {noticeView.frameAccess.map((origin) => (
+                {frameAccess.map((origin) => (
                   <button
                     key={origin}
                     disabled={busy || otherTab}
@@ -200,7 +204,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
             )}
           {!otherTab &&
             !noticeView?.continuationOrigin &&
-            !noticeView?.frameAccess?.length &&
+            !frameAccess.length &&
             !noticeView?.clarification &&
             attentionWorkflow && (
               <WorkflowPanel
@@ -217,7 +221,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
             )}
           {!otherTab &&
             !noticeView?.continuationOrigin &&
-            !noticeView?.frameAccess?.length &&
+            !frameAccess.length &&
             !noticeView?.clarification &&
             noticeView?.journey?.workflow?.status !== "review" &&
             noticeView?.goalPlan?.action?.kind === "visual" && (

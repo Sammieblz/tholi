@@ -18,6 +18,8 @@ DOM discovery and screenshot access are separate. A saved site grant can permit 
 
 Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted Chrome pages cannot be scanned.
 
+While **Explore page controls** is active, an ungranted embedded origin exposes an **Allow ORIGIN** action even before a destination is entered. This page-access notice is separate from task-owned instructions. The action requests only that origin; declining leaves its controls unscanned. Paused, stopped and completed sessions do not revive old permission prompts.
+
 ## Pending native checks
 
 Record Chrome version, manifest version, build provenance, date and result. Automated extension-page tests do not establish native permission dialogs, side-panel behavior or actual screen-reader speech.
