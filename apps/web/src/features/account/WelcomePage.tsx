@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SiteLink, useRouter } from "../../app/router";
 import { Demo } from "../demo/Demo";
 import { useAccount } from "./session";
-import { ArrowRight, Refresh, LogOut } from "iconoir-react";
+import { Refresh, LogOut } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 export function WelcomePage() {
   const { account, signOut } = useAccount(),
@@ -24,7 +24,6 @@ export function WelcomePage() {
       <div className="welcome-actions">
         <SiteLink to="/download" className="web-primary">
           Install Tholi
-          <ArrowRight width={18} aria-hidden="true" />
         </SiteLink>
         <button onClick={() => go("/onboarding")}>
           <Refresh width={17} aria-hidden="true" />

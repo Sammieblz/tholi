@@ -22,7 +22,7 @@ After rebuilding, select **Reload** in `chrome://extensions` and refresh the web
 
 Guide and Conversation share the same journey. Use settings to choose a movable/resizable widget or reveal Advanced controls. Route details and saved journeys are expandable; backend credentials remain in the sidebar. The controlled Northstar demo remains available with `npm run dev:demo` at `http://127.0.0.1:5173`.
 
-Run `npm run dev:web` for the local Tholi website at **http://127.0.0.1:5174**. It includes real extension screenshots, a packaged-preview download, setup instructions, and mock accounts/onboarding. No hosting, real authentication, or account requirement is added. See [UI setup, motion, and verification](docs/tholi-ui.md) and [screenshot sources and regeneration](docs/product-screenshots.md).
+Run `npm run dev:web` for the local Tholi website at **http://127.0.0.1:5174**. It includes a genuine extension recording, real screenshots, the shared-interface practice, searchable repository documentation, setup and downloads, mock onboarding, and Tholi-specific launch-document drafts. Dark is the default; Light/Dark choices persist only when optional preference cookies are allowed. Production analytics is disabled. No hosting, real authentication, or account requirement is added. Source remains **0.10.1** and the eligible download remains the accurately labeled **0.10.0** archive. See [the website redesign and setup](docs/website-redesign.md), [UI behavior](docs/tholi-ui.md), and [screenshot sources](docs/product-screenshots.md).
 
 ## What currently works
 

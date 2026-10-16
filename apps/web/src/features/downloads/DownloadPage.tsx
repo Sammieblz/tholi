@@ -172,7 +172,7 @@ export function DownloadPage() {
           className="web-text-link"
           href="https://github.com/Sammieblz/web-navigator"
         >
-          View source repository <ArrowRight width={17} aria-hidden="true" />
+          View source repository
         </a>
       </details>
     </section>

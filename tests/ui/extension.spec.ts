@@ -433,6 +433,10 @@ test("interrupted widget mount falls back to sidebar without losing destination"
   }
 });
 test("busy page motion retains one highlight and reports frame timing", async ({}, info) => {
+  // Collect all 120 samples even on the known slow 50,000-node workload.
+  // This is a wall-clock budget, not a relaxed frame-time target. Keep the
+  // mutation load, measured timings and every safety assertion unchanged.
+  test.setTimeout(90_000);
   const app = await fixture();
   try {
     await app.panel.evaluate(async () => {

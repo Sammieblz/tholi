@@ -53,46 +53,6 @@
   line-height: 1.6;
   max-width: 65ch;
 }
-.hero-product {
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--sage);
-}
-.capture-context {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 18px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.capture-context > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.capture-context a {
-  font-size: 12px;
-}
-.hero-product .capture-open {
-  box-shadow: 0 12px 32px #1c252214;
-}
-.product-views {
-  display: grid;
-  grid-template-columns: 1fr 1.1fr 1.1fr;
-  gap: 32px;
-  align-items: start;
-  margin: 100px 0;
-}
-.product-views-copy {
-  padding-top: 36px;
-}
-.product-views-copy > p:not(.eyebrow) {
-  color: var(--muted);
-  font-size: 15px;
-}
 .panel-capture {
   padding: 20px;
   background: var(--sage);
@@ -105,16 +65,6 @@
 }
 .panel-capture .capture-expand > span {
   display: none;
-}
-.verified-preview {
-  margin: 80px 0;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  align-items: center;
-  gap: 56px;
-}
-.verified-preview-copy > p:not(.eyebrow) {
-  color: var(--muted);
 }
 .capture-credits {
   font-size: 12px;
@@ -180,33 +130,7 @@
 .capture-dialog[data-ending-style] {
   opacity: 0;
 }
-@media (max-width: 900px) {
-  .product-views {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-block: 64px;
-  }
-  .product-views-copy {
-    grid-column: 1 / -1;
-    max-width: 600px;
-    padding: 0;
-  }
-  .verified-preview {
-    gap: 32px;
-  }
-}
 @media (max-width: 600px) {
-  .hero-product {
-    padding: 12px;
-    border-radius: 16px;
-  }
-  .capture-context {
-    align-items: flex-start;
-    font-size: 11px;
-    gap: 8px;
-    flex-direction: column;
-    margin-bottom: 12px;
-  }
   .capture-expand {
     padding: 8px;
     right: 8px;
@@ -215,24 +139,11 @@
   .capture-expand > span {
     display: none;
   }
-  .product-views {
-    grid-template-columns: 1fr;
-    margin-block: 56px;
-    gap: 24px;
-  }
   .panel-capture {
     max-width: 420px;
     width: 100%;
     padding: 16px;
     margin-inline: auto;
-  }
-  .verified-preview {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    margin-block: 56px;
-  }
-  .verified-preview-copy {
-    grid-row: 1;
   }
   .capture-dialog {
     padding: 12px;

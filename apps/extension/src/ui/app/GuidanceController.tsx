@@ -140,7 +140,10 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
             !noticeView?.continuationOrigin &&
             !noticeView?.frameAccess?.length &&
             noticeView?.clarification && (
-              <section className="goal-plan" aria-label="Clarification">
+              <section
+                className="goal-plan tholi-clarification"
+                aria-label="Clarification"
+              >
                 <h2>{noticeView.clarification.question}</h2>
                 {noticeView.clarification.choices.map((choice) => (
                   <button

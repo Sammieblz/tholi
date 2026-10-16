@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Refresh } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
+import { usePreferences } from "../preferences";
 export interface DownloadManifest {
   version: string;
   url: string;
@@ -56,9 +57,15 @@ export function useDownload(): DownloadState {
   return { ...result, retry: () => setAttempt((value) => value + 1) };
 }
 export function DownloadButton({ download }: { download: DownloadState }) {
+  const { trackEvent } = usePreferences();
   if (download.status === "available" && download.release)
     return (
-      <a className="web-primary" href={download.release.url} download>
+      <a
+        className="web-primary"
+        href={download.release.url}
+        download
+        onClick={() => trackEvent({ name: "download_click" })}
+      >
         <Download width={19} aria-hidden="true" />
         Download extension preview
       </a>

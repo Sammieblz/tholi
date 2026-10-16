@@ -1,6 +1,6 @@
 import "./account.css";
 import { useRef, useState } from "react";
-import { ArrowRight, ShieldCheck } from "iconoir-react";
+import { ShieldCheck } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { useAccount } from "./session";
@@ -170,10 +170,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
                 Opening your local preview
               </>
             ) : (
-              <>
-                {signup ? "Create demo account" : "Sign in to demo"}
-                <ArrowRight width={18} aria-hidden="true" />
-              </>
+              <>{signup ? "Create demo account" : "Sign in to demo"}</>
             )}
           </button>
         </form>

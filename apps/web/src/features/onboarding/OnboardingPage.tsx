@@ -1,6 +1,6 @@
 import "./onboarding.css";
 import { useState } from "react";
-import { ArrowRight, ShieldCheck, Check } from "iconoir-react";
+import { ShieldCheck, Check } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { useAccount } from "../account/session";
@@ -64,7 +64,6 @@ export function OnboardingPage() {
                 <DownloadButton download={download} />
                 <SiteLink to="/download" className="web-text-link">
                   See installation steps{" "}
-                  <ArrowRight width={16} aria-hidden="true" />
                 </SiteLink>
               </div>
               <div className="onboarding-capture">
@@ -84,7 +83,7 @@ export function OnboardingPage() {
               </p>
             </div>
             <button className="primary" onClick={() => setStep(1)}>
-              Try the demonstration <ArrowRight width={18} aria-hidden="true" />
+              Try the demonstration
             </button>
           </>
         ) : (
@@ -109,7 +108,7 @@ export function OnboardingPage() {
             </fieldset>
             <Demo mode={mode} onModeChange={setMode} />
             <button className="primary" onClick={complete}>
-              Finish onboarding <ArrowRight width={18} aria-hidden="true" />
+              Finish onboarding
             </button>
           </>
         )}

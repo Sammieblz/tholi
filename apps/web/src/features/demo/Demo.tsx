@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover } from "@base-ui/react/popover";
 import { createPortal } from "react-dom";
-import { Check, NavArrowDown, ArrowRight, Refresh } from "iconoir-react";
+import { Check, NavArrowDown, Refresh } from "iconoir-react";
+import { usePreferences } from "../preferences";
 import { GuidanceApp } from "../../../../../packages/ui/guidance/GuidanceApp";
 import {
   conversationCommand,
@@ -75,6 +76,7 @@ export function Demo({
   onModeChange?: (mode: UIPreferences["mode"]) => void;
   onDone?: () => void;
 }) {
+  const { theme, trackEvent } = usePreferences();
   const [shadow, setShadow] = useState<ShadowRoot | null>(null);
   const [preferences, setPreferences] = useState(initialPreferences);
   const [draft, setDraft] = useState(goals.settings);
@@ -125,6 +127,11 @@ export function Demo({
       (task === "spanish" && language === "Español")
     ) {
       setComplete(true);
+      trackEvent({
+        name: "practice_complete",
+        practice:
+          task === "settings" ? "account-settings" : "language-preference",
+      });
       onDone?.();
     }
   }, [task, paused, complete, screen, language, onDone]);
@@ -245,6 +252,12 @@ export function Demo({
           ? "settings"
           : undefined;
     setTask(next);
+    if (next)
+      trackEvent({
+        name: "practice_start",
+        practice:
+          next === "settings" ? "account-settings" : "language-preference",
+      });
     setVerifiedPath([]);
     setUnsupported(!next);
     setComplete(false);
@@ -280,11 +293,9 @@ export function Demo({
       </div>
       <div className="demo-destinations" aria-label="Practice destinations">
         <button onClick={() => start(goals.settings)}>
-          Find account settings <ArrowRight width={15} aria-hidden="true" />
+          Find account settings
         </button>
-        <button onClick={() => start(goals.spanish)}>
-          Switch to Spanish <ArrowRight width={15} aria-hidden="true" />
-        </button>
+        <button onClick={() => start(goals.spanish)}>Switch to Spanish</button>
       </div>
       <div className="demo-stage">
         <div className="demo-browser" aria-label="Practice website">
@@ -326,7 +337,7 @@ export function Demo({
                   setMenu(false);
                 }}
               >
-                Account settings <ArrowRight width={16} aria-hidden="true" />
+                Account settings
               </button>
               <span className="small">This is a practice website.</span>
             </PracticePopover>
@@ -429,7 +440,7 @@ export function Demo({
         </div>
         <div
           className="demo-guidance-host"
-          data-tholi-theme="light"
+          data-tholi-theme={theme === "dark" ? "light" : "dark"}
           ref={(host) => {
             if (host && !host.shadowRoot)
               setShadow(host.attachShadow({ mode: "open" }));

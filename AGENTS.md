@@ -11,7 +11,7 @@ Before UI work, read the relevant project-local skills in `.codex/skills`, not o
 
 Reference the exact skill guidance applied in the change record with its validation. Keep copied upstream skill files intact. User instructions and the accepted product plan take precedence over generic recommendations in skills.
 
-The accepted stack is React, Base UI, Iconoir, and existing CSS/WAAPI motion. Preserve it. Generic skill suggestions to migrate to Tailwind or another motion library do not apply to this product. Extend the existing easing, palette, spacing, and presentation tokens. Amber is the stateful wayfinder, jade is the guide; preserve the supplied wordmark and brand colors. No em dashes in product copy.
+The accepted stack is React, Base UI, Iconoir, and existing CSS/WAAPI motion. Preserve it. Generic skill suggestions to migrate to Tailwind or another motion library do not apply to this product. Extend the existing easing, palette, spacing, and presentation tokens. Amber is the stateful wayfinder, jade is the guide; preserve the supplied wordmark and brand colors. No em dashes in product copy or decorative dash prefixes on section labels.
 
 ## Ownership and truth
 

@@ -23,7 +23,7 @@ export function GuidanceApp(props: GuidanceProps) {
   const p = props.presentation;
   const Root = props.embedded ? "section" : "main";
   const appRoot = useRef<HTMLElement>(null);
-  const attentionRoot = useRef<HTMLElement>(null);
+  const attentionRoot = useRef<HTMLDivElement>(null);
   const [blockingAttention, setBlockingAttention] = useState(false);
   const [instructionInAttention, setInstructionInAttention] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
@@ -62,6 +62,8 @@ export function GuidanceApp(props: GuidanceProps) {
     props.error,
     props.widget,
     p.stepId,
+    p.instruction,
+    p.warning,
   ]);
   return (
     <Root
@@ -73,7 +75,7 @@ export function GuidanceApp(props: GuidanceProps) {
       }
       data-density={props.widget ? density : undefined}
       data-phase={p.phase}
-      data-attention={props.widget && widgetRequired}
+      data-attention={props.widget ? widgetRequired : blockingAttention}
       data-mode={prefs.mode}
       aria-label={props.embedded ? "Tholi practice guide" : undefined}
     >
@@ -117,20 +119,27 @@ export function GuidanceApp(props: GuidanceProps) {
       ) : (
         (props.error || props.attention || props.primary || props.children) && (
           <section
-            ref={attentionRoot}
             className={
               "tholi-attention" +
               (blockingAttention ? " tholi-attention-required" : "")
             }
             aria-label="Important guidance"
+            aria-live={blockingAttention ? "polite" : undefined}
           >
-            {props.error && (
-              <p className="tholi-error error" role="alert">
-                {props.error}
-              </p>
-            )}
-            {props.attention || props.children}
-            {props.primary}
+            {blockingAttention &&
+              !instructionInAttention &&
+              p.phase !== "clarification" && (
+                <p className="tholi-attention-instruction">{p.instruction}</p>
+              )}
+            <div ref={attentionRoot}>
+              {props.error && (
+                <p className="tholi-error error" role="alert">
+                  {props.error}
+                </p>
+              )}
+              {props.attention || props.children}
+              {props.primary}
+            </div>
           </section>
         )
       )}

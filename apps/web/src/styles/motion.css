@@ -1,4 +1,4 @@
-.web-main {
+.web-main:not(:has(> .home-page)) {
   animation: web-page-enter 180ms var(--ease-out) both;
 }
 .hero-heading,
@@ -10,7 +10,7 @@
 }
 .web-primary,
 .web-secondary,
-.web-link-arrow {
+.web-text-link {
   transition:
     transform 120ms var(--ease-out),
     opacity 120ms ease;
@@ -18,10 +18,6 @@
 .web-primary:active,
 .web-secondary:active {
   transform: scale(0.98);
-}
-.web-primary svg,
-.web-text-link svg {
-  transition: transform 180ms var(--ease-out);
 }
 .web-mobile-dialog {
   transition:
@@ -79,10 +75,6 @@
 @media (hover: hover) and (pointer: fine) {
   .web-primary:hover {
     opacity: 0.92;
-  }
-  .web-primary:hover svg,
-  .web-text-link:hover svg {
-    transform: translateX(3px);
   }
   .web-secondary:hover {
     background: var(--sage);

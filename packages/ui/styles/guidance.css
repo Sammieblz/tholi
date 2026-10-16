@@ -7,7 +7,7 @@
   margin: auto;
   padding: 16px;
   gap: 10px;
-  overflow: hidden;
+  overflow: clip;
   font:
     15px/1.5 Manrope,
     system-ui,
@@ -109,6 +109,30 @@
   font-size: 13px;
   padding: 8px 10px;
   margin: 4px 5px 0 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tholi-clarification button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-align: left;
+}
+/* A required decision replaces route chrome, rather than competing with it. */
+.tholi-app:not(.tholi-widget-app)[data-attention="true"] .tholi-attention {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
+}
+.tholi-app:not(.tholi-widget-app)[data-attention="true"] .tholi-workspace {
+  display: none;
+}
+.tholi-attention-instruction {
+  font-weight: 600;
+  line-height: 1.5;
 }
 .tholi-error {
   color: var(--danger);
@@ -147,6 +171,10 @@
   flex-direction: column;
   min-height: 0;
   flex: 1;
+}
+.tholi-workspace {
+  overflow: clip;
+  overflow-clip-margin: 6px;
 }
 .tholi-journey-heading {
   margin: 0;
@@ -202,7 +230,7 @@
 }
 .tholi-body {
   position: relative;
-  min-height: 48px;
+  min-height: 0;
   overflow: auto;
   padding: 8px 4px 12px;
   margin: 0 -4px;
@@ -423,6 +451,7 @@
 }
 .tholi-compose-dock {
   flex: none;
+  position: relative;
   padding: 4px;
   margin: 0 -4px;
   background: var(--surface);
@@ -760,6 +789,33 @@
 .tholi-compact-current,
 .tholi-message-marker {
   display: none;
+}
+@media (max-height: 640px) {
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) {
+    padding: 10px;
+    gap: 6px;
+  }
+  .tholi-app:not(.tholi-widget-app):not(
+      .tholi-embedded-app
+    )[data-attention="true"]
+    .tholi-view-switch {
+    display: none;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app)
+    .tholi-composer
+    textarea {
+    height: 60px;
+    min-height: 52px;
+    max-height: 80px;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app)
+    .tholi-reassurance {
+    display: none;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) .tholi-route-nodes,
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) .tholi-route-note {
+    display: none;
+  }
 }
 @container (max-width:280px) {
   .tholi-app .tholi-view-switch button {

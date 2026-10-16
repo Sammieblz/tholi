@@ -11,7 +11,10 @@ apps/web/src/
     account/                  Mock auth, session state, welcome, styles
     demo/                     Sample workspace and interactive walkthrough
     downloads/                Manifest loading, download button, setup page
-    marketing/                Home/about content and layout
+    docs/                     Allowlisted repository Markdown, safe GFM, search
+    legal/                    Operator configuration and launch-review drafts
+    preferences/              First-party cookie choices, theme, consent-gated analytics boundary
+    marketing/                Home/about, genuine video, brand-motion stage and scroll companion
     onboarding/               Skippable walkthrough and preview preferences
   styles/                     Shared website layout and motion
 
@@ -56,18 +59,22 @@ packages/overlay-ui/
 ## Ownership and extension points
 
 - Website features own components and styles. Shared layout belongs in `styles/site.css`; brand tokens and easing come from `packages/ui`. Marketing entrances belong on the website, not daily guidance controls.
+- `preferences` owns consent, pre-paint website appearance and the optional analytics boundary. The default has no production provider. The event allowlist excludes arbitrary text and extension data. Website Light/Dark preferences do not configure the extension's inverse-theme adaptation.
+- `docs` owns an explicit Markdown registry, local search, safe GFM rendering and reference-link mapping. Raw HTML is disabled and images become source links. `legal` owns operator configuration and Tholi-specific launch-review drafts. Both route bundles are lazy-loaded; repository Markdown stays out of the initial Home bundle.
+- `marketing` loads a recording manifest rather than embedding recreated product UI. Capture tooling accepts only a real worker-verified public-page result and records immutable extension/media hashes. Brand-motion demonstrations emit no journey or completion evidence.
 - Mock passwords remain component-local and are discarded after form completion. Only name, email, and onboarding state enter website session storage. Downloads require no account.
 - The extension controller hook owns transport and lifecycle. Feature components receive typed state/actions without opening duplicate polling or inference sessions. Privileged configuration remains sidebar-only.
 - `packages/ui` has no Chrome calls or navigation discovery. Its appearance helper samples computed CSS backgrounds only. Both surfaces receive the same presentation and callbacks. Keep the stable `guidance` and `tokens.css` entries when adding shared components.
 - Widget shell code owns geometry and pointer capture. The extension-origin iframe owns guidance and its single Widget menu. Typed layout requests pass through trusted UI transport to the matching session's top frame; the shell validates the action and returns clamped bounds. Closed-shadow styles remain isolated. Keyboard controls complement dragging.
 - Widget density depends on both usable dimensions, with immediate reduction and buffered expansion. Shared components remain mounted across tiers; CSS suppresses secondary controls while the composer retains its draft, selection and focus. Required prompts open their full controls explicitly. The widget root clips rather than becoming a programmatic scroll container.
 - `current-task-notices.ts` gates retained route actions by current task status and presentation phase. Stopped, paused, completed and replanning views cannot revive old return, tab-switch or visual prompts. This presentation guard does not verify outcomes.
+- A required sidebar decision owns the flexible middle region instead of competing with route chrome and the transcript. The retained workspace remains mounted but hidden until the decision clears. Semantic-content measurement excludes the promoted instruction, preventing duplicate-instruction detection from oscillating. Both normal and blocked scroll regions remain separate from the fixed composer; workspace clipping retains a six-pixel focus gutter.
 - Session-scoped surface visibility is independent of the journey. Minimized visibility mounts a launcher; hidden visibility removes it entirely. Both gate frame-local overlays/scrolling while authorized observation continues. Hidden state persists through worker restart and document changes until explicit restore. Launcher shell commands require the current session and authorized top document. Restore requests fresh evidence; native docking must succeed before the expanded widget is removed.
 - The website practice adapter mounts `GuidanceApp` with embedded rendering inside a shadow root. It owns sample outcomes, never Chrome permissions or production journey state. Website styles cannot alter product controls.
 - The overlay owns fresh geometry. Never interpolate between unrelated website controls. Tholi surfaces remain excluded from discovery and OCR captures.
 - Keep API contracts, storage, and outcome criteria outside UI features. A rendered state cannot establish success.
 
-Add pages to `app/App.tsx` and use `SiteLink` for client navigation. It preserves modified clicks and browser Back. Feature CSS stays colocated. Keep state at the lowest useful owner and use composition before adding global context. New engine phases need pure presentation mappings and continuity checks. Polling, geometry, and confidence updates must not replay attention effects.
+Add pages to `app/App.tsx` and use `SiteLink` for client navigation. The router separates pathname from query/fragment, preserves modified clicks, browser Back and session scroll positions, and waits for the actual heading or fragment when a lazy page mounts. Pending observers and animation frames are bounded and canceled on route changes. It does not create a placeholder heading or treat a fragment as a page name. Feature CSS stays colocated. Keep state at the lowest useful owner and use composition before adding global context. New engine phases need pure presentation mappings and continuity checks. Polling, geometry, and confidence updates must not replay attention effects.
 
 ## Development
 
@@ -80,4 +87,4 @@ $env:THOLI_UI_PORT = '5184'
 npm run test:ui
 ```
 
-Remove that environment variable afterward for the default port. See [the current audit, skill application and motion](ui-audit-redesign.md) and [release requirements](../CONTRIBUTING.md). Project-local skills and hashes live in `.codex`; they are development-only references.
+Remove that environment variable afterward for the default port. See [the current audit, skill application and motion](ui-audit-redesign.md), [website ownership, media, consent and docs](website-redesign.md), and [release requirements](../CONTRIBUTING.md). Project-local skills and hashes live in `.codex`; they are development-only references.

@@ -1,0 +1,13 @@
+Changing text size on Wikipedia
+
+Public source: https://en.wikipedia.org/wiki/Ada_Lovelace
+Request: Make the text larger
+
+This is the actual built extension in a disposable Chromium profile. The operator performs website interactions. No generated cursor, recreated controls or invented arrival state is present.
+
+00:00:00.001 A real Tholi widget is open on Wikipedia. Enter a destination once.
+00:00:07.337 Tholi highlights the live Text: Large control and explains the next step.
+00:00:09.248 Choose Large in Wikipedia’s Appearance controls.
+00:00:12.564 Wikipedia’s Large text preference is selected. Tholi verifies the preference change and shows a completion check.
+
+The light and dark recordings follow the same real workflow. Playback is muted, with descriptive captions. Browser permission UI, signed-in dashboards and unrelated tasks are not validated by this demonstration.

@@ -22,6 +22,8 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Current UI audit, implementation, skills, and validation](ui-audit-redesign.md)
 - [Adaptive website contrast and theme detection](adaptive-appearance.md)
 - [Real website screenshot sources and regeneration](product-screenshots.md)
+- [Website redesign, genuine video, public docs, cookie controls and launch drafts](website-redesign.md)
+- [Tholi UI, floating widget, and local website](tholi-ui.md)
 
 ## Historical evidence and specialized fixtures
 
@@ -33,7 +35,5 @@ Current setup and behavior are described in [the project README](../README.md). 
 - Controlled Northstar demo: [route authoring](route-authoring.md), [registry](route-registry.md)
 
 The authored demo route engine remains separate because it supplies deterministic regression fixtures. Product live discovery must not inherit its fixed routes or selectors.
-
-- [Tholi UI, floating widget, and local website](tholi-ui.md)
 
 - [Tholi 0.10.0 validation and artifacts](v0.10.0-validation.md)

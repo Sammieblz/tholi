@@ -5,11 +5,14 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { Router } from "./app/router";
 import { AccountProvider } from "./features/account/session";
+import { PreferencesProvider } from "./features/preferences";
 
 createRoot(document.getElementById("root")!).render(
-  <Router>
-    <AccountProvider>
-      <App />
-    </AccountProvider>
-  </Router>,
+  <PreferencesProvider>
+    <Router>
+      <AccountProvider>
+        <App />
+      </AccountProvider>
+    </Router>
+  </PreferencesProvider>,
 );

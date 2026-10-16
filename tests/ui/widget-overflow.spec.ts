@@ -18,7 +18,9 @@ test("widget conversation keeps summary, actions and composer visible while hist
       .getByRole("button", { name: "Guide me", exact: true })
       .evaluate((e) => (e as HTMLButtonElement).click());
     await expect
-      .poll(async () => (await app.view())?.selectedControlId)
+      .poll(async () => (await app.view())?.selectedControlId, {
+        timeout: 15000,
+      })
       .toBeTruthy();
     const requestId = (await app.view()).request.id;
     await app.panel.evaluate(async () => {

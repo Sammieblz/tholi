@@ -35,7 +35,8 @@
     "dev:web": "node scripts/sync-downloads.mjs && vite --config apps/web/vite.config.ts",
     "build:web": "node scripts/sync-downloads.mjs && vite build --config apps/web/vite.config.ts",
     "test:ui": "playwright test --config playwright.ui.config.ts",
-    "capture:web": "node scripts/capture-product-screenshots.mjs"
+    "capture:web": "node scripts/capture-product-screenshots.mjs",
+    "capture:video": "node scripts/capture-product-video.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -44,6 +45,8 @@
     "iconoir-react": "7.12.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {

@@ -12,6 +12,7 @@ export async function openNavigatorExtension(
   viewport = { width: 1280, height: 900 },
   fixturePermissions: string[] = [],
   inspectDetails = true,
+  options: { nativeViewport?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
   const extension = join(directory, "extension");
@@ -40,8 +41,11 @@ export async function openNavigatorExtension(
       args: [
         "--disable-extensions-except=" + extension,
         "--load-extension=" + extension,
+        ...(options.nativeViewport
+          ? [`--window-size=${viewport.width + 18},${viewport.height + 96}`]
+          : []),
       ],
-      viewport,
+      viewport: options.nativeViewport ? null : viewport,
     });
   let context: BrowserContext, worker: Worker, page: Page, panel: Page;
   const initialize = async () => {
@@ -54,7 +58,8 @@ export async function openNavigatorExtension(
     await panel.goto(
       "chrome-extension://" + new URL(worker.url()).host + "/sidepanel.html",
     );
-    await panel.setViewportSize({ width: 380, height: 1000 });
+    if (!options.nativeViewport)
+      await panel.setViewportSize({ width: 380, height: 1000 });
   };
   await initialize();
   const view = async () => {

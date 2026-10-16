@@ -1,6 +1,6 @@
 # Adaptive extension appearance
 
-Tholi automatically contrasts with the visible website: a dark website gets light guidance, and a light website gets dark guidance. This applies to the sidebar, floating widget, its drag/resize shell, and the page's highlight, instruction, and scroll cue. The website itself continues following the system appearance.
+Tholi automatically contrasts with the visible website: a dark website gets light guidance, and a light website gets dark guidance. This applies to the sidebar, floating widget, its drag/resize shell, and the page's highlight, instruction, and scroll cue. The Tholi product website has a separate Light/Dark switch and starts in Dark. It remembers that website choice only when preference storage is allowed. Website appearance never configures the installed extension.
 
 ## Detection and continuity
 

@@ -12,7 +12,9 @@ npm run dev:web
 
 Load `dist/extension` using **Load unpacked** in `chrome://extensions`. After rebuilding, reload Tholi and refresh the website tab. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
 
-Guide/sidebar with Advanced off remains the default. Enter a destination and select **Guide me**. The 56-pixel journey summary expands into verified progress and route details. Required decisions stay above the instruction and the composer stays below it. Verified arrival offers **New destination**, without Pause or remaining-click estimates.
+Guide/sidebar with Advanced off remains the default. Enter a destination and select **Guide me**. The 56-pixel journey summary expands into verified progress and route details. Required decisions temporarily replace the sidebar's route summary, progress and transcript with one scrollable decision area. Review and authentication instructions stay beside their required controls; generic clarification text is replaced by the actual question. The composer and Pause/Stop remain below this area. Answering restores the retained journey and conversation. Verified arrival offers **New destination**, without Pause or remaining-click estimates.
+
+Long clarification choices wrap into full-width buttons. On short sidebars, smaller spacing and a shorter composer reserve room for the decision; mode tabs are temporarily hidden while that decision is required. Scrollable content cannot paint over the anchored controls. Keyboard focus scrolls the question area, not the entire sidebar.
 
 Conversation centers the transcript rather than repeating the Guide card. It uses existing local NLP and actual navigation events. Enter sends; Shift+Enter adds a line. Navigation commands, compatible corrections/references, grounded clarification replies, copying guidance, and **Why this step?** are supported. Unsupported questions do not produce invented answers. Switching modes retains the draft and task. The latest 80 messages remain in trusted browser-session storage.
 
@@ -57,11 +59,17 @@ Required decisions remain until resolved. Passive notices use a four-second toas
 
 ## Website and demonstration
 
-Home, About, Download, Sign-up, Sign-in, Onboarding, and Welcome are local routes. Mock accounts are visibly labeled; passwords are neither sent nor persisted. Downloads and extension use require no account.
+Home, About, Download, Sign-up, Sign-in, Onboarding, and Welcome are local routes. Documentation adds `/docs` and an allowlist of current `/docs/:slug` Markdown references. `/privacy`, `/terms`, and `/cookies` are Tholi-specific launch-review drafts for ILUNỌNSEN LLC in Ohio, United States. A selected production host, analytics provider, public Tholi domain and final legal review remain launch work. Mock accounts are visibly labeled; passwords are neither sent nor persisted. Downloads and extension use require no account.
+
+The website starts in Dark regardless of OS appearance and provides an explicit Light/Dark control. A necessary `tholi_consent` cookie remembers choices for 180 days; optional `tholi_theme` remembers appearance only after preference consent. Essential only, Allow preferences and Settings are actual controls. Withdrawing preferences removes the theme cookie. Without optional storage, appearance works in memory. Production analytics remains unconfigured and inactive, with a tested consent boundary for a future disclosed provider. Website preferences are separate from the installed extension.
 
 The demonstration mounts the actual shared guidance app inside an isolated shadow root. Its controlled workspace offers two tasks: find account settings and change the sample language to Spanish. Actual sample interactions verify the outcome. Guide/Conversation, Pause/Resume/Stop, and onboarding mode selection work without configuring an installed extension. The practice adapter does not establish live-site routing accuracy.
 
 Genuine extension screenshots include provenance and enlargement controls. Installation illustrations are annotated schematics rather than invented Chrome screenshots. Downloads distinguish loading, available, unavailable, and failed states, with retry on failure. Version and SHA-256 come from the gated archive manifest. New archives require all existing release gates against matching bytes.
+
+Home pairs distinct charcoal, jade and ivory chapters with a real extension recording, followed by the shared practice and genuine screenshots. Capture tooling first attempts public GitHub Pull requests and uses the explicitly labeled Wikipedia text-size workflow when that request cannot be verified. Media acceptance requires both a real worker outcome and unchanged extension build bytes; it is not a claim of reliable GitHub or signed-in navigation. Light/dark VP9 WebM variants, posters, captions, transcript and provenance are served locally. Visible recordings loop muted on desktop and mobile, with one Pause/Resume control. Manual pause persists across scrolling and appearance changes. Reduced-motion and data-saving views require explicit Resume. Captions are not displayed; the transcript remains available.
+
+The About Wayfinder stage has a transparent background and an automatically looping sequence of labeled states, with no controls. It suspends offscreen and remains static with reduced motion. It is clearly identified as a brand-motion demonstration, not live task progress. Home's decorative desktop point follows the outer gutter without intercepting input; narrow and reduced-motion layouts keep a static equivalent. Product headings, selected explanations and the closing action use purpose-specific entrances rather than identical section fades. See [the website implementation and verification record](website-redesign.md).
 
 ## Verification
 

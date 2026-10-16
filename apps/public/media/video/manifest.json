@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "workflow": "wikipedia",
+  "label": "Changing text size on Wikipedia",
+  "title": "Changing text size on Wikipedia",
+  "source": "https://en.wikipedia.org/wiki/Ada_Lovelace",
+  "request": "Make the text larger",
+  "extensionVersion": "0.10.1",
+  "transcript": "/media/video/tholi-wikipedia-transcript.txt",
+  "provenance": "/media/video/provenance.json",
+  "variants": {
+    "light": {
+      "theme": "light",
+      "src": "/media/video/tholi-wikipedia-light.webm",
+      "poster": "/media/video/tholi-wikipedia-light-poster.webp",
+      "captions": "/media/video/tholi-wikipedia-light.vtt",
+      "width": 1440,
+      "height": 960,
+      "fps": 30,
+      "durationSeconds": 14.989,
+      "bytes": 4493038,
+      "sha256": "7eb0bcb0d01f0007261f62cd9e342233141cddbe71bc7dfda1cd7f1a54e51881",
+      "frameValidation": {
+        "frameCount": 473,
+        "sourceViewports": [
+          "1440x960"
+        ],
+        "arrivalFrame": {
+          "width": 1440,
+          "height": 960,
+          "uniformGrayFraction": 0.000462962962962963
+        }
+      }
+    },
+    "dark": {
+      "theme": "dark",
+      "src": "/media/video/tholi-wikipedia-dark.webm",
+      "poster": "/media/video/tholi-wikipedia-dark-poster.webp",
+      "captions": "/media/video/tholi-wikipedia-dark.vtt",
+      "width": 1440,
+      "height": 960,
+      "fps": 30,
+      "durationSeconds": 14.094,
+      "bytes": 4272016,
+      "sha256": "c6e991aa0ff2fa205c5d66faf25e58ca7bc1fd147616ba1d022fed7a9290d13d",
+      "frameValidation": {
+        "frameCount": 439,
+        "sourceViewports": [
+          "1440x960"
+        ],
+        "arrivalFrame": {
+          "width": 1440,
+          "height": 960,
+          "uniformGrayFraction": 0.00034722222222222224
+        }
+      }
+    }
+  }
+}
