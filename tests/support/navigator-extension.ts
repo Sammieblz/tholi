@@ -1,3 +1,5 @@
+import { prepareChromiumProfile } from "./chromium-profile";
+import { installSidebarTabHarness } from "./sidebar-tab";
 import {
   chromium,
   expect,
@@ -12,10 +14,14 @@ export async function openNavigatorExtension(
   viewport = { width: 1280, height: 900 },
   fixturePermissions: string[] = [],
   inspectDetails = true,
-  options: { nativeViewport?: boolean } = {},
+  options: { nativeViewport?: boolean; allowAutomaticDownloads?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
   const extension = join(directory, "extension");
+  const { profilePath, downloadsPath } = await prepareChromiumProfile(
+    directory,
+    options,
+  );
   await cp(resolve("dist/extension"), extension, { recursive: true });
   const manifest = JSON.parse(
     await readFile(join(extension, "manifest.json"), "utf8"),
@@ -35,9 +41,11 @@ export async function openNavigatorExtension(
       }),
     );
   const launch = () =>
-    chromium.launchPersistentContext(join(directory, "profile"), {
+    chromium.launchPersistentContext(profilePath, {
       channel: "chromium",
       headless: true,
+      acceptDownloads: true,
+      downloadsPath,
       args: [
         "--disable-extensions-except=" + extension,
         "--load-extension=" + extension,
@@ -55,6 +63,7 @@ export async function openNavigatorExtension(
       (await context.waitForEvent("serviceworker"));
     page = await context.newPage();
     panel = await context.newPage();
+    await installSidebarTabHarness(panel, downloadsPath);
     await panel.goto(
       "chrome-extension://" + new URL(worker.url()).host + "/sidepanel.html",
     );

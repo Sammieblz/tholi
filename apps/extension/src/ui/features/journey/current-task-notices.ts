@@ -19,11 +19,18 @@ export function currentTaskNotices(
   view: SessionView | undefined,
   presentation: GuidancePresentation,
 ) {
+  // The worker pauses at an expected origin handoff without pausing the task.
+  // Its explicit continuation action must remain reachable during that hold.
+  const pendingContinuation =
+    view?.status === "paused" &&
+    !!view.continuationOrigin &&
+    view.request?.status === "active";
   if (
-    !hasActiveSession(view) ||
-    ["idle", "arrived", "paused", "initializing", "planning"].includes(
+    (!hasActiveSession(view) && !pendingContinuation) ||
+    ["idle", "arrived", "initializing", "planning"].includes(
       presentation.phase,
-    )
+    ) ||
+    (presentation.phase === "paused" && !pendingContinuation)
   )
     return;
   return view;

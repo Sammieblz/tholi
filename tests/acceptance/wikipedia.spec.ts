@@ -6,6 +6,8 @@ for (const article of matrix.articles)
   test("declared Wikipedia goals: " + article, async ({}, info) => {
     const app = await openNavigatorExtension(
       info.project.use.viewport || undefined,
+      [],
+      false,
     );
     const errors: string[] = [];
     try {

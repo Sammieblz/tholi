@@ -1,3 +1,8 @@
+import { prepareChromiumProfile } from "../support/chromium-profile";
+import {
+  installSidebarTabHarness,
+  withSidebarTabForeground,
+} from "../support/sidebar-tab";
 import {
   test,
   expect,
@@ -17,6 +22,12 @@ let context: BrowserContext,
 test.beforeAll(async ({}, testInfo) => {
   directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
   const extension = join(directory, "extension");
+  const { profilePath, downloadsPath } = await prepareChromiumProfile(
+    directory,
+    {
+      allowAutomaticDownloads: true,
+    },
+  );
   await cp(resolve("dist/extension"), extension, { recursive: true });
   const manifest = JSON.parse(
     await readFile(join(extension, "manifest.json"), "utf8"),
@@ -29,10 +40,11 @@ test.beforeAll(async ({}, testInfo) => {
   // Tab metadata is needed to offer navigation before a new site's host grant.
   expect(manifest.permissions).toContain("tabs");
   expect(manifest.permissions).not.toContain("history");
-  context = await chromium.launchPersistentContext(join(directory, "profile"), {
+  context = await chromium.launchPersistentContext(profilePath, {
     channel: "chromium",
     headless: true,
     acceptDownloads: true,
+    downloadsPath,
     args: [
       "--disable-extensions-except=" + extension,
       "--load-extension=" + extension,
@@ -46,6 +58,7 @@ test.beforeAll(async ({}, testInfo) => {
   page = await context.newPage();
   await page.goto("http://127.0.0.1:5173");
   panel = await context.newPage();
+  await installSidebarTabHarness(panel, downloadsPath);
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
   await panel.setViewportSize({ width: 380, height: 1000 });
   await panel.evaluate(() =>
@@ -455,10 +468,15 @@ test("debug inspector renders scoring and exports bounded diagnostics", async ()
     name: "Export diagnostics",
   });
   await expect(exportButton).toBeEnabled();
-  const downloadPromise = panel.waitForEvent("download");
-  await exportButton.evaluate((e) => (e as HTMLButtonElement).click());
-  const download = await downloadPromise;
-  const report = JSON.parse(await readFile((await download.path())!, "utf8"));
+  const report = await withSidebarTabForeground(panel, page, async () => {
+    await exportButton.focus();
+    await expect(exportButton).toBeFocused();
+    const [download] = await Promise.all([
+      panel.waitForEvent("download"),
+      exportButton.press("Enter"),
+    ]);
+    return JSON.parse(await readFile((await download.path())!, "utf8"));
+  });
   expect(report.category).toBe("diagnostics");
   expect(report.diagnostics.transitions[0].outcome).toBe("verified");
   expect(JSON.stringify(report)).not.toMatch(

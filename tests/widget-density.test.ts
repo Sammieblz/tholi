@@ -87,3 +87,30 @@ it("does not resurrect frame prompts from paused, stopped or completed sessions"
       }),
     ).toEqual([]);
 });
+
+it("keeps the expected-origin handoff actionable while the worker holds an unfinished task", () => {
+  const view: SessionView = {
+    ...pageExplorationView(),
+    status: "paused",
+    continuationOrigin: "http://localhost:5173",
+    request: { status: "active" } as SessionView["request"],
+  };
+  expect(currentTaskNotices(view, present(view))).toBe(view);
+  expect(currentFrameAccess(view)).toEqual([]);
+  for (const status of ["stopped", "completed", "checkpoint"] as const) {
+    const ended = { ...view, status };
+    expect(currentTaskNotices(ended, present(ended))).toBeUndefined();
+  }
+  for (const status of ["paused", "completed", "canceled"] as const) {
+    const ended = {
+      ...view,
+      request: { ...view.request!, status },
+    };
+    expect(currentTaskNotices(ended, present(ended))).toBeUndefined();
+  }
+  const paused = { ...view, continuationOrigin: undefined };
+  expect(currentTaskNotices(paused, present(paused))).toBeUndefined();
+  expect(
+    currentTaskNotices(view, present(view, "Finding route")),
+  ).toBeUndefined();
+});

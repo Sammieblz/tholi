@@ -197,6 +197,9 @@ test("cookie settings are keyboard accessible at narrow widths with inactive ana
     exact: true,
   });
   await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Close cookie settings", exact: true }),
+  ).toBeFocused();
   await expect(dialog).toContainText("No provider is configured");
   await expect(dialog.getByRole("checkbox")).toHaveCount(1);
   const preference = dialog.getByRole("checkbox", {
@@ -205,13 +208,18 @@ test("cookie settings are keyboard accessible at narrow widths with inactive ana
   await preference.focus();
   await page.keyboard.press("Space");
   await expect(preference).toBeChecked();
+  const focusOrder = [
+    dialog.getByRole("link", { name: "Cookie details", exact: true }),
+    dialog.getByRole("link", { name: "Privacy draft", exact: true }),
+    dialog.getByRole("button", { name: "Essential only", exact: true }),
+    dialog.getByRole("button", { name: "Save choices", exact: true }),
+    dialog.getByRole("button", { name: "Close cookie settings", exact: true }),
+    preference,
+  ];
   for (let i = 0; i < 9; i++) {
     await page.keyboard.press("Tab");
-    expect(
-      await dialog.evaluate((element) =>
-        element.contains(document.activeElement),
-      ),
-    ).toBe(true);
+    // Base UI wraps focus through a guard on the next animation frame.
+    await expect(focusOrder[i % focusOrder.length]).toBeFocused();
   }
   await dialog
     .getByRole("button", { name: "Save choices", exact: true })

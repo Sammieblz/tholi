@@ -23,6 +23,8 @@ const html = `<!doctype html><html lang="en"><body style="font:16px sans-serif;m
 test("declared generic positive and negative cases", async ({}, info) => {
   const app = await openNavigatorExtension(
     info.project.use.viewport || undefined,
+    [],
+    false,
   );
   const errors: string[] = [];
   const load = async () => {

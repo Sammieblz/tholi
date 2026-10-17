@@ -1,6 +1,7 @@
 import { expect, type TestInfo, type Locator } from "@playwright/test";
 import type { AcceptanceCase } from "../../packages/acceptance-metrics";
 import { openNavigatorExtension } from "./navigator-extension";
+import { hasFinalStepEvidence } from "./final-step-evidence";
 export type NavigatorApp = Awaited<ReturnType<typeof openNavigatorExtension>>;
 export type GoalContract = { id: string; goal: string; expected: string };
 export async function attachCase(info: TestInfo, sample: AcceptanceCase) {
@@ -72,6 +73,21 @@ async function noAutomation(app: NavigatorApp, result: AcceptanceCase) {
   );
   await resetClicks(app);
 }
+// Poll worker-owned evidence without serializing hundreds of page controls
+// across the browser automation boundary on every sample.
+function progress(app: NavigatorApp) {
+  return app.panel.evaluate(async () => {
+    const { view } = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+    return {
+      status: view.status,
+      verifiedSteps: view.verifiedSteps,
+      request: view.request,
+      journey: view.journey,
+      goalPlan: view.goalPlan,
+      selectedControlId: view.selectedControlId,
+    };
+  });
+}
 export async function runGoal(
   app: NavigatorApp,
   contract: GoalContract,
@@ -112,7 +128,7 @@ export async function runGoal(
     );
     await oracle.reveal!.click();
     await expect
-      .poll(async () => (await app.view()).verifiedSteps, { timeout: 10000 })
+      .poll(async () => (await progress(app)).verifiedSteps, { timeout: 10000 })
       .toBeGreaterThanOrEqual(before + 1);
     const actual = await (oracle.revealed || oracle.target).isVisible();
     result.verifications.push(actual);
@@ -120,7 +136,7 @@ export async function runGoal(
     await expect
       .poll(
         async () => {
-          const next = await app.view();
+          const next = await progress(app);
           return (
             !!next.selectedControlId ||
             (next.verifiedSteps === before + 2 &&
@@ -163,7 +179,31 @@ export async function runGoal(
   result.targets.push(correct);
   await noAutomation(app, result);
   expect(correct).toBe(true);
-  const before = view.verifiedSteps;
+  if (oracle.picker && selected.inViewport === false) {
+    await oracle.target.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        app.panel.evaluate(async () => {
+          const { view } = await chrome.runtime.sendMessage({
+            type: "GET_SESSION",
+          });
+          const target = view.page?.controls.find(
+            (control: any) => control.id === view.selectedControlId,
+          );
+          return {
+            status: view.goalPlan?.status,
+            signature: target?.signature,
+            inViewport: target?.inViewport,
+          };
+        }),
+      )
+      .toEqual({
+        status: "guiding",
+        signature: selected.signature,
+        inViewport: true,
+      });
+    view = await app.view();
+  }
   if (oracle.kind === "choice") await oracle.target.check();
   else if (oracle.kind === "section" && selected.role === "heading")
     await oracle.target.scrollIntoViewIfNeeded();
@@ -172,8 +212,22 @@ export async function runGoal(
   else await oracle.target.click();
   try {
     await expect
-      .poll(async () => (await app.view()).verifiedSteps, { timeout: 10000 })
-      .toBe(before + 1);
+      .poll(
+        async () => {
+          const current = await progress(app);
+          if (hasFinalStepEvidence(view, current, oracle.kind, false))
+            return true;
+          if (!["choice", "section"].includes(oracle.kind)) return false;
+          return hasFinalStepEvidence(
+            view,
+            current,
+            oracle.kind,
+            await oracle.outcome(),
+          );
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true);
   } catch (error) {
     const current = await app.view();
     throw new Error(
@@ -193,7 +247,7 @@ export async function runGoal(
     );
   }
   await expect
-    .poll(async () => (await app.view()).goalPlan?.status)
+    .poll(async () => (await progress(app)).goalPlan?.status)
     .toBe(oracle.picker ? "awaiting-choice" : "completed");
   const actual = await oracle.outcome();
   result.verifications.push(actual);

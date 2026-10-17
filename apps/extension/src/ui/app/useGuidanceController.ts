@@ -1,6 +1,6 @@
 import { unresolvedTitle } from "./presentationLabels";
 import { applyAppearance } from "../theme/apply-appearance";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { RoutePreview } from "../../../../../packages/route-registry";
 import type { SessionView } from "../../../../../packages/shared-types";
 import {
@@ -33,6 +33,7 @@ export function useGuidanceController(widget = false) {
     useState<UIPreferences>(defaultPreferences);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const hydratedRef = useRef(false);
   const preferencesPending = useRef(false);
   const lastSurface = useRef<"sidebar" | "widget" | undefined>(undefined);
   const [view, setView] = useState<SessionView>();
@@ -83,7 +84,15 @@ export function useGuidanceController(widget = false) {
   const [visionBackend, setVisionBackend] = useState(false);
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
-  const [goal, setGoal] = useState("");
+  const [goal, restoreGoal] = useState("");
+  const goalValue = useRef("");
+  const goalRevision = useRef(0);
+  const savedGoalRevision = useRef(0);
+  const setGoal = useCallback((value: string) => {
+    if (value !== goalValue.current) goalRevision.current++;
+    goalValue.current = value;
+    restoreGoal(value);
+  }, []);
   const [suggestions, setSuggestions] = useState<
     { label: string; signature: string }[]
   >([]);
@@ -560,11 +569,18 @@ export function useGuidanceController(widget = false) {
     otherTab || !!view?.continuationOrigin,
   );
   useEffect(() => {
-    const refresh = () =>
+    let current = true;
+    let sequence = 0;
+    let applied = 0;
+    const refresh = () => {
+      const read = ++sequence;
+      const draftRevision = goalRevision.current;
+      const draftClean = draftRevision === savedGoalRevision.current;
       void chrome.runtime
         .sendMessage({ type: "UI_GET" })
         .then((r) => {
-          if (r.error) return;
+          if (!current || read < applied || r.error) return;
+          applied = read;
           if (!preferencesPending.current) setPreferences(r.preferences);
           setMessages(r.messages);
           const becomingVisible =
@@ -572,12 +588,17 @@ export function useGuidanceController(widget = false) {
             r.preferences.surface === (widget ? "widget" : "sidebar");
           lastSurface.current = r.preferences.surface;
           // Handoffs hydrate the destination without overwriting active typing.
-          if (!hydrated || becomingVisible) {
-            setGoal(r.draft);
+          if (!hydratedRef.current || becomingVisible) {
+            if (draftClean && goalRevision.current === draftRevision) {
+              goalValue.current = r.draft;
+              restoreGoal(r.draft);
+            }
+            hydratedRef.current = true;
             setHydrated(true);
           }
         })
         .catch(() => {});
+    };
     refresh();
     const listener = (
       changes: Record<string, chrome.storage.StorageChange>,
@@ -602,12 +623,23 @@ export function useGuidanceController(widget = false) {
         refresh();
     };
     chrome.storage.onChanged.addListener(listener);
-    return () => chrome.storage.onChanged.removeListener(listener);
-  }, [hydrated]);
+    return () => {
+      current = false;
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, []);
   useEffect(() => {
     if (!hydrated) return;
+    const revision = goalRevision.current;
     const id = setTimeout(
-      () => void chrome.runtime.sendMessage({ type: "UI_SAVE", draft: goal }),
+      () =>
+        void chrome.runtime
+          .sendMessage({ type: "UI_SAVE", draft: goal })
+          .then((reply) => {
+            if (!reply?.error && goalRevision.current === revision)
+              savedGoalRevision.current = revision;
+          })
+          .catch(() => {}),
       200,
     );
     return () => clearTimeout(id);

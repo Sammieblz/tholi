@@ -1,7 +1,25 @@
 import { test, expect } from "@playwright/test";
 import { openNavigatorExtension } from "../support/navigator-extension";
-async function fixture() {
+async function fixture(holdHydration = false) {
   const app = await openNavigatorExtension(undefined, [], false);
+  if (holdHydration) {
+    await app.panel.addInitScript(() => {
+      const send = chrome.runtime.sendMessage.bind(chrome.runtime);
+      let held = true;
+      const waiting: (() => void)[] = [];
+      (globalThis as any).__releaseHydration = () => {
+        held = false;
+        waiting.splice(0).forEach((release) => release());
+      };
+      chrome.runtime.sendMessage = (async (message: any) => {
+        const reply = await send(message);
+        if (message.type === "UI_GET" && held)
+          await new Promise<void>((resolve) => waiting.push(resolve));
+        return reply;
+      }) as typeof chrome.runtime.sendMessage;
+    });
+    await app.panel.reload();
+  }
   await app.context.route("http://127.0.0.1:5173/**", (route) =>
     route.fulfill({
       contentType: "text/html",
@@ -20,10 +38,19 @@ async function destination(
   text: string,
 ) {
   await app.panel.getByRole("textbox", { name: "Navigation goal" }).fill(text);
+  await app.panel.evaluate(() => (globalThis as any).__releaseHydration?.());
+  const guide = app.panel.getByRole("button", {
+    name: "Guide me",
+    exact: true,
+  });
+  await expect(guide).toBeEnabled();
+  await expect(
+    app.panel.getByRole("textbox", { name: "Navigation goal" }),
+  ).toHaveValue(text);
   await app.page.bringToFront();
-  await app.panel
-    .getByRole("button", { name: "Guide me", exact: true })
-    .evaluate((e) => (e as HTMLButtonElement).click());
+  // The sidebar is a separate test tab. Keep the authorized website active
+  // while dispatching the submit only after the real button is enabled.
+  await guide.evaluate((e) => (e as HTMLButtonElement).click());
   try {
     await expect
       .poll(async () => !!(await app.view())?.selectedControlId, {
@@ -42,7 +69,7 @@ async function destination(
   }
 }
 test("Guide and Conversation keep one journey and grounded evidence", async ({}, info) => {
-  const app = await fixture();
+  const app = await fixture(true);
   try {
     await destination(app, "Account settings");
     const id = (await app.view()).request.id;
@@ -169,17 +196,9 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
       )
       .toBe(true);
     await app.page.screenshot({ path: info.outputPath("standard-widget.png") });
-    const hostBox = (await app.page.locator("#tholi-widget").boundingBox())!;
-    const buttonRect = await frame
+    await frame
       .getByRole("button", { name: "Pause navigation", exact: true })
-      .evaluate((e) => {
-        const r = e.getBoundingClientRect();
-        return { x: r.x, y: r.y, width: r.width, height: r.height };
-      });
-    await app.page.mouse.click(
-      hostBox.x + 1 + buttonRect.x + buttonRect.width / 2,
-      hostBox.y + 29 + buttonRect.y + buttonRect.height / 2,
-    );
+      .click();
     await expect.poll(async () => (await app.view())?.status).toBe("paused");
     expect((await app.view()).request.id).toBe(id);
     const bounds = () => app.page.locator("#tholi-widget").boundingBox();

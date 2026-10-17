@@ -123,6 +123,10 @@ test("retains a plain login goal through an expected cross-origin popup", async 
     await expect
       .poll(async () => (await app.view()).continuationOrigin)
       .toBe("http://localhost:5173");
+    expect(await app.view()).toMatchObject({
+      status: "paused",
+      request: { id: initial.view.request.id, status: "active" },
+    });
     await expect(
       app.panel.getByRole("button", { name: "Continue task here" }),
     ).toBeEnabled();
@@ -206,6 +210,10 @@ test("an authentication server redirect retains context while unrelated navigati
       chrome.runtime.sendMessage({ type: "GET_SESSION" }),
     );
     expect(held.pendingNavigation.redirected).toBe(true);
+    expect(held.view).toMatchObject({
+      status: "paused",
+      request: { id: initial.view.request.id, status: "active" },
+    });
     expect(JSON.stringify(held)).not.toContain("QUERY_SENTINEL");
     await expect(
       app.panel.getByRole("button", { name: "Continue task here" }),
