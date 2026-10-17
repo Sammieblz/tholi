@@ -1,5 +1,5 @@
 import { mkdir, writeFile, stat } from "node:fs/promises";
-if (await stat("tests/multi-app/corpus.json").catch(() => undefined))
+if (await stat("tests/fixtures/multi-app/corpus.json").catch(() => undefined))
   throw Error(
     "The v0.8 corpus is frozen. Create a separately reviewed version instead of overwriting it.",
   );
@@ -232,7 +232,7 @@ for (const [platform, e] of Object.entries(examples)) {
           category === "negative" ? "unsupported" : "clarification",
       });
 }
-await mkdir("tests/multi-app", { recursive: true });
+await mkdir("tests/fixtures/multi-app", { recursive: true });
 const references = {
   cloudflare: [
     "Deploy Pages from GitHub using that repository",
@@ -257,7 +257,7 @@ for (const [platform, [text, prior]] of Object.entries(references)) {
   row.features = ["context", "reference"];
 }
 await writeFile(
-  "tests/multi-app/corpus.json",
+  "tests/fixtures/multi-app/corpus.json",
   JSON.stringify(
     {
       version: 1,

@@ -1,6 +1,8 @@
-import type { CDPSession, Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { deterministicNetwork } from "./browser-test";
+import type { Page } from "@playwright/test";
 
-const downloadRoots = new WeakMap<Page, string>();
+const downloadProfiles = new WeakSet<Page>();
 
 interface SidebarTabHarness {
   hold: () => Promise<void>;
@@ -10,9 +12,10 @@ interface SidebarTabHarness {
 /** A headless extension tab must keep the website context of a native sidebar. */
 export async function installSidebarTabHarness(
   panel: Page,
-  downloadsPath: string,
+  allowAutomaticDownloads = false,
 ) {
-  downloadRoots.set(panel, downloadsPath);
+  await deterministicNetwork(panel.context());
+  if (allowAutomaticDownloads) downloadProfiles.add(panel);
   await panel.addInitScript(() => {
     const send = chrome.runtime.sendMessage.bind(chrome.runtime);
     let website: any;
@@ -39,37 +42,35 @@ export async function installSidebarTabHarness(
   });
 }
 
-/** Use real foreground input for browser downloads, without switching the task. */
-export async function withSidebarTabForeground<T>(
+/** Read the real completed export from the explicitly pregranted test profile. */
+export async function downloadFromSidebar(
   panel: Page,
   page: Page,
-  action: () => Promise<T>,
-): Promise<T> {
+  activate: () => Promise<unknown>,
+): Promise<Buffer> {
+  if (!downloadProfiles.has(panel))
+    throw Error(
+      "Export checks require a pregranted disposable download profile.",
+    );
   await page.bringToFront();
   await panel.evaluate(() =>
     (
       globalThis as typeof globalThis & { __tholiSidebarTab: SidebarTabHarness }
     ).__tholiSidebarTab.hold(),
   );
-  let cdp: CDPSession | undefined;
   try {
     await panel.bringToFront();
-    const downloadPath = downloadRoots.get(panel);
-    if (!downloadPath)
-      throw new Error("Missing disposable download directory.");
-    cdp = await panel.context().newCDPSession(panel);
-    // Bind the native download override to this exact disposable context.
-    // The default CDP context need not own a persistent extension tab.
-    const { targetInfo } = await cdp.send("Target.getTargetInfo");
-    await cdp.send("Browser.setDownloadBehavior", {
-      behavior: "allowAndName",
-      browserContextId: targetInfo.browserContextId,
-      downloadPath,
-      eventsEnabled: true,
+    await panel.waitForFunction(() => document.hasFocus(), undefined, {
+      timeout: 5000,
     });
-    return await action();
+    const [download] = await Promise.all([
+      panel.waitForEvent("download", { timeout: 30000 }),
+      activate(),
+    ]);
+    const file = await download.path();
+    if (!file) throw Error("The export did not complete a browser download.");
+    return await readFile(file);
   } finally {
-    await cdp?.detach().catch(() => {});
     await page.bringToFront().catch(() => {});
     await panel
       .evaluate(() =>

@@ -1,0 +1,127 @@
+name: Full validation
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package candidates after full verification
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+env:
+  THOLI_TEST_TIER: full
+  THOLI_VALIDATION_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+jobs:
+  build:
+    outputs:
+      artifact_name: full-build-${{ github.run_attempt }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          assets: "true"
+      - run: npm run typecheck
+      - run: npm run build
+      - run: node scripts/build-manifest.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-build-${{ github.run_attempt }}
+          path: |
+            dist
+            apps/api/dist
+            assets/models
+            assets/ocr
+            output/build-manifest.json
+  tests:
+    needs: build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - group: acceptance
+            evidence: |
+              output/acceptance/results.json
+          - group: live
+            evidence: |
+              output/acceptance/live-regressions.json
+          - group: core
+            evidence: |
+              output/acceptance/e2e-regressions.json
+          - group: models
+            evidence: |
+              output/nlp/results.json
+              output/multi-app/model.json
+              output/multi-app/runtime.json
+              output/multi-app/performance.json
+              output/vision/runtime.json
+              output/vision/routes.json
+              output/vision/performance.json
+          - group: ui
+            evidence: |
+              output/qa/ui-build.json
+          - group: integration
+            evidence: |
+              output/nlp/browser-build.json
+              output/multi-app/browser.json
+              output/vision/browser.json
+              output/reliability
+          - group: unit
+            evidence: |
+              output/qa/unit.json
+    env:
+      THOLI_BUILD_PREPARED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+      - run: node scripts/build-manifest.mjs --verify
+      - run: npx playwright install chromium
+        if: matrix.group != 'unit' && matrix.group != 'models'
+      - run: npm run test:full -- --group ${{ matrix.group }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-evidence-${{ matrix.group }}-${{ github.run_attempt }}
+          path: |
+            ${{ matrix.evidence }}
+            output/build-manifest.json
+            output/qa/timing-full-${{ matrix.group }}.json
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: full-traces-${{ matrix.group }}-${{ github.run_attempt }}
+          path: test-results
+  certify:
+    needs: [build, tests]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: output
+          pattern: full-evidence-*-${{ github.run_attempt }}
+          merge-multiple: true
+      - run: node scripts/build-manifest.mjs --verify
+      - run: node scripts/verify-full.mjs
+      - run: npm run package:extension
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.package == true
+      - run: npm run package:api
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.package == true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-validation-evidence-${{ github.run_attempt }}
+          path: |
+            output

@@ -1,26 +1,21 @@
-# Tholi development guidance
+# Working on Tholi
 
-## UI, UX, and motion
+## Before editing
 
-Before UI work, read the relevant project-local skills in `.codex/skills`, not only a global copy. The inventory, upstream revisions, licenses, and SHA-256 hashes are in `.codex/skills-manifest.json`.
+1. Search existing implementation and tests before adding either.
+2. Extend the existing owner instead of layering a parallel implementation.
+3. Retain permanent tests only for distinct ongoing behavior, contracts or regressions.
+4. Remove temporary diagnostic probes after verification.
+5. Extract shared code for demonstrated reuse, not hypothetical future use.
 
-- Layout, hierarchy, typography, and brand: `apple-design/SKILL.md`, `ui-ux-pro-max/SKILL.md`, and `baseline-ui/SKILL.md`. Load the Apple references relevant to the actual surface.
-- Interactive controls and forms: `fixing-accessibility/SKILL.md`.
-- Animation implementation: `animate/SKILL.md` and `emil-design-eng/SKILL.md`; use `fixing-motion-performance/SKILL.md` or `animation-performance/SKILL.md` when measuring or changing motion mechanisms.
-- Read-only audits: `improve-ui/SKILL.md` and `improve-animations/SKILL.md`. Use the approved plan and implementation skills for execution.
+## Boundaries
 
-Reference the exact skill guidance applied in the change record with its validation. Keep copied upstream skill files intact. User instructions and the accepted product plan take precedence over generic recommendations in skills.
+The background runtime owns the single pinned session and journey. Content runtime observes, binds and verifies. `packages/ui` is presentation without browser privileges. The website practice uses an isolated adapter and mock accounts; it cannot own extension state. Preserve generated entrypoint filenames, public contracts, stored identifiers, host grants, consequential-action review, OCR masking and frozen corpora. A click or animation never establishes arrival.
 
-The accepted stack is React, Base UI, Iconoir, and existing CSS/WAAPI motion. Preserve it. Generic skill suggestions to migrate to Tailwind or another motion library do not apply to this product. Extend the existing easing, palette, spacing, and presentation tokens. Amber is the stateful wayfinder, jade is the guide; preserve the supplied wordmark and brand colors. No em dashes in product copy or decorative dash prefixes on section labels.
+Keep React, Base UI, Iconoir and the existing tokens. For visual UI work, read applicable project-local skills from `.codex/skills` and record specific guidance and validation; provenance is in `.codex/skills-manifest.json`. This does not require unrelated suites for a nonvisual change. Keep upstream skill files outside production assets and unchanged.
 
-## Ownership and truth
+## Validation
 
-`packages/ui` owns reusable presentation. The extension worker owns the journey. The website demo uses shared product components with an explicitly controlled local adapter. Keep browser privileges and credentials out of shared components and website previews.
+Run focused existing checks during implementation. `npm run test:ci` is the deterministic PR gate. `npm run test:full` is full certification, required before packaging. Both build once; use the documented prepared-build option only with immutable, verified build artifacts. PR or independently collected evidence cannot authorize a release. Native Chrome, screen-reader and signed-in checks stay pending until performed.
 
-Animations cannot establish completion. Arrival needs verified outcome evidence. Preserve frozen NLP/Wikipedia inputs, route eligibility, review boundaries, host-permission checks, private session storage, and OCR masking. Surface changes do not stop or reset a journey. Distinguish Stop, Reset current session, Reset position, and knowledge deletion.
-
-Keep feature-oriented frontend ownership. Avoid parallel styles, imitation product interfaces, inert controls, and broad folder rearrangements. Website delivery is local-only unless the user requests hosting. Mock accounts never send or persist passwords. New downloads must pass existing packaging gates; preserve truthful version and checksum information.
-
-## Verification
-
-Run focused checks during implementation, then strict TypeScript, unit tests, builds, and the complete UI regression on matching final extension bytes. Test narrow/compact sizes, 200% zoom, both appearances, keyboard use, reduced motion, and stable state identity. Record native Chrome, screen-reader, and signed-in checks separately when they have not been performed. Do not call fixture passes real-site passes.
+See [testing and CI](docs/development/testing/README.md), [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Keep documentation links and website article aliases updated when moving an owner. Do not publish, deploy or overwrite an existing archive without explicit authorization.

@@ -1,3 +1,5 @@
+import { verifyFull } from "./verify-full.mjs";
+import { requireFullEvidence } from "./evidence.mjs";
 import { visionEvidence } from "./verify-vision-release.mjs";
 import { readFile, mkdir, cp, writeFile, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
@@ -7,7 +9,14 @@ import { thirdParty } from "./third-party.mjs";
 import { artifactFiles } from "./artifact-files.mjs";
 import { multiAppEvidence } from "./verify-multi-app-release.mjs";
 import { reliabilityEvidence } from "./verify-reliability-release.mjs";
+await verifyFull();
 const report = JSON.parse(await readFile("output/nlp/results.json", "utf8"));
+const fullIdentity = requireFullEvidence(report, report.artifactFiles);
+requireFullEvidence(
+  JSON.parse(await readFile("output/qa/unit.json", "utf8")),
+  report.artifactFiles,
+  fullIdentity,
+);
 if (!report.passed)
   throw new Error(
     "Run passing real-model and API validation before packaging.",
@@ -38,7 +47,19 @@ await cp("assets/ocr", join(staging, "assets/ocr"), { recursive: true });
 await cp("assets/ocr-lock.json", join(staging, "assets/ocr-lock.json"));
 await cp("assets/models", join(staging, "assets/models"), { recursive: true });
 await cp("assets/model-lock.json", join(staging, "assets/model-lock.json"));
-await cp("docs/api-setup.md", join(staging, "README.md"));
+const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+const setupSource = new URL(
+  "blob/main/docs/guides/backend.md",
+  rootPackage.repository.url.replace(/\.git$/, "") + "/",
+);
+const setup = (await readFile("docs/guides/backend.md", "utf8")).replace(
+  /\]\(([^)]+)\)/g,
+  (match, href) =>
+    /^[a-z][a-z0-9+.-]*:|^#/i.test(href)
+      ? match
+      : `](${new URL(href, setupSource).href})`,
+);
+await writeFile(join(staging, "README.md"), setup);
 await thirdParty(staging);
 const dependencies = {};
 const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
@@ -108,7 +129,7 @@ await writeFile(
       multiApp,
       vision,
       reliability,
-      setup: "docs/api-setup.md",
+      setup: "docs/guides/backend.md",
     },
     null,
     2,

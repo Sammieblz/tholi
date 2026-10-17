@@ -158,9 +158,9 @@ const bytes =
     null,
     2,
   ) + "\n";
-await mkdir("tests/nlp", { recursive: true });
-await writeFile("tests/nlp/corpus.json", bytes);
+await mkdir("tests/fixtures/nlp", { recursive: true });
+await writeFile("tests/fixtures/nlp/corpus.json", bytes);
 await writeFile(
-  "tests/nlp/corpus.sha256",
+  "tests/fixtures/nlp/corpus.sha256",
   createHash("sha256").update(bytes).digest("hex") + "\n",
 );

@@ -4,13 +4,13 @@ Use Node **24.19.x** and its npm. Run `npm ci`, then `npm run check`. Builds fet
 
 ## Names and metadata
 
-Use **Tholi** in product copy, documentation, demo labels and generated report filenames. The root package owns the canonical repository URL. Existing scoped packages, storage keys, environment variables and protocol identifiers retain their legacy names for compatibility. See [the naming reference](docs/naming.md) before renaming an identifier or an artifact.
+Use **Tholi** in product copy, documentation, demo labels and generated report filenames. The root package owns the canonical repository URL. Existing scoped packages, storage keys, environment variables and protocol identifiers retain their legacy names for compatibility. See [the naming reference](docs/development/naming.md) before renaming an identifier or an artifact.
 
 ## Component boundaries
 
-Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/frontend-architecture.md). Keep feature CSS colocated and shared presentation free of Chrome APIs. Follow the [motion contract](docs/ui-refinement.md) for stable steps, reduced motion, and keyboard interactions.
+Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/architecture/frontend/README.md). Keep feature CSS colocated and shared presentation free of Chrome APIs. Follow the [motion contract](docs/releases/v0.10.1/ui-audit.md) for stable steps, reduced motion, and keyboard interactions.
 
-The shared navigation core owns validated requests, retrieval/planning orchestration, queues and workflows. NLP owns interpretation and CPU embeddings. The extension owns discovery, binding, permissions, lifecycle and outcome verification. The optional API uses the same core with inference outside its event loop. See [architecture](docs/live-navigation.md).
+The shared navigation core owns validated requests, retrieval/planning orchestration, queues and workflows. NLP owns interpretation and CPU embeddings. The extension owns discovery, binding, permissions, lifecycle and outcome verification. The optional API uses the same core with inference outside its event loop. See [architecture](docs/architecture/navigation.md).
 
 Keep website-specific selectors in independent test oracles. Workflow packs may describe sourced semantic milestones, prerequisites and outcome predicates; they must not encode fixed selectors, account URLs or coordinates. Never read editable values or credentials into discovery, knowledge or embeddings. Similarity, OCR confidence and clicks cannot establish completion or bypass review boundaries.
 
@@ -32,16 +32,18 @@ TypeScript rejects unused locals and parameters. Build hashing is shared by test
 
 Install browser binaries once with `npx playwright install chromium`. Run browser/model suites sequentially on memory-constrained machines. `npm run build:extension:experimental:paddle` includes Paddle/OpenCV for evaluation; the normal build removes their inactive assets. A failed experiment must never be counted as a passing default-engine gate.
 
-## Release checks
+## CI and releases
 
-CI runs the focused suites plus `npm run test:e2e -- --workers=1`, `npm run test:live:wikipedia` and `npm run test:acceptance`. Package with `npm run package:extension` and `npm run package:api` only after all required reports match the final build. Do not rebuild after evaluation or overwrite existing archives. Native Chrome and signed-in checks remain separately recorded in [the handoff checklist](docs/chrome-handoff.md).
+Use `npm run test:ci` for deterministic PR checks and `npm run test:full` before certification. The full command runs all retained coverage against one build, then verifies evidence. PR/main workflows preserve the required `validate` aggregate; nightly/manual/tag runs perform full validation. See [testing and CI](docs/development/testing/README.md) and [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md).
 
-Frozen corpora live in `tests/nlp`, `tests/multi-app`, `tests/continuity`, `tests/reliability-vision` and `tests/acceptance`. Keep existing inputs, splits, hashes and thresholds intact. Tune only calibration data; corpus changes need explicit versioning and independent annotation review. Do not regenerate expectations from predictions.
+Package with `npm run package:extension` and `npm run package:api` only after complete full-tier evidence from the same run and final bytes. Do not rebuild afterward or overwrite existing archives. Focused runs do not collectively certify a release. Native Chrome and signed-in checks remain separately recorded in [the handoff checklist](docs/guides/getting-started.md).
 
-Recording captions/transcripts and frozen `corpus.json` inputs are byte-verified. Their LF line endings are pinned in `.gitattributes`, including on Windows with `core.autocrlf=true`. Keep these rules when adding recordings or corpora. A checksum mismatch requires investigating the changed bytes; do not regenerate provenance merely to make checkout differences pass. `tests/checkout-integrity.test.ts` verifies a fresh Git checkout independently of the existing worktree.
+Frozen inputs live under `tests/fixtures`, with the acceptance declaration in `tests/browser/acceptance/matrix.json`. Preserve original bytes, splits, hashes and thresholds. Calibration changes require explicit versioning and independent review. Never regenerate expectations from predictions. `.gitattributes` pins LF for recording text and frozen JSON; checkout integrity is tested independently of the worktree.
 
-Store no authenticated screenshots or traces by default. Private entity text and values stay session-only, including their vectors. Original knowledge and reusable routes survive migrations; derived data can be rebuilt. See [privacy](docs/privacy.md) and [security](docs/security.md).
+Store no authenticated screenshots/traces by default. Private values remain session-only. Original knowledge and reusable routes survive migrations; derived indexes can rebuild. See [privacy](docs/architecture/privacy.md) and [security](docs/architecture/security.md).
 
-Run `npm run test:ui` for the shared sidebar/widget experience and local website. It records `output/qa/ui-build.json` against the current extension bytes, built website and frontend sources. UI-only selector updates must preserve navigation, privacy, and outcome assertions in the existing suites. The website is served locally by `npm run dev:web`; it has mock accounts only.
+New archives use `tholi-VERSION.zip` and `tholi-api-VERSION.tgz`. Legacy archives remain immutable with truthful checksums; both packagers reject already released versions under either naming convention.
 
-New extension archives use `tholi-VERSION.zip`; new backend archives use `tholi-api-VERSION.tgz`. Existing legacy archives remain immutable and eligible downloads keep their original filenames and checksums. Both packagers reject an already released version under either naming convention.
+## Avoiding duplication
+
+Search implementation and tests first. Extend the existing owner. Keep permanent tests only for distinct ongoing contracts/regressions. Remove temporary probes after verification. Extract shared code for demonstrated reuse, not hypothetical future use.

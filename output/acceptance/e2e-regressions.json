@@ -1,15 +1,13 @@
 {
-  "format": "navigator-regression-v1",
-  "scope": "e2e",
   "artifactFiles": {
-    "LICENSE": "a79724ced24654f5f34b2e8d01a3746ff9dc53903ff59b19450dc33f7c94ce44",
-    "THIRD_PARTY_NOTICES.md": "f6b9daf43ba59f1493131503fa72c364f653fc4c655f185572586ca6acd93a08",
-    "content.js": "85e9d3b69ad7355b3ebf5783921e1c305132667f1273abf5d41f73817bf70afb",
-    "content.js.map": "86153ff085ad1de8780d183eb4d2db842d435fbb6233f6c80d2110e0ee5fce42",
-    "discovery-lock.json": "c9e68753644d273842c34f1b3d990149c9a8424dff178054e871a88660eb281c",
-    "frame-agent.js": "eb03efa2fb7f602c5a8842288c0061888a2f251323779a05706c9523c59066d0",
-    "frame-agent.js.map": "50e1aea46ce8e6b5d9857f329cc91b5af798d17ef054b15ed27faecadeae1423",
-    "inference.js": "0e6e0779882ca0f6272c1d01367af074b2f09b4a9c840bb2c84783cbb3ecfea8",
+    "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
+    "THIRD_PARTY_NOTICES.md": "4e178aa8b9eca8b7272c89eff9ed297ad6513f3c7b7910de9325a84186aaf819",
+    "content.js": "4dc3358491ff983fd851b62db0a078a6c12b44e4b0466637e6d66cba71dd205a",
+    "content.js.map": "0def3bb701edfec19d3a815c877080a2f0962d1a9e50499d6298c4432112fbe6",
+    "discovery-lock.json": "4aa189c178714f51ffdaab3272389f3a3d3c71d5652fe74014a322c5cd6d6f6a",
+    "frame-agent.js": "dca7e397605e588ea33f8ffc460c2d9b54c9c0306c4255768c84e387fc5be6dc",
+    "frame-agent.js.map": "ccccc9c20dbd96751e973f1852cdf358f8d7e5b7c86d184fb604b1adf171dab1",
+    "inference.js": "5799afc035119dd23928e177467567a3e89c87829ab3aa6afc781484c1f0b5af",
     "licenses/@babel_runtime-LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76",
     "licenses/@base-ui_react-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
     "licenses/@base-ui_utils-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
@@ -249,398 +247,293 @@
     "models/Xenova/all-MiniLM-L6-v2/special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
-    "ocr-lock.json": "ac01ead32b50df222b8cca5ccc7b41d34b432997d05e21ebe488544179caabca",
+    "ocr-lock.json": "2d9400385852cab1afb909cf9260876e45c1a58e8f6a839bbf64c190eff1aa7d",
     "ocr-worker.js": "a670af4337a9d24d40dc560d2e70aa38b866ccd4abee667882748fe2d4cdd19a",
     "ocr/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "ocr/eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
     "ocr/tesseract-core-lstm.wasm.js": "775a35df6f2ae100e02609443e6bd5cafcd07983dd6175454ca4a432a7730687",
     "ocr/tesseract-core-simd-lstm.wasm.js": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
     "ocr/worker.min.js": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
-    "offscreen.html": "b0075d4bb6c92993060306d9ab191f8b507189f11e9244e956c1d1455f340034",
-    "offscreen.js": "c4c7e909f74d4932533347048ac75ab8bc9a22d790c53ac69387461eeb57e77b",
-    "offscreen.js.map": "a83191e00caa0d4bc2f8d25b51be8899172f567f3cca57956d34db11f979f870",
+    "offscreen.html": "6663936252c9e7a0f580b9015f73df49838acc7ede1716689dfc6510881275b3",
+    "offscreen.js": "e3c8e9b7225b98b5469a83685ae0e628b612f58b698fa49565a2e9c48f42ef72",
+    "offscreen.js.map": "f61f572601e8f072c2f35f4de0dfb79be7e53a265c839912402dac290c15f20d",
     "outfit-latin-wght-normal-5FXBKKJF.woff2": "6c18d579fd87c3776be068b762cbc83fde3acb543d49eabd3ade842eb987e887",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
     "sidepanel.css": "d65069c883887ea3c485e371def48a17031047b30c3c633ca91339a745612493",
-    "sidepanel.css.map": "25a50b71dbca6c512b8a77993038e592a16b0b992bf5a3ed285ac67271af54c2",
+    "sidepanel.css.map": "d67c3d30603b3be6a8068c156f51b3dd17f942580e9718adf923c5621196fb2f",
     "sidepanel.html": "c573a6fd1e89418f559b2084b564f15d2e73468787b893299cddaeeb914dc2f4",
-    "sidepanel.js": "3067c320eaf3f1c1d1838ffba4548258ba523b604758925311396c807cf7fe0d",
-    "sidepanel.js.map": "eceff48c26542e9c30d96ef5d1cab43aa5280e90f4aee163e08b43b16ce0fe47",
-    "theme-page.js": "98419ca92877002d7bbef4e1a69325dd551472687c1469ba4750f72fcf02e6d0",
-    "theme-page.js.map": "2faeec2fe8c1cb649b943b90cc44e43d446bc18ffffe037404b10786aa5b8255",
+    "sidepanel.js": "4bb541201298eec46c9d1aa2363fbb171615aadd329d1c51b0219be047c47c94",
+    "sidepanel.js.map": "5b28fc375d1c4932ea0476a0f1ecf5ce2c5c39ef95d7f6182678f9645241d6ce",
+    "theme-page.js": "dcbba567088a31a8ccf575b748bd046cc21c06f817bb0271de7bb744e2c647ad",
+    "theme-page.js.map": "54e4f43f10c26beb4a30492c31505cb7b35004b635172d3237201555c82eedda",
     "third-party.json": "6a6e5eb179068056e401992bc8a851c8316913da834f0f7ece405b82b4e9b135",
     "vision-policy.json": "d885022d8ab0bc4f3cd07a065464ce3f4b87a869de09b35861dcc67dda43c7c1",
-    "widget.html": "e289a1114d4eb09b5adbe14549ea1ec09a94292faaa82d5d9e773660f82d0848",
-    "worker.js": "c1fb8f2d009efe92cda693f06563c6881090c675c5f9a13b44662acc0fba75fa",
-    "worker.js.map": "5c1e8e76dae0044998c66f0631addd745f2c2f8d27f631ddc45aa0d008dbf4d6"
+    "widget.html": "02e067f49f69098d2210b8eabd442c4fa55070ad851f4540106d60ef1728ef04",
+    "worker.js": "41b74d0e456118262235fb3e8f8f66c1b9cc506b639b9f38dac4abbeed39de4c",
+    "worker.js.map": "4501ce5150e21f68ac39870623cb16a28bdaa9729889b0d7b43ca6115acb71ee"
   },
   "extensionVersion": "0.10.1",
-  "evaluatedAt": "2026-10-17T04:31:51.265Z",
-  "expected": 90,
-  "configuredCount": 90,
-  "sourceRevision": "3ee261a63a5ec8a433bb5cca6a42799674172267",
-  "workingTreeDirty": true,
+  "validation": {
+    "selection": "complete",
+    "tier": "full",
+    "runId": "15251e6a-857f-48b5-bf30-376fac268234",
+    "buildDigest": "16688e4073b4caa7435c08e10196662c0d56110f166955f0fcd71894363c06ba"
+  },
+  "scope": "e2e",
+  "evaluatedAt": "2026-10-17T09:59:48.787Z",
   "passed": true,
+  "files": [
+    "tests/browser/extension/core/accessibility.spec.ts",
+    "tests/browser/extension/core/authentication.spec.ts",
+    "tests/browser/extension/core/dashboard-navigation.spec.ts",
+    "tests/browser/extension/core/extension.spec.ts",
+    "tests/browser/extension/core/geometry.spec.ts",
+    "tests/browser/extension/core/lifecycle.spec.ts",
+    "tests/browser/extension/core/live-navigation.spec.ts",
+    "tests/browser/extension/core/page-context.spec.ts",
+    "tests/browser/extension/core/task-journey.spec.ts"
+  ],
+  "projects": [
+    "core-desktop",
+    "narrow"
+  ],
+  "expected": 47,
+  "configuredCount": 47,
   "cases": [
     {
-      "id": " / desktop / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "id": "ddd864604af8a6a0198f-5caeafcdf5fc8beb38a7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
       "status": "passed"
     },
     {
-      "id": " / desktop / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "id": "70f6afe7e350c931056e-78c5f7253066072ade7f",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
       "status": "passed"
     },
     {
-      "id": " / desktop / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "id": "70f6afe7e350c931056e-b30027230f52d8220562",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
       "status": "passed"
     },
     {
-      "id": " / desktop / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "id": "70f6afe7e350c931056e-638d1e32b33de3a0f80a",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
       "status": "passed"
     },
     {
-      "id": " / desktop / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "id": "70f6afe7e350c931056e-c1e5d96ae014bc19f0bc",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
       "status": "passed"
     },
     {
-      "id": " / desktop / dashboard-navigation.spec.ts / cloudflare: account settings survives an unmounted menu without substituting product settings",
+      "id": "d23bd77383021f8f1c37-c136595d52bf2437753a",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / cloudflare: account settings survives an unmounted menu without substituting product settings",
       "status": "passed"
     },
     {
-      "id": " / desktop / dashboard-navigation.spec.ts / github: account settings survives an unmounted menu without substituting product settings",
+      "id": "d23bd77383021f8f1c37-4fccf2e3dd94510b96da",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / github: account settings survives an unmounted menu without substituting product settings",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "id": "da119938d3268322a91b-ee5f444ec7573367880d",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "id": "da119938d3268322a91b-effa1d5873edd7644117",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "id": "da119938d3268322a91b-b0fe67c118663d4da7b2",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / login excludes synthetic secrets and requires resume",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "id": "da119938d3268322a91b-67ed155d1b0e52b5a605",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "id": "da119938d3268322a91b-fc278d0545d7f94a2df1",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / production localhost access is available without a toolbar grant",
+      "id": "da119938d3268322a91b-4569ec84a7de348b05ba",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / production localhost access is available without a toolbar grant",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "id": "da119938d3268322a91b-cda108e7cf0021b0f000",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "id": "da119938d3268322a91b-1d00303a55b1ba347aae",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "id": "da119938d3268322a91b-6a75c4668893f3d1d34b",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
       "status": "passed"
     },
     {
-      "id": " / desktop / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "id": "da119938d3268322a91b-076d2c793fd057bed7f3",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
       "status": "passed"
     },
     {
-      "id": " / desktop / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "id": "7a6b7f055de881ba5856-524ebaeceb7f3683bb69",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "id": "1f1785dee40219527314-070dc4bb76ca9d3e29f4",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "id": "1f1785dee40219527314-56ce7a14cc21c6fc5746",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "id": "1f1785dee40219527314-be21f435b08ad4792b7c",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep running pinned",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "id": "1f1785dee40219527314-437b9479dd0a4779aaa7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "id": "1f1785dee40219527314-6ec96b1af719c96694dd",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep waiting pinned",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "id": "1f1785dee40219527314-d70e5278bf6ff91639e1",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
       "status": "passed"
     },
     {
-      "id": " / desktop / lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "id": "1f1785dee40219527314-597074e75fe172678687",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep paused pinned",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "id": "23aa19f1721e64a18ead-b3a0ff37e08a4f53c045",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "id": "23aa19f1721e64a18ead-7a0956c620b829c1e6bb",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "id": "23aa19f1721e64a18ead-81a5634f1aaf1f2235e8",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "id": "23aa19f1721e64a18ead-1b4c07b5776b2e1e2407",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "id": "23aa19f1721e64a18ead-bd3933e53c136e41e9e6",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "id": "23aa19f1721e64a18ead-9af36e646dd32ee1e408",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "id": "23aa19f1721e64a18ead-ca7ec0b7bb01545a734e",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "id": "23aa19f1721e64a18ead-8cab36428ca2c3553739",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "id": "23aa19f1721e64a18ead-1a454340f45fc5d70cb7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "id": "23aa19f1721e64a18ead-8eba35e1c8783c2e4460",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
       "status": "passed"
     },
     {
-      "id": " / desktop / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "id": "23aa19f1721e64a18ead-925ae3ca7b96eeda0496",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
       "status": "passed"
     },
     {
-      "id": " / desktop / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
+      "id": "a3c2465ddc327f7e7bba-1c094d1726e7ac73ef4d",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
       "status": "passed"
     },
     {
-      "id": " / desktop / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
+      "id": "a3c2465ddc327f7e7bba-4a30cd92bb411900760d",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "id": "af04636c97843afb0727-b12bd7332448f7394a23",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "id": "af04636c97843afb0727-78bafa935906f7b29ef3",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a wrong native selection cannot complete the destination",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "id": "af04636c97843afb0727-f6fffe7b4167aaeb2a67",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "id": "af04636c97843afb0727-e5356fcfbed58b72cfda",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "id": "af04636c97843afb0727-78e5a106d8db1b52bc93",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "id": "af04636c97843afb0727-2d4f52115b9886cd71df",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
       "status": "passed"
     },
     {
-      "id": " / desktop / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "id": "af04636c97843afb0727-b3fcb2b109b82d41386e",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
       "status": "passed"
     },
     {
-      "id": " / narrow / accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "id": "23aa19f1721e64a18ead-042cc410042fbb986f65",
+      "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
       "status": "passed"
     },
     {
-      "id": " / narrow / authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / dashboard-navigation.spec.ts / cloudflare: account settings survives an unmounted menu without substituting product settings",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / dashboard-navigation.spec.ts / github: account settings survives an unmounted menu without substituting product settings",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / login excludes synthetic secrets and requires resume",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / production localhost access is available without a toolbar grant",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep running pinned",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep waiting pinned",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / lifecycle.spec.ts / tab switching and closure keep paused pinned",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / a wrong native selection cannot complete the destination",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
-      "status": "passed"
-    },
-    {
-      "id": " / narrow / task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "id": "23aa19f1721e64a18ead-daddecff84299e99c2b6",
+      "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
       "status": "passed"
     }
   ]

@@ -6,6 +6,19 @@ export const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+function hasLandmark(
+  ui: UIState,
+  p: Route["states"][number]["landmarks"][number],
+) {
+  return ui.landmarks.some(
+    (l) =>
+      l.visible &&
+      l.role === p.role &&
+      (p.anyName || p.names.some((n) => normalize(n) === normalize(l.name))) &&
+      (!p.selector || l.selectors?.includes(p.selector)) &&
+      (p.inViewport === undefined || l.inViewport === p.inViewport),
+  );
+}
 export function localize(
   route: Route,
   ui: UIState,
@@ -17,34 +30,12 @@ export function localize(
       if (state.modal !== undefined && state.modal !== ui.modal)
         reasons.push("modal-mismatch");
       let rejected = reasons.length > 0;
-      const matched = state.landmarks.map((p) =>
-        ui.landmarks.some(
-          (l) =>
-            l.visible &&
-            l.role === p.role &&
-            (p.anyName ||
-              p.names.some((n) => normalize(n) === normalize(l.name))) &&
-            (!p.selector || l.selectors?.includes(p.selector)) &&
-            (p.inViewport === undefined || l.inViewport === p.inViewport),
-        ),
-      );
+      const matched = state.landmarks.map((p) => hasLandmark(ui, p));
       if (state.landmarks.some((p, i) => p.required && !matched[i])) {
         rejected = true;
         reasons.push("required-landmark-missing");
       }
-      if (
-        state.absentLandmarks.some((p) =>
-          ui.landmarks.some(
-            (l) =>
-              l.visible &&
-              l.role === p.role &&
-              (p.anyName ||
-                p.names.some((n) => normalize(n) === normalize(l.name))) &&
-              (!p.selector || l.selectors?.includes(p.selector)) &&
-              (p.inViewport === undefined || l.inViewport === p.inViewport),
-          ),
-        )
-      ) {
+      if (state.absentLandmarks.some((p) => hasLandmark(ui, p))) {
         rejected = true;
         reasons.push("forbidden-landmark-present");
       }

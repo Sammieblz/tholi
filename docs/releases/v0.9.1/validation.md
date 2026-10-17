@@ -1,0 +1,53 @@
+# v0.9.1 reliability pass
+
+Historical snapshot of the packaged candidate before the cleanup pass. Metrics
+and bundled Paddle claims below apply to that archive, not the current build.
+Normal builds now exclude Paddle/OpenCV assets. See [maintenance](../records/2026-10-maintenance.md)
+for cleanup verification and [the README](../../../README.md) for current setup.
+
+The default extension retains destinations through credential and one-time-code screens, performs bounded automatic recovery, and verifies menu, document and review transitions. Inputs and editor contents are excluded. A review click never establishes completion; Prime status must explicitly identify Prime and confirm cancellation. Account headings cannot substitute for navigation controls in a result workflow.
+
+Browser discovery adapts bounded accessibility algorithms from pinned Microsoft Playwright source. Structural controls, custom interactive candidates, active surfaces, shadow roots and authorized frames remain indexed cooperatively. Opaque custom actions retain unknown effects. Fresh targets can be scrolled into view without clicking or changing focus; user interaction cancels pending scrolling.
+
+Viewport OCR masks discovered input, textarea and contenteditable fields, including open shadow roots, and all iframe rectangles. Authorized frames still support frame-local DOM discovery; their pixels remain masked because permission alone does not provide trustworthy field-mask geometry. OCR guidance inside frames is therefore unavailable in this candidate.
+
+The primary panel contains a destination, current instruction and Pause/Stop. Entering a destination can start the session after the necessary site grant. Normal review clicks and visual changes are observed automatically. Route details, strategies, control inspection, local knowledge and diagnostics remain accessible through expandable sections.
+
+The optional API preserves existing protocols and advertises its actual Tesseract engine. Backend OCR failure falls back to browser processing; cancellation prevents obsolete fallback. Derived indexes are versioned separately from model embeddings in IndexedDB and SQLite. Original site knowledge and saved routes are preserved.
+
+## OCR comparison
+
+The frozen, authored 32-image UI corpus contains eight calibration images and 24 held-out images, including canvas text, small labels, dark/light themes, duplicate labels and absent targets. Corpus and image hashes are verified before evaluation. These are simulated UI fixtures, not authenticated screenshots. The extension performs real local model inference offline.
+
+Tesseract remains the verified default. PaddleOCR.js 0.4.2 and PP-OCRv6 tiny detector/recognizer assets are bundled with source and model hashes. OpenCV function generation was adapted to static closures without loosening extension CSP; the SDK image adapter uses OffscreenCanvas pixels. The current Paddle pipeline still fails its startup deadline, so it is explicitly experimental and has NOT passed promotion gates. A completed comparison test must never be reported as a successful Paddle gate. The policy file keeps it disabled by default.
+
+## Verification and limits
+
+Focused tests cover OTP metadata without field-value reads, task retention, outcome-subject filtering, accessible names, backend fallback/cancellation and the complete simulated Prime sequence through a three-minute verification delay, menus, retention, final confirmation and status evidence. The simulated sequence requires one request, no retyping and no routine Navigator confirmation clicks. Fixture permissions are pregranted; this does not validate native permission UI.
+
+Final reports live under output/reliability, output/vision, output/nlp, output/multi-app and output/acceptance. Release gates must pass for matching built bytes. The package limit is now 100 MiB. Older frozen corpora remain unchanged.
+
+Measured on Windows, Node 24.19.0 and a Ryzen 7 5700U:
+
+| Check                            | Result                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Frozen 200-case NLP corpus       | Held-out accepted-target precision and supported coverage: 100%                                                          |
+| Frozen 360-case multi-app corpus | Per-platform held-out precision/coverage: 96.4–100%; one GitHub default-branch context miss remains recorded             |
+| Frozen 116-case accuracy matrix  | Passed; no false success, automatic website clicks or secret leaks                                                       |
+| Frozen UI-image corpus           | Tesseract: 100% accepted-region precision and supported coverage across 24 held-out images; 15 eligible positive targets |
+| Warm NLP planning p95            | 7.0 ms, after model/index startup                                                                                        |
+| 50,000 nodes / 5,000 controls    | Priority discovery 179 ms; warm projected discovery p95 162 ms; relevant refresh p95 258 ms                              |
+| Warm OCR p95                     | 106 ms on the 960×600 UI-image corpus; this does not establish latency on every real page                                |
+| Unpacked extension               | 76,271,843 bytes (72.7 MiB)                                                                                              |
+
+Paddle has no passing held-out score or latency measurement because initialization timed out. These measurements establish fixture/corpus results, not signed-in Amazon reliability.
+
+Native Chrome permission activation/recovery and signed-in Amazon account variants remain pending user-assisted checks. Actual final cancellation is performed only by the user when intended. Passing simulated journeys does not establish verified real-site Prime support. Workflow coverage remains live discovery until the corresponding real-site test is completed.
+
+## Native Chrome / Amazon check
+
+1. Open `chrome://extensions`, reload Internet Navigator and confirm version **0.9.1**. Refresh the Amazon tab so the previous content script is replaced.
+2. Open Navigator from its toolbar icon. Enter **Help me cancel my Amazon Prime membership**, select **Guide me** and approve the Amazon site grant if Chrome requests it.
+3. Follow the highlighted website controls. Complete login and 2FA on Amazon. Confirm the original destination survives the wait and guidance resumes on the authenticated screen without retyping or Navigator confirmation buttons.
+4. Follow membership management and retention screens. Perform the final cancellation on Amazon only if you intend it. Navigator must remain incomplete until fresh Prime membership status confirms the requested result.
+5. Check Pause/Resume, browser Back, extension restart and expired site/capture access. Chrome-required activation must explain which access is missing and preserve the destination. Record browser version, account/layout variant and any incorrect target; these remain pending until checked.

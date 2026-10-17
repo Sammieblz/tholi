@@ -1,0 +1,52 @@
+# Historical build evidence, October 2026
+
+Historical observations only. They do not certify current bytes.
+
+## Archived build verification — v0.6.7
+
+Production extension candidate: **0.6.7**. Generic live navigation protocol: **navigator.live 1.0.0**. Both demo and unpacked extension builds completed. Source baseline is the user's commit `1aec0785d13cc03f322e0b7212000b70e264b5a3`; the current follow-up is local and has not been committed or pushed. Evaluation reports identify the actual build-file hashes and dirty working tree.
+
+| Check                                                                           | Result                      |
+| ------------------------------------------------------------------------------- | --------------------------- |
+| TypeScript                                                                      | Passed                      |
+| Core, discovery, planning, memory, privacy, lifecycle and model-contract tests  | 94/94 passed                |
+| Production-extension browser integration at 1280×900 and 720×900                | 64/64 passed                |
+| Live Wikipedia goals, explicit language destination and geometry at both widths | 10/10 passed                |
+| Declared accuracy matrix                                                        | 14 tests / 116 cases passed |
+| Whitespace/diff validation                                                      | Passed                      |
+
+Reproduce with `npm run check`, `npm run test:e2e`, and `npm run test:live:wikipedia`. Browser harnesses use the production manifest unchanged. Local and live test artifacts are separate; both full regression reports record complete passing case sets and the same evaluated build bytes. The declared numerical benchmark is `npm run test:acceptance`; its results and denominators are recorded below.
+
+Generic fixtures have no Wikipedia IDs/classes. They exercise menu reveal plus preference changes, section arrival versus visible Contents links, semantic goal entry, unsafe/ambiguous/model-invented controls, stale revisions, changed labels and invalidation, focus without field-value capture, full-page and same-document navigation, pause/stop across loads, open-shadow-root updates and interactions, and memory persistence after closing and relaunching Chromium with the same profile. Forget/Clear stop observation before deleting stored knowledge.
+
+Live regressions use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. The test then clicks that link and independently verifies the actual French document. Navigator correctly stops at the new origin and does not claim a completed language goal there; fresh toolbar invocation/Start is required. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.
+
+Accuracy regressions cover regular plurals and decorative counts, explicit qualifiers, contextual ambiguity, hidden responsive duplicates, local versus shared-toolbar reveal relationships, accessibility description precedence and changes, shadow-root ownership, popup button roles, unrelated dialogs, equivalent navigation destinations versus distinct queries, opposite preference values, ordinary Help controls, and misleading or unnecessarily indirect model proposals. Descriptions participate in consequential-action checks and preserve field-value exclusions. Verified menu opening enters awaiting-choice; it does not claim a language preference changed. Match strength is displayed qualitatively rather than as a measured accuracy percentage.
+
+The retained Northstar regression cases cover normal cancellation guidance and final hard stop, billing completion, retention/wrong-turn branches, alternate labels, login/checkpoint privacy, ambiguity/unknown screens, delayed renders, full-document interruption, pinned versions/tokens, localhost access and local diagnostic exports. Same-document Chrome loading events are checked against document identity rather than terminating SPA guidance.
+
+The prior Wikipedia-specific coach, route packs, sample allowlist, URL policy, scope/continueOnNavigation schema fields, inspection helpers and superseded tests were removed. Shared authored-route functionality remains for controlled demo regression cases. Documentation reflects the new architecture and bounded extension-owned IndexedDB store.
+
+QA screenshots are under `output/qa/generic-panel-*.png`, `output/qa/live-generic-*.png` and `output/qa/language-*.png`; panel layouts and the actual languages highlight were inspected at both widths. Load `dist/extension`, Reload at `chrome://extensions`, and refresh the website to replace an older injected script.
+
+Limits: the on-device API adapter is tested with mocked structured responses, not evaluated for real Gemini Nano accuracy on this device. Live checks run semantic planning with optional AI disabled. Actual native Chrome toolbar/panel, keyboard/screen-reader speech and per-site permission denial/recovery remain pending in [chrome-handoff.md](../../guides/getting-started.md). The native computer-use helper failed to connect to its Windows pipe after retry/reset; the browser UI inventory exposes no surfaces. Automated extension-page checks do not establish native speech or permission-dialog behavior. Top-document/open-shadow-root semantics are supported; cross-origin frames, closed roots, canvas-only controls and universal website workflow coverage remain outside this adapter. Large scans are capped and disclosed; risk classification is heuristic.
+
+This implements the dynamic Wikipedia proof of concept and site-memory architecture. It does not establish the original MVP's multi-site beta acceptance metrics, remote route distribution or desktop adapters. Remaining acceptance work is tracked in the repository's existing issue plan.
+
+## Page context and grounded intent — v0.6.7
+
+The collector adds heading ancestry, named regions and transient viewport placement to actual controls. Generic matching incorporates nested context and penalizes extra nearest-section qualifiers, fixing the live Edit Plot versus Plot inspirations ambiguity. Structure changes invalidate signatures/revisions and refresh browser-local memory. Stored metadata omits transient placement. No website selector or URL route was added to product code.
+
+Optional model input uses goal-ranked bounded retrieval with opener relationships, states, destinations, layout and scan/omission counts rather than the first 180 controls. Each request clones a pristine system session, times out after 30 seconds and destroys its clone. Structured intent is validated against an unambiguous live route, original clear matches, requested context, target scope and declared control operation. Scope constrains targets while preserving openers. Empty/invalid/unsafe AI preserves semantic routes and boundaries. Accepted intent replans using fresh control IDs when a menu replaces its children. Details are in [page-context.md](../../architecture/page-context.md).
+
+The final semantic-mode matrix was evaluated at `2026-10-11T16:50:47.244Z`, with unchanged matrix SHA256 `bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae`. Live: 60 supported attempts, **72/72 targets**, **72/72 verification claims**, **60/60 outcomes**. Generic: 30 cases, **24/24 targets**, **18/18 verification**, **12/12 positives**, twelve intentional unresolved decisions. Authored: 26 cases, **12/12 targets**, **18/18 verification**, **26/26 state conformance**, eight expected stops. All report zero false success, Navigator automation, known sentinel leakage and model calls. The extra live interaction versus prior runs reflects actual revealed-control paths; case denominators did not change.
+
+The model browser contract uses deterministic responses for a paraphrase and a rerendered owned menu; it does not evaluate actual Gemini Nano quality. Native Chrome toolbar/permissions/speech and real-model interpretation remain pending. OCR, custom model training and remote providers were not introduced. Live Edit coverage independently checks both the article toolbar and Plot section links plus actual highlight geometry; no edit is published.
+
+Earlier v0.6.6 reports remain version-prefixed. Pre-scope-update passing reports and the failed concurrent live report remain in `context-before-scope-*.json` and `context-concurrent-live-regressions.json`; the final artifact requires fresh complete reports after that scope fix. `context-iteration-notes.json` records the test-accessible-name and fixture syntax errors, actual section-specificity bug, scrolling revision check and extension-page startup timeout. Trace directories are retained under `output/qa`.
+
+The final separate live suite passed **10/10** at `2026-10-11T16:53:24.343Z`, including both Edit target/geometry checks. Desktop and narrow Plot highlights were visually inspected. All three complete reports bind to the same ten production build files. Verified package: `output/releases/internet-navigator-0.6.7.zip` (**650,796 bytes**), SHA256 **602047419c2a6a46dc6748727836676276edd0f8d485f703b3e6951cad1eb0bc**. Every archive member was read back and matched. Previous archives remain intact. Native handoff #10/#17/#18 remains open; this follow-up is uncommitted and unpublished. Reload the extension and refresh the website before retesting.
+
+## Historical acceptance scope
+
+Candidate 0.6.7 keeps the same 116 declared cases. Its richer structural context and intent layer has additional unit coverage and four browser regression cases, bringing the full extension suite to 64. Live Edit regression also checks explicit Edit Plot against its own independently located link and halo; those checks remain outside the six-family accuracy matrix. Model browser contracts use deterministic fake output, while the measured matrix runs with AI off. Actual model language-understanding accuracy is still unevaluated. Archived v0.6.6 and pre-scope-update reports preserve earlier bytes; the final passing reports bind to the packaged v0.6.7 build. See `context-iteration-notes.json` for the retained failures and scope fix.

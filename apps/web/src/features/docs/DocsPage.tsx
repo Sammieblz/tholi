@@ -158,14 +158,11 @@ export function DocsPage({ slug }: { slug?: string }) {
             </p>
             <ul className="docs-navigation">
               {results.map((item) => (
-                <li key={item.slug}>
-                  <SiteLink
-                    to={`/docs/${item.slug}`}
-                    aria-current={slug === item.slug ? "page" : undefined}
-                  >
-                    {item.title}
-                  </SiteLink>
-                </li>
+                <ArticleNavigationItem
+                  key={item.slug}
+                  item={item}
+                  slug={slug}
+                />
               ))}
             </ul>
             {!results.length && (
@@ -183,14 +180,11 @@ export function DocsPage({ slug }: { slug?: string }) {
                   {articles
                     .filter((item) => item.group === group)
                     .map((item) => (
-                      <li key={item.slug}>
-                        <SiteLink
-                          to={`/docs/${item.slug}`}
-                          aria-current={slug === item.slug ? "page" : undefined}
-                        >
-                          {item.title}
-                        </SiteLink>
-                      </li>
+                      <ArticleNavigationItem
+                        key={item.slug}
+                        item={item}
+                        slug={slug}
+                      />
                     ))}
                 </ul>
               </div>
@@ -266,5 +260,24 @@ export function DocsPage({ slug }: { slug?: string }) {
         )}
       </div>
     </section>
+  );
+}
+
+function ArticleNavigationItem({
+  item,
+  slug,
+}: {
+  item: DocumentationArticle;
+  slug?: string;
+}) {
+  return (
+    <li>
+      <SiteLink
+        to={`/docs/${item.slug}`}
+        aria-current={slug === item.slug ? "page" : undefined}
+      >
+        {item.title}
+      </SiteLink>
+    </li>
   );
 }

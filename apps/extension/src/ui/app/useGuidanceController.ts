@@ -1,52 +1,47 @@
-import { unresolvedTitle } from "./presentationLabels";
-import { applyAppearance } from "../theme/apply-appearance";
-import { useCallback, useEffect, useState, useRef } from "react";
-import type { RoutePreview } from "../../../../../packages/route-registry";
-import type { SessionView } from "../../../../../packages/shared-types";
+import { useEffect, useRef, useState } from "react";
+import { beginJourney } from "../../../../../packages/goal-planner/task-journey";
+import { liveReport } from "../../../../../packages/live-diagnostics";
 import {
   LIVE_ROUTE_ID,
   LIVE_VERSION,
   pageSnapshotSchema,
-  type SavedTask,
   type RouteStrategy,
+  type SavedTask,
 } from "../../../../../packages/page-model";
-import { beginJourney } from "../../../../../packages/goal-planner/task-journey";
 import { sanitizeGoal } from "../../../../../packages/privacy-redaction";
-import { LocalModel, modelAvailability } from "../../local-model";
 import { memorySummary } from "../../../../../packages/site-memory";
-import { liveReport } from "../../../../../packages/live-diagnostics";
-import { requestCurrentSiteAccess } from "../../site-access";
+import { type UIPreferences } from "../../../../../packages/ui/guidance";
+import { present } from "../../../../../packages/ui/presentation";
 import {
-  defaultPreferences,
-  type UIPreferences,
-} from "../../../../../packages/ui/guidance";
-import {
-  present,
-  appendMessage,
-  conversationCommand,
-  clarificationReply,
-  explainStep,
-  type ConversationMessage,
-} from "../../../../../packages/ui/presentation";
+  LocalModel,
+  modelAvailability,
+} from "../../inference/browser-language-model";
+import { requestCurrentSiteAccess } from "../../platform/site-access";
+import { createModelActions } from "../features/advanced/actions";
+import { createConversationActions } from "../features/conversation/actions";
+import { useBackendSettings } from "../hooks/useBackendSettings";
+import { usePresentationSession } from "../hooks/usePresentationSession";
+import { useSessionSnapshot } from "../hooks/useSessionSnapshot";
+import { unresolvedTitle } from "./presentationLabels";
 export function useGuidanceController(widget = false) {
-  const [preferences, setPreferences] =
-    useState<UIPreferences>(defaultPreferences);
-  const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-  const hydratedRef = useRef(false);
-  const preferencesPending = useRef(false);
-  const lastSurface = useRef<"sidebar" | "widget" | undefined>(undefined);
-  const [view, setView] = useState<SessionView>();
-  const [context, setContext] = useState<{
-    tabId?: number;
-    origin?: string;
-    siteAccessRequired?: boolean;
-    canContinueTask?: boolean;
-    routes: RoutePreview[];
-    reason?: string;
-    sessionRoute?: RoutePreview;
-    session?: { tabId: number; view?: SessionView };
-  }>();
+  const { view, setView, context } = useSessionSnapshot(widget);
+  const {
+    preferences,
+    setPreferences,
+    messages,
+    setMessages,
+    hydrated,
+    goal,
+    setGoal,
+    preferencesPending,
+  } = usePresentationSession(widget, () => {
+    planning.current?.abort();
+    setView(undefined);
+    setJourneys([]);
+    setError("");
+  });
+  const { visionBackend, setVisionBackend, backend, setBackend } =
+    useBackendSettings(widget);
   const [selectedId, setSelectedId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<{
@@ -81,26 +76,11 @@ export function useGuidanceController(widget = false) {
     });
     return () => cancelAnimationFrame(frame);
   }, [busy, view?.status, hydrated]);
-  const [visionBackend, setVisionBackend] = useState(false);
   const [debug, setDebug] = useState(false);
   const [controlFilter, setControlFilter] = useState("");
-  const [goal, restoreGoal] = useState("");
-  const goalValue = useRef("");
-  const goalRevision = useRef(0);
-  const savedGoalRevision = useRef(0);
-  const setGoal = useCallback((value: string) => {
-    if (value !== goalValue.current) goalRevision.current++;
-    goalValue.current = value;
-    restoreGoal(value);
-  }, []);
   const [suggestions, setSuggestions] = useState<
     { label: string; signature: string }[]
   >([]);
-  const [backend, setBackend] = useState({
-    url: "http://127.0.0.1:8787",
-    token: "",
-    enabled: false,
-  });
   const [strategy, setStrategy] = useState<RouteStrategy>("fastest");
   const [journeys, setJourneys] = useState<{ id: string; goal: string }[]>([]);
   const [savedTasks, setSavedTasks] = useState<SavedTask[]>([]);
@@ -109,19 +89,6 @@ export function useGuidanceController(widget = false) {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiProgress, setAiProgress] = useState<number>();
   const [storedMemory, setStoredMemory] = useState(memorySummary());
-  useEffect(() => {
-    if (widget) return;
-    void chrome.runtime
-      .sendMessage({ type: "GET_VISION" })
-      .then((r) => setVisionBackend(!!r.backend))
-      .catch(() => {});
-    void chrome.runtime
-      .sendMessage({ type: "GET_BACKEND" })
-      .then((r) => {
-        if (!r.error) setBackend(r);
-      })
-      .catch(() => {});
-  }, []);
   useEffect(() => {
     let current = true;
     if (!goal.trim() || view?.status !== "running") {
@@ -197,59 +164,6 @@ export function useGuidanceController(widget = false) {
     return () => {
       planning.current?.abort();
       void model.current.close().catch(() => {});
-    };
-  }, []);
-  useEffect(() => {
-    let current = true;
-    let reading = false;
-    let readingAppearance = false;
-    const refreshAppearance = () => {
-      if (readingAppearance) return;
-      readingAppearance = true;
-      void chrome.runtime
-        .sendMessage({ type: "UI_APPEARANCE" })
-        .then((r) => {
-          if (current && !r?.error)
-            applyAppearance(
-              r?.appearance === "light" || r?.appearance === "dark"
-                ? r.appearance
-                : undefined,
-            );
-        })
-        .catch(() => {})
-        .finally(() => {
-          readingAppearance = false;
-        });
-    };
-    const refresh = () => {
-      refreshAppearance();
-      if (reading) return;
-      reading = true;
-      chrome.runtime
-        .sendMessage({ type: "GET_CONTEXT" })
-        .then((r) => {
-          if (current && r?.routes) {
-            setContext(r);
-            setView(r.session?.view);
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          reading = false;
-        });
-    };
-    refresh();
-    const port = chrome.runtime.connect({
-      name: widget ? "tholi-widget" : "tholi-panel",
-    });
-    port?.onMessage.addListener(refresh);
-    chrome.tabs.onActivated.addListener(refresh);
-    const interval = setInterval(refresh, 1000);
-    return () => {
-      current = false;
-      clearInterval(interval);
-      chrome.tabs.onActivated.removeListener(refresh);
-      port?.disconnect();
     };
   }, []);
   const command = async (
@@ -494,23 +408,13 @@ export function useGuidanceController(widget = false) {
     view?.journey?.progress.length,
     view?.page?.stateKey,
   ]);
-  const enableAI = async () => {
-    setError("");
-    setAiProgress(0);
-    try {
-      await model.current.enable(setAiProgress);
-      setAiEnabled(true);
-      setAiAvailability("available");
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "On-device AI could not start.",
-      );
-    } finally {
-      setAiProgress(undefined);
-    }
-  };
+  const { enableAI } = createModelActions({
+    setError,
+    setAiProgress,
+    model,
+    setAiEnabled,
+    setAiAvailability,
+  });
   const guideControl = async (controlId: string) => {
     setBusy(true);
     setError("");
@@ -568,94 +472,16 @@ export function useGuidanceController(widget = false) {
         : undefined,
     otherTab || !!view?.continuationOrigin,
   );
-  useEffect(() => {
-    let current = true;
-    let sequence = 0;
-    let applied = 0;
-    const refresh = () => {
-      const read = ++sequence;
-      const draftRevision = goalRevision.current;
-      const draftClean = draftRevision === savedGoalRevision.current;
-      void chrome.runtime
-        .sendMessage({ type: "UI_GET" })
-        .then((r) => {
-          if (!current || read < applied || r.error) return;
-          applied = read;
-          if (!preferencesPending.current) setPreferences(r.preferences);
-          setMessages(r.messages);
-          const becomingVisible =
-            lastSurface.current !== r.preferences.surface &&
-            r.preferences.surface === (widget ? "widget" : "sidebar");
-          lastSurface.current = r.preferences.surface;
-          // Handoffs hydrate the destination without overwriting active typing.
-          if (!hydratedRef.current || becomingVisible) {
-            if (draftClean && goalRevision.current === draftRevision) {
-              goalValue.current = r.draft;
-              restoreGoal(r.draft);
-            }
-            hydratedRef.current = true;
-            setHydrated(true);
-          }
-        })
-        .catch(() => {});
-    };
-    refresh();
-    const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
-      if (area === "session" && changes.tholiSessionReset) {
-        planning.current?.abort();
-        setGoal("");
-        setMessages([]);
-        setView(undefined);
-        setJourneys([]);
-        setError("");
-      }
-      if (
-        (area === "session" &&
-          (changes.tholiConversation ||
-            changes.tholiDraft ||
-            changes.tholiSurfacePresentation ||
-            changes.tholiSessionReset)) ||
-        (area === "local" && changes.tholiPreferences)
-      )
-        refresh();
-    };
-    chrome.storage.onChanged.addListener(listener);
-    return () => {
-      current = false;
-      chrome.storage.onChanged.removeListener(listener);
-    };
-  }, []);
-  useEffect(() => {
-    if (!hydrated) return;
-    const revision = goalRevision.current;
-    const id = setTimeout(
-      () =>
-        void chrome.runtime
-          .sendMessage({ type: "UI_SAVE", draft: goal })
-          .then((reply) => {
-            if (!reply?.error && goalRevision.current === revision)
-              savedGoalRevision.current = revision;
-          })
-          .catch(() => {}),
-      200,
-    );
-    return () => clearTimeout(id);
-  }, [goal, hydrated]);
-  const addMessage = async (
-    role: "user" | "guide",
-    text: string,
-    id: string = crypto.randomUUID(),
-  ) => {
-    const message = { id, role, text: text.slice(0, 1500), at: Date.now() };
-    setMessages((m) => appendMessage(m, message));
-    await chrome.runtime.sendMessage({ type: "UI_APPEND", message });
-  };
-  const explainCurrentStep = async () => {
-    await addMessage("guide", explainStep(view));
-  };
+  const { addMessage, explainCurrentStep, submit } = createConversationActions({
+    setMessages,
+    view,
+    goal,
+    preferences,
+    setGoal,
+    command,
+    submitGoal,
+  });
+
   const newDestination = () => {
     setGoal("");
     setError("");
@@ -702,45 +528,7 @@ export function useGuidanceController(widget = false) {
       "step:" + presentation.stepId,
     );
   }, [presentation.stepId, hydrated]);
-  const submit = async () => {
-    const text = goal.trim();
-    if (!text) return;
-    void addMessage("user", text);
-    if (preferences.mode === "conversation") {
-      const action = conversationCommand(text);
-      if (action === "WHY") {
-        await addMessage("guide", explainStep(view));
-        setGoal("");
-        return;
-      }
-      if (action) {
-        await command(action);
-        setGoal("");
-        return;
-      }
-      const choice =
-        view?.clarification &&
-        clarificationReply(text, view.clarification.choices);
-      if (choice) {
-        await command("CLARIFY", { choice });
-        setGoal("");
-        return;
-      }
-      if (
-        /^(?:what is|who is|tell me a joke|write me|explain quantum|what's the weather)/i.test(
-          text,
-        )
-      ) {
-        await addMessage(
-          "guide",
-          "I can guide website tasks and explain the selected step. Tell me where you want to go on this website.",
-        );
-        setGoal("");
-        return;
-      }
-    }
-    await submitGoal();
-  };
+
   const changePreferences = async (next: UIPreferences) => {
     const previous = preferences;
     preferencesPending.current = true;

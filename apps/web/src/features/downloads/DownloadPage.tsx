@@ -1,14 +1,14 @@
-import "./downloads.css";
-import packageMetadata from "../../../../../package.json";
-import { repositoryUrl } from "../../config/project";
 import {
   ArrowRight,
+  Check,
   Download,
   Folder,
-  Check,
   ShieldCheck,
 } from "iconoir-react";
+import packageMetadata from "../../../../../package.json";
+import { repositoryUrl } from "../../config/project";
 import { DownloadButton, useDownload } from "./downloads";
+import "./downloads.css";
 
 const steps = [
   {

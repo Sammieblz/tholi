@@ -1,8 +1,8 @@
-export { PreferencesProvider, usePreferences } from "./PreferencesProvider";
-export { CookieConsent, ThemeToggle } from "./CookieConsent";
 export {
   createConsentAnalytics,
   createFetchAnalyticsProvider,
 } from "./analytics";
-export type { WebsiteEvent, AnalyticsProvider } from "./analytics";
-export type { WebsiteTheme, ConsentRecord } from "./cookies";
+export type { AnalyticsProvider, WebsiteEvent } from "./analytics";
+export { CookieConsent, ThemeToggle } from "./CookieConsent";
+export type { ConsentRecord, WebsiteTheme } from "./cookies";
+export { PreferencesProvider, usePreferences } from "./PreferencesProvider";

@@ -1,11 +1,11 @@
-import "./onboarding.css";
+import { Check, ShieldCheck } from "iconoir-react";
 import { useState } from "react";
-import { ShieldCheck, Check } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { useAccount } from "../account/session";
 import { Demo } from "../demo/Demo";
 import { DownloadButton, useDownload } from "../downloads/downloads";
+import "./onboarding.css";
 export function OnboardingPage() {
   const [step, setStep] = useState(0),
     [mode, setMode] = useState<"guide" | "conversation">("guide"),

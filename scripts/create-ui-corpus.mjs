@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { createHash } from "node:crypto";
-const root = "tests/reliability-vision";
+const root = "tests/fixtures/reliability-vision";
 if (
   await access(root + "/corpus.json").then(
     () => true,

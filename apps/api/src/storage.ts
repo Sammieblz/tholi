@@ -1,3 +1,4 @@
+import { upgradeTransition } from "../../../packages/site-memory/migration";
 import { DatabaseSync } from "node:sqlite";
 import type {
   CachedEmbedding,
@@ -60,11 +61,7 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
         .prepare("SELECT origin,data FROM sites")
         .all()) {
         const site = JSON.parse(String(row.data));
-        site.transitions = (site.transitions || []).map((edge: any) => ({
-          ...edge,
-          action: edge.action || { kind: "control", signature: edge.signature },
-          requiresFreshBinding: true,
-        }));
+        site.transitions = (site.transitions || []).map(upgradeTransition);
         this.db
           .prepare("UPDATE sites SET data=? WHERE origin=?")
           .run(JSON.stringify(site), row.origin);

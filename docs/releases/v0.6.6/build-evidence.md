@@ -1,0 +1,21 @@
+# Historical build evidence, October 2026
+
+Historical observations only. They do not certify current bytes.
+
+## Archived reported Edit regression — v0.6.6
+
+The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.
+
+The panel distinguishes absent routes, ambiguous controls, unknown effects and consequential boundaries. Ordinary link guidance no longer calls the link a menu. Optional model input includes discovered scope; real model accuracy remains unevaluated. This is a rule/context improvement, not a trained website-understanding or OCR model.
+
+Final validation: TypeScript and **83/83 unit tests**, **60/60 extension browser regressions**, **10/10 live regressions**, and **14 benchmark tests / 116 declared cases** passed. The live Edit regression independently checks the article toolbar link and its halo geometry at both widths. Generic editor fixtures verify entry navigation, field access and committing/unknown-effect boundaries. No live edit is published and a complete Wikipedia editing workflow is not established by these tests.
+
+The six-family live matrix remains **60 supported attempts**, with **71/71 targets**, **71/71 verification claims**, and **60/60 supported outcomes**. Generic fixtures now contain **30 cases (18 negative)**: targets **24/24**, verification **18/18**, positives **12/12**, and twelve intentional unresolved decisions. Authored cases remain **26**, targets **12/12**, verification **18/18**, state conformance **26/26**, and eight expected stops. All suites record zero false success, Navigator automation, known synthetic secret leakage or model calls. Matrix SHA256: `bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae`; evaluated at `2026-10-11T15:52:29.674Z`.
+
+Earlier reports and failures remain version/iteration-prefixed in `output/acceptance`; `edit-iteration-notes.json` explains the scope assertion correction, diagnostics-export enable-state race and live fundraising-banner geometry oracle. The banner could put the language control below the fold at document top; the live oracle now checks a direction cue offscreen and halo alignment onscreen rather than requiring a halo unconditionally. These corrections preserve independent website/geometry assertions and all case denominators. The complete final reports bind to identical production build bytes.
+
+Verified package: `output/releases/internet-navigator-0.6.6.zip` (**632,434 bytes**), SHA256 **a18f4ce9916d93fe95e26aee92f33eaa7fc52d1576856492a57f3bba56fb6a09**. All ten archive members were read back and matched. Previous archives remain intact. Candidate is local and uncommitted/unpublished; native handoff #10/#17/#18 stays open. Reload the extension and refresh the website tab before retesting Edit.
+
+## Historical acceptance scope
+
+The v0.6.6 matrix revision adds generic negative cases for an opaque Edit action and an implicit POST submit, making 30 generic cases (18 negative) and 116 total attached cases. The six live goal families remain unchanged. Editing is separate regression coverage: generic fixtures verify page/section entry selection, actual editor navigation and publishing/unknown-effect boundaries; live Wikipedia tests check the article Edit target and actual highlight geometry at both widths. Those live Edit tests do not publish anything or establish a complete editing workflow. The previous matrix did not cover editing, and its passing measurements did not establish general navigation accuracy. The three v0.6.5 reports are retained under their version-prefixed filenames.

@@ -1,20 +1,20 @@
 import { currentGuidanceRect } from "../../../../../packages/overlay-ui";
-import { widgetStyles } from "./widget-styles";
 import { contrastPageTheme } from "../../../../../packages/ui/page-theme";
 import {
+  updateWayfinder,
   wayfinderMarkup,
   wayfinderStyles,
-  updateWayfinder,
   type WayfinderState,
 } from "../../../../../packages/ui/wayfinder";
-import { dockIntent } from "./presentation-state";
-import { bindLauncherControls } from "./launcher-controls";
 import {
   widgetDensity,
   widgetLayoutActions,
   type WidgetDensity,
   type WidgetLayoutAction,
 } from "../../../../../packages/ui/widget-density";
+import { bindLauncherControls } from "./launcher-controls";
+import { dockIntent } from "./presentation-state";
+import { widgetStyles } from "./widget-styles";
 let host: HTMLElement | undefined, frame: HTMLIFrameElement | undefined;
 let shadowRoot: ShadowRoot | undefined;
 let minimized = false;

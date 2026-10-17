@@ -1,14 +1,14 @@
-import gettingStarted from "../../../../../docs/chrome-handoff.md?raw";
-import usingTholi from "../../../../../docs/tholi-ui.md?raw";
-import journeys from "../../../../../docs/task-routing.md?raw";
-import sessions from "../../../../../docs/session-lifecycle.md?raw";
-import appearance from "../../../../../docs/adaptive-appearance.md?raw";
-import troubleshooting from "../../../../../docs/live-diagnostics.md?raw";
-import security from "../../../../../docs/security.md?raw";
-import architecture from "../../../../../docs/live-navigation.md?raw";
-import naturalLanguage from "../../../../../docs/nlp-architecture.md?raw";
-import backend from "../../../../../docs/api-setup.md?raw";
 import contributing from "../../../../../CONTRIBUTING.md?raw";
+import naturalLanguage from "../../../../../docs/architecture/natural-language.md?raw";
+import architecture from "../../../../../docs/architecture/navigation.md?raw";
+import security from "../../../../../docs/architecture/security.md?raw";
+import sessions from "../../../../../docs/architecture/sessions.md?raw";
+import appearance from "../../../../../docs/guides/appearance.md?raw";
+import backend from "../../../../../docs/guides/backend.md?raw";
+import gettingStarted from "../../../../../docs/guides/getting-started.md?raw";
+import journeys from "../../../../../docs/guides/journeys.md?raw";
+import troubleshooting from "../../../../../docs/guides/troubleshooting.md?raw";
+import usingTholi from "../../../../../docs/guides/using-tholi.md?raw";
 import { repositorySourceUrl } from "../../config/project";
 
 export { repositoryUrl } from "../../config/project";
@@ -27,7 +27,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "Install the preview, grant website access and begin a destination.",
     group: "Start here",
-    source: "docs/chrome-handoff.md",
+    source: "docs/guides/getting-started.md",
     markdown: gettingStarted,
   },
   {
@@ -36,7 +36,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "Guide, Conversation, the floating widget and the local practice.",
     group: "Start here",
-    source: "docs/tholi-ui.md",
+    source: "docs/guides/using-tholi.md",
     markdown: usingTholi,
   },
   {
@@ -45,7 +45,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "How destinations, corrections and return routes work across screens.",
     group: "Using Tholi",
-    source: "docs/task-routing.md",
+    source: "docs/guides/journeys.md",
     markdown: journeys,
   },
   {
@@ -54,7 +54,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "Pause, Stop, close, resume and understand session continuity.",
     group: "Using Tholi",
-    source: "docs/session-lifecycle.md",
+    source: "docs/architecture/sessions.md",
     markdown: sessions,
   },
   {
@@ -62,7 +62,7 @@ export const articles: DocumentationArticle[] = [
     title: "Appearance",
     description: "Website appearance and the extension's contrasting guidance.",
     group: "Using Tholi",
-    source: "docs/adaptive-appearance.md",
+    source: "docs/guides/appearance.md",
     markdown: appearance,
   },
   {
@@ -71,7 +71,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "Understand missing evidence and safely export local diagnostics.",
     group: "Using Tholi",
-    source: "docs/live-diagnostics.md",
+    source: "docs/guides/troubleshooting.md",
     markdown: troubleshooting,
   },
   {
@@ -79,7 +79,7 @@ export const articles: DocumentationArticle[] = [
     title: "Security and boundaries",
     description: "Permissions, private inputs, review and verified outcomes.",
     group: "Under the hood",
-    source: "docs/security.md",
+    source: "docs/architecture/security.md",
     markdown: security,
   },
   {
@@ -87,7 +87,7 @@ export const articles: DocumentationArticle[] = [
     title: "How guidance works",
     description: "Discovery, grounded planning, live binding and verification.",
     group: "Under the hood",
-    source: "docs/live-navigation.md",
+    source: "docs/architecture/navigation.md",
     markdown: architecture,
   },
   {
@@ -96,7 +96,7 @@ export const articles: DocumentationArticle[] = [
     description:
       "English interpretation, local models and contextual retrieval.",
     group: "Under the hood",
-    source: "docs/nlp-architecture.md",
+    source: "docs/architecture/natural-language.md",
     markdown: naturalLanguage,
   },
   {
@@ -104,7 +104,7 @@ export const articles: DocumentationArticle[] = [
     title: "Optional backend",
     description: "Connect a self-hosted API when you choose to use one.",
     group: "Under the hood",
-    source: "docs/api-setup.md",
+    source: "docs/guides/backend.md",
     markdown: backend,
   },
   {
@@ -151,6 +151,41 @@ export function searchDocumentation(query: string) {
     return terms.every((term) => text.includes(term));
   });
 }
+const legacySources: Record<string, string> = {
+  "chrome-handoff.md": "docs/guides/getting-started.md",
+  "tholi-ui.md": "docs/guides/using-tholi.md",
+  "task-routing.md": "docs/guides/journeys.md",
+  "session-lifecycle.md": "docs/architecture/sessions.md",
+  "adaptive-appearance.md": "docs/guides/appearance.md",
+  "api-setup.md": "docs/guides/backend.md",
+  "live-diagnostics.md": "docs/guides/troubleshooting.md",
+  "privacy.md": "docs/architecture/privacy.md",
+  "security.md": "docs/architecture/security.md",
+  "live-navigation.md": "docs/architecture/navigation.md",
+  "nlp-architecture.md": "docs/architecture/natural-language.md",
+  "page-context.md": "docs/architecture/page-context.md",
+  "frontend-architecture.md": "docs/architecture/frontend/README.md",
+  "passive-guidance.md": "docs/architecture/frontend/guidance.md",
+  "naming.md": "docs/development/naming.md",
+  "product-screenshots.md": "docs/development/media-capture.md",
+  "accuracy-benchmark.md": "docs/development/testing/acceptance.md",
+  "route-authoring.md": "docs/architecture/authored-routes.md",
+  "route-registry.md": "docs/architecture/authored-routes.md",
+  "maintenance.md": "docs/releases/records/2026-10-maintenance.md",
+  "build-evidence.md": "docs/releases/records/legacy-build-evidence.md",
+  "dashboard-navigation.md": "docs/releases/v0.9.2/navigation.md",
+  "ui-refinement.md": "docs/releases/v0.10.1/ui-audit.md",
+  "ui-audit-redesign.md": "docs/releases/v0.10.1/ui-audit.md",
+  "website-redesign.md": "docs/releases/v0.10.1/website.md",
+  "v0.10.0-validation.md": "docs/releases/v0.10.0/validation.md",
+  "v0.7.0-validation.md": "docs/releases/v0.7.0/validation.md",
+  "v0.7.1-navigation-fixes.md": "docs/releases/v0.7.1/navigation-fixes.md",
+  "v0.8.0-architecture.md": "docs/releases/v0.8.0/architecture.md",
+  "v0.8.0-capabilities.md": "docs/releases/v0.8.0/capabilities.md",
+  "v0.8.0-validation.md": "docs/releases/v0.8.0/validation.md",
+  "v0.9.0-validation.md": "docs/releases/v0.9.0/validation.md",
+  "v0.9.1-validation.md": "docs/releases/v0.9.1/validation.md",
+};
 export function resolveDocumentationLink(
   href: string,
   source: string,
@@ -171,6 +206,7 @@ export function resolveDocumentationLink(
   } catch {
     return { href: "", local: false };
   }
+  relative = legacySources[relative.split("/").at(-1)!] || relative;
   const registered = articles.find((article) => article.source === relative);
   return registered
     ? { href: `/docs/${registered.slug}${target.hash}`, local: true }

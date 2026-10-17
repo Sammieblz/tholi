@@ -4,6 +4,17 @@ import {
   structuralKnowledge,
   parameterizedTask,
 } from "../navigation-core/privacy";
+/** Preserve the existing legacy action/default policy in both storage adapters. */
+export function upgradeTransition<
+  T extends { signature: string; action?: unknown },
+>(edge: T) {
+  return {
+    ...edge,
+    action: edge.action || { kind: "control", signature: edge.signature },
+    requiresFreshBinding: true,
+  };
+}
+
 export function upgradePrivateMemory(tx: IDBTransaction) {
   upgradeRouteActions(tx, true);
   const tasks = tx.objectStore("tasks").openCursor();
@@ -35,11 +46,7 @@ export function upgradeRouteActions(
       tx.objectStore("indexes").delete(row.value.origin);
     row.update({
       ...value,
-      transitions: (value.transitions || []).map((edge: any) => ({
-        ...edge,
-        action: edge.action || { kind: "control", signature: edge.signature },
-        requiresFreshBinding: true,
-      })),
+      transitions: (value.transitions || []).map(upgradeTransition),
     });
     row.continue();
   };

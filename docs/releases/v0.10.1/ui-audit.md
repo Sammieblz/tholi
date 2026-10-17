@@ -1,0 +1,199 @@
+# Tholi audit and redesign record
+
+Date: October 15, 2026. Source: 0.10.1. Scope: extension presentation, widget continuity, shared UI, local website, and skill installation. Engine completion criteria, frozen corpora, knowledge schema, and public backend APIs are unchanged.
+
+## Findings and implementation
+
+| Finding                                   | Response                                                                   | Owner                                |
+| ----------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------ |
+| Large cards displaced input               | Compact journey accordion, one body scroll area, anchored composer         | Shared guidance                      |
+| Chat repeated Guide                       | Transcript-first Conversation, keyboard composer, real events and evidence | Shared UI and controller             |
+| Decisions were buried                     | Top attention area; passive Base UI toast for routine notices              | Controller and shared UI             |
+| Flat dots and rails                       | Stateful dimensional amber Wayfinder and reduced-motion shapes             | `WayfinderMark.tsx`, `wayfinder.ts`  |
+| Arrival showed active controls            | Phase-derived actions and completed details                                | SessionActions and JourneyDetails    |
+| Close lost presentation continuity        | Session-scoped launcher independent of journey                             | Worker, UI transport, isolated shell |
+| Hidden widget could still guide visually  | Frame-local presentation gate, suppressed scrolling, fresh restore         | Content, frame and overlay adapters  |
+| Plain details and ambiguous deletion      | Verified/predicted hierarchy, disclosures, labeled trash confirmations     | Extension feature components         |
+| Demo diverged from installed UI           | Shared components in isolated controlled practice adapter                  | Web demo                             |
+| Broken installation/mobile/loading states | Feature breakpoints, annotated illustrations, explicit download states     | Web downloads                        |
+| Incomplete errors and onboarding          | Associated errors, first-invalid focus, working mode selection             | Account/onboarding                   |
+
+The strict `BEGIN_SESSION` contract now accepts optional validated presentation visibility/revision fields. The first integration check caught these fields being rejected, preventing startup; a handshake regression covers both old and current clients. This is an internal extension contract, not a public API change.
+
+## Verifiable skill use
+
+Ten reviewed skills and supporting resources are installed in `.codex/skills`, outside production assets. The [manifest](../../../.codex/skills-manifest.json) records upstream URLs, pinned revisions, installation dates, available licenses, and every installed file's SHA-256. Root [AGENTS.md](../../../AGENTS.md) requires relevant local guidance before UI work. Apple's linked pull-request listing was checked; no open requests were present at review time.
+
+| Local guidance                                                                           | Applied decisions                                                              | Validation                                                    |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Apple Design: layout, typography, branding, accessibility, motion and desktop references | Persistent input, progressive disclosure, quiet hierarchy, meaningful feedback | Narrow layouts, keyboard, themes, zoom, screenshots           |
+| UI UX Pro Max                                                                            | Focus visibility, clear forms, responsive feature ownership                    | Field errors, focus targets, mobile grids and overflow        |
+| Baseline UI and Fixing Accessibility                                                     | Existing primitives, labeled actions, landmark isolation and live status       | Base UI controls, embedded non-main check, IME/keyboard tests |
+| Animate and Emil Design Engineering                                                      | Purpose-first, short interruptible motion and selected marketing rhythm        | Stable marker identity, reduced motion, geometry checks       |
+| Animation Performance and Fixing Motion Performance                                      | Transform/opacity motion, no animated blur/shadow or per-frame React state     | Busy-page frame measurements                                  |
+| Improve UI and Improve Animations                                                        | Read-only audits before approved implementation                                | Findings above and visual review                              |
+
+The brand and accepted React/Base UI/Iconoir/CSS/WAAPI stack override generic skill palette/framework suggestions. Manrope and Outfit replace the old Inter dependency. Only local Latin variable fonts are used. Build cleanup removes obsolete generated fonts and notices. Skill assets are not shipped to users.
+
+## Validation
+
+Strict TypeScript and all **202 unit tests** pass, including 11 shared guidance cases and nine widget lifecycle cases. The skill manifest's 230 file hashes were verified with zero mismatches. Frozen NLP, Wikipedia, multi-app, and vision corpus inputs are unchanged.
+
+The website's seven focused browser cases pass. All seven routes were captured at 320, 375, 768, and 1440 pixels in light and dark themes: 56 captures, no horizontal overflow, no page errors, and one main landmark. Shared component checks cover the 360 × 420 widget, minimum widget, 200% equivalent narrow layout, three visible clarification choices, and explicit Compose focus. Actual extension pointer tests exposed and fixed the resize handle covering the minimum-widget Expand control. Browser tests also check draft handoff, cross-document minimized continuity, and full session reset.
+
+Four genuine extension captures were regenerated on public Wikipedia. The capture script required a live grounded text-size target and a verified preference outcome before taking Arrived. Sources and hashes are in `apps/public/media/screenshots/provenance.json`.
+
+Shared marker frame samples on the AMD Ryzen 7 5700U (16 logical processors), Windows, headless Chromium 156 measured 16.8 ms p95 in both the normal sample and a 4 ms-per-frame synthetic workload. The idle cycle measured 3,600 ms; reduced motion produced no looping animations. This small fixture is not a signed-in dashboard benchmark. The separate 50,000-node fixture records its own frame intervals in the full UI report.
+
+The reminder check instruments Chrome's extension isolated world, where the real overlay runs. It observes four 1,200 ms iterations, cancellation on interaction, and no replay from geometry updates. Busy-page motion is measured after a grounded step is established; this separates UI motion from model cold startup and initial discovery performance, which retain their existing release gates.
+
+Parallel browser/model/unit suites overloaded this machine and produced setup/planning timeouts. The final serial navigation regression passed **90/90** in 10.2 minutes, with ordinary assertion thresholds retained and identical recursive extension hashes before and after. Evidence: `output/acceptance/e2e-regressions.json`. The final UI run uses those same frozen extension bytes. Fixture results are not signed-in workflow passes.
+
+The final full UI gate passed **15/15** in 2.0 minutes. `output/qa/ui-build.json` reports `passed: true`; both UI and navigation reports match the evaluated redesign build, before the reset-icon correction below. TypeScript, extension build, website build, and `git diff --check` pass. That unpacked extension contains 176 files totaling **62,498,244 bytes (59.6 MiB)**, below the 100 MB limit. The local preview is available at `http://127.0.0.1:5174`.
+
+The deliberately severe 50,000-node mutation fixture retained the same highlight root but measured **300.1 ms frame-interval p95** while changing 100 inline text nodes every 50 ms. It does not meet a smooth-frame target. This pass therefore makes no claim of smooth behavior under that mutation load; discovery/layout work needs separate profiling. The stable-root, four-cycle reminder, geometry identity, and interaction-cancellation assertions pass independently of that performance result.
+
+Pending native checks: right-edge docking under real Chrome activation, supported native panel close events, renewed capture/site permissions, screen-reader behavior, and signed-in Amazon/Cloudflare/GitHub workflows. No reliable Prime cancellation or universal-dashboard claim is made by this pass.
+
+## Delivery
+
+Reset-icon correction: session reset now uses Iconoir Restart in settings, Advanced, and confirmations; actual deletion retains Trash. Applied local Apple `buttons.md` / Content guidance to pair familiar actions with familiar symbols, UI UX Pro Max's SVG-icon consistency guidance, and Baseline UI/accessibility rules for labeled controls and decorative icons. This is an icon-only correction with unchanged reset behavior. Focused shared guidance tests, TypeScript, and both builds are checked separately; the earlier full gate reports do not certify these rebuilt bytes.
+
+Task-details lifecycle correction: the attention prompt now belongs to the current unfinished request/task, not merely a retained workflow snapshot. Arrival, Stop/Pause, destination edits, replanning and task replacement hide stale forms. Manual input requires the current bound, unverified milestone; focusing a field alone still does not finish input. Verified milestones and obsolete guides cannot revive old forms. Required review/recovery notices remain available. Applied local Baseline UI progressive state feedback and Fixing Accessibility's focused-change guidance. Six lifecycle regressions plus 11 shared guidance tests, TypeScript, and the rebuilt extension pass; these focused checks do not replace the earlier full release gates.
+
+Unpacked extension: `dist/extension`. Local website: `dist/web`, preview port 5174. The existing gated 0.10.0 download stays immutable until a newer archive passes all release gates on its own bytes. No hosting, real authentication, analytics, cloud inference, or private-data upload is added.
+
+## Continuous wayfinding and step nodes
+
+The static guidance dash/point is replaced by a continuous amber waypoint orbit with compass ticks, a fading trail and the existing shaded center. Guidance runs a seamless 2.8-second rotation, planning 1.8 seconds, and the horizontal current-route signal 2.4 seconds. These are state indicators, not interaction delays or elapsed-progress estimates. CSS animates transform/opacity only; React does not update per frame. The page coach uses the same marker. Visible-loop suspension is shared rather than duplicated across React components.
+
+The sidebar, widget and controlled website practice use the same bounded horizontal step path. Live/forecast steps get numbers, verified history gets checks, and only verified arrival checks the destination. Finite forecasts are explicitly estimated. Incomplete or truncated forecasts retain an open end rather than inventing clicks from a count. Checkpoints retain task-local totals, while long histories collapse into an earlier-steps node. Polling and geometry updates retain node identity. Pause, review, authentication, hidden views and reduced motion suspend activity. Stop removes the route path. Keyboard navigation still avoids interaction transitions but no longer disables active navigation indicators.
+
+| Before                                                        | After                                                                  | Guidance applied                                                                                                                                                      |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static dash and dot during guidance                           | Continuously circulating waypoint and moving route signal              | Local Animate: state indication, CSS for predetermined loops, linear continuous motion; Animation Performance: transform/opacity, no per-frame React state            |
+| No compact view of upcoming/verified steps                    | Numbered path, verified checks, open-ended discovery                   | Local Apple `progress-indicators.md` / Best practices: distinguish known and unknown progress; UI UX Pro Max Feedback / Progress Indicators: expose multi-step status |
+| New path competes with input in small surfaces                | Shorter route rail, compact widget treatment and a retained composer   | Local Baseline UI layout/performance rules; Apple `motion.md` / Best practices: purposeful optional feedback                                                          |
+| Switching back from a scrolled transcript can hide Guide text | Guide returns to its current instruction without resetting the journey | Local Emil Design Engineering: spatial continuity and invisible interaction correctness                                                                               |
+
+Focused validation covers open-ended forecasts, no invented nodes, wrong/terminal outcomes, task-local checkpoint counts beyond 70 interactions, forecast overlap, stale recovery, polling identity and mode switching. Browser checks cover actual five-step practice verification, continuous activity during keyboard use, pause/resume, offscreen suspension, reduced motion, widget instruction visibility and the anchored composer. The full UI gate now requires all **17 cases**, preserving the previous 15 and adding two motion/step regressions. Packaging requires that expanded gate; the earlier download is unchanged. Native Chrome, screen-reader and signed-in workflow limitations recorded above remain pending.
+
+Validation on 2026-10-15: **215 unit tests**, strict TypeScript, both builds and **17/17 full UI cases** pass. The final UI report at `output/qa/ui-build.json` hashes the rebuilt extension before and after execution; screenshots are under `output/qa/route-motion-release`. The bounded 4 ms scripting-per-frame benchmark measured **16.8 ms frame-interval p95** on the AMD Ryzen 7 5700U using Playwright Chromium. The separate 50,000-node mutation fixture measured **416.7 ms p95**, retaining the same highlight root but failing smooth-frame expectations. These workload measurements are not interchangeable. The final unpacked extension contains 176 files totaling **62,548,831 bytes**, below 100 MB. The frozen navigation/NLP acceptance matrices were not rerun for this presentation-only change, so the earlier navigation report does not certify these newer bytes and no new ZIP is released.
+
+The four website product screenshots were refreshed from the actual built extension on public Wikipedia, including text-size guidance and verified arrival. Their capture date and SHA-256 values are in `apps/public/media/screenshots/provenance.json`. This public-page check is separate from the pending signed-in dashboard workflows.
+
+## Terminal marker transformation
+
+Follow-up: the check and X are now made from the amber material itself. The ball releases into two rounded pieces, which unfold into the standalone symbol over 420 ms. The original sphere and shadow end at zero opacity. There is no brown glyph sitting on an amber badge. Shared React views and the minimized launcher use the same persistent SVG and state updater. A terminal one-shot is armed only on a fresh visible state change, independently of loop visibility. Polling, view switching, theme changes, remounting an already-terminal view and returning onscreen do not restart it.
+
+Applied project-local Animate and Emil Design Engineering guidance: rare outcome feedback, on-screen transformation with existing ease-in-out tokens, a short interruptible sequence within the approved 450 ms arrival limit, and static reduced-motion equivalents. Applied Animation Performance guidance: transform/opacity only, no animated layout/blur/shadow and no per-frame React updates. The inherited starting-scale value is assigned once at the state change, never animated. Focused browser checks inspect the actual practice arrival and an explicitly isolated X fixture, including 0/100/240/420 ms stage captures, final material/opacity, one-shot timing and retained Animation/SVG identity after visibility changes. The X fixture supplies no navigation outcome evidence.
+
+Terminal follow-up validation: strict TypeScript, **216 unit tests**, extension/web builds and **17/17 full UI cases** pass against the rebuilt 0.10.1 extension. The UI report records matching recursive artifact hashes; the extension is **62,569,492 bytes**. Stage captures and final outcome screenshots are under `output/qa/terminal-morph-release`. The package download remains the earlier gated version; no navigation/model accuracy claim or native Chrome permission claim is added by these presentation checks.
+
+## Widget size and priority follow-up
+
+The widget now removes secondary controls according to available width **and** height. Expanded needs 400 × 560 usable pixels, Standard 340 × 360, Compact 280 × 240; smaller surfaces use Minimal. Reduction is immediate and expansion has a 12-pixel buffer. The shell still defaults to 360 × 420 including its title bar. Explicit expansion requests 420 × 620 and remains viewport-clamped.
+
+Standard retains the destination, one instruction or transcript, estimated step caption, composer and session actions. Compact and Minimal retain one current message, the composer and inline Send. Pause/Resume/Stop, mode changes, settings, route details and placement controls move to the single Widget menu. The shell keeps drag/Close and no longer repeats a separate Layout/Reset/Dock toolbar. Idle and stopped layouts remove obsolete journey cards and return prompts. Arrival keeps its verified outcome behavior.
+
+Required decisions replace the message area with their actual prompt summary. Opening Review details exposes the full mounted controls and requests larger bounds; prompt arrival alone cannot resize the widget. The composer, draft, selection and conversation remain mounted across size changes. The root uses clipping rather than an offscreen programmatic scroll position, preventing restored focus from moving the instruction under the shell header. Secondary content and popovers own scrolling.
+
+Applied project-local Apple Design layout guidance for prioritization and progressive disclosure; UI UX Pro Max for responsive ownership and visible focus; Baseline UI and Fixing Accessibility for Base UI popovers, labeled menu controls and keyboard continuity; Emil Design Engineering for interruption-safe state preservation. Existing marker and route animations keep their identity when geometry changes. No new animation library, navigation success rule, model, storage migration or backend API is introduced.
+
+Focused browser validation covers all four tiers, a wide but short widget, immediate collapse/buffered expansion, composer bounds, retained DOM/draft/focus/selection, required questions and answers across resizing, stopped-state cleanup, actual extension dragging/resizing and menu actions. Screenshots are under `output/qa/widget-density-confirmed`. The full UI gate now requires **18 cases**; packaging requires the expanded gate. The older ZIP remains unchanged; native Chrome and signed-in checks remain pending as listed above.
+
+Final size-priority validation: strict TypeScript, **225 unit tests**, extension/web builds and **18/18 UI cases** pass. The UI suite completed in 2.7 minutes; `output/qa/ui-build.json` reports matching recursive extension hashes. Final captures are under `output/qa/widget-density-final`. The extension contains 176 files totaling **62,621,326 bytes**. Four genuine website screenshots were refreshed from that extension, including verified public-page arrival; their provenance records the new hashes. The first full run exposed selectors that assumed the old card structure: phase assertions now identify the app root explicitly, and theme assertions check the visible widget surface rather than its newly transparent summary. No acceptance threshold was relaxed.
+
+The 4 ms-per-frame scripting fixture measured **16.8 ms frame-interval p95**. The separate 50,000-node mutation fixture measured **416.8 ms p95** with the same highlight root. Its previously recorded smoothness limitation remains unresolved by this layout pass. Frozen navigation/model gates were not rerun, and no new downloadable ZIP is released.
+
+## Launcher removal follow-up
+
+Double-clicking the minimized floating widget reveals Open Tholi and Remove controls. Single-click restoration is delayed 400 ms so the first click cannot restore before the second arrives. Keyboard activation remains immediate. Right-click and Shift+F10 expose the same controls; Escape closes them and restores launcher focus. Native sidebar activation remains immediate because Chrome requires its privileged call within the user gesture; that launcher's removal controls are available through right-click or keyboard. Controls are labeled native buttons, not a hand-built modal or ARIA menu. The close symbol uses the shell's existing functional SVG treatment.
+
+Remove changes worker-owned surface visibility to hidden, suppresses guidance/capture and unmounts the launcher without canceling or clearing the task, draft or conversation. Hidden state survives worker restart and fresh documents; session updates cannot recreate the launcher. The Chrome toolbar restores the retained session. Stale task/document dismissal commands are rejected. Screenshot and discovery exclusions remain unchanged.
+
+Applied local Apple `menus.md` Labels and Icons guidance for clear verbs and purposeful symbols, Baseline UI's labeled control and existing-stack rules, Fixing Accessibility's keyboard/focus requirements, and Emil Design Engineering's invisible interaction correctness. No new motion is added to this occasional control. Focused tests distinguish single/double activation, cancellation, keyboard access, native immediate activation, stale dismissal and restart persistence. The existing extension continuity browser case now also exercises the actual double-click, keyboard removal, document reload and retained-session restoration.
+
+Validation: strict TypeScript, **228 unit tests**, both builds and **18/18 full UI cases** pass. The final UI run completed in 2.6 minutes and its recursive hashes match the rebuilt extension: 176 files, **62,634,725 bytes**. Evidence and the visible removal control are under `output/qa/launcher-final`; the focused continuity case also passed independently under `output/qa/launcher-focused`. `git diff --check` passes. The motion fixtures recorded 33.3 ms frame-interval p95 under the bounded scripting workload and 566.6 ms under severe mutations, retaining the same highlight root. No smoothness improvement is claimed. Native Chrome activation and screen-reader checks remain pending; frozen navigation/model gates were not rerun and the older downloadable ZIP remains unchanged.
+
+## Sidebar clarification overflow correction
+
+The widget size matrix left a sidebar coverage gap. A required clarification used a separate 30%-height box while the journey summary and progress remained fixed-size children of a shrinking workspace. The instruction's minimum height could overflow that workspace and paint over Pause/Stop. The user's Comments example also exposed long choice labels clipped inside the limited question area.
+
+Required sidebar decisions now own the flexible middle region; route summary, progress and transcript stay mounted but hidden until the question clears. The question scrolls independently, the composer and session actions remain anchored, and clarification choices wrap at full available width. Review/authentication instructions are retained in the decision area when absent from its content. The measurement ref observes only supplied content, preventing self-generated instruction text from causing alternating duplicate detection. Normal instructions scroll within their own bounded workspace. The app uses clipping rather than whole-frame scrolling; a six-pixel overflow margin preserves workspace focus outlines. Short sidebars reduce optional chrome while the decision is active.
+
+Applied local Apple `layout.md` Visual hierarchy guidance for ordering and grouping, UI UX Pro Max's responsive-layout and focus rules, Baseline UI's nearby errors and existing primitives, and Fixing Accessibility's focus visibility, labels and live updates. Engine intent matching, choice content, outcome verification and consequential boundaries are unchanged. A new presentation-only Comments fixture exercises 480 × 868, 360 × 620, 280 × 480 and 220 × 420 in both themes, including keyboard scrolling, long instructions, review/authentication, Conversation restoration and retained draft identity. Its expectation fails on the previous build; focused checks pass after the correction. The full gate now requires 19 UI cases, including this regression.
+
+Final validation: strict TypeScript, **228 unit tests**, both builds and **19/19 UI cases** pass. The 2.6-minute final UI run hashes the same rebuilt extension before and after: 176 files, **62,639,765 bytes**. Screenshots and results are under `output/qa/sidebar-final`; the eight focused layout captures are under `output/qa/sidebar-focused`. `git diff --check` passes. The bounded scripting workload measured 16.8 ms frame-interval p95; the severe 50,000-node workload measured 366.6 ms while retaining the same highlight root. The existing severe-load smoothness limitation remains. No navigation/model gate or signed-in YouTube check is claimed, and no new download archive is released. Native Chrome and screen-reader checks remain pending.
+
+## Section-label decoration cleanup
+
+Removed the shared `.eyebrow::before` horizontal stroke and its obsolete flex spacing, so every website section label begins with its text. Applied local Baseline UI's restrained accent and existing-token guidance. A source scan finds no literal em dashes or encoded em-dash entities in website, extension UI or shared presentation files. Root guidance now explicitly prohibits decorative dash prefixes as well as punctuation. This is a website CSS change only; extension assets and navigation behavior are unchanged. The website build and **19/19 UI checks** pass; screenshots and results are under `output/qa/eyebrow-cleanup`. `git diff --check` passes. No new tests or download archive were added for this cosmetic change.
+
+## Earlier refinement, October 14, 2026
+
+This dated record predates the audit above. Its fonts, layouts, counts and measurements describe that earlier build only.
+
+Historical record of the first refinement pass. Current layouts, fonts, project-local skills, and verification are described in [the subsequent audit and redesign](ui-audit.md) and [current interface guide](../../guides/using-tholi.md).
+
+The design thesis is a guide that keeps one destination and one next step in view. A quiet route line connects the current guidance; a connected marker anchors the website demonstration. The supplied palette stays authoritative. Inter remains bundled, with lighter display weights and tighter tracking reserved for headlines. Iconoir remains the functional icon set.
+
+Computed contrast: charcoal on ivory 14.68:1, secondary text on ivory 6.26:1, white on jade buttons 6.37:1, and dark-theme secondary text on its background 9.86:1. The editable-field boundary is 3.30:1 against the card surface. These are token checks; native screen-reader and real-device checks remain separate.
+
+## Installed and applied skills
+
+The requested skills are installed under `C:/Users/samue/.codex/skills`, outside the repository. They become available for automatic selection next turn. This pass reads their installed instructions directly.
+
+| Source                                                                   | Installed folders                                     | Pinned upstream revision                   |
+| ------------------------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------ |
+| [Apple Design](https://github.com/dickwu/apple-design-skill)             | `apple-design`                                        | `904b0eedc7cc778152f545506075d5bb5219ce77` |
+| [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `ui-ux-pro-max`                                       | `7246805992a42b7bba37d4cac83b01416f0c6c44` |
+| [Emil Kowalski](https://github.com/emilkowalski/skills)                  | `animate`, `emil-design-eng`, `animation-performance` | `2d228630ba1446365f614a108cb8252f1feda202` |
+
+Apple references consulted cover accessibility, layout, typography, color, desktop context, motion, loading, feedback, branding, and cross-platform translation. These inform web interaction principles rather than imitation macOS chrome. Specific applications: `layout.md` under Visual hierarchy supports progressive disclosure; `motion.md` under Providing feedback supports brief, cancellable feedback; `branding.md` under Best practices supports restrained emphasis and familiar controls.
+
+UI UX Pro Max searches used `navigation assistant warm minimal` for the design system, `dragging movements` for accessible alternatives, and `component composition state` for React ownership. The minimalism result fits Tholi. Generic palette/font recommendations were discarded in favor of the supplied brand and bundled Inter. The dragging result informed the widget Layout controls.
+
+Emil's construction sequence and component recipes informed timing, trigger origins, interruption, reduced motion, and use of CSS/WAAPI. No animation framework was installed. Dragging directly updates geometry rather than animating through React state.
+
+## Applied review
+
+| Before                             | After                                                                | Why                                           |
+| ---------------------------------- | -------------------------------------------------------------------- | --------------------------------------------- |
+| Similar sage cards throughout      | A distinct current-step surface with a route rail                    | Hierarchy carries the task                    |
+| Abrupt mode selection              | A 240 ms sliding selection                                           | Preserve spatial continuity                   |
+| Mostly static website              | Hero sequence, one-time section reveals, staged demo feedback        | Explain the product through interaction       |
+| Repeated headline/card treatment   | Quiet typography and connected sample-browser guidance               | Spend emphasis on wayfinding                  |
+| One large website component        | Page features, session state, routing, layout, local styles          | Grow features without editing unrelated forms |
+| Effects mixed with advanced markup | Controller hook, compositional screen, advanced and journey features | Keep lifecycle ownership clear                |
+| Drag/keyboard positioning          | Layout buttons for position and size                                 | Add a single-pointer alternative              |
+| Entry only on node creation        | Fresh-target fades on stable target identity                         | Avoid replay during geometry refresh          |
+
+## Motion contract
+
+| Moment                    | Driver and timing                                     | Purpose                                  |
+| ------------------------- | ----------------------------------------------------- | ---------------------------------------- |
+| Press                     | CSS transform, 120 ms                                 | Immediate acknowledgement                |
+| Instruction               | CSS opacity/6 px translation, 160 ms, stable step key | Make the new instruction legible         |
+| Highlight                 | WAAPI opacity, 180 ms entrance / 120 ms exit          | Reveal a fresh binding without moving it |
+| Menu/settings             | Trigger-origin opacity/scale, 180 to 200 ms           | Show the surface's origin                |
+| Mode selection            | CSS transform, 240 ms                                 | Spatial continuity                       |
+| Widget mount / move aside | WAAPI, 180 / 240 ms                                   | Reveal and explain relocation            |
+| Website hero / sections   | CSS/WAAPI, 600 to 700 ms, 50 ms hero stagger          | First-visit explanation                  |
+| Arrival                   | Check/marker, 420 ms                                  | Confirm a verified outcome               |
+
+UI entry uses `cubic-bezier(0.23,1,0.32,1)`; deliberate movement uses `cubic-bezier(0.77,0,0.175,1)`. Reminders remain four 1.2-second glow cycles after four idle seconds. Scroll arrows move in the required direction three times at 900 ms, then remain static. No artificial route percentage, simulated streaming, or fabricated reasoning is added.
+
+Reduced motion removes repeated/spatial effects. Shared surfaces suppress decorative transitions for keyboard interactions. Drag, keyboard movement, and resize stay direct. Pointer intervention cancels automatic widget movement. Section entrances run once and cancel when reduced motion becomes active. Interaction never waits for animation, and animation cannot establish arrival.
+
+## Delivery and verification scope
+
+The unpacked source build is **0.10.1**. The website still offers the immutable, checksum-verified **0.10.0** ZIP until a newer archive passes all release gates. This pass does not overwrite or re-certify that archive.
+
+Focused checks cover strict TypeScript, existing unit tests, view continuity, widget frame isolation/capture exclusion, drag/resize and click alternatives, narrow/dark/reduced-motion layouts, mock account/onboarding, and download integrity. Screenshots cover website widths 375/768/1440, sidebar widths 300/380/620, 200% zoom, and widget standard/compact/minimum layouts.
+
+Final checks on October 14, 2026: strict TypeScript passed; 178 unit tests across 21 files passed; all nine UI browser checks passed against extension 0.10.1 at `2026-10-14T17:58:36.323Z`. Extension and website production builds succeeded. The unpacked extension is 61,754,418 bytes, below 100 MB. The final synthetic mutation run retained its overlay root and measured 800 ms RAF p95; it does not pass a smooth-frame claim. Website preview on port 5174 returned HTTP 200. Download metadata still identifies 0.10.0 and its verified checksum.
+
+Native Chrome permissions, screen-reader, and signed-in workflow checks remain pending. The 50,000-node mutation fixture retains the overlay, but page rendering can still stall its main thread. Compositor-friendly effects do not establish a 60 fps guarantee for that stress case. Exact latest measurements are in `output/qa/ui-build.json`.
+
+Frozen NLP/Wikipedia inputs, safety thresholds, and outcome rules are unchanged. Run release gates against matching final bytes before packaging. This frontend pass makes no new claim about dashboard routing accuracy.
