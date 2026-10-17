@@ -1,5 +1,5 @@
+import { Pause, Play } from "iconoir-react";
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause } from "iconoir-react";
 import { usePreferences } from "../preferences";
 import "./video.css";
 

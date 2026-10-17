@@ -1,0 +1,10 @@
+node_modules/
+dist/
+output/
+assets/models/
+assets/ocr/
+.codex/skills/
+apps/public/media/
+tests/fixtures/**/corpus.json
+tests/fixtures/**/corpus.sha256
+tests/browser/acceptance/matrix.json

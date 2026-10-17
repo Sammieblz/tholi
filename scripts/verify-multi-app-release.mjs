@@ -1,3 +1,4 @@
+import { requireFullEvidence } from "./evidence.mjs";
 import { readFile } from "node:fs/promises";
 export async function multiAppEvidence(files, apiFiles) {
   const reports = {};
@@ -16,6 +17,10 @@ export async function multiAppEvidence(files, apiFiles) {
       throw Error(
         `Run passing ${expectedVersion} ${name} validation for the exact build bytes.`,
       );
+    const acceptance = JSON.parse(
+      await readFile("output/acceptance/results.json", "utf8"),
+    );
+    requireFullEvidence(report, files, acceptance.validation);
     reports[name] = report;
   }
   if (
@@ -32,7 +37,7 @@ export async function multiAppEvidence(files, apiFiles) {
     initialMs: reports.performance.initialMs,
     refreshP95Ms: reports.performance.refreshP95Ms,
     warmP95Ms: reports.performance.warmP95Ms,
-    capabilityMatrix: "docs/v0.8.0-capabilities.md",
+    capabilityMatrix: "docs/releases/v0.8.0/capabilities.md",
     authenticatedChecks: "pending user-assisted signed-in verification",
   };
 }

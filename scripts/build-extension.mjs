@@ -52,12 +52,12 @@ if (!withPaddle) {
 }
 await build({
   entryPoints: {
-    worker: "apps/extension/src/worker.ts",
-    content: "apps/extension/src/content.ts",
-    "theme-page": "apps/extension/src/theme-page.ts",
-    "frame-agent": "apps/extension/src/frame-agent.ts",
-    sidepanel: "apps/extension/src/sidepanel.tsx",
-    offscreen: "apps/extension/src/offscreen.ts",
+    worker: "apps/extension/src/entries/worker.ts",
+    content: "apps/extension/src/entries/content.ts",
+    "theme-page": "apps/extension/src/entries/theme-page.ts",
+    "frame-agent": "apps/extension/src/entries/frame-agent.ts",
+    sidepanel: "apps/extension/src/entries/sidepanel.tsx",
+    offscreen: "apps/extension/src/entries/offscreen.ts",
   },
   bundle: true,
   outdir: out,
@@ -68,7 +68,7 @@ await build({
   loader: { ".woff2": "file" },
 });
 await build({
-  entryPoints: ["apps/extension/src/inference.ts"],
+  entryPoints: { inference: "apps/extension/src/inference/nlp-worker.ts" },
   outdir: out,
   bundle: true,
   format: "esm",
@@ -117,7 +117,7 @@ await buildBrand(out);
 await thirdParty(out);
 
 await build({
-  entryPoints: ["apps/extension/src/ocr-worker.ts"],
+  entryPoints: { "ocr-worker": "apps/extension/src/inference/ocr-worker.ts" },
   outdir: out,
   bundle: true,
   format: "esm",

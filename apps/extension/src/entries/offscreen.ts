@@ -1,0 +1,1 @@
+import "../inference/offscreen-runtime";

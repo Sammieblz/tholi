@@ -20,8 +20,19 @@ export async function prepareChromiumProfile(
       join(profilePath, "Default", "Preferences"),
       JSON.stringify({
         profile: { default_content_setting_values: { automatic_downloads: 1 } },
+        download: {
+          default_directory: downloadsPath,
+          prompt_for_download: false,
+          directory_upgrade: true,
+        },
       }),
     );
   }
-  return { profilePath, downloadsPath };
+  // Only export fixtures use Chromium's file-backed blob transport. This avoids
+  // unrelated host memory pressure starving a tiny report's allocation. Browser
+  // download completion and file bytes remain real; benchmarks use normal args.
+  const launchArgs = allowAutomaticDownloads
+    ? ["--blob-transport-by-file-trigger=1"]
+    : [];
+  return { profilePath, downloadsPath, launchArgs };
 }

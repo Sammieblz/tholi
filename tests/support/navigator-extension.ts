@@ -1,3 +1,4 @@
+import { permissionVariant } from "./permission-variant";
 import { prepareChromiumProfile } from "./chromium-profile";
 import { installSidebarTabHarness } from "./sidebar-tab";
 import {
@@ -7,39 +8,18 @@ import {
   type Worker,
   type Page,
 } from "@playwright/test";
-import { mkdtemp, cp, rm, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep, basename } from "node:path";
 export async function openNavigatorExtension(
   viewport = { width: 1280, height: 900 },
   fixturePermissions: string[] = [],
-  inspectDetails = true,
   options: { nativeViewport?: boolean; allowAutomaticDownloads?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
-  const extension = join(directory, "extension");
-  const { profilePath, downloadsPath } = await prepareChromiumProfile(
-    directory,
-    options,
-  );
-  await cp(resolve("dist/extension"), extension, { recursive: true });
-  const manifest = JSON.parse(
-    await readFile(join(extension, "manifest.json"), "utf8"),
-  );
-  expect(manifest.host_permissions).toEqual([
-    "http://127.0.0.1/*",
-    "http://localhost/*",
-    "https://en.wikipedia.org/*",
-  ]);
-  // Fixture-only pregrants. These do not validate native Chrome permission UI.
-  if (fixturePermissions.length)
-    await writeFile(
-      join(extension, "manifest.json"),
-      JSON.stringify({
-        ...manifest,
-        host_permissions: [...manifest.host_permissions, ...fixturePermissions],
-      }),
-    );
+  const extension = await permissionVariant(fixturePermissions);
+  const { profilePath, downloadsPath, launchArgs } =
+    await prepareChromiumProfile(directory, options);
   const launch = () =>
     chromium.launchPersistentContext(profilePath, {
       channel: "chromium",
@@ -47,6 +27,7 @@ export async function openNavigatorExtension(
       acceptDownloads: true,
       downloadsPath,
       args: [
+        ...launchArgs,
         "--disable-extensions-except=" + extension,
         "--load-extension=" + extension,
         ...(options.nativeViewport
@@ -63,7 +44,7 @@ export async function openNavigatorExtension(
       (await context.waitForEvent("serviceworker"));
     page = await context.newPage();
     panel = await context.newPage();
-    await installSidebarTabHarness(panel, downloadsPath);
+    await installSidebarTabHarness(panel, options.allowAutomaticDownloads);
     await panel.goto(
       "chrome-extension://" + new URL(worker.url()).host + "/sidepanel.html",
     );
@@ -71,44 +52,58 @@ export async function openNavigatorExtension(
       await panel.setViewportSize({ width: 380, height: 1000 });
   };
   await initialize();
-  const view = async () => {
-    if (inspectDetails) {
-      await panel
-        .locator('.tholi-journey-summary[aria-expanded="false"]')
-        .evaluateAll((nodes) => {
-          for (const node of nodes) {
-            const previous = document.activeElement as HTMLElement | null;
-            (node as HTMLButtonElement).click();
-            if (document.activeElement === node && previous?.isConnected)
-              previous.focus({ preventScroll: true });
-          }
-        });
-      await panel
-        .locator('.tholi-disclosure-trigger[aria-expanded="false"]')
-        .evaluateAll((nodes) => {
-          for (const node of nodes) {
-            if (!/^(Route details|Saved routes)/.test(node.textContent || ""))
-              continue;
-            const previous = document.activeElement as HTMLElement | null;
-            (node as HTMLButtonElement).click();
-            if (document.activeElement === node && previous?.isConnected)
-              previous.focus({ preventScroll: true });
-          }
-        });
-      await panel.locator("details").evaluateAll((nodes) => {
-        for (const node of nodes)
-          if (
-            /^(Route details|Advanced controls|Saved routes|Route preference|Workflow details)/.test(
-              node.querySelector(":scope > summary")?.textContent || "",
-            )
-          )
-            (node as HTMLDetailsElement).open = true;
+  const openDetails = async () => {
+    await panel
+      .locator('.tholi-journey-summary[aria-expanded="false"]')
+      .evaluateAll((nodes) => {
+        for (const node of nodes) {
+          const previous = document.activeElement as HTMLElement | null;
+          (node as HTMLButtonElement).click();
+          if (document.activeElement === node && previous?.isConnected)
+            previous.focus({ preventScroll: true });
+        }
       });
-    }
-    return panel.evaluate(
-      async () =>
-        (await chrome.runtime.sendMessage({ type: "GET_SESSION" }))?.view,
-    );
+    await panel
+      .locator('.tholi-disclosure-trigger[aria-expanded="false"]')
+      .evaluateAll((nodes) => {
+        for (const node of nodes) {
+          if (!/^(Route details|Saved routes)/.test(node.textContent || ""))
+            continue;
+          const previous = document.activeElement as HTMLElement | null;
+          (node as HTMLButtonElement).click();
+          if (document.activeElement === node && previous?.isConnected)
+            previous.focus({ preventScroll: true });
+        }
+      });
+    await panel.locator("details").evaluateAll((nodes) => {
+      for (const node of nodes)
+        if (
+          /^(Route details|Advanced controls|Saved routes|Route preference|Workflow details)/.test(
+            node.querySelector(":scope > summary")?.textContent || "",
+          )
+        )
+          (node as HTMLDetailsElement).open = true;
+    });
+  };
+  const view = async () => {
+    return panel.evaluate(async () => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          chrome.runtime
+            .sendMessage({ type: "GET_SESSION" })
+            .then((reply) => reply?.view),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => reject(Error("Session read exceeded five seconds")),
+              5000,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    });
   };
   const start = async (routeId = "navigator.live") => {
     await panel
@@ -142,6 +137,11 @@ export async function openNavigatorExtension(
     await expect(startButton).toBeEnabled();
     await startButton.evaluate((e) => (e as HTMLButtonElement).click());
     await expect.poll(async () => (await view())?.status).toBe("running");
+    // A running worker can precede the UI command response. Do not let a test
+    // programmatically click the disabled composer during that interval.
+    await expect(
+      panel.getByRole("button", { name: "Pause navigation", exact: true }),
+    ).toBeEnabled();
   };
   const stop = () =>
     panel.evaluate(
@@ -175,6 +175,7 @@ export async function openNavigatorExtension(
       return worker;
     },
     view,
+    openDetails,
     start,
     stop,
     close,

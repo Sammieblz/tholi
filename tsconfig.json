@@ -14,5 +14,13 @@
     "skipLibCheck": true,
     "types": ["node", "chrome"]
   },
-  "include": ["apps", "packages", "routes", "tests", "vitest.config.ts"]
+  "include": [
+    "apps",
+    "packages",
+    "routes",
+    "tests",
+    "config",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
 }

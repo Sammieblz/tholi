@@ -1,10 +1,10 @@
-import "./account.css";
+import { LogOut, Refresh } from "iconoir-react";
 import { useState } from "react";
+import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { Demo } from "../demo/Demo";
+import "./account.css";
 import { useAccount } from "./session";
-import { Refresh, LogOut } from "iconoir-react";
-import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 export function WelcomePage() {
   const { account, signOut } = useAccount(),
     { go } = useRouter();

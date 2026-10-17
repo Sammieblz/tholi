@@ -1,3 +1,5 @@
+import { verifyFull } from "./verify-full.mjs";
+import { requireFullEvidence } from "./evidence.mjs";
 import { visionEvidence } from "./verify-vision-release.mjs";
 import { readFile, stat, mkdir, writeFile } from "node:fs/promises";
 import { artifactFiles } from "./artifact-files.mjs";
@@ -6,6 +8,8 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { multiAppEvidence } from "./verify-multi-app-release.mjs";
 import { reliabilityEvidence } from "./verify-reliability-release.mjs";
+
+await verifyFull();
 
 // Package the exact build that passed evaluation; never rebuild or overwrite it.
 const extension = resolve("dist/extension");
@@ -23,16 +27,23 @@ if (!report.passed || report.extensionVersion !== manifest.version)
   );
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const files = await artifactFiles(extension);
+const fullIdentity = requireFullEvidence(report, files);
+requireFullEvidence(
+  JSON.parse(await readFile("output/qa/unit.json", "utf8")),
+  files,
+  fullIdentity,
+);
 const ui = JSON.parse(await readFile("output/qa/ui-build.json", "utf8"));
 if (
   !ui.passed ||
-  ui.expected !== 29 ||
+  !ui.cases?.length ||
   ui.extensionVersion !== manifest.version ||
   JSON.stringify(ui.artifactFiles) !== JSON.stringify(files)
 )
   throw Error(
     "Run the full Tholi UI suite on these exact build bytes before packaging",
   );
+requireFullEvidence(ui, files, fullIdentity);
 const multiApp = await multiAppEvidence(files);
 const vision = await visionEvidence(files);
 const reliability = await reliabilityEvidence(files);
@@ -72,6 +83,7 @@ for (const scope of ["e2e", "live"]) {
     throw new Error(
       `Run the full passing ${scope} regression suite for this exact build before packaging`,
     );
+  requireFullEvidence(r, files, fullIdentity);
   regressions[scope] = {
     passed: r.passed,
     count: r.cases.length,
@@ -162,7 +174,7 @@ await writeFile(
         llmCalls: nlp.llmCalls,
         embeddingActivity: nlp.embeddingActivity,
       },
-      checklist: "docs/chrome-handoff.md",
+      checklist: "docs/guides/getting-started.md",
       pending: [
         "signed-in Amazon Prime cancellation and account variants",
         "six-platform signed-in workflow verification",

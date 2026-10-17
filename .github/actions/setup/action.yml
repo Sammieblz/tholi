@@ -1,0 +1,21 @@
+name: Set up Tholi validation
+inputs:
+  assets:
+    description: Restore pinned inference assets
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24.19.0
+        cache: npm
+    - uses: actions/cache@v4
+      if: inputs.assets == 'true'
+      with:
+        path: |
+          assets/models
+          assets/ocr
+        key: ${{ runner.os }}-inference-${{ hashFiles('assets/model-lock.json', 'assets/ocr-lock.json') }}
+    - run: npm ci
+      shell: pwsh

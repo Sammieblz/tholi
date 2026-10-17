@@ -1,3 +1,4 @@
+import { requireFullEvidence } from "./evidence.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 export async function reliabilityEvidence(files) {
@@ -15,8 +16,10 @@ export async function reliabilityEvidence(files) {
     JSON.stringify(report.artifactFiles) !== JSON.stringify(files)
   )
     throw Error("Run complete reliability browser checks for matching bytes.");
+  requireFullEvidence(report, files);
+  requireFullEvidence(comparison, files, report.validation);
   const sha = createHash("sha256")
-    .update(await readFile("tests/reliability-vision/corpus.json"))
+    .update(await readFile("tests/fixtures/reliability-vision/corpus.json"))
     .digest("hex");
   if (comparison.corpusSha256 !== sha)
     throw Error("UI image corpus differs from evaluated corpus.");
@@ -35,6 +38,9 @@ export async function reliabilityEvidence(files) {
     metrics,
     paddle: comparison.metrics.paddle,
     nativePermissions: report.nativePermissions,
-    signedInAmazon: report.signedInAmazon,
+    // The shared reporter records general authentication status. Preserve this
+    // release field without promoting authored fixture coverage to a live check.
+    signedInAmazon:
+      report.signedInAmazon || "pending: journey uses authored responses",
   };
 }

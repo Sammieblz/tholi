@@ -1,43 +1,77 @@
 name: Validate offline navigation
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+env:
+  THOLI_TEST_TIER: pr
+  THOLI_VALIDATION_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
 jobs:
-  validate:
+  build:
+    outputs:
+      artifact_name: pr-build-${{ github.run_attempt }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24.19.0
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm run test:nlp
-      - run: npm run test:multi-app
-      - run: npm run test:vision
+          assets: "true"
+      - run: npm run typecheck
+      - run: npm run build
+      - run: node scripts/build-manifest.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-build-${{ github.run_attempt }}
+          path: |
+            dist
+            apps/api/dist
+            assets/models
+            assets/ocr
+            output/build-manifest.json
+  tests:
+    needs: build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        group: [core, ui, integration, unit]
+    env:
+      THOLI_BUILD_PREPARED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+      - run: node scripts/build-manifest.mjs --verify
       - run: npx playwright install chromium
-      - run: npm run test:nlp:browser
-      - run: npm run test:multi-app:browser
-      - run: npm run test:continuity:browser
-      - run: npm run test:reliability:browser
-      - run: npm run test:ui
-      - run: npm run test:e2e -- --workers=1
-      - run: npm run test:live:wikipedia
-      - run: npm run test:acceptance
-      - run: npm run package:extension
-      - run: npm run package:api
+        if: matrix.group != 'unit'
+      - run: npm run test:ci -- --group ${{ matrix.group }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: validation-evidence
+          name: pr-evidence-${{ matrix.group }}-${{ github.run_attempt }}
           path: |
-            output/nlp
-            output/multi-app
-            output/vision
-            output/reliability
-            output/acceptance
-            output/qa/ui-build.json
-            output/releases/*.zip
-            output/releases/*.tgz
-            output/releases/*.sha256
-            output/releases/*.json
-            test-results*
+            output/qa
+            output/acceptance/e2e-regressions.json
+            output/nlp/browser-build.json
+            output/multi-app/browser.json
+            output/vision/browser.json
+            output/reliability/browser.json
+            test-results
+  validate:
+    if: always()
+    needs: [build, tests]
+    runs-on: windows-latest
+    steps:
+      - name: Require every fast gate
+        shell: pwsh
+        run: |
+          if ('${{ needs.build.result }}' -ne 'success' -or '${{ needs.tests.result }}' -ne 'success') { exit 1 }

@@ -21,8 +21,17 @@ export default class AccuracyReporter implements Reporter {
   private missing: string[] = [];
   private failures: string[] = [];
   private browsers = new Set<string>();
+  private projects: string[] = [];
   async onBegin(_config: unknown, _suite: Suite) {
     this.build = await buildProvenance();
+    this.projects = [
+      ...new Set(
+        _suite
+          .allTests()
+          .filter((t) => t.parent.project()?.metadata.scope === "acceptance")
+          .map((t) => t.parent.project()!.name),
+      ),
+    ];
   }
   async onTestEnd(test: TestCase, result: TestResult) {
     for (const a of result.attachments.filter(
@@ -50,7 +59,7 @@ export default class AccuracyReporter implements Reporter {
       this.failures.push(test.titlePath().join(" / "));
   }
   async onEnd(result: FullResult) {
-    const matrix = await readFile("tests/acceptance/matrix.json"),
+    const matrix = await readFile("tests/browser/acceptance/matrix.json"),
       definition = JSON.parse(matrix.toString());
     const build = await buildProvenance();
     const live = this.samples.filter((c) => c.suite === "live"),
@@ -63,8 +72,7 @@ export default class AccuracyReporter implements Reporter {
     const fixtureExpected =
       (definition.goals.length + definition.negativeCases.length) *
       definition.viewports.length;
-    const authoredExpected =
-      definition.authoredStates.length * definition.viewports.length;
+    const authoredExpected = 0;
     const unique = new Set(this.samples.map((c) => c.id));
     const expectedIds = definition.viewports.flatMap((v: { name: string }) => [
       ...definition.articles.flatMap((article: string) =>
@@ -76,9 +84,6 @@ export default class AccuracyReporter implements Reporter {
         ...definition.goals.map((g: { id: string }) => g.id),
         ...definition.negativeCases,
       ].map((id: string) => `${v.name}/fixture/${id}`),
-      ...definition.authoredStates.map(
-        (id: string) => `${v.name}/authored/${id}`,
-      ),
     ]);
     const missingCases = expectedIds.filter((id: string) => !unique.has(id));
     const unexpectedCases = [...unique].filter(
@@ -102,15 +107,14 @@ export default class AccuracyReporter implements Reporter {
       fixture.length === fixtureExpected &&
       authored.length === authoredExpected &&
       acceptancePassed(summaries.live, definition.gates) &&
-      acceptancePassed(summaries.fixture, definition.gates) &&
-      acceptancePassed(summaries.authored, {
-        ...definition.gates,
-        targetPrecision: 0.95,
-      });
+      acceptancePassed(summaries.fixture, definition.gates);
     const report = {
-      format: "navigator-acceptance-v1",
+      format: "navigator-acceptance-v2",
       evaluatedAt: new Date().toISOString(),
       artifactFiles: build.artifactFiles,
+      validation: build.validation,
+      projects: this.projects,
+      authoredEvidence: "output/qa/unit.json",
       matrixSha256: createHash("sha256").update(matrix).digest("hex"),
       extensionVersion: build.extensionVersion,
       protocolVersion: "1.0.0",

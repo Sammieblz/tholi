@@ -10,14 +10,14 @@
   <a href="#try-tholi">Try Tholi</a> ·
   <a href="docs/README.md">Documentation</a> ·
   <a href="CONTRIBUTING.md">Contribute</a> ·
-  <a href="docs/privacy.md">Privacy</a>
+  <a href="docs/architecture/privacy.md">Privacy</a>
 </p>
 
 <p align="center"><strong>Desktop Chrome · English · Local processing · No account required</strong></p>
 
 ![The real Tholi widget guides a text-size change on Wikipedia, highlighting the Large control beside its instruction.](apps/public/media/screenshots/live-guidance.webp)
 
-_Actual extension capture on public [Wikipedia](https://en.wikipedia.org/wiki/Ada_Lovelace), October 15, 2026. [Capture details and provenance](docs/product-screenshots.md). This example does not establish reliability on every website._
+_Actual extension capture on public [Wikipedia](https://en.wikipedia.org/wiki/Ada_Lovelace), October 15, 2026. [Capture details and provenance](docs/development/media-capture.md). This example does not establish reliability on every website._
 
 ## A guide that stays with you
 
@@ -47,7 +47,7 @@ The build fetches and verifies pinned MiniLM and English Tesseract assets. These
 3. Open a website, click the **Tholi** toolbar icon and allow website access if Chrome asks.
 4. Enter a destination, such as **Make the text larger** on Wikipedia, then select **Guide me**.
 
-After rebuilding, reload Tholi in `chrome://extensions` and refresh the website tab. [Chrome setup and permission recovery](docs/chrome-handoff.md) covers the details.
+After rebuilding, reload Tholi in `chrome://extensions` and refresh the website tab. [Chrome setup and permission recovery](docs/guides/getting-started.md) covers the details.
 
 ### Explore the local website
 
@@ -57,29 +57,31 @@ npm run dev:web
 
 Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs, installation help and downloads. Sign-up and sign-in are explicitly mocked. Dark is the default; optional preference cookies can remember Light/Dark. Production analytics is disabled.
 
-**Source version: 0.10.1. Packaged preview: 0.10.0.** The website reads download version and checksum from the eligible archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/website-redesign.md).
+**Source version: 0.10.1.** The website offers a packaged preview only when an eligible, verified archive is available; otherwise it shows source setup. Download version and checksum come from that archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/releases/v0.10.1/website.md).
 
 ## Preview boundaries
 
-Tholi is a working preview. Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/chrome-handoff.md).
+Tholi is a working preview. Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/guides/getting-started.md).
 
-The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and Chrome-model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/maintenance.md) must not be confused with default-engine support.
+The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and Chrome-model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/releases/records/2026-10-maintenance.md) must not be confused with default-engine support.
 
 ## Build and contribute
 
-| Work                                | Command                                   | Output                         |
-| ----------------------------------- | ----------------------------------------- | ------------------------------ |
-| Extension                           | `npm run build:extension`                 | `dist/extension`               |
-| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`         |
-| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                      |
-| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/api-setup.md) |
-| Types, unit tests and builds        | `npm run check`                           | Local validation               |
+| Work                                | Command                                   | Output                              |
+| ----------------------------------- | ----------------------------------------- | ----------------------------------- |
+| Extension                           | `npm run build:extension`                 | `dist/extension`                    |
+| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`              |
+| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                           |
+| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md) |
+| Deterministic PR validation         | `npm run test:ci`                         | Local validation                    |
 
 Install test Chromium once with `npx playwright install chromium`. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
 
-The extension worker owns journeys and verification; `packages/ui` owns shared presentation; the website practice uses an isolated, controlled adapter. Start with [frontend ownership](docs/frontend-architecture.md), [navigation architecture](docs/live-navigation.md), [NLP](docs/nlp-architecture.md), and [the documentation index](docs/README.md).
+`npm run test:ci` runs deterministic PR checks. `npm run test:full` runs complete certification before gated packaging. Existing focused aliases remain available. See [testing and CI](docs/development/testing/README.md), [coverage ledger](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Public-site tests, frozen model/OCR budgets and the complete responsive matrix run nightly, manually and before releases.
 
-Reusable site knowledge stays local. Private values and task context remain session-only; screenshots and field values are not stored as route knowledge. [Privacy](docs/privacy.md) and [security](docs/security.md) describe the optional backend and deletion controls.
+The extension worker owns journeys and verification; `packages/ui` owns shared presentation; the website practice uses an isolated, controlled adapter. Start with [frontend ownership](docs/architecture/frontend/README.md), [navigation architecture](docs/architecture/navigation.md), [NLP](docs/architecture/natural-language.md), and [the documentation index](docs/README.md).
+
+Reusable site knowledge stays local. Private values and task context remain session-only; screenshots and field values are not stored as route knowledge. [Privacy](docs/architecture/privacy.md) and [security](docs/architecture/security.md) describe the optional backend and deletion controls.
 
 <p>
   <img src="apps/public/media/tholi_icon.png" width="32" alt="Tholi icon" />
@@ -87,4 +89,4 @@ Reusable site knowledge stays local. Private values and task context remain sess
 
 Tholi is operated by **[ILUNỌNSEN LLC](https://ilunonsen.com)**, Ohio, United States. [Contact](mailto:info@ilunonsen.com).
 
-[MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Naming and compatibility](docs/naming.md)
+[MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Naming and compatibility](docs/development/naming.md)

@@ -3,7 +3,10 @@ apps/public/media/video/*.vtt text eol=lf
 apps/public/media/video/*.txt text eol=lf
 
 # Frozen validation inputs and their checksums use canonical LF endings.
-tests/*/corpus.json text eol=lf
-tests/*/corpus.sha256 text eol=lf
+tests/fixtures/*/corpus.json text eol=lf
+tests/fixtures/*/corpus.sha256 text eol=lf
 
 .codex/skills/** -text
+
+# The acceptance declaration is also a byte-frozen input.
+tests/browser/acceptance/matrix.json text eol=lf

@@ -17,3 +17,5 @@ output/multi-app/
 output/vision/
 output/reliability/
 apps/public/downloads/
+
+output/build-manifest.json

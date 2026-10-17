@@ -1,3 +1,4 @@
+import { requireFullEvidence } from "./evidence.mjs";
 import { readFile } from "node:fs/promises";
 export async function visionEvidence(files, apiFiles) {
   const manifest = JSON.parse(
@@ -16,6 +17,10 @@ export async function visionEvidence(files, apiFiles) {
       throw new Error(
         "Run passing v0.9 " + name + " checks for the matching build bytes",
       );
+    const acceptance = JSON.parse(
+      await readFile("output/acceptance/results.json", "utf8"),
+    );
+    requireFullEvidence(report, files, acceptance.validation);
     reports[name] = report;
   }
   if (
