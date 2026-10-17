@@ -100,9 +100,9 @@ test("retains one destination through modal, full document navigation and prefer
     expect(await app.page.evaluate(() => document.documentElement.lang)).toBe(
       "es",
     );
-    await expect(
-      app.panel.getByRole("region", { name: "Task journey" }),
-    ).toContainText("3 verified steps");
+    await expect(app.panel.locator(".tholi-route-context")).toContainText(
+      "3 verified steps",
+    );
     await app.panel.screenshot({
       path: `output/qa/task-journey-${info.project.name}.png`,
       fullPage: true,
@@ -182,24 +182,20 @@ test("saved routes persist across browser restart and rebind after a website cha
     );
     await app.page.goto("http://localhost:5173/saved");
     await app.start();
-    const savedRoutes = app.panel
-      .locator("summary")
-      .filter({ hasText: /^Saved routes$/ });
+    const savedRoutes = app.panel.getByRole("button", {
+      name: /^Saved routes/,
+    });
     await expect(savedRoutes).toBeVisible();
-    if (
-      !(await savedRoutes.evaluate((e) =>
-        e.parentElement?.hasAttribute("open"),
-      ))
-    )
+    if ((await savedRoutes.getAttribute("aria-expanded")) !== "true")
       await savedRoutes.click();
     await app.page.bringToFront();
     await expect(
       app.panel.getByRole("button", {
-        name: "Set color to Blue · Reached before",
+        name: /^Set color to Blue\s+Reached before$/,
       }),
     ).toBeEnabled();
     await app.panel
-      .getByRole("button", { name: "Set color to Blue · Reached before" })
+      .getByRole("button", { name: /^Set color to Blue\s+Reached before$/ })
       .evaluate((e) => (e as HTMLButtonElement).click());
     await next(app, "Color: Blue");
     expect((await app.view()).selectedControlId).not.toBe(oldId);
@@ -210,6 +206,20 @@ test("saved routes persist across browser restart and rebind after a website cha
       .toBe("completed");
     await app.panel
       .getByRole("button", { name: "Forget route: Set color to Blue" })
+      .evaluate((e) => (e as HTMLButtonElement).click());
+    const deletion = app.panel.getByRole("alertdialog", {
+      name: "Forget route?",
+    });
+    await expect(deletion).toBeVisible();
+    expect(
+      await app.panel.evaluate(
+        async () =>
+          (await chrome.runtime.sendMessage({ type: "GET_TASKS" })).tasks
+            .length,
+      ),
+    ).toBe(1);
+    await deletion
+      .getByRole("button", { name: "Forget route", exact: true })
       .evaluate((e) => (e as HTMLButtonElement).click());
     await expect
       .poll(async () =>

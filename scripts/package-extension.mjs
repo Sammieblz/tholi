@@ -23,6 +23,16 @@ if (!report.passed || report.extensionVersion !== manifest.version)
   );
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const files = await artifactFiles(extension);
+const ui = JSON.parse(await readFile("output/qa/ui-build.json", "utf8"));
+if (
+  !ui.passed ||
+  ui.expected !== 29 ||
+  ui.extensionVersion !== manifest.version ||
+  JSON.stringify(ui.artifactFiles) !== JSON.stringify(files)
+)
+  throw Error(
+    "Run the full Tholi UI suite on these exact build bytes before packaging",
+  );
 const multiApp = await multiAppEvidence(files);
 const vision = await visionEvidence(files);
 const reliability = await reliabilityEvidence(files);
@@ -70,9 +80,14 @@ for (const scope of ["e2e", "live"]) {
 }
 const release = resolve("output/releases");
 await mkdir(release, { recursive: true });
-const name = `internet-navigator-${manifest.version}`;
+const name = `tholi-${manifest.version}`;
 const archive = join(release, name + ".zip");
-if (await stat(archive).catch(() => undefined))
+if (
+  (await stat(archive).catch(() => undefined)) ||
+  (await stat(
+    join(release, `internet-navigator-${manifest.version}.zip`),
+  ).catch(() => undefined))
+)
   throw new Error(
     "Release archive already exists; preserve it and bump the version for changes",
   );
@@ -128,6 +143,12 @@ await writeFile(
       matrixSha256: report.matrixSha256,
       metrics: report.summaries,
       regressions,
+      ui: {
+        cases: ui.cases.length,
+        evaluatedAt: ui.evaluatedAt,
+        motion: ui.cases.find((c) => c.motion)?.motion,
+        nativeChrome: "pending user-assisted verification",
+      },
       multiApp,
       vision,
       reliability,
@@ -155,3 +176,4 @@ await writeFile(
   ) + "\n",
 );
 console.log(`Verified candidate: ${archive}\nSHA256: ${archiveSha256}`);
+await (await import("./sync-downloads.mjs")).syncDownloads();

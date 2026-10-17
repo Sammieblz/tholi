@@ -37,8 +37,7 @@ export function guidancePolicy(transition: Transition): {
   if (transition.risk === "consequential")
     return {
       allowed: false,
-      reason:
-        "Consequential action: Navigator stops here. You remain in control.",
+      reason: "Consequential action: Tholi stops here. You remain in control.",
     };
   return { allowed: true, reason: "User-controlled guidance." };
 }

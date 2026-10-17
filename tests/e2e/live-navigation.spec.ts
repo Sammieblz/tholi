@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { withSidebarTabForeground } from "../support/sidebar-tab";
 import { openNavigatorExtension } from "../support/navigator-extension";
 import { readFile } from "node:fs/promises";
 import { liveReportSchema } from "../../packages/live-diagnostics";
@@ -9,8 +10,16 @@ function fixture(compact: boolean, suffix = "one") {
 <nav aria-label="Contents"><a href="#sources-${suffix}">2 References</a></nav><a href="/library/next">Next article</a><a href="https://example.com/">Another website</a><button>Delete account</button>
 <input type="password" value="SENTINEL_PASSWORD"><div contenteditable>SENTINEL_MESSAGE</div><div class="spacer"></div><h2 id="sources-${suffix}">References</h2><div style="height:900px"></div></body></html>`;
 }
-async function prepare(info: any) {
-  const app = await openNavigatorExtension(info.project.use.viewport);
+async function prepare(
+  info: any,
+  options: { allowAutomaticDownloads?: boolean } = {},
+) {
+  const app = await openNavigatorExtension(
+    info.project.use.viewport,
+    [],
+    true,
+    options,
+  );
   await app.context.route("http://localhost:5173/library/**", (r) =>
     r.fulfill({
       contentType: "text/html",
@@ -26,7 +35,7 @@ async function prepare(info: any) {
 }
 
 test("live inspector explains goal candidates and exports private verification evidence without changing navigation", async ({}, info) => {
-  const app = await prepare(info);
+  const app = await prepare(info, { allowAutomaticDownloads: true });
   try {
     await app.page.locator("input[type=search]").fill("SENTINEL_QUERY");
     await goal(app, "make text larger");
@@ -52,12 +61,19 @@ test("live inspector explains goal candidates and exports private verification e
       .poll(async () => (await app.view()).goalPlan?.status)
       .toBe("completed");
     await expect(inspector).toContainText("checked-change");
-    const download = app.panel.waitForEvent("download");
-    await inspector
-      .getByRole("button", { name: "Export diagnostics" })
-      .evaluate((e) => (e as HTMLButtonElement).click());
     const report = liveReportSchema.parse(
-      JSON.parse(await readFile((await (await download).path())!, "utf8")),
+      await withSidebarTabForeground(app.panel, app.page, async () => {
+        const button = inspector.getByRole("button", {
+          name: "Export diagnostics",
+        });
+        await button.focus();
+        await expect(button).toBeFocused();
+        const [download] = await Promise.all([
+          app.panel.waitForEvent("download"),
+          button.click(),
+        ]);
+        return JSON.parse(await readFile((await download.path())!, "utf8"));
+      }),
     );
     expect(
       report.diagnostics!.events.some(

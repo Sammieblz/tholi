@@ -37,7 +37,11 @@ export async function stopFrames() {
       ),
     );
 }
-export async function startFrames(session: PinnedSession) {
+export async function startFrames(
+  session: PinnedSession,
+  visible = true,
+  presentationRevision = 0,
+) {
   await stopFrames();
   visibility.clear();
   const current = (scope = {
@@ -101,6 +105,8 @@ export async function startFrames(session: PinnedSession) {
           nonce: current.nonce,
           ...f,
           limit,
+          presentationVisible: visible,
+          presentationRevision,
         },
         { frameId: f.frameId },
       );
@@ -108,6 +114,30 @@ export async function startFrames(session: PinnedSession) {
       missing.add(new URL(frame.url).origin);
     }
   }
+}
+export async function setFramePresentation(
+  session: PinnedSession,
+  visible: boolean,
+  revision: number,
+) {
+  if (scope?.sessionId !== session.sessionId) return;
+  const current = scope;
+  await Promise.allSettled(
+    [...current.frames.values()].map((frame) =>
+      chrome.tabs.sendMessage(
+        session.tabId,
+        {
+          type: "FRAME_PRESENTATION",
+          sessionId: session.sessionId,
+          nonce: current.nonce,
+          ...frame,
+          visible,
+          revision,
+        },
+        { frameId: frame.frameId },
+      ),
+    ),
+  );
 }
 export async function frameVisibilityMessage(
   raw: any,

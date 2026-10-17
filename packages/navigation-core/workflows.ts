@@ -1383,7 +1383,7 @@ export async function planWorkflow(
     confidence: first.score,
     reason:
       w.status === "review"
-        ? "Review this action on the website. You make the click; Navigator will verify the result afterward."
+        ? "Review this action on the website. You make the click; Tholi will verify the result afterward."
         : w.reason,
     steps:
       w.status === "review"

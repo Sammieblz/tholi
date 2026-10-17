@@ -78,7 +78,7 @@ export const routeSchema = z
     description: z.string().default(""),
     safetyNote: z
       .string()
-      .default("You make every click. Navigator never submits for you."),
+      .default("You make every click. Tholi never submits for you."),
     completionInstruction: z
       .string()
       .default(
@@ -86,7 +86,7 @@ export const routeSchema = z
       ),
     boundaryInstruction: z
       .string()
-      .default("Navigator stops here. The final action is yours to decide."),
+      .default("Tholi stops here. The final action is yours to decide."),
     milestoneStates: z.record(z.number().int().nonnegative()).default({}),
     version: z.string(),
     lastVerified: z.string(),
@@ -370,6 +370,8 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("BEGIN_SESSION"),
       sessionId: z.string().uuid(),
+      presentationVisible: z.boolean().optional(),
+      presentationRevision: z.number().int().nonnegative().optional(),
       routeId: z.string().min(1),
       routeVersion: z.string().min(1),
       verifiedSteps: z.number().int().nonnegative().optional(),
@@ -449,7 +451,7 @@ const diagnosticsSchema = z
         confidence: z.number().min(0).max(1),
         reason: z.enum([
           "Target not found with enough confidence.",
-          "Multiple controls match. Navigator will not guess.",
+          "Multiple controls match. Tholi will not guess.",
           "Role, accessible name and context verified.",
         ]),
         candidates: z

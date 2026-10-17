@@ -1,0 +1,910 @@
+/* One secondary scroll area and an anchored composer on every product surface. */
+.tholi-app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 620px;
+  margin: auto;
+  padding: 16px;
+  gap: 10px;
+  overflow: clip;
+  font:
+    15px/1.5 Manrope,
+    system-ui,
+    sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+}
+.tholi-app button,
+.tholi-app textarea,
+.tholi-app input,
+.tholi-app select {
+  font-family: inherit;
+}
+.tholi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  min-height: 44px;
+}
+.tholi-header-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.tholi-header-actions svg {
+  flex: none;
+}
+.tholi-view-switch {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  gap: 4px;
+  flex: none;
+  background: var(--sage);
+  border-radius: 13px;
+  padding: 4px;
+}
+.tholi-view-switch button {
+  position: relative;
+  flex: 1;
+  background: transparent;
+  border-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  padding: 8px;
+  min-height: 36px;
+}
+.tholi-view-switch button[aria-pressed="true"] {
+  color: var(--jade);
+  font-weight: 700;
+}
+.tholi-view-indicator {
+  position: absolute;
+  z-index: -1;
+  inset: 4px auto 4px 4px;
+  width: calc(50% - 6px);
+  background: var(--card);
+  border-radius: 9px;
+  box-shadow: 0 1px 4px #1c25220d;
+  transition: transform 200ms var(--ease-in-out);
+}
+.tholi-view-switch[data-mode="conversation"] .tholi-view-indicator {
+  transform: translateX(calc(100% + 4px));
+}
+.tholi-attention {
+  flex: none;
+  max-height: 30%;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border-radius: 12px;
+  font-size: 13px;
+  scrollbar-gutter: stable;
+  padding: 0 4px;
+}
+.tholi-attention:empty {
+  display: none;
+}
+.tholi-attention-required {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--amber) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--line));
+}
+.tholi-attention p {
+  margin: 4px 0 8px;
+}
+.tholi-attention h2,
+.tholi-attention h3 {
+  font-size: 14px;
+  margin: 2px 0 6px;
+}
+.tholi-attention button {
+  font-size: 13px;
+  padding: 8px 10px;
+  margin: 4px 5px 0 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tholi-clarification button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-align: left;
+}
+/* A required decision replaces route chrome, rather than competing with it. */
+.tholi-app:not(.tholi-widget-app)[data-attention="true"] .tholi-attention {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
+}
+.tholi-app:not(.tholi-widget-app)[data-attention="true"] .tholi-workspace {
+  display: none;
+}
+.tholi-attention-instruction {
+  font-weight: 600;
+  line-height: 1.5;
+}
+.tholi-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 4px 0;
+}
+.tholi-notice-stack {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
+  pointer-events: none;
+  outline: none;
+}
+.tholi-notice {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  box-shadow: var(--shadow);
+  padding: 12px 16px;
+  font-size: 13px;
+  pointer-events: none;
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+.tholi-notice[data-starting-style],
+.tholi-notice[data-ending-style] {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.tholi-workspace,
+.tholi-journey {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.tholi-workspace {
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+.tholi-journey-heading {
+  margin: 0;
+  flex: none;
+  font-size: inherit;
+}
+.tholi-journey-summary {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--card);
+  text-align: left;
+  box-shadow: 0 1px 0 #1c252203;
+  overflow: visible;
+}
+.tholi-journey-summary .tholi-wayfinder-host {
+  height: 36px;
+  flex: none;
+}
+.tholi-summary-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  gap: 2px;
+}
+.tholi-summary-destination {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tholi-summary-state {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.tholi-disclosure-chevron {
+  flex: none;
+  transition: transform 180ms var(--ease-out);
+}
+.tholi-journey-summary[data-panel-open] .tholi-disclosure-chevron {
+  transform: rotate(180deg);
+}
+.tholi-body {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 4px 12px;
+  margin: 0 -4px;
+  overscroll-behavior: contain;
+  flex: 1;
+  scrollbar-gutter: stable;
+  outline-offset: -2px;
+}
+/* A compact route window stays visible without becoming a second status card. */
+.tholi-route-steps {
+  flex: none;
+  min-width: 0;
+  padding: 5px 4px 4px;
+}
+.tholi-route-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+.tholi-route-note {
+  color: var(--muted);
+  font-weight: 500;
+  text-align: right;
+}
+.tholi-route-nodes {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tholi-route-stop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.tholi-route-stop:first-child {
+  flex: none;
+}
+.tholi-route-node {
+  position: relative;
+  width: 23px;
+  height: 23px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--field-line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.tholi-route-node svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tholi-route-stop[data-checked="true"] .tholi-route-node {
+  border-color: var(--jade);
+  color: var(--jade);
+  background: var(--sage);
+}
+.tholi-route-stop[data-state="current"] .tholi-route-node {
+  border-color: var(--amber);
+  background: linear-gradient(145deg, #f4ce88, #e6af57);
+  color: #4d350f;
+  box-shadow: 0 1px 2px #714b1614;
+}
+.tholi-route-stop[data-state="current"] .tholi-route-node::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid var(--amber);
+  border-radius: inherit;
+  opacity: 0.35;
+}
+.tholi-route-connector {
+  position: relative;
+  height: 2px;
+  min-width: 3px;
+  flex: 1;
+  margin: 0 4px;
+  background: var(--line);
+  overflow: hidden;
+  border-radius: 2px;
+}
+.tholi-route-stop[data-checked="true"] .tholi-route-connector {
+  background: var(--jade);
+  opacity: 0.65;
+}
+.tholi-route-signal {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--amber),
+    #f4ce88,
+    transparent
+  );
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.tholi-route-steps[data-moving="true"]
+  .tholi-route-stop[data-state="current"]
+  .tholi-route-signal,
+.tholi-route-steps[data-moving="true"]
+  .tholi-route-stop[data-state="current"]
+  + .tholi-route-stop
+  .tholi-route-signal,
+.tholi-route-steps[data-moving="true"]
+  .tholi-route-stop[data-state="more"]
+  .tholi-route-signal {
+  opacity: 1;
+  animation: tholi-route-travel 2.4s linear infinite;
+}
+.tholi-route-steps[data-moving="true"]
+  .tholi-route-stop[data-state="current"]
+  .tholi-route-node::after {
+  animation: tholi-route-beacon 2.4s var(--ease-in-out) infinite;
+}
+.tholi-route-stop[data-checked="true"] svg {
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+@starting-style {
+  .tholi-route-stop[data-checked="true"] svg {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes tholi-route-travel {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes tholi-route-beacon {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.08);
+  }
+}
+@container (max-width: 300px) {
+  .tholi-route-note {
+    display: none;
+  }
+  .tholi-route-node {
+    width: 20px;
+    height: 20px;
+  }
+  .tholi-route-connector {
+    margin-inline: 3px;
+  }
+}
+.tholi-view-content {
+  animation: tholi-content-enter var(--duration-step) var(--ease-out);
+}
+.tholi-current {
+  position: relative;
+  padding: 14px 4px 12px;
+  min-height: 0;
+  overflow-wrap: anywhere;
+}
+.tholi-current[data-phase="arrived"] {
+  background: var(--sage);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 8px;
+}
+.tholi-current[data-phase="idle"] {
+  padding-top: 18px;
+}
+.tholi-step-content {
+  min-height: 0;
+  overflow: visible;
+}
+.tholi-phase {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jade);
+  margin-bottom: 5px;
+}
+.tholi-instruction {
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 0;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  animation: tholi-content-enter var(--duration-step) var(--ease-out);
+}
+.tholi-current[data-phase="idle"] .tholi-instruction {
+  font-size: 16px;
+  color: var(--muted);
+}
+.tholi-warning .tholi-phase {
+  color: var(--warning);
+}
+.tholi-compose-dock {
+  flex: none;
+  position: relative;
+  padding: 4px;
+  margin: 0 -4px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.tholi-session-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0 9px;
+}
+.tholi-session-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 12px;
+  min-height: 44px;
+  font-size: 12px;
+  background: transparent;
+}
+.tholi-session-actions button:first-child {
+  flex: 1;
+}
+.tholi-arrived-actions button {
+  color: var(--jade);
+  font-weight: 650;
+}
+.tholi-composer label {
+  display: block;
+  font-size: 12px;
+  font-weight: 650;
+  margin: 5px 0 7px;
+}
+.tholi-input-wrap {
+  position: relative;
+  padding: 3px;
+  margin: -3px;
+}
+.tholi-composer textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 74px;
+  min-height: 60px;
+  max-height: 140px;
+  line-height: 1.5;
+  font-size: 14px;
+  border-radius: 12px;
+  resize: vertical;
+  padding: 11px 12px;
+}
+.tholi-composer .primary {
+  width: 100%;
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.tholi-reassurance {
+  font-size: 10px;
+  color: var(--muted);
+  margin: 7px 0 0;
+  text-align: center;
+}
+.tholi-chat-composer .tholi-input-wrap {
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--field-line);
+  border-radius: 17px;
+  background: var(--card);
+  position: relative;
+}
+.tholi-chat-composer .tholi-input-wrap:focus-within {
+  outline: 3px solid var(--jade);
+  outline-offset: 2px;
+}
+.tholi-chat-composer textarea {
+  background: transparent;
+  border: 0;
+  border-radius: 17px;
+  padding-right: 60px;
+  min-height: 76px;
+  height: 76px;
+  resize: none;
+  outline: none;
+}
+.tholi-chat-composer .tholi-send {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+}
+.tholi-chat-composer .tholi-send span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.tholi-journey-panel {
+  overflow: hidden;
+  transition:
+    height 200ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+  height: var(--accordion-panel-height);
+  padding: 0 4px;
+}
+.tholi-journey-panel[data-starting-style],
+.tholi-journey-panel[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.tholi-route-context {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 14px;
+}
+.tholi-route-context h2 {
+  font-size: 14px !important;
+  margin: 0 0 4px !important;
+}
+.tholi-route-context p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.tholi-body details {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+  padding: 0 12px;
+}
+.tholi-body summary {
+  cursor: pointer;
+  color: var(--ink);
+  padding: 13px 0;
+  font-size: 13px;
+  font-weight: 650;
+  min-height: 44px;
+}
+.tholi-body h2 {
+  font-size: 17px;
+  margin: 12px 0;
+}
+.tholi-body h3 {
+  font-size: 14px;
+}
+.tholi-body p {
+  overflow-wrap: anywhere;
+}
+.tholi-body input:not([type="checkbox"]),
+.tholi-body select {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+.tholi-body button {
+  margin: 4px 4px 4px 0;
+}
+.tholi-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 12px 0 8px;
+}
+.tholi-message {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.tholi-message p {
+  white-space: pre-wrap;
+  margin: 5px 0 0;
+}
+.tholi-message-author {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--jade);
+}
+.tholi-message.user {
+  align-self: flex-end;
+  background: var(--sage);
+  padding: 10px 13px;
+  border-radius: 15px 15px 4px 15px;
+  max-width: 91%;
+}
+.tholi-message.user .tholi-message-author {
+  color: var(--muted);
+}
+.tholi-message.guide {
+  padding: 0 4px;
+}
+.tholi-message-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.tholi-message-tools .icon-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  margin: 2px 0 0;
+}
+.tholi-why-step {
+  align-self: flex-start;
+  font-size: 12px !important;
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  background: transparent;
+  min-height: 36px;
+  border-radius: 20px;
+}
+.tholi-conversation-welcome {
+  padding: 10px 4px 4px;
+}
+.tholi-conversation-welcome h2 {
+  font-size: 22px;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.tholi-conversation-welcome p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.tholi-advanced {
+  font-size: 13px;
+  padding: 8px 4px;
+}
+.tholi-advanced table {
+  width: 100%;
+  font-size: 12px;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+.tholi-advanced fieldset {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 12px 0;
+  padding: 12px;
+}
+.tholi-reset-session {
+  color: var(--danger);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tholi-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #101b1766;
+  z-index: 30;
+}
+.tholi-confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 32px));
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  z-index: 31;
+}
+.tholi-confirm-dialog h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.tholi-confirm-dialog p {
+  font-size: 14px;
+  color: var(--muted);
+}
+.tholi-confirm-dialog > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tholi-compact-compose {
+  display: none;
+}
+/* Native rails retain platform keyboard/touch behavior. Only the thumb fades. */
+.tholi-app * {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.tholi-app *:hover,
+.tholi-app *:focus-within,
+.tholi-app [data-scrolling="true"] {
+  scrollbar-color: var(--field-line) transparent;
+}
+.tholi-app ::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.tholi-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tholi-app ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background: transparent;
+  background-clip: padding-box;
+  border-radius: 10px;
+}
+.tholi-app :hover::-webkit-scrollbar-thumb,
+.tholi-app :focus-within::-webkit-scrollbar-thumb,
+.tholi-app [data-scrolling="true"]::-webkit-scrollbar-thumb {
+  background-color: var(--field-line);
+}
+.tholi-embedded-app {
+  height: 100%;
+  max-width: none;
+}
+.tholi-compact-current,
+.tholi-message-marker {
+  display: none;
+}
+@media (max-height: 640px) {
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) {
+    padding: 10px;
+    gap: 6px;
+  }
+  .tholi-app:not(.tholi-widget-app):not(
+      .tholi-embedded-app
+    )[data-attention="true"]
+    .tholi-view-switch {
+    display: none;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app)
+    .tholi-composer
+    textarea {
+    height: 60px;
+    min-height: 52px;
+    max-height: 80px;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app)
+    .tholi-reassurance {
+    display: none;
+  }
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) .tholi-route-nodes,
+  .tholi-app:not(.tholi-widget-app):not(.tholi-embedded-app) .tholi-route-note {
+    display: none;
+  }
+}
+@container (max-width:280px) {
+  .tholi-app .tholi-view-switch button {
+    font-size: 12px;
+  }
+  .tholi-app:not(.tholi-widget-app) .tholi-instruction {
+    font-size: 16px;
+  }
+  .tholi-app .tholi-summary-state {
+    font-size: 10px;
+  }
+  .tholi-app .tholi-reassurance {
+    font-size: 10px;
+  }
+  .tholi-app .tholi-session-actions button {
+    font-size: 11px;
+  }
+}
+@container (max-width:230px) {
+  .tholi-app:not(.tholi-widget-app) .tholi-view-switch {
+    flex-direction: column;
+  }
+  .tholi-app:not(.tholi-widget-app) .tholi-view-indicator {
+    display: none;
+  }
+  .tholi-app:not(.tholi-widget-app)
+    .tholi-view-switch
+    button[aria-pressed="true"] {
+    background: var(--card);
+  }
+  .tholi-app .tholi-session-actions button {
+    padding-inline: 8px;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tholi-notice {
+    background: var(--card);
+  }
+}
+@media (forced-colors: active) {
+  .tholi-route-node {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+  .tholi-route-stop[data-state="current"] .tholi-route-node {
+    outline: 2px solid Highlight;
+  }
+  .tholi-route-connector {
+    background: CanvasText !important;
+  }
+  .tholi-route-signal {
+    display: none;
+  }
+  .tholi-app * {
+    scrollbar-color: auto;
+  }
+  .tholi-notice,
+  .tholi-attention-required {
+    background: Canvas;
+    border-color: CanvasText;
+  }
+  .tholi-journey-summary {
+    border-color: ButtonText;
+  }
+  .tholi-wayfinder .wf-symbol {
+    stroke: CanvasText;
+  }
+  .tholi-chat-composer .tholi-input-wrap:focus-within {
+    outline-color: Highlight;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tholi-route-steps *,
+  .tholi-route-steps *::after {
+    animation: none !important;
+    transition-duration: 80ms !important;
+  }
+  .tholi-route-signal {
+    display: none;
+  }
+  .tholi-app .tholi-view-content,
+  .tholi-app .tholi-instruction {
+    animation: none;
+  }
+  .tholi-view-indicator {
+    transition-duration: 80ms;
+  }
+  .tholi-journey-panel {
+    transition: opacity 80ms ease;
+  }
+}

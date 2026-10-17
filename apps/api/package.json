@@ -1,12 +1,13 @@
 {
   "name": "@internet-navigator/api",
-  "version": "0.9.2",
+  "description": "Tholi's optional single-owner local API for knowledge, navigation and OCR.",
+  "version": "0.10.0",
   "type": "module",
   "private": false,
   "license": "MIT",
   "dependencies": {
-    "@internet-navigator/navigation-core": "0.9.2",
-    "@internet-navigator/vision": "0.9.2",
+    "@internet-navigator/navigation-core": "0.10.0",
+    "@internet-navigator/vision": "0.10.0",
     "fastify": "5.12.5",
     "@fastify/swagger": "9.9.2",
     "@fastify/cors": "11.2.0",

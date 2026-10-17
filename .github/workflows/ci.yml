@@ -19,6 +19,7 @@ jobs:
       - run: npm run test:multi-app:browser
       - run: npm run test:continuity:browser
       - run: npm run test:reliability:browser
+      - run: npm run test:ui
       - run: npm run test:e2e -- --workers=1
       - run: npm run test:live:wikipedia
       - run: npm run test:acceptance
@@ -34,6 +35,7 @@ jobs:
             output/vision
             output/reliability
             output/acceptance
+            output/qa/ui-build.json
             output/releases/*.zip
             output/releases/*.tgz
             output/releases/*.sha256

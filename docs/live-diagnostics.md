@@ -1,6 +1,6 @@
 # Diagnosing dynamic navigation
 
-Start navigation, enter a goal, then expand **Local route tools** and enable **Show route debug inspector**. Enabling or disabling the inspector changes its presentation only; planning and verification use the same bounded evidence either way. No diagnostic telemetry is sent.
+Start navigation, enter a destination, then open **Tholi settings** and enable **Advanced controls**. Expand the local route tools and enable **Show route debug inspector**. Enabling or disabling the inspector changes its presentation only; planning and verification use the same bounded evidence either way. No diagnostic telemetry is sent.
 
 The live inspector shows the current observation revision, structure/state fingerprints and partial-scan status. Its candidate table explains label, description and context matches, qualifier/preference rejection, disabled or consequential controls, hidden targets, reveal ownership and ambiguity. A selected opening control can have a low goal score because it is a grounded reveal step for the actual target. Scores rank evidence and are not measured accuracy percentages. Labels are displayed only if the current document binding still matches the recorded signature.
 

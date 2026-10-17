@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-10-15T23:25:05.545Z",
+  "extensionVersion": "0.10.1",
+  "source": "https://en.wikipedia.org/wiki/Ada_Lovelace",
+  "request": "Make the text larger",
+  "capture": "Disposable Chromium profile, public page, actual loaded extension. Viewports are captured without altered UI or invented overlays; PNG sources are retained under output/qa/product-sources.",
+  "captures": [
+    {
+      "file": "live-guidance.webp",
+      "width": 1440,
+      "height": 960,
+      "sha256": "665f3be3457bd4662b2ee8ba96d359bb8971b9a463019f4713dde4cc436fd293",
+      "description": "The actual Tholi widget and page highlight guide a text-size request on public Wikipedia."
+    },
+    {
+      "file": "guide-panel.webp",
+      "width": 420,
+      "height": 760,
+      "sha256": "c45a9bd80261f8eaf6e68a0db571b91c219b5bd4b12e5b68230dcdeede132961",
+      "description": "Actual extension Guide interface, captured from its extension page while the public page remains active."
+    },
+    {
+      "file": "conversation-panel.webp",
+      "width": 420,
+      "height": 760,
+      "sha256": "f3983021a1e5b8510a5da75bdbc063f86e986eda16ef78864c50fa4a495a79f0",
+      "description": "Actual local Conversation interface answering Why this step from the current route evidence."
+    },
+    {
+      "file": "verified-arrival.webp",
+      "width": 1440,
+      "height": 960,
+      "sha256": "37c133ea0ffad33ce91e3ab79c5ad4d52d2d6909974e38641bc52258d5f1b92c",
+      "description": "After the text-size option is changed on Wikipedia, the actual extension reports a verified arrival."
+    }
+  ]
+}

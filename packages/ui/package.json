@@ -1,0 +1,11 @@
+{
+  "name": "@internet-navigator/ui",
+  "description": "Tholi's shared guidance interface, design tokens and Wayfinder motion.",
+  "version": "0.10.1",
+  "private": true,
+  "type": "module",
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

@@ -1,8 +1,14 @@
-# Contributing
+# Contributing to Tholi
 
 Use Node **24.19.x** and its npm. Run `npm ci`, then `npm run check`. Builds fetch and verify the pinned default model assets automatically. Load `dist/extension` unpacked in Chrome and refresh website tabs after rebuilding.
 
+## Names and metadata
+
+Use **Tholi** in product copy, documentation, demo labels and generated report filenames. The root package owns the canonical repository URL. Existing scoped packages, storage keys, environment variables and protocol identifiers retain their legacy names for compatibility. See [the naming reference](docs/naming.md) before renaming an identifier or an artifact.
+
 ## Component boundaries
+
+Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/frontend-architecture.md). Keep feature CSS colocated and shared presentation free of Chrome APIs. Follow the [motion contract](docs/ui-refinement.md) for stable steps, reduced motion, and keyboard interactions.
 
 The shared navigation core owns validated requests, retrieval/planning orchestration, queues and workflows. NLP owns interpretation and CPU embeddings. The extension owns discovery, binding, permissions, lifecycle and outcome verification. The optional API uses the same core with inference outside its event loop. See [architecture](docs/live-navigation.md).
 
@@ -18,6 +24,7 @@ TypeScript rejects unused locals and parameters. Build hashing is shared by test
 | NLP and v1 API                                   | `npm run test:nlp`                 |
 | Workflow/privacy/migration and v2 API            | `npm run test:multi-app`           |
 | OCR service, cancellation and bounds             | `npm run test:vision`              |
+| Shared UI, widget and website                    | `npm run test:ui`                  |
 | Queue, clarification and search browser behavior | `npm run test:nlp:browser`         |
 | Dynamic controls, frames and performance         | `npm run test:multi-app:browser`   |
 | Return routing, restart and browser OCR          | `npm run test:continuity:browser`  |
@@ -31,4 +38,10 @@ CI runs the focused suites plus `npm run test:e2e -- --workers=1`, `npm run test
 
 Frozen corpora live in `tests/nlp`, `tests/multi-app`, `tests/continuity`, `tests/reliability-vision` and `tests/acceptance`. Keep existing inputs, splits, hashes and thresholds intact. Tune only calibration data; corpus changes need explicit versioning and independent annotation review. Do not regenerate expectations from predictions.
 
+Recording captions/transcripts and frozen `corpus.json` inputs are byte-verified. Their LF line endings are pinned in `.gitattributes`, including on Windows with `core.autocrlf=true`. Keep these rules when adding recordings or corpora. A checksum mismatch requires investigating the changed bytes; do not regenerate provenance merely to make checkout differences pass. `tests/checkout-integrity.test.ts` verifies a fresh Git checkout independently of the existing worktree.
+
 Store no authenticated screenshots or traces by default. Private entity text and values stay session-only, including their vectors. Original knowledge and reusable routes survive migrations; derived data can be rebuilt. See [privacy](docs/privacy.md) and [security](docs/security.md).
+
+Run `npm run test:ui` for the shared sidebar/widget experience and local website. It records `output/qa/ui-build.json` against the current extension bytes, built website and frontend sources. UI-only selector updates must preserve navigation, privacy, and outcome assertions in the existing suites. The website is served locally by `npm run dev:web`; it has mock accounts only.
+
+New extension archives use `tholi-VERSION.zip`; new backend archives use `tholi-api-VERSION.tgz`. Existing legacy archives remain immutable and eligible downloads keep their original filenames and checksums. Both packagers reject an already released version under either naming convention.

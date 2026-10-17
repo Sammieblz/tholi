@@ -38,9 +38,11 @@ test("new sites expose navigation before a host grant and denial never starts sc
       expect(context.current.routes.map((r: any) => r.id)).toContain(
         "navigator.live",
       );
+      await app.panel.getByLabel("Navigation goal").fill("Open Settings");
       await expect(
         app.panel.getByRole("button", {
-          name: "Allow website access and start",
+          name: "Guide me",
+          exact: true,
         }),
       ).toBeEnabled();
       expect(
@@ -55,7 +57,7 @@ test("new sites expose navigation before a host grant and denial never starts sc
       };
     });
     await app.panel
-      .getByRole("button", { name: "Allow website access and start" })
+      .getByRole("button", { name: "Guide me", exact: true })
       .click();
     await expect(app.panel.getByRole("alert")).toContainText(
       "access was declined",

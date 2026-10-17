@@ -1,6 +1,24 @@
 import { test, expect } from "@playwright/test";
 import { openNavigatorExtension } from "../support/navigator-extension";
 
+// Read only the selected control's evidence during readiness polls.
+function selectedTarget(
+  app: Awaited<ReturnType<typeof openNavigatorExtension>>,
+) {
+  return app.panel.evaluate(async () => {
+    const { view } = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+    const target = view.page?.controls.find(
+      (control: any) => control.id === view.selectedControlId,
+    );
+    return {
+      status: view.goalPlan?.status,
+      signature: target?.signature,
+      inViewport: target?.inViewport,
+      targetLanguage: target?.targetLanguage,
+    };
+  });
+}
+
 test("one Spanish destination survives the language picker and destination-origin permission boundary", async ({}, info) => {
   const app = await openNavigatorExtension(
     info.project.use.viewport || undefined,
@@ -23,13 +41,20 @@ test("one Spanish destination survives the language picker and destination-origi
     const opener = app.page.locator("#p-lang-btn").filter({ visible: true });
     const openerLabel = await opener.innerText();
     expect(reply.view.goalPlan.steps[0].label).toMatch(/languages/i);
+    const selected = reply.view.page.controls.find(
+      (control: any) => control.id === reply.view.selectedControlId,
+    );
+    await opener.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => selectedTarget(app))
+      .toMatchObject({
+        status: "guiding",
+        signature: selected.signature,
+        inViewport: true,
+      });
     await opener.click();
     await expect
-      .poll(async () => {
-        const v = await app.view();
-        return v.page?.controls.find((c: any) => c.id === v.selectedControlId)
-          ?.targetLanguage;
-      })
+      .poll(async () => (await selectedTarget(app)).targetLanguage)
       .toBe("es");
     const intermediate = await app.view();
     expect(intermediate.goalPlan.goal).toBe("Change language to Spanish");
@@ -104,6 +129,16 @@ test("change language highlights the live language selector, not the tools menu"
     const language = app.page
       .getByRole("button", { name: selected.label, exact: true })
       .filter({ visible: true });
+    // Fundraising banners can put the target below the viewport. Follow the
+    // scroll instruction, then wait for fresh guidance before interacting.
+    await language.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => selectedTarget(app))
+      .toMatchObject({
+        status: "guiding",
+        signature: selected.signature,
+        inViewport: true,
+      });
     const bounds = await language.boundingBox();
     expect(bounds).not.toBeNull();
     await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
@@ -114,7 +149,7 @@ test("change language highlights the live language selector, not the tools menu"
     });
     await language.click();
     await expect
-      .poll(async () => (await app.view()).goalPlan?.status)
+      .poll(async () => (await selectedTarget(app)).status)
       .toBe("awaiting-choice");
     expect((await app.view()).verifiedSteps).toBe(1);
     // Opening a picker is a verified intermediate step, not a completed language change.

@@ -7,7 +7,7 @@ export const billingRoute = routeSchema.parse({
   title: "Find billing details",
   description: "Account → billing overview",
   safetyNote:
-    "A read-only route. Navigator stops when billing details are visible.",
+    "A read-only route. Tholi stops when billing details are visible.",
   completionInstruction:
     "You reached Billing. Your plan and billing details are visible; no account settings were changed.",
   startStates: ["home", "account", "profile", "login", "billing"],

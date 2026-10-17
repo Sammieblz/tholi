@@ -13,6 +13,7 @@ import {
 import { resolve, join } from "node:path";
 import { thirdParty } from "./third-party.mjs";
 import { opencvCsp } from "./opencv-csp.mjs";
+import { buildBrand } from "./build-brand.mjs";
 const out = "dist/extension";
 const withPaddle = process.argv.includes("--with-paddle");
 const visionPolicy = JSON.parse(
@@ -32,7 +33,7 @@ if (
 )
   throw Error("Unexpected extension output path");
 for (const entry of await readdir(out, { withFileTypes: true }))
-  if (entry.isFile() && /\.(?:js|js\.map)$/.test(entry.name))
+  if (entry.isFile() && /\.(?:js|js\.map|woff2)$/.test(entry.name))
     await unlink(join(resolvedOut, entry.name));
 // Switching from an experimental build must not leave inactive models behind.
 if (!withPaddle) {
@@ -53,6 +54,7 @@ await build({
   entryPoints: {
     worker: "apps/extension/src/worker.ts",
     content: "apps/extension/src/content.ts",
+    "theme-page": "apps/extension/src/theme-page.ts",
     "frame-agent": "apps/extension/src/frame-agent.ts",
     sidepanel: "apps/extension/src/sidepanel.tsx",
     offscreen: "apps/extension/src/offscreen.ts",
@@ -63,6 +65,7 @@ await build({
   target: "chrome120",
   sourcemap: true,
   define: { "process.env.NODE_ENV": '"production"' },
+  loader: { ".woff2": "file" },
 });
 await build({
   entryPoints: ["apps/extension/src/inference.ts"],
@@ -109,6 +112,8 @@ for (const name of [
 await copyFile("assets/model-lock.json", out + "/model-lock.json");
 await copyFile("apps/extension/manifest.json", out + "/manifest.json");
 await copyFile("apps/extension/sidepanel.html", out + "/sidepanel.html");
+await copyFile("apps/extension/widget.html", out + "/widget.html");
+await buildBrand(out);
 await thirdParty(out);
 
 await build({

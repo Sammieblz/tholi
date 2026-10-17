@@ -22,7 +22,7 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await expect.poll(async () => (await app.view())?.status).toBe("running");
     const status = app.panel.getByRole("status", { name: "Navigation status" });
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
-    await expect(status).toContainText("Guiding.");
+    await expect(status).toContainText("Your next step.");
     const text = await status.textContent();
     // Polling/geometry-only updates must not rewrite the live announcement.
     await app.panel.evaluate(() => {
@@ -47,19 +47,19 @@ test("panel exposes distinct status announcements, stable polling and usable key
       await app.panel.evaluate(() => (window as any).__announcements),
     ).toBe(0);
     await app.page.getByRole("searchbox").click();
-    await expect(status).toContainText("Goal verified.");
+    await expect(status).toContainText("Arrived.");
     await expect(status).toContainText("1 verified control interactions");
     await setGoal(app, "Show languages");
     await app.page
       .getByRole("button", { name: "Languages", exact: true })
       .click();
-    await expect(status).toContainText("Waiting for the website.");
-    await expect(status).toContainText("Choose an option.");
+    await expect(status).toContainText("Checking the website.");
+    await expect(status).toContainText("One quick question.");
     await setGoal(app, "Missing feature");
-    await expect(status).toContainText("Finding your next step.");
+    await expect(status).toContainText("Finding a way forward.");
     expect((await app.view()).request.status).not.toBe("completed");
     await setGoal(app, "Delete account");
-    await expect(status).toContainText("Review required.");
+    await expect(status).toContainText("Review this step.");
     await expect(status).toContainText("consequential");
     await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
       0,
@@ -69,7 +69,7 @@ test("panel exposes distinct status announcements, stable polling and usable key
       .focus();
     await app.page.bringToFront();
     await app.panel.keyboard.press("Enter");
-    await expect(status).toContainText("paused.");
+    await expect(status).toContainText("Paused.");
     await expect(
       app.panel.getByRole("button", { name: "Resume navigation", exact: true }),
     ).toBeFocused();
@@ -78,7 +78,7 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await app.panel.getByRole("button", { name: "Stop", exact: true }).focus();
     await app.panel.keyboard.press("Enter");
-    await expect(status).toContainText("stopped.");
+    await expect(status).toContainText("Stopped.");
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await app.panel.setViewportSize({ width: 300, height: 800 });
     const width = await app.panel.evaluate(() => ({
@@ -132,7 +132,7 @@ test("panel exposes distinct status announcements, stable polling and usable key
       return Object.values(win.__polling).map((c: any) => c.max);
     });
     expect(pending).toEqual([1, 1]);
-    await expect(status).toContainText("stopped.");
+    await expect(status).toContainText("Stopped.");
   } finally {
     await app.close();
   }

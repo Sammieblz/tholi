@@ -1,3 +1,5 @@
+# Optional Tholi API
+
 The API is optional; the extension runs NLP and OCR locally without it.
 Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, `npm run fetch:ocr` and
 `npm run build:api`. Start the optional API with `npm run start:api`.
@@ -15,8 +17,9 @@ the API. Alternatively set `NAVIGATOR_EXTENSION_ORIGINS` to a comma-separated
 allowlist before launch. Keep the connection file private. On Windows, use a
 directory private to your user; the API does not configure Windows ACLs.
 
-In the extension's “Local site memory and AI” → “Optional private backend”,
-enter the API address and generated token, enable the connection and Save.
+In the sidebar, open **Settings**, enable **Advanced controls**, then open
+**Local site memory and AI** and **Optional private backend**.
+Enter the API address and generated token, enable the connection and Save.
 Grant Chrome's requested API-host access. The token is stored only in trusted
 extension storage contexts. The extension's origin must exactly match the
 API allowlist. An unavailable backend uses the bundled local model.
@@ -59,3 +62,8 @@ advertised by `/v2/health`; the current backend uses Tesseract. Images and priva
 recognized text are not persisted or payload-logged. Enable backend OCR
 explicitly in the extension to send temporary masked images; older or failed
 backends fall back locally. Paddle is a browser experiment, not an API capability.
+
+The service retains `NAVIGATOR_*` environment variables, `.navigator-api`, the
+SQLite filename and the `@internet-navigator/api` package identity for existing
+installations. Its displayed name is Tholi, and OpenAPI metadata reads the API
+package version. See [naming and compatibility](naming.md).

@@ -1,0 +1,269 @@
+.download-page {
+  margin: 32px auto;
+}
+.download-heading {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 64px;
+  align-items: center;
+}
+.download-heading h1 {
+  font-size: clamp(42px, 5.2vw, 68px);
+}
+.download-card {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 32px;
+  background: var(--sage);
+  border-radius: 18px;
+}
+.download-platform {
+  color: var(--jade);
+  font-size: 10px;
+  font-weight: 800;
+}
+.download-card > strong {
+  font-size: 14px;
+}
+.download-card > span:not(:first-child),
+.download-card > p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+.download-card > .web-primary {
+  width: 100%;
+  font-size: 13px;
+  padding-inline: 14px;
+}
+.download-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  min-height: 50px;
+  line-height: 1.6;
+}
+.download-problem {
+  display: block;
+}
+.download-problem button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.download-evidence {
+  max-width: 760px;
+  font-size: 13px;
+  margin: 28px 0;
+  color: var(--muted);
+}
+.download-evidence summary {
+  font-size: 13px;
+}
+.download-evidence code {
+  display: block;
+  margin-bottom: 20px;
+}
+.install-heading {
+  margin: 72px 0 28px;
+}
+.install-heading > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 64ch;
+}
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px 40px;
+  padding: 0;
+  margin: 32px 0 52px;
+  list-style: none;
+}
+.install-grid > li {
+  min-width: 0;
+}
+.install-illustration {
+  height: 190px;
+  background: var(--sage);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 28px;
+  color: var(--jade);
+  overflow: hidden;
+}
+.install-file {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.install-file > svg {
+  width: 28px;
+  height: 28px;
+}
+.install-file > span {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.install-file .small {
+  font-size: 11px;
+}
+.install-flow-arrow {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.install-folder {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.install-chrome-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  width: 260px;
+  max-width: 100%;
+  font-size: 13px;
+}
+.install-chrome-panel > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.install-chrome-panel > span:not(.install-load) {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.install-toggle {
+  display: block;
+  width: 34px;
+  height: 20px;
+  border-radius: 20px;
+  background: var(--jade);
+  padding: 3px;
+}
+.install-toggle i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card);
+  margin-left: auto;
+}
+.install-load {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--jade);
+  font-size: 11px;
+}
+.install-tholi {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.install-tholi > img {
+  background: #faf7f0;
+  border-radius: 4px;
+  padding: 3px;
+}
+.install-illustration-3 {
+  align-items: flex-start;
+  padding-top: 24px;
+}
+.install-product {
+  width: 220px;
+  height: auto;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.install-number {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--jade);
+}
+.install-grid h3 {
+  margin: 8px 0;
+  font-size: 24px;
+}
+.install-grid p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  max-width: 55ch;
+}
+.source-instructions {
+  margin-top: 36px;
+}
+@media (max-width: 900px) {
+  .download-heading {
+    gap: 32px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .download-card {
+    padding: 24px;
+  }
+  .install-grid {
+    gap: 28px;
+  }
+  .install-illustration {
+    padding: 20px;
+    gap: 12px;
+  }
+  .install-file {
+    padding: 14px;
+    gap: 10px;
+  }
+  .install-folder {
+    width: 32px;
+    height: 32px;
+  }
+}
+@media (max-width: 600px) {
+  .download-page {
+    margin-top: 12px;
+  }
+  .download-heading {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .download-card {
+    padding: 24px;
+  }
+  .download-heading h1 {
+    font-size: 44px;
+  }
+  .install-heading {
+    margin-top: 48px;
+  }
+  .install-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .install-illustration {
+    height: 180px;
+  }
+}

@@ -1,3 +1,5 @@
+import { prepareChromiumProfile } from "./chromium-profile";
+import { installSidebarTabHarness } from "./sidebar-tab";
 import {
   chromium,
   expect,
@@ -12,9 +14,14 @@ export async function openNavigatorExtension(
   viewport = { width: 1280, height: 900 },
   fixturePermissions: string[] = [],
   inspectDetails = true,
+  options: { nativeViewport?: boolean; allowAutomaticDownloads?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
   const extension = join(directory, "extension");
+  const { profilePath, downloadsPath } = await prepareChromiumProfile(
+    directory,
+    options,
+  );
   await cp(resolve("dist/extension"), extension, { recursive: true });
   const manifest = JSON.parse(
     await readFile(join(extension, "manifest.json"), "utf8"),
@@ -34,14 +41,19 @@ export async function openNavigatorExtension(
       }),
     );
   const launch = () =>
-    chromium.launchPersistentContext(join(directory, "profile"), {
+    chromium.launchPersistentContext(profilePath, {
       channel: "chromium",
       headless: true,
+      acceptDownloads: true,
+      downloadsPath,
       args: [
         "--disable-extensions-except=" + extension,
         "--load-extension=" + extension,
+        ...(options.nativeViewport
+          ? [`--window-size=${viewport.width + 18},${viewport.height + 96}`]
+          : []),
       ],
-      viewport,
+      viewport: options.nativeViewport ? null : viewport,
     });
   let context: BrowserContext, worker: Worker, page: Page, panel: Page;
   const initialize = async () => {
@@ -51,14 +63,38 @@ export async function openNavigatorExtension(
       (await context.waitForEvent("serviceworker"));
     page = await context.newPage();
     panel = await context.newPage();
+    await installSidebarTabHarness(panel, downloadsPath);
     await panel.goto(
       "chrome-extension://" + new URL(worker.url()).host + "/sidepanel.html",
     );
-    await panel.setViewportSize({ width: 380, height: 1000 });
+    if (!options.nativeViewport)
+      await panel.setViewportSize({ width: 380, height: 1000 });
   };
   await initialize();
   const view = async () => {
-    if (inspectDetails)
+    if (inspectDetails) {
+      await panel
+        .locator('.tholi-journey-summary[aria-expanded="false"]')
+        .evaluateAll((nodes) => {
+          for (const node of nodes) {
+            const previous = document.activeElement as HTMLElement | null;
+            (node as HTMLButtonElement).click();
+            if (document.activeElement === node && previous?.isConnected)
+              previous.focus({ preventScroll: true });
+          }
+        });
+      await panel
+        .locator('.tholi-disclosure-trigger[aria-expanded="false"]')
+        .evaluateAll((nodes) => {
+          for (const node of nodes) {
+            if (!/^(Route details|Saved routes)/.test(node.textContent || ""))
+              continue;
+            const previous = document.activeElement as HTMLElement | null;
+            (node as HTMLButtonElement).click();
+            if (document.activeElement === node && previous?.isConnected)
+              previous.focus({ preventScroll: true });
+          }
+        });
       await panel.locator("details").evaluateAll((nodes) => {
         for (const node of nodes)
           if (
@@ -68,12 +104,20 @@ export async function openNavigatorExtension(
           )
             (node as HTMLDetailsElement).open = true;
       });
+    }
     return panel.evaluate(
       async () =>
         (await chrome.runtime.sendMessage({ type: "GET_SESSION" }))?.view,
     );
   };
   const start = async (routeId = "navigator.live") => {
+    await panel
+      .getByRole("button", { name: "Tholi settings", exact: true })
+      .click();
+    await panel
+      .getByRole("checkbox", { name: "Advanced controls", exact: true })
+      .check();
+    await panel.keyboard.press("Escape");
     await page.bringToFront();
     await expect(
       panel

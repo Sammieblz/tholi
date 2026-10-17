@@ -32,7 +32,7 @@ export async function inspectOverlay(cdp: CDPSession) {
     const result = await cdp
       .send("DOM.getBoxModel", { backendNodeId: n.backendNodeId })
       .catch(() => undefined);
-    if (!result) return undefined; // A frame redraw can replace a closed-shadow node mid-inspection.
+    if (!result) return undefined; // The target can disappear while the worker clears guidance.
     const { model } = result;
     const q = model.border;
     return {
@@ -45,10 +45,12 @@ export async function inspectOverlay(cdp: CDPSession) {
     };
   };
   const arrow = find("arrow");
+  const text = (n: any): string =>
+    n.nodeType === 3 ? n.nodeValue : (n.children || []).map(text).join("");
   return {
     halo: await geometry("halo"),
     tip: await geometry("tip"),
-    arrow: arrow?.children?.map((n: any) => n.nodeValue || "").join(""),
+    arrow: arrow ? text(arrow) : undefined,
     ariaHidden: attr(node, "aria-hidden"),
     pointerEvents: (
       await cdp.send("CSS.getComputedStyleForNode", { nodeId })

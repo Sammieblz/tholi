@@ -95,7 +95,7 @@ export function planAuthentication(
             "consequential",
           )),
       reason:
-        "You reached the authentication form. Complete private credentials and review submission on the website yourself. Navigator cannot verify login or account creation from field focus or a submission click.",
+        "You reached the authentication form. Complete private credentials and review submission on the website yourself. Tholi cannot verify login or account creation from field focus or a submission click.",
     };
   }
   const plan = base || planGoal(page, task.goal, memory, proposal);
@@ -151,7 +151,7 @@ export function planAuthentication(
   )
     return uncertain(
       task,
-      "That entry control was already used. The task is retained while you reveal the next screen or form; Navigator will not send you back through the same entry.",
+      "That entry control was already used. The task is retained while you reveal the next screen or form; Tholi will not send you back through the same entry.",
     );
   return { ...plan, goal: task.goal };
 }

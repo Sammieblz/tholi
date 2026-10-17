@@ -8,7 +8,7 @@ Live sessions pin origin, tab, session and document identity. Expected document/
 
 Commands require the extension identity and appropriate extension-owned sender. Content updates require assigned tab/frame/document identity and validated contracts. Loading invalidates visible bindings; stale asynchronous results cannot restore an older document or complete a newer task. Pause remains paused through loads; Stop prevents reattachment. Resume requires fresh observation.
 
-Users perform website clicks, field input, credential entry and submissions. Navigator may scroll a freshly bound target and display guidance. Automatic scrolling is canceled when the user intervenes. Review targets explain the consequential or unknown effect; a click only starts verification. Risk classification is heuristic and cannot establish arbitrary JavaScript/server behavior.
+Users perform website clicks, field input, credential entry and submissions. Tholi may scroll a freshly bound target and display guidance. Automatic scrolling is canceled when the user intervenes. Review targets explain the consequential or unknown effect; a click only starts verification. Risk classification is heuristic and cannot establish arbitrary JavaScript/server behavior.
 
 Completion requires fresh task-specific state: the requested selected preference, destination, item or status. Finding an entry point, opening a menu, OCR text, a changed image, unrelated success toast or user confirmation cannot independently prove completion. Skip is recorded as skipped. Predictions and saved routes never authorize stale controls.
 

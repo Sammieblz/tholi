@@ -1,3 +1,8 @@
+import { prepareChromiumProfile } from "../support/chromium-profile";
+import {
+  installSidebarTabHarness,
+  withSidebarTabForeground,
+} from "../support/sidebar-tab";
 import {
   test,
   expect,
@@ -17,6 +22,12 @@ let context: BrowserContext,
 test.beforeAll(async ({}, testInfo) => {
   directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
   const extension = join(directory, "extension");
+  const { profilePath, downloadsPath } = await prepareChromiumProfile(
+    directory,
+    {
+      allowAutomaticDownloads: true,
+    },
+  );
   await cp(resolve("dist/extension"), extension, { recursive: true });
   const manifest = JSON.parse(
     await readFile(join(extension, "manifest.json"), "utf8"),
@@ -29,10 +40,11 @@ test.beforeAll(async ({}, testInfo) => {
   // Tab metadata is needed to offer navigation before a new site's host grant.
   expect(manifest.permissions).toContain("tabs");
   expect(manifest.permissions).not.toContain("history");
-  context = await chromium.launchPersistentContext(join(directory, "profile"), {
+  context = await chromium.launchPersistentContext(profilePath, {
     channel: "chromium",
     headless: true,
     acceptDownloads: true,
+    downloadsPath,
     args: [
       "--disable-extensions-except=" + extension,
       "--load-extension=" + extension,
@@ -46,8 +58,15 @@ test.beforeAll(async ({}, testInfo) => {
   page = await context.newPage();
   await page.goto("http://127.0.0.1:5173");
   panel = await context.newPage();
+  await installSidebarTabHarness(panel, downloadsPath);
   await panel.goto("chrome-extension://" + extensionId + "/sidepanel.html");
   await panel.setViewportSize({ width: 380, height: 1000 });
+  await panel.evaluate(() =>
+    chrome.runtime.sendMessage({
+      type: "UI_SAVE",
+      preferences: { mode: "guide", surface: "sidebar", advanced: true },
+    }),
+  );
 });
 test.afterAll(async () => {
   await context?.close();
@@ -73,17 +92,33 @@ async function start(routeId = "demo.subscription.cancel") {
     .getByRole("button", { name: "Start navigation" })
     .evaluate((button) => (button as HTMLButtonElement).click());
   await expect(page.locator("#internet-navigator-overlay")).toBeVisible();
-  await expect(panel.locator(".indicator")).toHaveText("ON");
+  await expect(
+    panel.getByRole("button", { name: "Pause navigation", exact: true }),
+  ).toBeVisible();
   await expect(panel.locator(".error")).toHaveCount(0);
 }
 async function status(value: string) {
-  await expect(panel.locator(".current .eyebrow")).toHaveText(value);
+  const phases: Record<string, string> = {
+    "REVIEW REQUIRED": "review",
+    REROUTING: "recovering",
+    PAUSED: "paused",
+    STOPPED: "idle",
+    CHECKPOINT: "paused",
+    "WAITING FOR THE WEBSITE": "verifying",
+    GUIDING: "guiding",
+    COMPLETED: "arrived",
+  };
+  await expect(panel.locator(".tholi-current")).toHaveAttribute(
+    "data-phase",
+    phases[value],
+  );
 }
 async function reset() {
   await panel.evaluate(
     async () => await chrome.runtime.sendMessage({ type: "STOP" }),
   );
   await page.goto("http://127.0.0.1:5173");
+  await page.bringToFront();
   await expect(
     panel.getByRole("button", { name: "Start navigation" }),
   ).toBeVisible();
@@ -132,9 +167,9 @@ test("explicit activation, verified steps, retention branch and final hard stop"
   await next("Continue cancellation", "Confirm cancellation");
   await status("REVIEW REQUIRED");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
-  await expect(panel.locator(".evidence")).toContainText(
-    "5 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("5 verified control interactions");
   await page
     .getByRole("button", { name: "Confirm cancellation", exact: true })
     .click();
@@ -194,7 +229,7 @@ test("ambiguous duplicates and unknown screens stop instead of guessing", async 
   await next("Account", "Account overview");
   await next("Billing", "Billing & subscription");
   await status("STOPPED");
-  await expect(panel.locator(".current")).toContainText(
+  await expect(panel.locator(".tholi-current")).toContainText(
     "Multiple controls match",
   );
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
@@ -221,9 +256,9 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
     }),
   ).toBeVisible();
   await status("WAITING FOR THE WEBSITE");
-  await expect(panel.locator(".evidence")).toContainText(
-    "0 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("0 verified control interactions");
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Account overview", exact: true }),
@@ -237,9 +272,9 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
       ),
     )
     .toBe("account");
-  await expect(panel.locator(".evidence")).toContainText(
-    "1 verified transitions",
-  );
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("1 verified control interactions");
   await page.goto("about:blank");
   await status("STOPPED");
 });
@@ -268,22 +303,38 @@ test("two origin-filtered tasks have independent previews and billing completion
   const choice = panel.getByRole("combobox", { name: "Choose a task" });
   await expect(choice.locator("option")).toHaveCount(3);
   await choice.selectOption("demo.billing.overview");
-  await expect(panel.locator(".route-card h2")).toHaveText(
+  const journeyDetails = panel.getByRole("button", {
+    name: "Journey summary and details",
+  });
+  if ((await journeyDetails.getAttribute("aria-expanded")) !== "true")
+    await journeyDetails.evaluate((element) =>
+      (element as HTMLButtonElement).click(),
+    );
+  const routeDetails = panel.getByRole("button", { name: /^Route details/ });
+  if ((await routeDetails.getAttribute("aria-expanded")) !== "true")
+    await routeDetails.evaluate((element) =>
+      (element as HTMLButtonElement).click(),
+    );
+  await expect(panel.locator(".detail-destination")).toHaveText(
     "Find billing details",
   );
-  await expect(panel.locator(".notice")).toContainText("read-only route");
+  await expect(panel.locator(".tholi-journey-details")).toContainText(
+    "read-only route",
+  );
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await start("demo.billing.overview");
   await expect(choice).toBeDisabled();
   await next("Account", "Account overview");
   await next("Billing", "Billing & subscription");
   await status("COMPLETED");
-  await expect(panel.locator(".current")).toContainText("You reached Billing");
-  await expect(panel.locator(".current")).not.toContainText("canceled");
-  await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
-  await expect(panel.locator(".evidence")).toContainText(
-    "2 verified transitions",
+  await expect(panel.locator(".tholi-current")).toContainText(
+    "You reached Billing",
   );
+  await expect(panel.locator(".tholi-current")).not.toContainText("canceled");
+  await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
+  await expect(
+    panel.getByRole("status", { name: "Navigation status" }),
+  ).toContainText("2 verified control interactions");
   const pin = await panel.evaluate(
     async () => await chrome.runtime.sendMessage({ type: "GET_SESSION" }),
   );
@@ -372,7 +423,7 @@ test("unsupported tabs offer no tasks and cannot replace a pinned session", asyn
   );
   expect(current.routes).toEqual([]);
   await expect(
-    panel.getByRole("heading", { name: "No supported tasks" }),
+    panel.getByRole("heading", { name: "Open a website" }),
   ).toBeVisible();
   await expect(panel.locator(".tab-warning")).toContainText("another tab");
   const rejected = await panel.evaluate(
@@ -396,7 +447,10 @@ test("unsupported tabs offer no tasks and cannot replace a pinned session", asyn
 test("debug inspector renders scoring and exports bounded diagnostics", async () => {
   await reset();
   await start();
-  await panel.locator("summary").evaluate((e) => (e as HTMLElement).click());
+  await panel
+    .locator("summary")
+    .filter({ hasText: /^Local route tools$/ })
+    .evaluate((e) => (e as HTMLElement).click());
   await panel.getByLabel("Show route debug inspector").evaluate((e) => {
     (e as HTMLInputElement).click();
   });
@@ -414,10 +468,15 @@ test("debug inspector renders scoring and exports bounded diagnostics", async ()
     name: "Export diagnostics",
   });
   await expect(exportButton).toBeEnabled();
-  const downloadPromise = panel.waitForEvent("download");
-  await exportButton.evaluate((e) => (e as HTMLButtonElement).click());
-  const download = await downloadPromise;
-  const report = JSON.parse(await readFile((await download.path())!, "utf8"));
+  const report = await withSidebarTabForeground(panel, page, async () => {
+    await exportButton.focus();
+    await expect(exportButton).toBeFocused();
+    const [download] = await Promise.all([
+      panel.waitForEvent("download"),
+      exportButton.press("Enter"),
+    ]);
+    return JSON.parse(await readFile((await download.path())!, "utf8"));
+  });
   expect(report.category).toBe("diagnostics");
   expect(report.diagnostics.transitions[0].outcome).toBe("verified");
   expect(JSON.stringify(report)).not.toMatch(

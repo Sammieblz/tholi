@@ -1,14 +1,24 @@
 # Chrome setup and native verification
 
-Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload and refresh existing website tabs to replace injected scripts. The footer displays the manifest version.
+Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload for **Tholi** and refresh existing website tabs to replace injected scripts. Confirm version **0.10.1** in Chrome's extension details.
 
-On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. **Explore page controls** starts discovery without a task. Authored Northstar tasks retain their separate Start button.
+On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
+
+Switch between Guide and Conversation during the same task. Try Pause, Resume, Stop, and “Why this step?” in Conversation. Use **Tholi settings → Use floating widget** to check dragging, resizing, **Widget menu** position/size controls, keyboard controls, **Expand widget**, and **Dock to sidebar**. Confirm the destination survives each view/surface change and a website reload. Compact and minimal widgets prioritize one readable message and the composer, with Pause/Resume/Stop in Widget menu. Check four idle reminders, their cancellation, reduced motion, and absence of arrival feedback until the requested result is verified.
+
+## Widget continuity checks
+
+Close the widget with X and confirm it becomes a 44-pixel launcher. The task should continue observing without expanded highlights or automatic guidance scrolling. Reveal a relevant menu on the website, then restore Tholi: the same destination, draft and conversation should remain, with fresh guidance. Repeat through a recognized document transition and worker restart. Reset current session should clear unfinished tasks and conversation while preserving learned knowledge and saved routes.
+
+During a deliberate drag, approach within 24 pixels of the right viewport edge and release on the docking preview. Chrome should open its configured native panel side before the widget disappears. If Chrome rejects activation, the widget must remain and explain toolbar/Dock recovery. Test native panel close/reopen only on versions exposing the lifecycle events. These checks remain pending until performed in native Chrome.
 
 ## Access recovery
 
-DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Navigator requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
+DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Tholi requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
 
 Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted Chrome pages cannot be scanned.
+
+While **Explore page controls** is active, an ungranted embedded origin exposes an **Allow ORIGIN** action even before a destination is entered. This page-access notice is separate from task-owned instructions. The action requests only that origin; declining leaves its controls unscanned. Paused, stopped and completed sessions do not revive old permission prompts.
 
 ## Pending native checks
 

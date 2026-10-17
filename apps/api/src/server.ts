@@ -4,7 +4,7 @@ import {
   validatePng,
 } from "../../../packages/vision/contracts";
 import Fastify from "fastify";
-import apiPackage from "../package.json";
+import apiPackage from "../package.json" with { type: "json" };
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import { timingSafeEqual } from "node:crypto";
@@ -185,7 +185,7 @@ export async function createApi(options: ApiOptions) {
   });
   await app.register(swagger, {
     openapi: {
-      info: { title: "Internet Navigator single-owner API", version: "0.8.0" },
+      info: { title: "Tholi single-owner API", version: apiPackage.version },
       components: {
         securitySchemes: { bearer: { type: "http", scheme: "bearer" } },
       },

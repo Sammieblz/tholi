@@ -1,5 +1,5 @@
 import { fullyUnclipped } from "../../../packages/browser-adapter/geometry";
-import { GuidanceOverlay } from "../../../packages/overlay-ui";
+import { GuidanceOverlay, guidanceVisible } from "../../../packages/overlay-ui";
 import {
   PageDiscovery,
   type BoundControl,
@@ -53,6 +53,7 @@ import {
   continuesDestination,
 } from "../../../packages/navigation-core/queue";
 import { canonicalGoal } from "../../../packages/nlp/canonical";
+import { words } from "../../../packages/nlp/retrieval";
 import {
   recordWorkflowAction,
   continueWorkflow,
@@ -163,6 +164,14 @@ export class PageCoach {
       this.replan();
     if (this.view.request?.status === "active") this.requestReplan();
     return this.view;
+  }
+  presentationChanged(visible: boolean) {
+    this.cancelScroll?.();
+    this.cancelScroll = undefined;
+    this.overlay.clear();
+    // Retain the selected control for outcome observation while minimized.
+    // Restoring always checks the current document before showing it again.
+    if (visible) this.refresh();
   }
   private observe() {
     this.cleanup = this.discovery.observe(() => this.refresh());
@@ -322,6 +331,28 @@ export class PageCoach {
       const targets = [value, ...(next?.targets || [])].filter(
         (v): v is string => !!v,
       );
+      const pickerTask = this.view.request?.tasks[this.view.request.active];
+      // A detached picker can obscure or omit its opener before focus settles.
+      // Verify only this pending, same-task reveal from a fresh named dialog's
+      // visible expanded combobox. This cannot establish the chosen outcome.
+      const pickerWords =
+        this.view.request?.status === "active" &&
+        pickerTask &&
+        ["reveal", "choose"].includes(pickerTask.operation) &&
+        !pickerTask.desiredValue &&
+        this.view.journey?.requestTaskId === pickerTask.id &&
+        this.before.origin === page.origin &&
+        this.selected.element.isConnected &&
+        this.selected.control.risk === "ordinary" &&
+        words(pickerTask.target).every((word) =>
+          words(
+            this.selected!.control.label +
+              " " +
+              this.selected!.control.description,
+          ).includes(word),
+        )
+          ? words(pickerTask.target)
+          : [];
       const matching = page.controls.filter(
         (c) =>
           c.visible &&
@@ -332,14 +363,27 @@ export class PageCoach {
             (this.selected!.control.reference?.frameId || 0) &&
           (workflow
             ? targets.some((t) => t.toLowerCase() === c.label.toLowerCase())
-            : this.view.goalPlan?.exploration &&
-              c.risk === "ordinary" &&
-              (goalScore(this.view.goalPlan.goal, c) >= 0.7 ||
-                (!!this.view.request &&
-                  groundedSettingsTarget(
-                    this.view.request.tasks[this.view.request.active],
-                    c,
-                  )))) &&
+            : (this.view.goalPlan?.exploration &&
+                c.risk === "ordinary" &&
+                (goalScore(this.view.goalPlan.goal, c) >= 0.7 ||
+                  (!!this.view.request &&
+                    groundedSettingsTarget(
+                      this.view.request.tasks[this.view.request.active],
+                      c,
+                    )))) ||
+              (pickerWords.length > 0 &&
+                c.kind === "focus" &&
+                c.role === "combobox" &&
+                c.expanded === true &&
+                c.risk === "ordinary" &&
+                pickerWords.every((word) => words(c.label).includes(word)) &&
+                c.structure?.regions.some(
+                  (region) =>
+                    region.role === "dialog" &&
+                    pickerWords.every((word) =>
+                      words(region.name).includes(word),
+                    ),
+                ))) &&
           !this.before!.controls.some(
             (old) => old.signature === c.signature && old.visible,
           ) &&
@@ -353,9 +397,11 @@ export class PageCoach {
       // verify the reveal even when a framework portals it outside the trigger.
       // This verifies only the opening, never the next action or task outcome.
       if (
-        (workflow || this.view.goalPlan?.exploration) &&
+        (workflow || this.view.goalPlan?.exploration || pickerWords.length) &&
         matching.length === 1
       ) {
+        if (pickerWords.length)
+          this.record("verified", "related-controls-added");
         this.verified(page);
         return;
       }
@@ -509,6 +555,21 @@ export class PageCoach {
         return;
       }
       if (
+        this.pending &&
+        c.kind === "expand" &&
+        c.popup &&
+        page.partial &&
+        chosen.element.isConnected &&
+        (!fresh?.control.visible || fresh.control.occluded)
+      ) {
+        // A portal can obscure its opener before incremental discovery indexes
+        // the new popup. Retain the actual interaction through that incomplete
+        // observation; fresh outcome evidence is still required to verify it.
+        this.view.selectedControlId = undefined;
+        this.publish(this.view);
+        return;
+      }
+      if (
         !fresh ||
         !fresh.control.visible ||
         !fresh.control.enabled ||
@@ -541,7 +602,16 @@ export class PageCoach {
           return;
         }
       } else if (!this.pending)
-        this.overlay.show(fresh.geometry, this.view.instruction);
+        this.overlay.show(fresh.geometry, this.view.instruction, {
+          key:
+            (this.view.request?.id || this.view.journey?.id || "") +
+            ":" +
+            fresh.control.id +
+            ":" +
+            this.view.verifiedSteps,
+          attention: fresh.control.risk === "ordinary",
+          warning: fresh.control.risk !== "ordinary",
+        });
     } else if (
       !this.view.request &&
       (this.view.goalPlan?.status === "unresolved" ||
@@ -1044,15 +1114,28 @@ export class PageCoach {
           this.view.selectedControlId = target.control.id;
           this.view.instruction = result.plan.reason;
           this.cancelScroll?.();
-          if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+          if (
+            guidanceVisible() &&
+            (!target.control.inViewport || !fullyUnclipped(target.geometry))
+          )
             this.cancelScroll = scrollTarget(
               target.geometry,
               () =>
                 this.selected === target &&
+                guidanceVisible() &&
                 this.view.status === "running" &&
                 !target.control.occluded,
             );
-          this.overlay.show(target.geometry, this.view.instruction);
+          this.overlay.show(target.geometry, this.view.instruction, {
+            key:
+              (this.view.request?.id || this.view.journey?.id || "") +
+              ":" +
+              target.control.id +
+              ":" +
+              this.view.verifiedSteps,
+            attention: target.control.risk === "ordinary",
+            warning: target.control.risk !== "ordinary",
+          });
           this.publish(this.view);
         }
         const external = this.view.page?.controls.find(
@@ -1144,7 +1227,25 @@ export class PageCoach {
           this.requestReplan();
           return;
         }
-        this.installRequest(result, this.view.journey?.strategy);
+        const installed = this.installRequest(
+          result,
+          this.view.journey?.strategy,
+        );
+        // Installation refreshes the document again. A layout-only revision can
+        // invalidate this result without triggering a structural replan. Retry
+        // only that rejected result, leaving newer plans and ended tasks alone.
+        if (
+          "error" in installed &&
+          installed.error ===
+            "Stale scan. Recalculate using the current document." &&
+          this.planningRevision === revision &&
+          this.view.status === "running" &&
+          this.view.request?.id === id &&
+          this.view.request.active === active
+        ) {
+          this.planningRevision = "";
+          this.requestReplan();
+        }
       })
       .catch(() => {
         if (this.planningRevision === revision) this.planningRevision = "";
@@ -1194,10 +1295,13 @@ export class PageCoach {
       return { view: this.view };
     }
     this.selected = target;
-    if (!target.control.inViewport || !fullyUnclipped(target.geometry))
+    if (
+      guidanceVisible() &&
+      (!target.control.inViewport || !fullyUnclipped(target.geometry))
+    )
       this.cancelScroll = scrollTarget(
         target.geometry,
-        () => this.selected === target,
+        () => guidanceVisible() && this.selected === target,
       );
     this.discovery.setPriority(target.element);
     this.selectedAt = Date.now();
@@ -1264,7 +1368,16 @@ export class PageCoach {
         target.control.kind === "focus"
           ? `Enter “${value}” using the highlighted field and the website's controls. Input contents are not read.`
           : `Use the highlighted “${target.control.label}” control to choose “${value}”. The requested state is checked.`;
-    this.overlay.show(target.geometry, this.view.instruction);
+    this.overlay.show(target.geometry, this.view.instruction, {
+      key:
+        (this.view.request?.id || this.view.journey?.id || "") +
+        ":" +
+        target.control.id +
+        ":" +
+        this.view.verifiedSteps,
+      attention: target.control.risk === "ordinary",
+      warning: target.control.risk !== "ordinary",
+    });
     this.publish(this.view, observed);
     return { view: this.view };
   }
@@ -1319,7 +1432,7 @@ export class PageCoach {
       this.clearTarget();
       this.state("choosing");
       this.view.instruction =
-        "Review the website's result yourself. This control does not declare an outcome Navigator can verify.";
+        "Review the website's result yourself. This control does not declare an outcome Tholi can verify.";
       if (this.view.goalPlan)
         this.view.goalPlan = {
           ...this.view.goalPlan,
@@ -1765,6 +1878,11 @@ export class PageCoach {
     if (this.view.status !== "paused") return;
     this.view.status = "running";
     if (this.view.request) this.view.request = resumeQueue(this.view.request);
+    // Blocked review requests may not start another plan immediately. Do not
+    // leave their prior Pause instruction attached to a running session.
+    this.view.instruction =
+      this.view.goalPlan?.reason ||
+      "Checking the current page. Your destination is retained.";
     this.planningRevision = "";
     this.observe();
     this.refresh();

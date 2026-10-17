@@ -203,6 +203,9 @@ export class NavigationCore {
     // the same task and fresh expanded-state evidence; a closed/stale menu
     // must still be replanned rather than treated as an observed outcome.
     const revealed = input.journey?.progress.at(-1);
+    const revealedOpener = input.observation.controls.find(
+      (c) => c.signature === revealed?.signature,
+    );
     const openPicker =
       ["reveal", "choose"].includes(task.operation) &&
       !task.desiredValue &&
@@ -211,8 +214,24 @@ export class NavigationCore {
       revealed?.kind === "expand" &&
       input.observation.controls.find(
         (c) =>
-          c.signature === revealed.signature &&
-          c.kind === "expand" &&
+          ((c.signature === revealed.signature && c.kind === "expand") ||
+            // Large active dialogs can fill the bounded projection and omit
+            // their opener. Preserve only a matching live expanded combobox;
+            // its named dialog plus the verified same-task reveal is evidence
+            // to wait for a choice, never to select or complete that choice.
+            (input.observation.partial &&
+              !revealedOpener &&
+              c.kind === "focus" &&
+              c.role === "combobox" &&
+              c.visible &&
+              !c.occluded &&
+              c.structure?.regions.some(
+                (region) =>
+                  region.role === "dialog" &&
+                  words(task.target).every((word) =>
+                    words(region.name).includes(word),
+                  ),
+              ))) &&
           c.expanded === true &&
           c.enabled &&
           c.risk === "ordinary" &&
@@ -338,7 +357,7 @@ export class NavigationCore {
           issue: "consequential",
           steps: [],
           reason:
-            "Review this consequential action on the website. Navigator stops before submission.",
+            "Review this consequential action on the website. Tholi stops before submission.",
         },
       });
     }

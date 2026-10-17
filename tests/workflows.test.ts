@@ -133,6 +133,81 @@ test("a verified reveal retains the choice handoff instead of targeting a popup 
   expect(replanned.plan?.status).toBe("guiding");
   expect(replanned.plan?.steps[0].controlId).toBe(opener.id);
 });
+test("a partial picker projection retains only a current, matching expanded dialog handoff", async () => {
+  const p = page("https://example.com", ["318 languages"]),
+    request = interpretRequest("Show languages"),
+    opener = { ...p.controls[0], kind: "expand" as const, expanded: false },
+    started = beginJourney("languages", p.origin);
+  started.requestTaskId = request.tasks[0].id;
+  const search = {
+    ...opener,
+    id: "w1111111111111111-1",
+    signature: "search-languages",
+    label: "Search languages",
+    context: "Languages",
+    role: "combobox",
+    kind: "focus" as const,
+    expanded: true,
+    visible: true,
+    occluded: false,
+    structure: {
+      regions: [{ role: "dialog", name: "Languages" }],
+      headings: [],
+    },
+  };
+  const opened = {
+    ...p,
+    revision: 2,
+    stateKey: "picker",
+    fingerprint: "picker",
+    partial: true,
+    controls: [search],
+  };
+  const journey = advanceJourney(started, opened, opener, p.stateKey, 10);
+  const result = await core().plan(
+    input(request.original, opened, { request, journey }),
+  );
+  expect(result.plan).toMatchObject({ status: "awaiting-choice", steps: [] });
+  expect(result.request?.status).toBe("active");
+  expect(result.activity?.embedded).toBe(0);
+  const invalid = [
+    { observation: { ...opened, partial: false } },
+    { observation: { ...opened, controls: [{ ...search, expanded: false }] } },
+    { observation: { ...opened, controls: [{ ...search, visible: false }] } },
+    { observation: { ...opened, controls: [{ ...search, occluded: true }] } },
+    {
+      observation: {
+        ...opened,
+        controls: [
+          {
+            ...search,
+            structure: {
+              regions: [{ role: "dialog", name: "Notifications" }],
+              headings: [],
+            },
+          },
+        ],
+      },
+    },
+    { observation: { ...opened, origin: "https://other.example" } },
+    {
+      observation: {
+        ...opened,
+        controls: [{ ...opener, expanded: false }, search],
+      },
+    },
+    { journey: { ...journey, requestTaskId: crypto.randomUUID() } },
+  ];
+  for (const changed of invalid) {
+    const rejected = await core().plan(
+      input(request.original, opened, { request, journey, ...changed }),
+    );
+    expect(rejected.reason).not.toBe(
+      "The menu's current expanded state was verified.",
+    );
+  }
+});
+
 test("guides are versioned documented milestones, never selector or URL scripts", () => {
   expect(new Set(workflowGuides.map((g) => g.platform)).size).toBe(6);
   for (const g of workflowGuides) {

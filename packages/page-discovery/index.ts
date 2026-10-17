@@ -502,7 +502,7 @@ export class PageDiscovery {
         break;
       }
       if (
-        e.closest("#internet-navigator-overlay,[data-sensitive=true]") ||
+        e.closest("#internet-navigator-overlay,[data-tholi-ui],[data-sensitive=true]") ||
         isSensitiveElement(e)
       )
         continue;
@@ -582,7 +582,7 @@ export class PageDiscovery {
           hit !== geometry &&
           !geometry?.contains(hit) &&
           !hit.contains(geometry || e) &&
-          !hit.closest("#internet-navigator-overlay");
+          !hit.closest("#internet-navigator-overlay,[data-tholi-ui]");
         if (control.occluded) control.visible = false;
         if (cached.destination) {
           const d = cached.destination.getBoundingClientRect();
@@ -915,7 +915,7 @@ export class PageDiscovery {
           hit !== geometry &&
           !geometry?.contains(hit) &&
           !hit.contains(geometry || e) &&
-          !hit.closest("#internet-navigator-overlay"));
+          !hit.closest("#internet-navigator-overlay,[data-tholi-ui]"));
       if (control.occluded) control.visible = false;
       controls.push(control);
       this.bindings.set(id, {

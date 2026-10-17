@@ -28,7 +28,7 @@ await app.listen({
   port: Number(process.env.NAVIGATOR_PORT || 8787),
 });
 console.log(
-  `Navigator API: http://127.0.0.1:${process.env.NAVIGATOR_PORT || 8787}\nConnection settings: ${configPath}\nAllowed extensions: ${origins.join(", ") || "none; add your extension origin before connecting"}`,
+  `Tholi API: http://127.0.0.1:${process.env.NAVIGATOR_PORT || 8787}\nConnection settings: ${configPath}\nAllowed extensions: ${origins.join(", ") || "none; add your extension origin before connecting"}`,
 );
 for (const signal of ["SIGINT", "SIGTERM"] as const)
   process.on(signal, () => {

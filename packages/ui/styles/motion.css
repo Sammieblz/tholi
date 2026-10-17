@@ -1,0 +1,53 @@
+/* Shared motion grammar. Geometry follows the real target without interpolation. */
+:root,
+:host {
+  --duration-press: 120ms;
+  --duration-step: 160ms;
+  --duration-enter: 180ms;
+  --duration-exit: 120ms;
+  --duration-panel: 240ms;
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes tholi-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes tholi-check {
+  from {
+    stroke-dashoffset: 30;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes tholi-arrival {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* Pointer motion never adds delay to keyboard navigation. */
+html[data-input="keyboard"]
+  *:not(.wf-seed):not(.wf-piece):not(.wf-route-orbit):not(.wf-checking):not(
+    .tholi-route-signal
+  ),
+html[data-input="keyboard"] *::before,
+html[data-input="keyboard"] *::after {
+  animation-duration: 0ms !important;
+  transition-duration: 0ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+}

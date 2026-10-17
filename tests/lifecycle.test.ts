@@ -1,11 +1,102 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { BrowserAdapter } from "../packages/browser-adapter";
+import { PageDiscovery } from "../packages/page-discovery";
 import { PageCoach } from "../apps/extension/src/page-coach";
+import { fixture } from "./nlp/fixtures";
+import { interpretRequest } from "../packages/nlp/interpret";
+import { beginJourney } from "../packages/goal-planner/task-journey";
+import type {
+  NavigationRequest,
+  PlanResult,
+} from "../packages/navigation-core";
+import type { PageSnapshot } from "../packages/page-model";
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
+});
+it("replans from fresh evidence when the scan changes during automatic plan installation", async () => {
+  const page = { ...fixture(), controls: [] },
+    snapshot = vi
+      .spyOn(PageDiscovery.prototype, "snapshot")
+      .mockReturnValue(page),
+    request = interpretRequest("Open Help"),
+    journey = beginJourney(request.original, page.origin),
+    coach = new PageCoach(vi.fn());
+  journey.requestTaskId = request.tasks[0].id;
+  coach.view.request = request;
+  coach.view.journey = journey;
+  let first = true;
+  const planner = vi.fn(
+    async (_request: NavigationRequest, observation: PageSnapshot) => {
+      if (first) {
+        first = false;
+        snapshot.mockReturnValue({ ...page, revision: 2 });
+      }
+      return {
+        requestId: request.id,
+        documentId: "doc",
+        revision: observation.revision,
+        status: "plan",
+        request,
+        canonicalGoal: "Help",
+        plan: {
+          goal: request.original,
+          source: "semantics",
+          status: "unresolved",
+          issue: "ambiguous",
+          confidence: 0,
+          reason: `Scan ${observation.revision}`,
+          steps: [],
+        },
+        reason: "Choose a current control",
+        activity: {
+          embedded: 0,
+          cacheHits: 0,
+          llmCalls: 0,
+          modelRevision: "test",
+        },
+      } satisfies PlanResult;
+    },
+  );
+  Object.assign(coach, { requestPlanner: planner });
+  coach.recheckJourney();
+  const initialRevision = coach.view.page!.revision;
+  try {
+    await vi.waitFor(() => expect(planner).toHaveBeenCalledTimes(2));
+    expect(
+      planner.mock.calls.map(([, observation]) => observation.revision),
+    ).toEqual([initialRevision, initialRevision + 1]);
+    expect(coach.view.goalPlan?.reason).toBe(`Scan ${initialRevision + 1}`);
+    expect(coach.view.request?.id).toBe(request.id);
+    expect(coach.view.verifiedSteps).toBe(0);
+  } finally {
+    coach.stop();
+  }
+});
+it("resuming a review request clears paused guidance while preserving the boundary", () => {
+  const coach = new PageCoach(vi.fn());
+  coach.view.goalPlan = {
+    goal: "Deploy application",
+    status: "unresolved",
+    issue: "consequential",
+    source: "semantics",
+    confidence: 0,
+    steps: [],
+    reason: "Review the deployment on the website before continuing.",
+  };
+  coach.pause();
+  expect(coach.view.instruction).toContain("paused");
+  try {
+    coach.resume();
+    expect(coach.view.status).toBe("running");
+    expect(coach.view.instruction).not.toContain("Navigation paused");
+    expect(coach.view.goalPlan.issue).toBe("consequential");
+    expect(coach.view.goalPlan.status).not.toBe("completed");
+  } finally {
+    coach.stop();
+  }
 });
 it("disconnects DOM and open-shadow observers, every event subscription and pending timers", async () => {
   vi.useFakeTimers();

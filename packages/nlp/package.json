@@ -1,6 +1,7 @@
 {
   "name": "@internet-navigator/nlp",
-  "version": "0.9.2",
+  "description": "Tholi's local English interpretation and semantic retrieval pipeline.",
+  "version": "0.10.0",
   "type": "module",
   "private": true,
   "license": "MIT",

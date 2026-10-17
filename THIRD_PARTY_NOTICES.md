@@ -1,4 +1,4 @@
-Internet Navigator code is MIT licensed. Bundled third-party components retain
+Tholi code is MIT licensed. Legacy `@internet-navigator/*` package identifiers are retained for compatibility. Bundled third-party components retain
 their own licenses. The extension includes the complete license texts under
 `licenses/` and the build-generated `third-party.json` with pinned versions.
 
@@ -9,6 +9,11 @@ their own licenses. The extension includes the complete license texts under
   `751bff37182d3f1213fa05d7196b954e230abad9`.
 - ONNX Runtime / onnxruntime-common: MIT, Microsoft.
 - React, React DOM, Zod: MIT, their respective contributors.
+- Iconoir React: MIT, Iconoir contributors.
+- Base UI and Base UI utilities: MIT, MUI contributors.
+- Manrope and Outfit fonts, packaged through Fontsource: SIL Open Font License 1.1, their respective designers and contributors. Font files are bundled locally; their license texts are included in the generated licenses directory.
+- Sharp, used to generate toolbar icon sizes at build time: Apache-2.0, Lovell Fuller and contributors.
+- Brand artwork in apps/public/media was supplied by the project owner.
 - Fastify and plugins (optional API): MIT, Fastify contributors.
 
 Model upstream: https://huggingface.co/Xenova/all-MiniLM-L6-v2

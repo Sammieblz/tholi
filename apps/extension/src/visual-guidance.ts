@@ -1,4 +1,8 @@
 import type { NavigationAction } from "../../../packages/navigation-core/navigation-actions";
+import {
+  guidanceVisible,
+  onGuidanceVisibility,
+} from "../../../packages/overlay-ui/presentation-gate";
 let revision = 0;
 let visual: HTMLElement | undefined;
 let notify: (() => void) | undefined;
@@ -7,6 +11,9 @@ export function clearVisual() {
   visual?.remove();
   visual = undefined;
 }
+onGuidanceVisibility((visible) => {
+  if (!visible) clearVisual();
+});
 const invalidate = () => {
   revision++;
   clearVisual();
@@ -17,7 +24,10 @@ const own = (node: Node) =>
   node instanceof Element &&
   (node.id === "navigator-visual-suggestion" ||
     node.id === "internet-navigator-overlay" ||
-    !!node.closest("#internet-navigator-overlay,#navigator-visual-suggestion"));
+    node.hasAttribute("data-tholi-ui") ||
+    !!node.closest(
+      "#internet-navigator-overlay,[data-tholi-ui],#navigator-visual-suggestion",
+    ));
 const observer = new MutationObserver((records) => {
   if (
     records.some(
@@ -79,8 +89,11 @@ export function captureMetadata() {
       if (element.shadowRoot) walk(element.shadowRoot);
   };
   walk(document);
-  const overlay = document.getElementById("internet-navigator-overlay");
-  if (overlay) overlay.style.visibility = "hidden";
+  document
+    .querySelectorAll<HTMLElement>(
+      "[data-tholi-ui],#internet-navigator-overlay",
+    )
+    .forEach((e) => (e.style.visibility = "hidden"));
   visual?.remove();
   visual = undefined;
   return {
@@ -92,8 +105,11 @@ export function captureMetadata() {
   };
 }
 export function restoreOverlay() {
-  const overlay = document.getElementById("internet-navigator-overlay");
-  if (overlay) overlay.style.visibility = "";
+  document
+    .querySelectorAll<HTMLElement>(
+      "[data-tholi-ui],#internet-navigator-overlay",
+    )
+    .forEach((e) => (e.style.visibility = ""));
 }
 export function viewportRevision() {
   return revision;
@@ -104,6 +120,7 @@ export function showVisual(
   capturedAt: number,
 ) {
   if (
+    !guidanceVisible() ||
     action.kind !== "visual" ||
     revision !== capturedRevision ||
     Date.now() - capturedAt > 15000

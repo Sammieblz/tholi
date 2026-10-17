@@ -9,6 +9,15 @@ for (const article of [
     const app = await openNavigatorExtension(
       info.project.use.viewport || undefined,
     );
+    // Poll only the worker-owned phase, without repeatedly serializing the full
+    // discovered page or reopening UI disclosures on a real, changing article.
+    const phase = () =>
+      app.panel.evaluate(async () => {
+        const { view } = await chrome.runtime.sendMessage({
+          type: "GET_SESSION",
+        });
+        return view.goalPlan?.status;
+      });
     const goal = async (text: string) => {
       await app.page.bringToFront();
       return app.panel.evaluate(async (goal) => {
@@ -38,9 +47,7 @@ for (const article of [
           .click();
       }
       await app.page.getByLabel("Large", { exact: true }).check();
-      await expect
-        .poll(async () => (await app.view()).goalPlan?.status)
-        .toBe("completed");
+      await expect.poll(phase).toBe("completed");
       const references = await goal("find references");
       expect(references.view.goalPlan.status).toBe("guiding");
       const chosen = references.view.page.controls.find(
@@ -49,9 +56,7 @@ for (const article of [
       if (chosen.role === "heading")
         await app.page.locator("#References").scrollIntoViewIfNeeded();
       else await app.page.locator('a[href="#References"]').first().click();
-      await expect
-        .poll(async () => (await app.view()).goalPlan?.status)
-        .toBe("completed");
+      await expect.poll(phase).toBe("completed");
       await app.panel.screenshot({
         path: `output/qa/live-generic-${article}-${info.project.name}.png`,
       });

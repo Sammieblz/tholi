@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-tholi-theme="dark" style="color-scheme: dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script>
+      // Apply only a current, explicit appearance choice before styles paint.
+      // No OS lookup or preference storage is performed during startup.
+      try {
+        const read = (name) => {
+          const part = document.cookie
+            .split(";")
+            .map((value) => value.trim())
+            .find((value) => value.startsWith(name + "="));
+          return part ? decodeURIComponent(part.slice(name.length + 1)) : null;
+        };
+        const raw = read("tholi_consent");
+        const choice = raw && raw.length <= 2048 ? JSON.parse(raw) : null;
+        const now = Date.now();
+        const valid =
+          choice &&
+          choice.version === 1 &&
+          choice.preferences === true &&
+          Number.isFinite(choice.savedAt) &&
+          Number.isFinite(choice.expiresAt) &&
+          choice.savedAt <= now + 60000 &&
+          choice.expiresAt > now &&
+          choice.expiresAt > choice.savedAt &&
+          choice.expiresAt - choice.savedAt <= 15552000000 &&
+          (choice.analytics === null ||
+            (choice.analytics &&
+              typeof choice.analytics === "object" &&
+              typeof choice.analytics.provider === "string" &&
+              /^[a-z0-9-]{1,64}$/.test(choice.analytics.provider) &&
+              typeof choice.analytics.disclosure === "string" &&
+              /^[a-zA-Z0-9._-]{1,64}$/.test(choice.analytics.disclosure) &&
+              typeof choice.analytics.allowed === "boolean"));
+        if (valid && read("tholi_theme") === "light") {
+          document.documentElement.dataset.tholiTheme = "light";
+          document.documentElement.style.colorScheme = "light";
+        }
+      } catch {
+        /* Dark remains usable when cookies are unavailable. */
+      }
+    </script>
+    <meta
+      name="description"
+      content="Tholi makes your next step through website menus and controls clearer, while you stay in control."
+    />
+    <title>Tholi | Find your way forward</title>
+    <link rel="icon" href="/media/tholi_icon.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

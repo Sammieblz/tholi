@@ -43,11 +43,11 @@ export const demoRoute = routeSchema.parse({
   siteName: "Northstar demo",
   description: "Account → billing → plan → final confirmation",
   safetyNote:
-    "Navigator stops before the final cancellation. It never clicks or submits for you.",
+    "Tholi stops before the final cancellation. It never clicks or submits for you.",
   completionInstruction:
     "Visible confirmation verified. Your demo subscription is canceled.",
   boundaryInstruction:
-    "You reached the cancellation confirmation. Navigator stops here. Only you can confirm cancellation.",
+    "You reached the cancellation confirmation. Tholi stops here. Only you can confirm cancellation.",
   milestoneStates: {
     home: 0,
     profile: 0,

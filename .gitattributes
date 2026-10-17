@@ -1,4 +1,9 @@
+# Preserve the raw bytes checked against recording provenance on every OS.
+apps/public/media/video/*.vtt text eol=lf
+apps/public/media/video/*.txt text eol=lf
 
-tests/continuity/corpus.json text eol=lf
-tests/continuity/corpus.sha256 text eol=lf
-tests/reliability-vision/corpus.json text eol=lf
+# Frozen validation inputs and their checksums use canonical LF endings.
+tests/*/corpus.json text eol=lf
+tests/*/corpus.sha256 text eol=lf
+
+.codex/skills/** -text

@@ -40,7 +40,7 @@ export function discoverOutcomes(
       !text ||
       !visible(e) ||
       isSensitiveElement(e) ||
-      e.closest("#internet-navigator-overlay")
+      e.closest("#internet-navigator-overlay,[data-tholi-ui]")
     )
       return;
     const links = [...e.querySelectorAll<HTMLAnchorElement>("a[href]")]

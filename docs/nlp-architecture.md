@@ -1,4 +1,6 @@
-Navigator supports English requests on English interfaces. Compromise
+# Natural language in Tholi
+
+Tholi supports English requests on English interfaces. Compromise
 parses the entire validated request before retrieval, preserving ordered tasks,
 negation, corrections and desired values. The maximum is 1,000 characters and
 three explicit tasks. Unresolved references require an explicit target.
