@@ -35,14 +35,15 @@ export function HomePage() {
           </p>
           <div className="hero-actions">
             <SiteLink to="/download" className="web-primary">
-              Get Tholi for Chrome
+              Get Tholi
             </SiteLink>
             <a href="#practice" className="web-text-link">
               Try it here
             </a>
           </div>
           <p className="small">
-            Local processing. Your clicks. No account required.
+            Desktop previews for Chrome, Edge, Brave, compatible Chromium
+            browsers and Firefox. Local processing. No account required.
           </p>
         </div>
       </section>
@@ -292,7 +293,9 @@ export function HomePage() {
               <br />
               made clear.
             </h2>
-            <p>Start with the desktop Chrome preview. No account needed.</p>
+            <p>
+              Choose the desktop Chromium or Firefox preview. No account needed.
+            </p>
           </div>
           <SiteLink to="/download" className="web-primary">
             Find your way with Tholi

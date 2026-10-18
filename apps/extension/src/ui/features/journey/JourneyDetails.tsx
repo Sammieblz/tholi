@@ -1,3 +1,4 @@
+import { api } from "../../../platform/api";
 import { ArrowRight, Check, FastArrowRight } from "iconoir-react";
 import type { useGuidanceController } from "../../app/useGuidanceController";
 import { Disclosure } from "../../components/Disclosure";
@@ -133,7 +134,7 @@ export function JourneyDetails({
               className="tholi-quiet-action"
               disabled={otherTab || view.status !== "running"}
               onClick={async () => {
-                const result = await chrome.runtime.sendMessage({
+                const result = await api.runtime.sendMessage({
                   type: "SKIP_TASK",
                 });
                 if (result.view) setView(result.view);
@@ -186,7 +187,7 @@ export function JourneyDetails({
                     disabled={busy}
                     description="Remove this reusable route from local knowledge. Your current destination stays with you."
                     action={async () => {
-                      const result = await chrome.runtime.sendMessage({
+                      const result = await api.runtime.sendMessage({
                         type: "DELETE_TASK",
                         id: task.id,
                       });

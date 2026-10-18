@@ -19,6 +19,9 @@ import {
 } from "./evidence";
 import AccuracyReporter from "./accuracy-reporter";
 const output: Record<string, string> = {
+  firefox: "output/qa/firefox-build.json",
+  branded: "output/qa/branded-build.json",
+  "browser-performance": "output/qa/browser-performance.json",
   e2e: "output/acceptance/e2e-regressions.json",
   live: "output/acceptance/live-regressions.json",
   ui: "output/qa/ui-build.json",
@@ -45,13 +48,30 @@ async function websiteProvenance() {
 export default class BrowserReporter implements Reporter {
   private start?: Awaited<ReturnType<typeof buildProvenance>>;
   private website?: Awaited<ReturnType<typeof websiteProvenance>>;
+  private firefoxBuild?: Awaited<ReturnType<typeof buildProvenance>>;
+  private browsers = new Map<string, unknown[]>();
   private expected = new Map<string, string[]>();
   private files = new Map<string, Set<string>>();
   private projects = new Map<string, Set<string>>();
   private cases = new Map<string, CaseResult[]>();
   private accuracy?: AccuracyReporter;
+  private firefoxAccuracy?: AccuracyReporter;
   async onBegin(config: FullConfig, suite: Suite) {
-    this.start = await buildProvenance();
+    const firefoxOnly =
+      suite.allTests().length > 0 &&
+      suite
+        .allTests()
+        .every((test) =>
+          ["firefox", "acceptance-firefox"].includes(scope(test)),
+        );
+    this.start = await buildProvenance(firefoxOnly ? "firefox" : "chromium");
+    if (firefoxOnly) this.firefoxBuild = this.start;
+    else if (
+      suite
+        .allTests()
+        .some((test) => ["firefox", "acceptance-firefox"].includes(scope(test)))
+    )
+      this.firefoxBuild = await buildProvenance("firefox");
     for (const test of suite.allTests()) {
       const group = scope(test);
       this.files.set(
@@ -71,6 +91,10 @@ export default class BrowserReporter implements Reporter {
       this.expected.set(group, [...(this.expected.get(group) || []), test.id]);
     }
     if (this.expected.has("ui")) this.website = await websiteProvenance();
+    if (this.expected.has("acceptance-firefox")) {
+      this.firefoxAccuracy = new AccuracyReporter("firefox");
+      await this.firefoxAccuracy.onBegin(config, suite);
+    }
     if (this.expected.has("acceptance")) {
       this.accuracy = new AccuracyReporter();
       await this.accuracy.onBegin(config, suite);
@@ -78,6 +102,20 @@ export default class BrowserReporter implements Reporter {
   }
   async onTestEnd(test: TestCase, result: TestResult) {
     const group = scope(test);
+    for (const attachment of result.attachments.filter(
+      (item) => item.name === "browser-runtime",
+    )) {
+      this.browsers.set(group, [
+        ...(this.browsers.get(group) || []),
+        JSON.parse(
+          (attachment.body || (await readFile(attachment.path!))).toString(),
+        ),
+      ]);
+    }
+    if (group === "acceptance-firefox") {
+      await this.firefoxAccuracy!.onTestEnd(test, result);
+      return;
+    }
     if (group === "acceptance") {
       await this.accuracy!.onTestEnd(test, result);
       return;
@@ -85,6 +123,8 @@ export default class BrowserReporter implements Reporter {
     const extra: Record<string, unknown> = {};
     for (const [name, key] of [
       ["motion-benchmark", "motion"],
+      ["native-surfaces", "surfaces"],
+      ["paired-performance", "pairedPerformance"],
       ["route-motion-timing", "routeMotion"],
       ["website-motion-timing", "websiteMotion"],
     ]) {
@@ -94,12 +134,28 @@ export default class BrowserReporter implements Reporter {
           (attachment.body || (await readFile(attachment.path!))).toString(),
         );
     }
+    const disposals = await Promise.all(
+      result.attachments
+        .filter((item) => item.name === "browser-disposal")
+        .map(async (item) =>
+          JSON.parse((item.body || (await readFile(item.path!))).toString()),
+        ),
+    );
     this.cases.set(group, [
       ...(this.cases.get(group) || []),
       {
         id: test.id,
         name: test.titlePath().join(" / "),
         status: result.status,
+        elapsedMs: result.duration,
+        ...(disposals.length
+          ? {
+              disposalMs: disposals.reduce(
+                (sum, item) => sum + item.elapsedMs,
+                0,
+              ),
+            }
+          : {}),
         ...extra,
       },
     ]);
@@ -109,7 +165,7 @@ export default class BrowserReporter implements Reporter {
     let passed =
       result.status === "passed" && unchanged && this.expected.size > 0;
     for (const [group, expected] of this.expected) {
-      if (group === "acceptance") continue;
+      if (["acceptance", "acceptance-firefox"].includes(group)) continue;
       const cases = this.cases.get(group) || [];
       const groupPassed =
         passed &&
@@ -120,7 +176,8 @@ export default class BrowserReporter implements Reporter {
       passed &&= groupPassed;
       if (!output[group]) throw Error("Unknown evidence scope: " + group);
       await writeEvidence(output[group], {
-        ...this.start,
+        ...(group === "firefox" ? this.firefoxBuild : this.start),
+        browsers: this.browsers.get(group) || [],
         scope: group,
         evaluatedAt: new Date().toISOString(),
         passed: groupPassed,
@@ -137,6 +194,10 @@ export default class BrowserReporter implements Reporter {
             }
           : {}),
       });
+    }
+    if (this.firefoxAccuracy) {
+      const accuracy = await this.firefoxAccuracy.onEnd(result);
+      passed = passed && accuracy.status === "passed";
     }
     if (this.accuracy) {
       const accuracy = await this.accuracy.onEnd(result);

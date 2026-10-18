@@ -1,4 +1,5 @@
 import { cleanupPermissionVariants } from "./permission-variant";
+import { cleanupNativeDrivers } from "./native-browser-lifecycle";
 import { test as base, type BrowserContext } from "@playwright/test";
 export * from "@playwright/test";
 const installed = new WeakSet<BrowserContext>();
@@ -11,6 +12,17 @@ export async function deterministicNetwork(context: BrowserContext) {
   )
     return;
   installed.add(context);
+  const browser = context.browser();
+  if (browser)
+    await base.info().attach("browser-runtime", {
+      body: Buffer.from(
+        JSON.stringify({
+          name: browser.browserType().name(),
+          version: browser.version(),
+        }),
+      ),
+      contentType: "application/json",
+    });
   await context.route(/^https?:/, async (route) => {
     const url = new URL(route.request().url());
     if (["127.0.0.1", "localhost", "[::1]"].includes(url.hostname))
@@ -20,9 +32,19 @@ export async function deterministicNetwork(context: BrowserContext) {
   });
 }
 export const test = base.extend<
-  { networkPolicy: void },
+  { networkPolicy: void; nativeBrowserCleanup: void },
   { permissionCopies: void }
 >({
+  nativeBrowserCleanup: [
+    async ({}, use) => {
+      try {
+        await use();
+      } finally {
+        await cleanupNativeDrivers();
+      }
+    },
+    { auto: true, timeout: 45000 },
+  ],
   permissionCopies: [
     async ({}, use) => {
       await use();

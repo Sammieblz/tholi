@@ -4,6 +4,7 @@ import matrix from "../../tests/browser/acceptance/matrix.json" with { type: "js
 const full = process.env.THOLI_TEST_TIER === "full";
 const port = Number(process.env.THOLI_UI_PORT || 5174);
 const browserGroup = process.env.THOLI_BROWSER_GROUP;
+const domTrace = { mode: "retain-on-failure" as const, screenshots: false };
 const project = (
   name: string,
   scope: string,
@@ -23,11 +24,20 @@ const project = (
   ...extra,
 });
 const projects: Project[] = [
-  project("core-desktop", "e2e", "extension/core", { timeout: 30_000 }),
+  project("core-desktop", "e2e", "extension/core", {
+    timeout: 30_000,
+    use: { trace: domTrace },
+  }),
   project("narrow", "e2e", "extension/core", {
     timeout: 30_000,
     grep: /live inspector explains|generic discovery plans/,
-    use: { viewport: { width: 720, height: 900 }, trace: "retain-on-failure" },
+    use: {
+      viewport: { width: 720, height: 900 },
+      trace: domTrace,
+    },
+  }),
+  project("firefox-extension", "firefox", "extension/firefox", {
+    timeout: 120_000,
   }),
   project("nlp", "nlp", "extension/nlp", { timeout: 60_000 }),
   project("multi-app", "multi-app", "extension/multi-app", {
@@ -45,6 +55,18 @@ const projects: Project[] = [
     timeout: 45_000,
     ...(full ? {} : { grepInvert: /busy page motion/ }),
   }),
+  project("ui-website-firefox", "ui", "website", {
+    timeout: 45_000,
+    use: {
+      browserName: "firefox",
+      baseURL: `http://127.0.0.1:${port}`,
+      viewport: { width: 1280, height: 900 },
+      trace: "retain-on-failure",
+    },
+    ...(full
+      ? {}
+      : { grep: /download|account|onboarding|theme|cookie|documentation/ }),
+  }),
   project("ui-website", "ui", "website", {
     timeout: 45_000,
     use: {
@@ -58,6 +80,19 @@ const projects: Project[] = [
   }),
 ];
 if (full) {
+  projects.push(
+    project(
+      "browser-performance",
+      "browser-performance",
+      "extension/performance",
+      { timeout: 240_000 },
+    ),
+  );
+  projects.push(
+    project("branded-browsers", "branded", "extension/branded", {
+      timeout: 120_000,
+    }),
+  );
   for (const { name, width, height } of matrix.viewports) {
     projects.push(
       project("live-" + name, "live", "live", {
@@ -65,9 +100,20 @@ if (full) {
       }),
     );
     projects.push(
+      project(
+        "acceptance-firefox-" + name,
+        "acceptance-firefox",
+        "acceptance-firefox",
+        {
+          timeout: 180_000,
+          use: { viewport: { width, height }, trace: "retain-on-failure" },
+        },
+      ),
+    );
+    projects.push(
       project("acceptance-" + name, "acceptance", "acceptance", {
         timeout: 180_000,
-        use: { viewport: { width, height }, trace: "retain-on-failure" },
+        use: { viewport: { width, height }, trace: domTrace },
       }),
     );
   }
@@ -81,7 +127,13 @@ export default defineConfig({
   projects,
   reporter: [["list"], [resolve("tests/support/browser-reporter.ts")]],
   webServer: [
-    ...(browserGroup !== "live"
+    ...(![
+      "live",
+      "firefox",
+      "brands",
+      "browser-performance",
+      "acceptance-firefox",
+    ].includes(browserGroup || "")
       ? [
           {
             command:

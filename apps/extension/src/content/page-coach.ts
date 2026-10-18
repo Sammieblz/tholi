@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import { fullyUnclipped } from "../../../../packages/browser-adapter/geometry";
 import { scrollTarget } from "../../../../packages/browser-adapter/scroll-target";
 import {
@@ -345,7 +346,7 @@ export class PageCoach {
     if (this.view.status === "waiting") this.view.status = "running";
     this.selected = undefined;
     if (this.externalControl)
-      void chrome.runtime
+      void api.runtime
         .sendMessage({ type: "CLEAR_FRAME_GUIDANCE" })
         .catch(() => {});
     this.externalControl = undefined;
@@ -1424,7 +1425,7 @@ export class PageCoach {
         element,
         "Scroll to the embedded application to see its highlighted control.",
       );
-    void chrome.runtime
+    void api.runtime
       .sendMessage({
         type: "GUIDE_FRAME",
         reference: control.reference,

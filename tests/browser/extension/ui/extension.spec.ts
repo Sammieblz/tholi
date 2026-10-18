@@ -11,11 +11,21 @@ async function fixture(holdHydration = false) {
         held = false;
         waiting.splice(0).forEach((release) => release());
       };
-      chrome.runtime.sendMessage = (async (message: any) => {
-        const reply = await send(message);
-        if (message.type === "UI_GET" && held)
-          await new Promise<void>((resolve) => waiting.push(resolve));
-        return reply;
+      chrome.runtime.sendMessage = ((
+        message: any,
+        callback?: (reply: any) => void,
+      ) => {
+        const result = (async () => {
+          const reply = await send(message);
+          if (message.type === "UI_GET" && held)
+            await new Promise<void>((resolve) => waiting.push(resolve));
+          return reply;
+        })();
+        if (typeof callback === "function") {
+          void result.then(callback);
+          return;
+        }
+        return result;
       }) as typeof chrome.runtime.sendMessage;
     });
     await app.panel.reload();

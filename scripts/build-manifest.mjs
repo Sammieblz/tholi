@@ -5,6 +5,7 @@ const paths = [
   "dist/demo",
   "dist/test-fixtures",
   "dist/extension",
+  "dist/extension-firefox",
   "dist/web",
   "apps/api/dist",
   "assets/models",

@@ -51,17 +51,39 @@ test("new sites expose navigation before a host grant and denial never starts sc
     }
     await app.panel.evaluate(() => {
       (globalThis as any).__requestedOrigins = [];
-      chrome.permissions.request = async (permissions) => {
+      chrome.permissions.request = ((
+        permissions: any,
+        callback?: (granted: boolean) => void,
+      ) => {
         (globalThis as any).__requestedOrigins = permissions.origins;
-        return false;
-      };
+        callback?.(false);
+        return Promise.resolve(false);
+      }) as typeof chrome.permissions.request;
     });
     await app.panel
       .getByRole("button", { name: "Guide me", exact: true })
       .click();
-    await expect(app.panel.getByRole("alert")).toContainText(
-      "access was declined",
-    );
+    const notice = app.panel.getByRole("alert");
+    await expect(notice).toBeVisible();
+    await expect(async () => {
+      if (!(await notice.innerText()).includes("access was declined")) {
+        // The loop can outrun the sidebar's context refresh. Stale intent must
+        // request no grant and start no session; retry only that rejected action.
+        await expect(notice).toContainText("expected task destination");
+        expect(
+          await app.panel.evaluate(
+            () => (globalThis as any).__requestedOrigins,
+          ),
+        ).toEqual([]);
+        expect(await app.view()).toBeUndefined();
+        await app.panel
+          .getByRole("button", { name: "Guide me", exact: true })
+          .click();
+      }
+      await expect(notice).toContainText("access was declined", {
+        timeout: 500,
+      });
+    }).toPass({ timeout: 5000 });
     expect(
       await app.panel.evaluate(() => (globalThis as any).__requestedOrigins),
     ).toEqual(["https://unlisted.example/*"]);

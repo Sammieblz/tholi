@@ -10,7 +10,7 @@ Authentication is detected using field metadata and bounded form/screen context.
 
 ## Persistence
 
-Trusted `chrome.storage.session` holds active requests, supplied values, entity bindings, unfinished journeys and a task-scoped navigation ledger. It is not a general browser-history collection service. Browser-session private context is separate from extension IndexedDB knowledge.
+Trusted extension `storage.session` holds active requests, supplied values, entity bindings, unfinished journeys and a task-scoped navigation ledger. It is not a general browser-history collection service. Browser-session private context is separate from extension IndexedDB knowledge.
 
 IndexedDB v5 stores reusable interface semantics, sanitized paths without queries, layout fingerprints, observed transitions and parameterized saved routes. Original knowledge survives migrations; incompatible derived indexes rebuild. Private entity names, supplied values, authenticated statuses and their vectors remain session-only. Public sanitized reusable labels may persist. Saved private routes ask for parameters again.
 
@@ -20,7 +20,7 @@ Knowledge is bounded to 50 sites, 100 latest pages, 120 state snapshots, 30 temp
 
 ## Vision, models and optional backend
 
-Viewport capture requires an active authorized HTTP/HTTPS tab and Chrome screenshot access. Tholi hides its overlays and masks discovered editable fields, including open shadow roots, plus all iframe rectangles. Authorized frames support DOM guidance but their pixels remain masked. Images and recognized private text are temporary processing data, not saved evidence.
+Viewport capture requires an active authorized HTTP/HTTPS tab and browser screenshot access. Tholi hides its overlays and masks discovered editable fields, including open shadow roots, plus all iframe rectangles. Authorized frames support DOM guidance but their pixels remain masked. Images and recognized private text are temporary processing data, not saved evidence.
 
 MiniLM and default Tesseract assets are packaged locally. Experimental Paddle assets are included only by the explicit experimental build. The optional Chrome Prompt API is separate; enabling it may download Chrome's model. It receives bounded sanitized observations and task context. Predictions remain untrusted and cannot declare success.
 
@@ -39,3 +39,5 @@ The local Tholi website has explicitly mocked accounts. Name/email and onboardin
 Website cookie choices use the first-party `tholi_consent` cookie for 180 days. The optional `tholi_theme` cookie remembers Light or Dark only after appearance-preference storage is allowed. Essential only or withdrawing preference storage deletes that cookie; appearance remains in memory on the current page. Cookies use host-only scope, `Path=/`, `SameSite=Lax`, and `Secure` on HTTPS. They are not credentials. With blocked cookies, choices and appearance remain usable in memory. Silence grants no optional storage.
 
 Production analytics is inactive with no configured provider. The prepared boundary accepts only public page categories, download clicks and the two fixed practice task identifiers. It excludes requests, conversation, account information, documentation searches and extension observations. Any future provider needs a specific disclosure and fresh matching consent; withdrawal cancels queued/in-flight work. The launch-review drafts at `/privacy`, `/terms` and `/cookies` describe ILUNỌNSEN LLC in Ohio, United States. Hosting, a public Tholi domain, an analytics provider and legal review remain unconfigured.
+
+Backend/vision credentials use protected Chromium local storage or Firefox extension-origin IndexedDB, outside content-script storage. See [browser platforms](browser-platforms.md).

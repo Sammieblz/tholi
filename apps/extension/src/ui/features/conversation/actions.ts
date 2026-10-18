@@ -1,3 +1,4 @@
+import { api } from "../../../platform/api";
 import type * as React from "react";
 import { type SavedTask } from "../../../../../../packages/page-model";
 import type { SessionView } from "../../../../../../packages/shared-types";
@@ -26,7 +27,7 @@ export function createConversationActions(context: Context) {
   ) => {
     const message = { id, role, text: text.slice(0, 1500), at: Date.now() };
     context.setMessages((m) => appendMessage(m, message));
-    await chrome.runtime.sendMessage({ type: "UI_APPEND", message });
+    await api.runtime.sendMessage({ type: "UI_APPEND", message });
   };
   const explainCurrentStep = async () => {
     await addMessage("guide", explainStep(context.view));

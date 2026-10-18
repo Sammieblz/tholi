@@ -1,0 +1,42 @@
+[
+  {
+    "id": "chrome",
+    "label": "Chrome",
+    "target": "chromium",
+    "manager": "chrome://extensions",
+    "minimum": "Chromium 140",
+    "verification": "pending"
+  },
+  {
+    "id": "edge",
+    "label": "Edge",
+    "target": "chromium",
+    "manager": "edge://extensions",
+    "minimum": "Chromium 140",
+    "verification": "pending"
+  },
+  {
+    "id": "brave",
+    "label": "Brave",
+    "target": "chromium",
+    "manager": "brave://extensions",
+    "minimum": "Chromium 140",
+    "verification": "pending"
+  },
+  {
+    "id": "chromium",
+    "label": "Other Chromium browsers",
+    "target": "chromium",
+    "manager": "chrome://extensions",
+    "minimum": "Chromium 140",
+    "verification": "capability-dependent"
+  },
+  {
+    "id": "firefox",
+    "label": "Firefox",
+    "target": "firefox",
+    "manager": "about:debugging#/runtime/this-firefox",
+    "minimum": "Firefox 153",
+    "verification": "pending"
+  }
+]

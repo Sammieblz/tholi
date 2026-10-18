@@ -1,3 +1,4 @@
+import { getPrivateSetting, setPrivateSetting } from "./private-settings";
 import type { PlanInput } from "../../../../packages/navigation-core/contracts";
 import { resultSchema } from "../../../../packages/navigation-core/contracts";
 import {
@@ -17,7 +18,7 @@ export function cancelBackendPlanning() {
 }
 export async function backendSettings(): Promise<Settings> {
   return (
-    (await chrome.storage.local.get("backend")).backend || {
+    (await getPrivateSetting<Settings>("backend")) || {
       url: "http://127.0.0.1:8787",
       token: "",
       enabled: false,
@@ -40,15 +41,10 @@ export async function setBackendSettings(settings: Settings) {
     throw new Error("Use HTTPS or a loopback HTTP address.");
   if (settings.enabled && settings.token.length < 32)
     throw new Error("Paste the API’s generated bearer token.");
-  await chrome.storage.local.setAccessLevel({
-    accessLevel: "TRUSTED_CONTEXTS",
-  });
-  await chrome.storage.local.set({
-    backend: {
-      url: url.origin,
-      token: settings.token,
-      enabled: settings.enabled,
-    },
+  await setPrivateSetting("backend", {
+    url: url.origin,
+    token: settings.token,
+    enabled: settings.enabled,
   });
   return { ok: true };
 }

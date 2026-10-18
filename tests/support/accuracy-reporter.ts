@@ -16,6 +16,7 @@ import {
 } from "../../packages/acceptance-metrics";
 import { buildProvenance } from "./build-provenance";
 export default class AccuracyReporter implements Reporter {
+  constructor(private target: "chromium" | "firefox" = "chromium") {}
   private build?: Awaited<ReturnType<typeof buildProvenance>>;
   private samples: AcceptanceCase[] = [];
   private missing: string[] = [];
@@ -23,12 +24,16 @@ export default class AccuracyReporter implements Reporter {
   private browsers = new Set<string>();
   private projects: string[] = [];
   async onBegin(_config: unknown, _suite: Suite) {
-    this.build = await buildProvenance();
+    this.build = await buildProvenance(this.target);
     this.projects = [
       ...new Set(
         _suite
           .allTests()
-          .filter((t) => t.parent.project()?.metadata.scope === "acceptance")
+          .filter(
+            (t) =>
+              t.parent.project()?.metadata.scope ===
+              (this.target === "firefox" ? "acceptance-firefox" : "acceptance"),
+          )
           .map((t) => t.parent.project()!.name),
       ),
     ];
@@ -61,7 +66,7 @@ export default class AccuracyReporter implements Reporter {
   async onEnd(result: FullResult) {
     const matrix = await readFile("tests/browser/acceptance/matrix.json"),
       definition = JSON.parse(matrix.toString());
-    const build = await buildProvenance();
+    const build = await buildProvenance(this.target);
     const live = this.samples.filter((c) => c.suite === "live"),
       fixture = this.samples.filter((c) => c.suite === "fixture"),
       authored = this.samples.filter((c) => c.suite === "authored");
@@ -113,6 +118,8 @@ export default class AccuracyReporter implements Reporter {
       evaluatedAt: new Date().toISOString(),
       artifactFiles: build.artifactFiles,
       validation: build.validation,
+      target: this.target,
+      buildTargets: build.buildTargets,
       projects: this.projects,
       authoredEvidence: "output/qa/unit.json",
       matrixSha256: createHash("sha256").update(matrix).digest("hex"),
@@ -142,12 +149,13 @@ export default class AccuracyReporter implements Reporter {
       cases: this.samples,
     };
     await mkdir("output/acceptance", { recursive: true });
-    await writeFile(
-      "output/acceptance/results.json",
-      JSON.stringify(report, null, 2),
-    );
+    const output =
+      this.target === "firefox"
+        ? "output/acceptance/results-firefox.json"
+        : "output/acceptance/results.json";
+    await writeFile(output, JSON.stringify(report, null, 2));
     process.stdout.write(
-      `Acceptance report: output/acceptance/results.json; ${passed ? "PASSED" : "FAILED"}\n`,
+      `Acceptance report: ${output}; ${passed ? "PASSED" : "FAILED"}\n`,
     );
     return { status: passed ? ("passed" as const) : ("failed" as const) };
   }

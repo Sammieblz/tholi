@@ -12,7 +12,8 @@ server are included; no model-fetch or compilation step is required. Keep that
 directory as the working directory, or set `NAVIGATOR_MODELS` explicitly.
 
 Find your extension ID in `chrome://extensions`. Add
-`chrome-extension://YOUR_32_CHARACTER_ID` to `origins` in that file and restart
+your exact `chrome-extension://YOUR_32_CHARACTER_ID` or
+`moz-extension://YOUR_INTERNAL_UUID` to `origins` in that file and restart
 the API. Alternatively set `NAVIGATOR_EXTENSION_ORIGINS` to a comma-separated
 allowlist before launch. Keep the connection file private. On Windows, use a
 directory private to your user; the API does not configure Windows ACLs.
@@ -20,8 +21,8 @@ directory private to your user; the API does not configure Windows ACLs.
 In the sidebar, open **Settings**, enable **Advanced controls**, then open
 **Local site memory and AI** and **Optional private backend**.
 Enter the API address and generated token, enable the connection and Save.
-Grant Chrome's requested API-host access. The token is stored only in trusted
-extension storage contexts. The extension's origin must exactly match the
+Grant the browser's requested API-host access. The token uses protected Chromium
+local storage or Firefox extension-origin IndexedDB, never content-script storage. The extension's origin must exactly match the
 API allowlist. An unavailable backend uses the bundled local model.
 
 The authenticated OpenAPI specification is `/v1/openapi.json`. Endpoints:
@@ -67,3 +68,7 @@ The service retains `NAVIGATOR_*` environment variables, `.navigator-api`, the
 SQLite filename and the `@internet-navigator/api` package identity for existing
 installations. Its displayed name is Tholi, and OpenAPI metadata reads the API
 package version. See [naming and compatibility](../development/naming.md).
+
+## Browser origins
+
+The explicit API allowlist accepts `chrome-extension://` plus the installed 32-letter Chromium ID, or `moz-extension://` plus Firefox's actual internal UUID. It accepts no wildcards or ordinary website origins. In the extension inspector, `browser.runtime.getURL("")` (Firefox) or `chrome.runtime.getURL("")` (Chromium) gives that installation's URL; omit its trailing slash in `NAVIGATOR_EXTENSION_ORIGINS`. Firefox's add-on ID `tholi@ilunonsen.com` is not its internal origin UUID. Keep each installation's exact origin in the allowlist. Tokens remain private and installations do not synchronize knowledge.

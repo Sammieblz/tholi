@@ -8,4 +8,5 @@ export function requireFullEvidence(
   report: any,
   files: Record<string, string>,
   identity?: { runId: string },
+  target?: "chromium" | "firefox",
 ): any;

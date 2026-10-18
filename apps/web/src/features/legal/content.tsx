@@ -84,7 +84,7 @@ export function privacySections(): LegalSection[] {
             You enter credentials and make website changes yourself. A
             task-scoped navigation ledger supports continuity and return routes
             while Tholi is active. It is not a general browsing-history
-            collection service. Restricted Chrome pages and unpermitted origins
+            collection service. Restricted browser pages and unpermitted origins
             cannot be inspected.
           </p>
         </>
@@ -283,7 +283,7 @@ export function termsSections(): LegalSection[] {
             third-party content or accounts.
           </p>
           <p>
-            Chrome controls extension permissions and capture access. Some
+            Your browser controls extension permissions and capture access. Some
             pages, frames and native controls are inaccessible. You can decline
             access, pause or stop guidance, remove stored knowledge or uninstall
             the extension.

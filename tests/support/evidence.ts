@@ -21,5 +21,9 @@ export async function writeEvidence(
 export async function unchangedBuild(
   start: Awaited<ReturnType<typeof buildProvenance>>,
 ) {
-  return JSON.stringify(start) === JSON.stringify(await buildProvenance());
+  if (!start) return false;
+  return (
+    JSON.stringify(start) ===
+    JSON.stringify(await buildProvenance(start.target))
+  );
 }

@@ -1,24 +1,14 @@
+import {
+  ensureInferenceHost,
+  requestInferenceHost,
+  disposeInferenceHost,
+  cancelInferenceHost,
+} from "../platform/inference-host";
 import type { PlanInput } from "../../../../packages/navigation-core/contracts";
 import type { SiteMemory } from "../../../../packages/page-model/index";
-let creating: Promise<void> | undefined;
 let idle: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
 let active = 0;
-export async function ensureOffscreen() {
-  const contexts = await chrome.runtime.getContexts({
-    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
-  });
-  if (contexts.length) return;
-  await (creating ||= chrome.offscreen
-    .createDocument({
-      url: "offscreen.html",
-      reasons: [chrome.offscreen.Reason.WORKERS],
-      justification: "Run the packaged CPU NLP model in a local worker.",
-    })
-    .finally(() => {
-      creating = undefined;
-    }));
-}
 export async function localNlp(
   input: PlanInput,
   memory?: SiteMemory,
@@ -28,9 +18,8 @@ export async function localNlp(
   const started = generation;
   active++;
   try {
-    await ensureOffscreen();
-    const response = await chrome.runtime.sendMessage({
-      target: "offscreen",
+    await ensureInferenceHost();
+    const response = await requestInferenceHost({
       type: suggestions ? "SUGGEST_NLP" : "PLAN_NLP",
       id: crypto.randomUUID(),
       input,
@@ -44,27 +33,24 @@ export async function localNlp(
     active--;
     if (!active)
       idle = setTimeout(() => {
-        void chrome.offscreen.closeDocument().catch(() => {});
+        void disposeInferenceHost();
       }, 120000);
   }
 }
 export async function cancelNlp() {
   generation++;
   clearTimeout(idle);
-  await chrome.runtime
-    .sendMessage({ target: "offscreen", type: "CANCEL_NLP" })
-    .catch(() => {});
-  await chrome.offscreen.closeDocument().catch(() => {});
+  await cancelInferenceHost("CANCEL_NLP");
+  await disposeInferenceHost();
 }
 
 export async function browserOcr(message: Record<string, unknown>) {
   clearTimeout(idle);
   active++;
   try {
-    await ensureOffscreen();
-    const response = await chrome.runtime.sendMessage({
+    await ensureInferenceHost();
+    const response = await requestInferenceHost({
       ...message,
-      target: "offscreen",
       type: "OCR_REQUEST",
       id: crypto.randomUUID(),
     });
@@ -73,10 +59,6 @@ export async function browserOcr(message: Record<string, unknown>) {
     return response.value;
   } finally {
     active--;
-    if (!active)
-      idle = setTimeout(
-        () => void chrome.offscreen.closeDocument().catch(() => {}),
-        120000,
-      );
+    if (!active) idle = setTimeout(() => void disposeInferenceHost(), 120000);
   }
 }

@@ -16,6 +16,8 @@ Keep React, Base UI, Iconoir and the existing tokens. For visual UI work, read a
 
 ## Validation
 
-Run focused existing checks during implementation. `npm run test:ci` is the deterministic PR gate. `npm run test:full` is full certification, required before packaging. Both build once; use the documented prepared-build option only with immutable, verified build artifacts. PR or independently collected evidence cannot authorize a release. Native Chrome, screen-reader and signed-in checks stay pending until performed.
+Run focused existing checks during implementation. `npm run test:ci` is the deterministic PR gate. `npm run test:full` is full certification, required before packaging. Both build once; use the documented prepared-build option only with immutable, verified build artifacts. PR or independently collected evidence cannot authorize a release. Native browser permission, screen-reader and signed-in checks stay pending until performed.
 
 See [testing and CI](docs/development/testing/README.md), [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Keep documentation links and website article aliases updated when moving an owner. Do not publish, deploy or overwrite an existing archive without explicit authorization.
+
+Browser APIs belong behind the typed WebExtensions boundary and platform adapters. Keep one shared engine, worker settings and safety budgets across targets. Never replace native document identity with a URL or synthetic identity, or use Chromium evidence to certify Firefox artifacts.

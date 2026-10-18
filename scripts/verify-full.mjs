@@ -2,7 +2,7 @@ import { verifyBuildManifest } from "./build-manifest.mjs";
 import { createHash } from "node:crypto";
 import { artifactFiles } from "./artifact-files.mjs";
 import { readdir, readFile } from "node:fs/promises";
-import { requireFullEvidence } from "./evidence.mjs";
+import { requireFullEvidence, digest } from "./evidence.mjs";
 import assert from "node:assert/strict";
 export async function verifyFull() {
   await verifyBuildManifest();
@@ -25,6 +25,17 @@ export async function verifyFull() {
   const read = async (path) => JSON.parse(await readFile(path, "utf8"));
   const acceptance = await read("output/acceptance/results.json");
   const identity = requireFullEvidence(acceptance, files);
+  const buildTargets = {
+    chromium: digest(files),
+    firefox: digest(await artifactFiles("dist/extension-firefox")),
+  };
+  const targetMatch = (report) =>
+    assert.deepEqual(
+      report.buildTargets,
+      buildTargets,
+      "Evidence must match both target builds",
+    );
+  targetMatch(acceptance);
   const reports = [
     "output/qa/unit.json",
     "output/qa/ui-build.json",
@@ -47,6 +58,7 @@ export async function verifyFull() {
   for (const path of reports) {
     const report = await read(path);
     requireFullEvidence(report, files, identity);
+    targetMatch(report);
     if (report.apiArtifactFiles)
       assert.deepEqual(report.apiArtifactFiles, api, path + " API bytes");
     if (report.website) {
@@ -69,9 +81,79 @@ export async function verifyFull() {
       );
     }
   }
+  const paired = await read("output/qa/browser-performance.json");
+  requireFullEvidence(paired, files, identity);
+  targetMatch(paired);
+  const measurements = paired.cases?.flatMap(
+    (item) => item.pairedPerformance?.measurements || [],
+  );
+  assert.deepEqual(
+    measurements?.map((item) => item.target).sort(),
+    ["chromium", "firefox"],
+    "Both browser performance measurements are required",
+  );
+  for (const item of measurements) {
+    assert(
+      item.version &&
+        Number.parseInt(item.version) >=
+          (item.target === "firefox" ? 153 : 140),
+      "Missing supported browser version in paired performance",
+    );
+    assert(item.planning.warmP95Ms < 750);
+    assert(item.ocr.warmP95Ms < 2000);
+    assert(item.stopMs < 1000);
+  }
+  const branded = await read("output/qa/branded-build.json");
+  requireFullEvidence(branded, files, identity);
+  targetMatch(branded);
+  for (const name of ["chrome", "edge", "brave"])
+    assert(
+      branded.browsers?.some(
+        (browser) => browser.name === name && browser.version,
+      ),
+      "Missing branded runtime evidence: " + name,
+    );
+  const firefoxFiles = await artifactFiles("dist/extension-firefox");
+  const firefox = await read("output/qa/firefox-build.json");
+  requireFullEvidence(firefox, firefoxFiles, identity, "firefox");
+  targetMatch(firefox);
+  assert(
+    firefox.cases?.some((item) => item.name.includes("event-page restart")),
+    "Firefox event-page/settings boundary coverage is required",
+  );
+  assert.deepEqual(
+    firefox.projects,
+    ["firefox-extension"],
+    "Firefox extension conformance is required",
+  );
+  assert(
+    firefox.cases?.some(
+      (item) => item.surfaces?.nativeSidebar && item.surfaces?.minimizedArrival,
+    ),
+    "Firefox native surfaces are required",
+  );
+  assert(
+    branded.cases?.every(
+      (item) => item.surfaces?.nativeSidebar && item.surfaces?.minimizedArrival,
+    ),
+    "Branded native surfaces are required",
+  );
+  const firefoxAcceptance = await read(
+    "output/acceptance/results-firefox.json",
+  );
+  requireFullEvidence(firefoxAcceptance, firefoxFiles, identity, "firefox");
+  targetMatch(firefoxAcceptance);
+  assert.deepEqual(
+    firefoxAcceptance.projects?.sort(),
+    ["acceptance-firefox-desktop", "acceptance-firefox-narrow"],
+    "Complete Firefox acceptance is required",
+  );
   for (const [path, names] of [
     ["output/acceptance/e2e-regressions.json", ["core-desktop", "narrow"]],
-    ["output/qa/ui-build.json", ["ui-extension", "ui-website"]],
+    [
+      "output/qa/ui-build.json",
+      ["ui-extension", "ui-website", "ui-website-firefox"],
+    ],
     [
       "output/acceptance/live-regressions.json",
       ["live-desktop", "live-narrow"],
@@ -89,6 +171,21 @@ export async function verifyFull() {
   }
   for (const [path, directories, field] of [
     ["output/qa/unit.json", ["tests/unit"], "suites"],
+    [
+      "output/qa/firefox-build.json",
+      ["tests/browser/extension/firefox"],
+      "files",
+    ],
+    [
+      "output/qa/branded-build.json",
+      ["tests/browser/extension/branded"],
+      "files",
+    ],
+    [
+      "output/qa/browser-performance.json",
+      ["tests/browser/extension/performance"],
+      "files",
+    ],
     ["output/nlp/results.json", ["tests/integration/nlp"], "suites"],
     [
       "output/multi-app/runtime.json",

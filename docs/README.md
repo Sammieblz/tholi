@@ -4,7 +4,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 
 ## Using Tholi
 
-- [Chrome setup, permissions and native verification](guides/getting-started.md)
+- [Browser setup, permissions and native verification](guides/getting-started.md)
 - [Guide, Conversation, widget and local website](guides/using-tholi.md)
 - [Continuous journeys and return routing](guides/journeys.md)
 - [Session lifecycle](architecture/sessions.md)
@@ -54,3 +54,6 @@ The authored demo route engine remains separate because it supplies deterministi
 - [Cleanup measurements](releases/v0.10.1/repository-cleanup.md)
 
 Release records are grouped by version under `releases/vVERSION`. Unversioned October 2026 history stays under `releases/records`; it makes no current guarantee.
+
+- [Browser adapters and target builds](architecture/browser-platforms.md)
+- [Chromium and Firefox implementation evidence](releases/v0.10.1/browser-support.md)

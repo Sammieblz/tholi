@@ -1,6 +1,6 @@
 # Testing and CI
 
-Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium`.
+Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |
 | ------------------------------------------------ | -------------------------------------------- |
@@ -34,3 +34,13 @@ Use `THOLI_UI_PORT=5188` to avoid another local preview. `THOLI_BUILD_PREPARED=1
 See [the coverage ledger](../../releases/v0.10.1/coverage-ledger.md) for every merged/removed owner and preserved assertions, and [the cleanup report](../../releases/v0.10.1/repository-cleanup.md) for before/after evidence. The target is at most ten minutes on a warm hosted PR run, excluding queues. Local measurements do not establish hosted runtime; that remains pending until the revised workflow executes.
 
 Retain permanent tests for distinct contracts or regressions. Search existing ownership first, improve it, remove temporary probes, and never remove a unique assertion to reach a test-count quota.
+
+## Browser targets
+
+The normal build creates both targets. `node scripts/test.mjs firefox` uses Selenium/geckodriver to execute installed Firefox. Resolution checks Windows App Paths, including Microsoft Store registration; `THOLI_FIREFOX_BINARY` selects an isolated official build if needed. Playwright Firefox projects test the website. Branded checks use installed Chrome/Edge and pinned official Brave portable (`npm run fetch:browser-tools`, or `THOLI_BRAVE_BINARY`). Disposable profiles never alter a user profile.
+
+Full validation includes paired `browser-performance` measurements on the same hardware, with unchanged 750 ms warm planning, 2000 ms warm OCR and 1000 ms Stop limits. Cold timings and busy-page frames are reported without promising identical execution times. Both target digests, browser versions and one validation identity are required. Frozen acceptance IDs use shared contracts and independent oracles; pure engine/model tests run once.
+
+Full acceptance has separate `acceptance-chromium` and `acceptance-firefox` owners, each covering both declared viewports and all frozen IDs. Nightly CI runs them in separate jobs and merges only matching run/build evidence. Locally, `node scripts/test.mjs full --group acceptance-firefox` runs that complete owner; the Chromium equivalent uses `acceptance-chromium`. The existing `test:acceptance` alias still runs both targets as a focused validation. Background memory assertions wait for durable state without adding persistence latency to navigation or Stop. Browser teardown has a separate thirty-second bound, and native Firefox timeouts clean up only identity-checked disposable profiles.
+
+Gecko cannot intercept privileged extension contexts through BiDi. Deterministic website interception rejects public HTTP requests; packaged extension CSP/assets and private-settings boundaries are checked separately. Native permission prompts, screen-reader speech and signed-in workflows remain explicit manual checks.

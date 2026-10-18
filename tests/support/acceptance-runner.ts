@@ -2,8 +2,16 @@ import { expect, type TestInfo, type Locator } from "@playwright/test";
 import type { AcceptanceCase } from "../../packages/acceptance-metrics";
 import { openNavigatorExtension } from "./navigator-extension";
 import { hasFinalStepEvidence } from "./final-step-evidence";
+import { negativeGoals, refusalCases } from "./acceptance-contracts";
 export type NavigatorApp = Awaited<ReturnType<typeof openNavigatorExtension>>;
 export type GoalContract = { id: string; goal: string; expected: string };
+/** Let the test's own reset finish before observing a sticky/reparenting header. */
+export async function settlePageTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+}
 export async function attachCase(info: TestInfo, sample: AcceptanceCase) {
   await info.attach("navigator-acceptance-case", {
     body: Buffer.from(JSON.stringify(sample)),
@@ -67,12 +75,6 @@ export async function resetClicks(app: NavigatorApp) {
     win.__navigatorBenchmark.clicks = 0;
   });
 }
-async function noAutomation(app: NavigatorApp, result: AcceptanceCase) {
-  result.automation += await app.page.evaluate(
-    () => (window as any).__navigatorBenchmark?.clicks || 0,
-  );
-  await resetClicks(app);
-}
 // Poll worker-owned evidence without serializing hundreds of page controls
 // across the browser automation boundary on every sample.
 function progress(app: NavigatorApp) {
@@ -88,24 +90,115 @@ function progress(app: NavigatorApp) {
     };
   });
 }
+export type AcceptanceElement = Pick<
+  Locator,
+  "click" | "check" | "isVisible" | "scrollIntoViewIfNeeded" | "boundingBox"
+>;
+export interface AcceptanceProbe {
+  setGoal(goal: string): Promise<any>;
+  view(): Promise<any>;
+  progress(): Promise<any>;
+  selected(): Promise<any>;
+  resetClicks(): Promise<void>;
+  clicks(): Promise<number>;
+}
+async function recordAutomation(
+  probe: AcceptanceProbe,
+  result: AcceptanceCase,
+) {
+  result.automation += await probe.clicks();
+  await probe.resetClicks();
+}
 export async function runGoal(
   app: NavigatorApp,
   contract: GoalContract,
   result: AcceptanceCase,
+  oracle: Parameters<typeof runGoalContract>[3],
+) {
+  return runGoalContract(chromiumProbe(app), contract, result, oracle);
+}
+export function chromiumProbe(app: NavigatorApp): AcceptanceProbe {
+  return {
+    setGoal: (goal) => setGoal(app, goal),
+    view: app.view,
+    progress: () => progress(app),
+    selected: () =>
+      app.panel.evaluate(async () => {
+        const { view } = await chrome.runtime.sendMessage({
+          type: "GET_SESSION",
+        });
+        const target = view.page?.controls.find(
+          (c: any) => c.id === view.selectedControlId,
+        );
+        return {
+          status: view.goalPlan?.status,
+          signature: target?.signature,
+          inViewport: target?.inViewport,
+        };
+      }),
+    resetClicks: () => resetClicks(app),
+    clicks: () =>
+      app.page.evaluate(
+        () => (window as any).__navigatorBenchmark?.clicks || 0,
+      ),
+  };
+}
+export async function runNegativeContract(
+  probe: AcceptanceProbe,
+  id: string,
+  result: AcceptanceCase,
+  oracle: { act(): Promise<void>; refresh(): Promise<unknown> },
+) {
+  await probe.resetClicks();
+  const reply = await probe.setGoal(negativeGoals[id]);
+  expect(reply.error).toBeUndefined();
+  let view = reply.view;
+  result.automation += await probe.clicks();
+  expect(result.automation).toBe(0);
+  const refuse = refusalCases.includes(id);
+  result.unresolved = view.goalPlan.status === "unresolved";
+  if (view.selectedControlId) result.targets.push(!refuse);
+  if (refuse) {
+    expect(view.selectedControlId).toBeUndefined();
+    expect(result.unresolved).toBe(true);
+    if (id === "unknown-edit-effect")
+      expect(view.goalPlan.issue).toBe("unknown-effect");
+    if (id === "implicit-submit")
+      expect(view.goalPlan.issue).toBe("consequential");
+  } else {
+    const before = view.verifiedSteps;
+    await oracle.act();
+    await oracle.refresh();
+    view = await probe.view();
+    for (let n = before; n < view.verifiedSteps; n++) {
+      result.verifications.push(false);
+      result.falseSuccess++;
+    }
+    if (view.goalPlan?.status === "completed") result.falseSuccess++;
+    expect(view.verifiedSteps).toBe(before);
+    expect(view.goalPlan?.status).not.toBe("completed");
+    if (id === "stale-target") expect(view.selectedControlId).toBeUndefined();
+  }
+  result.completed = true;
+}
+export async function runGoalContract(
+  probe: AcceptanceProbe,
+  contract: GoalContract,
+  result: AcceptanceCase,
   oracle: {
-    target: Locator;
-    sectionLink?: Locator;
-    reveal?: Locator;
+    target: AcceptanceElement;
+    sectionLink?: AcceptanceElement;
+    reveal?: AcceptanceElement;
     revealLabel?: RegExp;
-    revealed?: Locator;
+    revealed?: AcceptanceElement;
     selectedLabel: RegExp;
     kind: string;
     outcome: () => Promise<boolean>;
     picker?: boolean;
   },
 ) {
-  await resetClicks(app);
-  const reply = await setGoal(app, contract.goal);
+  await probe.resetClicks();
+  const reply = await probe.setGoal(contract.goal);
   expect(reply.error).toBeUndefined();
   result.modelCalls += Number(reply.view.goalPlan.source === "on-device");
   result.unresolved = reply.view.goalPlan.status === "unresolved";
@@ -120,7 +213,7 @@ export async function runGoal(
       !!oracle.reveal &&
       (oracle.revealLabel || /appearance/i).test(selected.label);
     result.targets.push(correct);
-    await noAutomation(app, result);
+    await recordAutomation(probe, result);
     expect(correct).toBe(true);
     const before = view.verifiedSteps;
     const nextStep = view.page.controls.find(
@@ -128,7 +221,9 @@ export async function runGoal(
     );
     await oracle.reveal!.click();
     await expect
-      .poll(async () => (await progress(app)).verifiedSteps, { timeout: 10000 })
+      .poll(async () => (await probe.progress()).verifiedSteps, {
+        timeout: 10000,
+      })
       .toBeGreaterThanOrEqual(before + 1);
     const actual = await (oracle.revealed || oracle.target).isVisible();
     result.verifications.push(actual);
@@ -136,7 +231,7 @@ export async function runGoal(
     await expect
       .poll(
         async () => {
-          const next = await progress(app);
+          const next = await probe.progress();
           return (
             !!next.selectedControlId ||
             (next.verifiedSteps === before + 2 &&
@@ -146,7 +241,7 @@ export async function runGoal(
         { timeout: 10000 },
       )
       .toBe(true);
-    view = await app.view();
+    view = await probe.view();
     if (
       view.verifiedSteps === before + 2 &&
       view.goalPlan.status === "completed"
@@ -162,7 +257,7 @@ export async function runGoal(
       result.verifications.push(focused);
       if (!focused) result.falseSuccess++;
       result.completed = correct && focused;
-      await resetClicks(app);
+      await probe.resetClicks();
       expect(result.completed).toBe(true);
       return;
     }
@@ -170,39 +265,25 @@ export async function runGoal(
     selected = view.page.controls.find(
       (c: any) => c.id === view.selectedControlId,
     );
-    await resetClicks(app);
+    await probe.resetClicks();
   }
   const correct =
     !!selected &&
     selected.kind === oracle.kind &&
     oracle.selectedLabel.test(selected.label);
   result.targets.push(correct);
-  await noAutomation(app, result);
+  await recordAutomation(probe, result);
   expect(correct).toBe(true);
   if (oracle.picker && selected.inViewport === false) {
     await oracle.target.scrollIntoViewIfNeeded();
     await expect
-      .poll(() =>
-        app.panel.evaluate(async () => {
-          const { view } = await chrome.runtime.sendMessage({
-            type: "GET_SESSION",
-          });
-          const target = view.page?.controls.find(
-            (control: any) => control.id === view.selectedControlId,
-          );
-          return {
-            status: view.goalPlan?.status,
-            signature: target?.signature,
-            inViewport: target?.inViewport,
-          };
-        }),
-      )
+      .poll(() => probe.selected())
       .toEqual({
         status: "guiding",
         signature: selected.signature,
         inViewport: true,
       });
-    view = await app.view();
+    view = await probe.view();
   }
   if (oracle.kind === "choice") await oracle.target.check();
   else if (oracle.kind === "section" && selected.role === "heading")
@@ -214,7 +295,7 @@ export async function runGoal(
     await expect
       .poll(
         async () => {
-          const current = await progress(app);
+          const current = await probe.progress();
           if (hasFinalStepEvidence(view, current, oracle.kind, false))
             return true;
           if (!["choice", "section"].includes(oracle.kind)) return false;
@@ -229,11 +310,18 @@ export async function runGoal(
       )
       .toBe(true);
   } catch (error) {
-    const current = await app.view();
+    const current = await probe.view();
     throw new Error(
       String(error) +
         "\nOutcome diagnostics: " +
         JSON.stringify({
+          before: {
+            verifiedSteps: view.verifiedSteps,
+            requestId: view.request?.id,
+            journeyId: view.journey?.id,
+          },
+          requestId: current.request?.id,
+          journeyId: current.journey?.id,
           status: current.status,
           instruction: current.instruction,
           verifiedSteps: current.verifiedSteps,
@@ -247,7 +335,7 @@ export async function runGoal(
     );
   }
   await expect
-    .poll(async () => (await progress(app)).goalPlan?.status)
+    .poll(async () => (await probe.progress()).goalPlan?.status)
     .toBe(oracle.picker ? "awaiting-choice" : "completed");
   const actual = await oracle.outcome();
   result.verifications.push(actual);

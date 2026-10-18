@@ -1,3 +1,10 @@
+import { protectLocalSettings } from "../platform/private-settings";
+import {
+  openNativeSidebar,
+  nativePanelEvents,
+  hasNativeSidebar,
+} from "../platform/sidebar";
+import { api, type Runtime } from "../platform/api";
 import { z } from "zod";
 import type { PinnedSession } from "../../../../packages/route-registry/session";
 import { present } from "../../../../packages/ui/presentation";
@@ -25,11 +32,23 @@ const boundsSchema = z
     y: z.number().finite().min(0).max(16384),
   })
   .strict();
-void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
-let surface = "sidebar";
-void chrome.storage.local.get("tholiPreferences").then((d) => {
-  surface = d.tholiPreferences?.surface || "sidebar";
+void protectLocalSettings().catch(() => {});
+let surface = hasNativeSidebar() ? "sidebar" : "widget";
+void api.storage.local.get("tholiPreferences").then((d) => {
+  surface = hasNativeSidebar()
+    ? d.tholiPreferences?.surface || "sidebar"
+    : "widget";
 });
+export async function rememberSurface(next: "sidebar" | "widget") {
+  surface = next;
+  const { tholiPreferences } = await api.storage.local.get("tholiPreferences");
+  const preferences = prefsSchema.safeParse(tholiPreferences);
+  const current = preferences.success ? preferences.data : defaultPrefs;
+  if (current.surface !== next)
+    await api.storage.local.set({
+      tholiPreferences: { ...current, surface: next },
+    });
+}
 export function preferredSurface(session?: PinnedSession) {
   return session && presentation?.sessionId === session.sessionId
     ? presentation.surface
@@ -39,7 +58,7 @@ let presentation: SurfacePresentation | undefined;
 let sessionProvider: (() => PinnedSession | undefined) | undefined;
 const currentSession = (session: PinnedSession) =>
   !sessionProvider || sessionProvider() === session;
-const presentationReady = chrome.storage.session
+const presentationReady = api.storage.session
   .get("tholiSurfacePresentation")
   .then((data) => {
     const parsed = surfacePresentationSchema.safeParse(
@@ -54,13 +73,15 @@ export async function getSurfacePresentation(session?: PinnedSession) {
     throw Error("The task changed. Use the current Tholi interface.");
   if (presentation?.sessionId !== session.sessionId) {
     const { tholiPreferences } =
-      await chrome.storage.local.get("tholiPreferences");
+      await api.storage.local.get("tholiPreferences");
     if (!currentSession(session)) throw Error("The task changed.");
     presentation = initialPresentation(
       session.sessionId,
-      tholiPreferences?.surface === "widget" ? "widget" : "sidebar",
+      !hasNativeSidebar() || tholiPreferences?.surface === "widget"
+        ? "widget"
+        : "sidebar",
     );
-    await chrome.storage.session.set({
+    await api.storage.session.set({
       tholiSurfacePresentation: presentation,
     });
   }
@@ -74,7 +95,7 @@ export async function presentationVisible(session?: PinnedSession) {
 }
 export async function clearSurfacePresentation(session?: PinnedSession) {
   if (session) {
-    await chrome.tabs
+    await api.tabs
       .sendMessage(
         session.tabId,
         {
@@ -88,7 +109,7 @@ export async function clearSurfacePresentation(session?: PinnedSession) {
     mounted.delete(session.tabId);
   }
   presentation = undefined;
-  await chrome.storage.session.remove("tholiSurfacePresentation");
+  await api.storage.session.remove("tholiSurfacePresentation");
 }
 async function changePresentation(
   session: PinnedSession,
@@ -97,11 +118,13 @@ async function changePresentation(
   const current = (await getSurfacePresentation(session))!;
   if (!currentSession(session)) throw Error("The task changed.");
   const next = (presentation = updatePresentation(current, change));
-  await chrome.storage.session.set({ tholiSurfacePresentation: next });
+  await api.storage.session.set({ tholiSurfacePresentation: next });
+  if (!currentSession(session) || presentation !== next) return presentation;
+  if (change.surface) await rememberSurface(change.surface);
   if (!currentSession(session) || presentation !== next) return presentation;
   const visible = next.visibility === "expanded";
   await Promise.allSettled([
-    chrome.tabs.sendMessage(
+    api.tabs.sendMessage(
       session.tabId,
       {
         type: "PRESENTATION_CHANGED",
@@ -127,15 +150,15 @@ const grants = new Map<
     widgetDocument?: string;
   }
 >();
-const ports = new Set<chrome.runtime.Port>();
-export function isPanel(sender: chrome.runtime.MessageSender) {
+const ports = new Set<Runtime.Port>();
+export function isPanel(sender: Runtime.MessageSender) {
   return (
-    sender.id === chrome.runtime.id &&
-    sender.url === chrome.runtime.getURL("sidepanel.html")
+    sender.id === api.runtime.id &&
+    sender.url === api.runtime.getURL("sidepanel.html")
   );
 }
 export function isWidget(
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   const g =
@@ -145,14 +168,14 @@ export function isWidget(
   return (
     !!g &&
     g.documentId === session?.documentId &&
-    sender.id === chrome.runtime.id &&
+    sender.id === api.runtime.id &&
     sender.frameId === g.frameId &&
     sender.documentId === g.widgetDocument &&
-    sender.url === chrome.runtime.getURL("widget.html") + "?grant=" + g.nonce
+    sender.url === api.runtime.getURL("widget.html") + "?grant=" + g.nonce
   );
 }
 export function trustedUi(
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   return isPanel(sender) || isWidget(sender, session);
@@ -166,29 +189,49 @@ export function invalidateUi() {
     }
   }
 }
-chrome.runtime.onConnect.addListener((port) => {
+api.runtime.onConnect.addListener((port) => {
   const sender = port.sender || {},
     g = sender.tab ? grants.get(sender.tab.id!) : undefined;
   const widget =
     port.name === "tholi-widget" &&
     g &&
-    sender.id === chrome.runtime.id &&
-    sender.url === chrome.runtime.getURL("widget.html") + "?grant=" + g.nonce &&
+    sender.id === api.runtime.id &&
+    sender.url === api.runtime.getURL("widget.html") + "?grant=" + g.nonce &&
     sender.frameId === g.frameId &&
     sender.documentId === g.widgetDocument;
   if (!widget && (port.name !== "tholi-panel" || !isPanel(sender))) return;
   ports.add(port);
   port.onDisconnect.addListener(() => ports.delete(port));
 });
+const mounting = new Map<
+  number,
+  { documentId: string; promise: Promise<void> }
+>();
 export async function mountWidget(session?: PinnedSession, force = false) {
+  if (!session?.documentId) return;
+  let previous;
+  while ((previous = mounting.get(session.tabId))) {
+    await previous.promise;
+    if (!force && previous.documentId === session.documentId) return;
+  }
+  const promise = mountWidgetOnce(session, force);
+  const entry = { documentId: session.documentId, promise };
+  mounting.set(session.tabId, entry);
+  try {
+    await promise;
+  } finally {
+    if (mounting.get(session.tabId) === entry) mounting.delete(session.tabId);
+  }
+}
+async function mountWidgetOnce(session?: PinnedSession, force = false) {
   if (!session?.documentId) return;
   // Session replacement/reset is an expected race for fire-and-forget saves.
   // Explicit UI commands still receive stale-session errors from their guards.
   const state = await getSurfacePresentation(session).catch(() => undefined);
   if (!state) return;
   const { tholiWidgetBounds } =
-    await chrome.storage.local.get("tholiWidgetBounds");
-  const current = await chrome.webNavigation
+    await api.storage.local.get("tholiWidgetBounds");
+  const current = await api.webNavigation
     .getFrame({ tabId: session.tabId, frameId: 0 })
     .catch(() => undefined);
   if (
@@ -203,7 +246,7 @@ export async function mountWidget(session?: PinnedSession, force = false) {
     (state.visibility === "expanded" && state.surface === "sidebar")
   ) {
     if (mounted.has(session.tabId) || state.visibility === "hidden")
-      await chrome.tabs
+      await api.tabs
         .sendMessage(
           session.tabId,
           {
@@ -225,7 +268,7 @@ export async function mountWidget(session?: PinnedSession, force = false) {
     old.visibility === state.visibility &&
     !force
   ) {
-    await chrome.tabs
+    await api.tabs
       .sendMessage(
         session.tabId,
         {
@@ -244,12 +287,12 @@ export async function mountWidget(session?: PinnedSession, force = false) {
   grants.delete(session.tabId);
   if (state.visibility === "expanded") grants.set(session.tabId, grant);
   try {
-    await chrome.tabs.sendMessage(
+    await api.tabs.sendMessage(
       session.tabId,
       {
         type: "MOUNT_WIDGET",
         sessionId: session.sessionId,
-        url: chrome.runtime.getURL("widget.html") + "?grant=" + grant.nonce,
+        url: api.runtime.getURL("widget.html") + "?grant=" + grant.nonce,
         visibility: state.visibility,
         phase,
         marker: view.marker,
@@ -277,13 +320,10 @@ const shellCommands = new Set([
   "UI_DOCK",
 ]);
 const pendingDockWindows = new Set<number>();
-function currentShell(
-  sender: chrome.runtime.MessageSender,
-  session?: PinnedSession,
-) {
+function currentShell(sender: Runtime.MessageSender, session?: PinnedSession) {
   return (
     !!session?.documentId &&
-    sender.id === chrome.runtime.id &&
+    sender.id === api.runtime.id &&
     sender.tab?.id === session.tabId &&
     sender.frameId === 0 &&
     sender.documentId === session.documentId
@@ -292,7 +332,7 @@ function currentShell(
 // Native open must run directly in the user gesture's message turn. Never
 // queue it behind planning, storage reads, or a document handshake.
 export async function dockSidebar(
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   if (
@@ -309,8 +349,8 @@ export async function dockSidebar(
   // Start the privileged API call before the first await.
   pendingDockWindows.add(windowId);
   try {
-    await chrome.sidePanel.open({ windowId });
-    const frame = await chrome.webNavigation
+    await openNativeSidebar(windowId);
+    const frame = await api.webNavigation
       .getFrame({ tabId, frameId: 0 })
       .catch(() => undefined);
     if (
@@ -343,7 +383,7 @@ export async function restoreSurface(
 }
 export async function uiMessage(
   raw: any,
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   if (
@@ -366,14 +406,14 @@ export async function uiMessage(
   if (raw.type === "UI_WIDGET_BOUNDS") {
     if (
       !session ||
-      sender.id !== chrome.runtime.id ||
+      sender.id !== api.runtime.id ||
       sender.tab?.id !== session.tabId ||
       sender.frameId !== 0 ||
       sender.documentId !== session.documentId ||
       raw.sessionId !== session.sessionId
     )
       throw Error("Widget position requires the current authorized document.");
-    await chrome.storage.local.set({
+    await api.storage.local.set({
       tholiWidgetBounds: boundsSchema.parse(raw.bounds),
     });
     return { ok: true };
@@ -385,24 +425,26 @@ export async function uiMessage(
         : undefined;
     if (
       !g ||
-      sender.id !== chrome.runtime.id ||
+      sender.id !== api.runtime.id ||
       g.documentId !== session?.documentId ||
-      sender.url !==
-        chrome.runtime.getURL("widget.html") + "?grant=" + g.nonce ||
+      sender.url !== api.runtime.getURL("widget.html") + "?grant=" + g.nonce ||
       !sender.frameId
     )
       throw Error("Widget requires a fresh authorized document.");
     // Chrome omits extension-origin subframes from webNavigation's website
     // inventory. Use its unforgeable runtime frame/document identity and the
     // one-use capability mounted inside the top document's closed shadow root.
-    const parent = await chrome.webNavigation.getFrame({
+    const parent = await api.webNavigation.getFrame({
       tabId: session!.tabId,
       frameId: 0,
     });
     if (
       parent?.documentId !== g.documentId ||
       !sender.documentId ||
-      sender.documentLifecycle !== "active"
+      ((sender as Runtime.MessageSender & { documentLifecycle?: string })
+        .documentLifecycle !== undefined &&
+        (sender as Runtime.MessageSender & { documentLifecycle?: string })
+          .documentLifecycle !== "active")
     )
       throw Error("Widget frame does not belong to this journey.");
     if (g.frameId !== undefined && g.frameId !== sender.frameId)
@@ -430,7 +472,7 @@ export async function uiMessage(
   }
   if (raw.type === "UI_WIDGET_MOVE") {
     if (session)
-      await chrome.tabs.sendMessage(
+      await api.tabs.sendMessage(
         session.tabId,
         { type: "MOVE_WIDGET", sessionId: session.sessionId },
         { frameId: 0 },
@@ -440,21 +482,21 @@ export async function uiMessage(
   if (raw.type === "UI_WIDGET_LAYOUT") {
     const action = z.enum(widgetLayoutActions).parse(raw.action);
     if (!session) throw Error("No current journey.");
-    const result = await chrome.tabs.sendMessage(
+    const result = await api.tabs.sendMessage(
       session.tabId,
       { type: "LAYOUT_WIDGET", sessionId: session.sessionId, action },
       { frameId: 0 },
     );
     if (boundsSchema.safeParse(result?.bounds).success)
-      await chrome.storage.local.set({ tholiWidgetBounds: result.bounds });
+      await api.storage.local.set({ tholiWidgetBounds: result.bounds });
     return { ok: true };
   }
   if (raw.type === "UI_WIDGET_STATUS")
     return { ready: !!session && !!grants.get(session.tabId)?.widgetDocument };
   if (raw.type === "UI_GET") {
     const [{ tholiPreferences }, data] = await Promise.all([
-      chrome.storage.local.get("tholiPreferences"),
-      chrome.storage.session.get(["tholiConversation", "tholiDraft"]),
+      api.storage.local.get("tholiPreferences"),
+      api.storage.session.get(["tholiConversation", "tholiDraft"]),
     ]);
     const current = await getSurfacePresentation(session);
     const preferences = prefsSchema.safeParse(tholiPreferences).success
@@ -473,11 +515,11 @@ export async function uiMessage(
     if (raw.preferences) {
       const p = prefsSchema.parse(raw.preferences);
       surface = p.surface;
-      await chrome.storage.local.set({ tholiPreferences: p });
+      await api.storage.local.set({ tholiPreferences: p });
       if (session) await restoreSurface(session, p.surface);
     }
     if (typeof raw.draft === "string")
-      await chrome.storage.session.set({
+      await api.storage.session.set({
         tholiDraft: raw.draft.slice(0, 1000),
       });
     invalidateUi();
@@ -493,10 +535,10 @@ export async function uiMessage(
       })
       .strict()
       .parse(raw.message);
-    const data = await chrome.storage.session.get("tholiConversation"),
+    const data = await api.storage.session.get("tholiConversation"),
       messages = data.tholiConversation || [];
     if (!messages.some((x: any) => x.id === m.id))
-      await chrome.storage.session.set({
+      await api.storage.session.set({
         tholiConversation: [...messages, m].slice(-80),
       });
     invalidateUi();
@@ -504,7 +546,7 @@ export async function uiMessage(
   }
   if (raw.type === "UI_WIDGET_EXPAND") {
     if (session) {
-      const expanded = await chrome.tabs
+      const expanded = await api.tabs
         .sendMessage(
           session.tabId,
           {
@@ -515,7 +557,7 @@ export async function uiMessage(
         )
         .catch(() => undefined);
       if (boundsSchema.safeParse(expanded?.bounds).success)
-        await chrome.storage.local.set({ tholiWidgetBounds: expanded.bounds });
+        await api.storage.local.set({ tholiWidgetBounds: expanded.bounds });
     }
     return { ok: true };
   }
@@ -530,16 +572,18 @@ export function watchNativePanels(
   currentSession: () => PinnedSession | undefined,
 ) {
   sessionProvider = currentSession;
-  const api = chrome.sidePanel as typeof chrome.sidePanel & {
-    onClosed?: PanelLifecycleEvent;
-    onOpened?: PanelLifecycleEvent;
-  };
-  api.onOpened?.addListener((info) => {
+  const panelEvents = nativePanelEvents() as
+    | (ReturnType<typeof nativePanelEvents> & {
+        onClosed?: PanelLifecycleEvent;
+        onOpened?: PanelLifecycleEvent;
+      })
+    | undefined;
+  panelEvents?.onOpened?.addListener((info) => {
     if (pendingDockWindows.has(info.windowId)) return;
     const session = currentSession();
     if (!session) return;
     void (async () => {
-      const tab = await chrome.tabs.get(session.tabId).catch(() => undefined);
+      const tab = await api.tabs.get(session.tabId).catch(() => undefined);
       if (
         currentSession() !== session ||
         tab?.windowId !== info.windowId ||
@@ -549,11 +593,11 @@ export function watchNativePanels(
       await restoreSurface(session, "sidebar");
     })().catch(() => {});
   });
-  api.onClosed?.addListener((info) => {
+  panelEvents?.onClosed?.addListener((info) => {
     const session = currentSession();
     if (!session) return;
     void (async () => {
-      const tab = await chrome.tabs.get(session.tabId).catch(() => undefined);
+      const tab = await api.tabs.get(session.tabId).catch(() => undefined);
       const state = await getSurfacePresentation(session);
       if (
         currentSession() !== session ||

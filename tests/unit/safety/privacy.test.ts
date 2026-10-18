@@ -65,3 +65,28 @@ it("observes checkbox-button metadata without reading its value or sensitive var
   expect(new BrowserAdapter().snapshot().landmarks).toHaveLength(0);
   vi.restoreAllMocks();
 });
+
+it("Firefox stores private backend credentials outside content-accessible local storage", async () => {
+  const { IDBFactory } = await import("fake-indexeddb");
+  const localSet = vi.fn();
+  vi.stubGlobal("indexedDB", new IDBFactory());
+  vi.stubGlobal("browser", {
+    runtime: { getURL: () => "moz-extension://test/" },
+    storage: { local: { set: localSet, get: async () => ({}) } },
+  });
+  try {
+    const settings =
+      await import("../../../apps/extension/src/platform/private-settings");
+    const backend = {
+      url: "http://127.0.0.1:8787",
+      token: "SYNTHETIC_PRIVATE_TOKEN",
+      enabled: false,
+    };
+    await settings.setPrivateSetting("backend", backend);
+    expect(await settings.getPrivateSetting("backend")).toEqual(backend);
+    expect(localSet).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  }
+});

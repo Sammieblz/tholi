@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import type { PinnedSession } from "../../../../packages/route-registry/session";
 import {
   saveTask,
@@ -126,7 +127,7 @@ export function createMemoryService(context: Context) {
         // Late persistence must not replace a newer task's saved-route context.
         if (context.session.view.journey?.id !== journey?.id)
           savedTask = undefined;
-        await chrome.tabs
+        await api.tabs
           .sendMessage(context.session.tabId, {
             type: "UPDATE_MEMORY",
             sessionId: context.session.sessionId,

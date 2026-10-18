@@ -1,3 +1,4 @@
+import { api } from "../../platform/api";
 import { applyAppearance } from "./apply-appearance";
 /** Shares the session refresh trigger; owns no additional subscription or timer. */
 export function createAppearanceReader(current: () => boolean) {
@@ -5,7 +6,7 @@ export function createAppearanceReader(current: () => boolean) {
   return () => {
     if (reading) return;
     reading = true;
-    void chrome.runtime
+    void api.runtime
       .sendMessage({ type: "UI_APPEARANCE" })
       .then((reply) => {
         if (current() && !reply?.error)

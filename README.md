@@ -13,11 +13,11 @@
   <a href="docs/architecture/privacy.md">Privacy</a>
 </p>
 
-<p align="center"><strong>Desktop Chrome · English · Local processing · No account required</strong></p>
+<p align="center"><strong>Desktop Chromium & Firefox · English · Local processing · No account required</strong></p>
 
 ![The real Tholi widget guides a text-size change on Wikipedia, highlighting the Large control beside its instruction.](apps/public/media/screenshots/live-guidance.webp)
 
-_Actual extension capture on public [Wikipedia](https://en.wikipedia.org/wiki/Ada_Lovelace), October 15, 2026. [Capture details and provenance](docs/development/media-capture.md). This example does not establish reliability on every website._
+_Actual Chrome extension capture on public [Wikipedia](https://en.wikipedia.org/wiki/Ada_Lovelace), October 15, 2026. [Capture details and provenance](docs/development/media-capture.md). This example does not establish reliability on every website._
 
 ## A guide that stays with you
 
@@ -42,12 +42,14 @@ npm run build:extension
 
 The build fetches and verifies pinned MiniLM and English Tesseract assets. These are bundled into the extension; installed inference needs no runtime model download.
 
-1. Open `chrome://extensions` and turn on **Developer mode**.
+1. In Chrome, Edge or Brave, open `chrome://extensions`, `edge://extensions` or `brave://extensions` and turn on **Developer mode**.
 2. Choose **Load unpacked** and select `dist/extension`.
-3. Open a website, click the **Tholi** toolbar icon and allow website access if Chrome asks.
+3. Open a website, click the **Tholi** toolbar icon and allow website access if your browser asks.
 4. Enter a destination, such as **Make the text larger** on Wikipedia, then select **Guide me**.
 
-After rebuilding, reload Tholi in `chrome://extensions` and refresh the website tab. [Chrome setup and permission recovery](docs/guides/getting-started.md) covers the details.
+For **Firefox 153+**, open `about:debugging`, select **This Firefox → Load Temporary Add-on**, and choose `dist/extension-firefox/manifest.json`. This unsigned **Firefox developer preview** is removed on browser restart. Chromium requires engine version **140+**. Both targets bundle the same local model and safety checks. Other Chromium browsers are capability-compatible; [branded verification and measurements](docs/releases/v0.10.1/browser-support.md) are recorded separately.
+
+After rebuilding, reload the matching target in its extension manager and refresh the website tab. [Browser setup and permission recovery](docs/guides/getting-started.md) covers the details.
 
 ### Explore the local website
 
@@ -61,21 +63,21 @@ Open **http://127.0.0.1:5174** for the real extension recording, interactive pra
 
 ## Preview boundaries
 
-Tholi is a working preview. Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native Chrome permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/guides/getting-started.md).
+Tholi is a working preview. Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/guides/getting-started.md).
 
-The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and Chrome-model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/releases/records/2026-10-maintenance.md) must not be confused with default-engine support.
+The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and browser-provided model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/releases/records/2026-10-maintenance.md) must not be confused with default-engine support.
 
 ## Build and contribute
 
-| Work                                | Command                                   | Output                              |
-| ----------------------------------- | ----------------------------------------- | ----------------------------------- |
-| Extension                           | `npm run build:extension`                 | `dist/extension`                    |
-| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`              |
-| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                           |
-| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md) |
-| Deterministic PR validation         | `npm run test:ci`                         | Local validation                    |
+| Work                                | Command                                   | Output                                     |
+| ----------------------------------- | ----------------------------------------- | ------------------------------------------ |
+| Chromium and Firefox extensions     | `npm run build:extension`                 | `dist/extension`, `dist/extension-firefox` |
+| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`                     |
+| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                                  |
+| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md)        |
+| Deterministic PR validation         | `npm run test:ci`                         | Local validation                           |
 
-Install test Chromium once with `npx playwright install chromium`. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
+Install the test browsers once with `npx playwright install chromium firefox`. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
 
 `npm run test:ci` runs deterministic PR checks. `npm run test:full` runs complete certification before gated packaging. Existing focused aliases remain available. See [testing and CI](docs/development/testing/README.md), [coverage ledger](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Public-site tests, frozen model/OCR budgets and the complete responsive matrix run nightly, manually and before releases.
 

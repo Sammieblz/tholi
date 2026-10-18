@@ -32,6 +32,7 @@ test("download sync accepts both release names, preserves archives and rejects t
         metrics: {},
         regressions: {},
         status: "fixture",
+        ...(stem.startsWith("tholi-firefox-") ? { target: "firefox" } : {}),
       }),
     );
     return sha256;
@@ -45,6 +46,9 @@ test("download sync accepts both release names, preserves archives and rejects t
       "/downloads/internet-navigator-0.10.0.zip",
     );
 
+    expect((await manifest()).targets.firefox).toBeNull();
+    const firefox = Buffer.from("Firefox temporary fixture");
+    await archive("tholi-firefox-0.10.1", "0.10.1", firefox);
     const current = Buffer.from("Tholi packaged fixture");
     const sha256 = await archive("tholi-0.10.1", "0.10.1", current);
     // Backend and unrelated records cannot become extension downloads.
@@ -56,6 +60,14 @@ test("download sync accepts both release names, preserves archives and rejects t
       sha256,
       bytes: current.length,
     });
+    expect((await manifest()).targets.firefox).toMatchObject({
+      target: "firefox",
+      installationKind: "temporary",
+      minimumBrowserVersion: "153",
+    });
+    expect(await readFile(join(mirror, "tholi-firefox-0.10.1.zip"))).toEqual(
+      firefox,
+    );
     expect(await readFile(join(mirror, "tholi-0.10.1.zip"))).toEqual(current);
     await expect(
       access(join(mirror, "internet-navigator-0.10.0.zip")),
@@ -67,6 +79,14 @@ test("download sync accepts both release names, preserves archives and rejects t
     await writeFile(join(releases, "tholi-0.10.1.zip"), "tampered");
     expect(run).toThrow(/Packaged download checksum mismatch/);
     expect((await manifest()).sha256).toBe(sha256);
+    expect((await manifest()).targets.firefox).toMatchObject({
+      target: "firefox",
+      installationKind: "temporary",
+      minimumBrowserVersion: "153",
+    });
+    expect(await readFile(join(mirror, "tholi-firefox-0.10.1.zip"))).toEqual(
+      firefox,
+    );
     expect(await readFile(join(mirror, "tholi-0.10.1.zip"))).toEqual(current);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -79,6 +99,7 @@ test("release evidence rejects PR, partial, skipped, stale and mixed-run certifi
   const { completeCases } = await import("../../support/evidence");
   const files = { "worker.js": "verified-bytes" };
   const report = {
+    target: "chromium",
     passed: true,
     artifactFiles: files,
     validation: {
@@ -89,6 +110,17 @@ test("release evidence rejects PR, partial, skipped, stale and mixed-run certifi
     },
   };
   expect(requireFullEvidence(report, files).runId).toBe("one-run");
+  expect(() =>
+    requireFullEvidence(report, files, undefined, "firefox"),
+  ).toThrow();
+  expect(
+    requireFullEvidence(
+      { ...report, target: "firefox" },
+      files,
+      undefined,
+      "firefox",
+    ).runId,
+  ).toBe("one-run");
   for (const validation of [
     { ...report.validation, tier: "pr" },
     { ...report.validation, selection: "focused" },

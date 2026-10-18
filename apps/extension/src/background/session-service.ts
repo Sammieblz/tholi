@@ -1,3 +1,5 @@
+import { requireNavigationCapabilities } from "../platform/capabilities";
+import { api, type Tabs } from "../platform/api";
 import type { SavedTask } from "../../../../packages/page-model/index";
 import {
   contextualTask,
@@ -7,16 +9,19 @@ import { appendLedger } from "../../../../packages/navigation-core/continuity";
 import { advanceQueue } from "../../../../packages/navigation-core/queue";
 import {
   hash,
+  LIVE_ROUTE_ID,
+  LIVE_VERSION,
   supportsLiveUrl,
   type SiteMemory,
 } from "../../../../packages/page-model/index";
 import { routeRegistry } from "../../../../packages/route-registry/index";
 import {
   validPinnedView,
+  sessionLocked,
   type PinnedSession,
 } from "../../../../packages/route-registry/session";
 import { routeSupportsUrl } from "../../../../packages/safety-policy/index";
-import { cancelNlp } from "../inference/offscreen-client";
+import { cancelNlp } from "../inference/client";
 import { cancelBackendPlanning } from "../platform/backend-client";
 import {
   startFrames as observeFrames,
@@ -27,6 +32,8 @@ import { getSurfacePresentation } from "./ui-transport";
 
 interface Context {
   session: PinnedSession | undefined;
+  activeTab: () => Promise<Tabs.Tab>;
+  lastObservation: string;
   live: () => boolean;
   originOf: (url?: string) => string | undefined;
   ledgerNavigationEvent: boolean;
@@ -81,23 +88,25 @@ export function createSessionService(context: Context) {
     const uiPresentation = await getSurfacePresentation(context.session);
     if (context.live()) context.refreshMemory(context.session.origin!);
     const previousDocument = context.session.documentId;
-    const injected = await chrome.scripting.executeScript({
+    const injected = await api.scripting.executeScript({
       target: { tabId: context.session.tabId },
       files: ["content.js"],
     });
-    context.session.documentId = injected[0]?.documentId;
+    if (!injected[0]?.documentId)
+      throw Error("This browser lacks required native document identity.");
+    context.session.documentId = injected[0].documentId;
     context.session.navigationPending = false;
     if (
       context.live() &&
       previousDocument &&
       previousDocument === context.session.documentId
     ) {
-      await chrome.tabs.sendMessage(context.session.tabId, {
+      await api.tabs.sendMessage(context.session.tabId, {
         type: "CONTROL_SESSION",
         sessionId: context.session.sessionId,
         action: "RESUME",
       });
-      const reply = await chrome.tabs.sendMessage(context.session.tabId, {
+      const reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
       });
@@ -109,7 +118,7 @@ export function createSessionService(context: Context) {
       return context.session;
     }
     const navigation = context.session.pendingNavigation;
-    const tab = navigation && (await chrome.tabs.get(context.session.tabId)),
+    const tab = navigation && (await api.tabs.get(context.session.tabId)),
       url = tab?.url && new URL(tab.url);
     const verified = !!(
       navigation &&
@@ -144,7 +153,7 @@ export function createSessionService(context: Context) {
         );
     }
     context.session.pendingNavigation = undefined;
-    const reply = await chrome.tabs.sendMessage(context.session.tabId, {
+    const reply = await api.tabs.sendMessage(context.session.tabId, {
       type: "BEGIN_SESSION",
       sessionId: context.session.sessionId,
       presentationVisible: uiPresentation?.visibility !== "launcher",
@@ -177,7 +186,7 @@ export function createSessionService(context: Context) {
     });
     const freshPresentation = await getSurfacePresentation(context.session);
     if (freshPresentation !== uiPresentation)
-      await chrome.tabs
+      await api.tabs
         .sendMessage(
           context.session.tabId,
           {
@@ -227,7 +236,7 @@ export function createSessionService(context: Context) {
     context.navigationStarts.clear();
     if (!context.session) return;
     try {
-      const reply = await chrome.tabs.sendMessage(context.session.tabId, {
+      const reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "CONTROL_SESSION",
         sessionId: context.session.sessionId,
         action: "STOP",
@@ -247,5 +256,70 @@ export function createSessionService(context: Context) {
     context.session.pendingNavigation = undefined;
     await context.save();
   }
-  return { inScope, acceptView, attachSession, startFrames, stopSession };
+  async function startSession(command: {
+    routeId: string;
+    routeVersion: string;
+    tabId?: number;
+    origin?: string;
+  }) {
+    const dynamic =
+        command.routeId === LIVE_ROUTE_ID &&
+        command.routeVersion === LIVE_VERSION,
+      route = routeRegistry.get(command.routeId, command.routeVersion);
+    if (!dynamic && !route)
+      return {
+        error: "This route version is unavailable. Choose a task again.",
+      };
+    await requireNavigationCapabilities();
+    const tab = await context.activeTab();
+    if (tab?.id === undefined || !supportsLiveUrl(tab.url || ""))
+      return {
+        error:
+          "Select a website tab and click the extension icon to grant access.",
+      };
+    if (
+      (command.tabId !== undefined && command.tabId !== tab.id) ||
+      (command.origin && command.origin !== context.originOf(tab.url))
+    )
+      return {
+        error:
+          "The tab changed while granting access. Start navigation on the current website again.",
+      };
+    if (!dynamic && !routeSupportsUrl(route!, tab.url!))
+      return {
+        error: "The selected task is unavailable on this website.",
+      };
+    if (sessionLocked(context.session))
+      return {
+        error: "Stop the current navigation before starting another task.",
+      };
+    await stopSession();
+    context.session = {
+      sessionId: crypto.randomUUID(),
+      tabId: tab.id,
+      routeId: command.routeId,
+      routeVersion: command.routeVersion,
+      origin: context.originOf(tab.url),
+    };
+    context.lastObservation = "";
+    await context.save();
+    try {
+      return await attachSession();
+    } catch (error) {
+      context.session = undefined;
+      await context.save();
+      return {
+        error:
+          "Tholi could not access this page. Click its toolbar icon on the website, refresh the page, then try again. If your browser asks for this site's access, allow it to continue. Browser pages and documents without HTML controls are unsupported.",
+      };
+    }
+  }
+  return {
+    inScope,
+    acceptView,
+    attachSession,
+    startFrames,
+    stopSession,
+    startSession,
+  };
 }

@@ -125,3 +125,44 @@ it("rejects invented IDs even if a model ignores the response constraint, and ab
   expect(clone).toHaveBeenCalledOnce();
   await model.close();
 });
+
+it("recovers a local inference host after cancellation and ignores replies from the disposed worker", async () => {
+  const workers: any[] = [];
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: (path: string) => "chrome-extension://test/" + path },
+  });
+  vi.stubGlobal(
+    "Worker",
+    class {
+      onmessage: any;
+      onerror: any;
+      onmessageerror: any;
+      postMessage = vi.fn();
+      terminate = vi.fn();
+      constructor() {
+        workers.push(this);
+      }
+    },
+  );
+  const { createInferenceHost } =
+    await import("../../../apps/extension/src/inference/worker-host");
+  const host = createInferenceHost();
+  try {
+    const canceled = host.request({ type: "PLAN_NLP", id: "old" });
+    await host.request({ type: "CANCEL_NLP" });
+    expect(await canceled).toEqual({ id: "old", error: "Planning canceled." });
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const fresh = host.request({ type: "PLAN_NLP", id: "fresh" });
+    workers[0].onmessage({ data: { id: "old", value: "stale" } });
+    workers[1].onmessage({ data: { id: "fresh", value: "current" } });
+    expect(await fresh).toEqual({ id: "fresh", value: "current" });
+    const failed = host.request({ type: "PLAN_NLP", id: "failed" });
+    workers[1].onerror({ preventDefault: vi.fn() });
+    expect((await failed).error).toMatch(/failed/);
+    const recovered = host.request({ type: "PLAN_NLP", id: "recovered" });
+    workers[2].onmessage({ data: { id: "recovered", value: "recovered" } });
+    expect((await recovered).value).toBe("recovered");
+  } finally {
+    host.dispose();
+  }
+});

@@ -96,23 +96,10 @@ test("panel exposes distinct status announcements, stable polling and usable key
         GET_CONTEXT: { calls: 0, active: 0, max: 0 },
         GET_TASKS: { calls: 0, active: 0, max: 0 },
       };
-      const original = chrome.runtime.sendMessage.bind(chrome.runtime);
-      win.__restorePolling = () => (chrome.runtime.sendMessage = original);
-      chrome.runtime.sendMessage = ((...args: any[]) => {
-        const counter = win.__polling[args[0]?.type];
-        if (!counter) return (original as any)(...args);
-        counter.calls++;
-        counter.active++;
-        counter.max = Math.max(counter.max, counter.active);
-        return (original as any)(...args)
-          .then(async (reply: any) => {
-            await new Promise((resolve) =>
-              setTimeout(resolve, args[0].type === "GET_CONTEXT" ? 1500 : 3000),
-            );
-            return reply;
-          })
-          .finally(() => counter.active--);
-      }) as typeof chrome.runtime.sendMessage;
+      win.__slowReads = true;
+      win.__restorePolling = () => {
+        win.__slowReads = false;
+      };
     });
     await expect
       .poll(

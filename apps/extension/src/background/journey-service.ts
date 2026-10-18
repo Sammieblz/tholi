@@ -1,3 +1,4 @@
+import { api, type Runtime } from "../platform/api";
 import type { SuspendedJourney } from "../../../../packages/navigation-core/continuity";
 import type { SavedTask } from "../../../../packages/page-model/index";
 import type { PinnedSession } from "../../../../packages/route-registry/session";
@@ -16,7 +17,7 @@ import { type SiteMemory } from "../../../../packages/page-model/index";
 import { sanitizeGoal } from "../../../../packages/privacy-redaction/index";
 import { messageSchema } from "../../../../packages/route-schema/index";
 import { needsVision } from "../../../../packages/vision/fusion";
-import { localNlp } from "../inference/offscreen-client";
+import { localNlp } from "../inference/client";
 import { backendNlp } from "../platform/backend-client";
 import { trustedUi } from "./ui-transport";
 
@@ -36,9 +37,9 @@ interface Context {
 }
 
 export function createJourneyService(context: Context) {
-  async function handleNlp(raw: any, sender: chrome.runtime.MessageSender) {
+  async function handleNlp(raw: any, sender: Runtime.MessageSender) {
     const startedGeneration = context.goalGeneration;
-    if (sender.id !== chrome.runtime.id) throw new Error("Invalid sender.");
+    if (sender.id !== api.runtime.id) throw new Error("Invalid sender.");
     const fromContent = raw.type === "NLP_REPLAN";
     if (!fromContent && !trustedUi(sender, context.session))
       throw new Error("Trusted extension panel required.");
@@ -60,7 +61,7 @@ export function createJourneyService(context: Context) {
           !context.inScope(sender.url || ""))
       )
         throw new Error("Stale document.");
-      let reply = await chrome.tabs.sendMessage(context.session.tabId, {
+      let reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
       });
@@ -70,7 +71,7 @@ export function createJourneyService(context: Context) {
           "The page changed before this request. Use the current scan.",
         );
       if (raw.text || raw.goal || raw.request?.original)
-        reply = await chrome.tabs.sendMessage(context.session.tabId, {
+        reply = await api.tabs.sendMessage(context.session.tabId, {
           type: "GET_PAGE",
           sessionId: context.session.sessionId,
           query: sanitizeGoal(raw.text || raw.goal || raw.request.original),
@@ -169,7 +170,7 @@ export function createJourneyService(context: Context) {
           context.session.navigationPending
         )
           throw new Error("Planning canceled by navigation or Stop.");
-        const fresh = await chrome.tabs.sendMessage(context.session.tabId, {
+        const fresh = await api.tabs.sendMessage(context.session.tabId, {
           type: "GET_PAGE",
           sessionId: context.session.sessionId,
         });
@@ -259,7 +260,7 @@ export function createJourneyService(context: Context) {
             context.suspended.push(parked);
           }
         }
-        const reply = await chrome.tabs.sendMessage(context.session.tabId, {
+        const reply = await api.tabs.sendMessage(context.session.tabId, {
           type: "INSTALL_REQUEST",
           sessionId: context.session.sessionId,
           result,
@@ -295,12 +296,12 @@ export function createJourneyService(context: Context) {
         context.session.navigationPending
       )
         return;
-      const fresh = await chrome.tabs.sendMessage(context.session.tabId, {
+      const fresh = await api.tabs.sendMessage(context.session.tabId, {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
       });
       if (!fresh.page) return;
-      const reply = await chrome.tabs.sendMessage(context.session.tabId, {
+      const reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "INSTALL_REQUEST",
         sessionId: context.session.sessionId,
         result: {

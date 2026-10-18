@@ -1,3 +1,4 @@
+import type { Runtime } from "../../../apps/extension/src/platform/api";
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import type { PinnedSession } from "../../../packages/route-registry/session";
@@ -67,7 +68,7 @@ function environment(seed: Record<string, unknown> = {}) {
     tab: { id: 7, windowId: 4 },
     frameId: 0,
     documentId: "document-a",
-  } as chrome.runtime.MessageSender;
+  } as Runtime.MessageSender;
   vi.stubGlobal("chrome", api);
   return { api, session, sender, stored, closed };
 }
@@ -242,7 +243,12 @@ it("restores a minimized presentation after worker module restart", async () => 
   });
   const ui =
     await import("../../../apps/extension/src/background/ui-transport");
-  await ui.mountWidget(session, true);
+  await Promise.all([
+    ui.mountWidget(session, true),
+    ui.mountWidget(session),
+    ui.mountWidget(session),
+  ]);
+  expect(api.tabs.sendMessage).toHaveBeenCalledTimes(1);
   expect(api.tabs.sendMessage).toHaveBeenCalledWith(
     7,
     expect.objectContaining({ type: "MOUNT_WIDGET", visibility: "launcher" }),
@@ -323,6 +329,10 @@ it("starts native docking immediately and leaves the widget intact if Chrome rej
     visibility: "expanded",
   });
   expect(session).toEqual(before);
+  expect((await api.storage.local.get()).tholiPreferences).toMatchObject({
+    surface: "sidebar",
+    mode: "conversation",
+  });
 });
 
 it("minimizes only a matching window's native sidebar dismissal", async () => {
@@ -410,4 +420,57 @@ it("suppresses DOM and visual highlights while preserving the ability to restore
   setGuidanceVisible(true);
   overlay.clear();
   target.remove();
+});
+
+it("Firefox requests the displayed origin in the click turn and rejects a changed active site", async () => {
+  const order: string[] = [];
+  let active = { id: 1, url: "https://expected.example:9443/" };
+  const request = vi.fn(() => {
+    order.push("request");
+    return Promise.resolve(true);
+  });
+  vi.stubGlobal("browser", {
+    runtime: { getURL: () => "moz-extension://test/" },
+    permissions: { request },
+    tabs: {
+      query: async () => {
+        order.push("query");
+        return [active];
+      },
+    },
+  });
+  const { requestCurrentSiteAccess } =
+    await import("../../../apps/extension/src/platform/site-access");
+  const result = requestCurrentSiteAccess("https://expected.example:8443", 1);
+  expect(order).toEqual(["request"]);
+  await expect(result).rejects.toThrow("active website changed");
+  expect(request).toHaveBeenCalledWith({
+    origins: ["https://expected.example/*"],
+  });
+  expect(order).toEqual(["request", "query"]);
+  active = { id: 2, url: "https://expected.example:8443/" };
+  await expect(
+    requestCurrentSiteAccess("https://expected.example:8443", 1),
+  ).rejects.toThrow("active website changed");
+});
+it("Firefox sidebar handoff retains the widget when the browser rejects its user activation", async () => {
+  const { api, session, sender } = environment();
+  const open = vi.fn(async () => {
+    throw Error("User action required");
+  });
+  vi.stubGlobal("browser", {
+    ...api,
+    runtime: {
+      ...api.runtime,
+      getURL: (path: string) => "moz-extension://tholi-test/" + path,
+    },
+    sidebarAction: { open, isOpen: async () => false },
+  });
+  const ui =
+    await import("../../../apps/extension/src/background/ui-transport");
+  await expect(ui.dockSidebar(sender, session)).rejects.toThrow(
+    "User action required",
+  );
+  expect((await ui.getSurfacePresentation(session))?.surface).toBe("widget");
+  expect(session.documentId).toBe("document-a");
 });

@@ -1,12 +1,12 @@
 {
   "artifactFiles": {
     "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
-    "THIRD_PARTY_NOTICES.md": "4e178aa8b9eca8b7272c89eff9ed297ad6513f3c7b7910de9325a84186aaf819",
-    "content.js": "4dc3358491ff983fd851b62db0a078a6c12b44e4b0466637e6d66cba71dd205a",
-    "content.js.map": "0def3bb701edfec19d3a815c877080a2f0962d1a9e50499d6298c4432112fbe6",
+    "THIRD_PARTY_NOTICES.md": "acf7a0f83e3e7a4cfb526fb19738477ecf5e10f4e54cd1879feaff85dd4899ba",
+    "content.js": "a664d8f059a844e9fef34cf2eb72166b26a76578e2033b24607eb13d1e0b3230",
+    "content.js.map": "b97213077cf3a76ceb1d1c622791c913af0358b53304768d7bf07200190a00fd",
     "discovery-lock.json": "4aa189c178714f51ffdaab3272389f3a3d3c71d5652fe74014a322c5cd6d6f6a",
-    "frame-agent.js": "dca7e397605e588ea33f8ffc460c2d9b54c9c0306c4255768c84e387fc5be6dc",
-    "frame-agent.js.map": "ccccc9c20dbd96751e973f1852cdf358f8d7e5b7c86d184fb604b1adf171dab1",
+    "frame-agent.js": "42008dda93fdcc6218b68754e194ab77a2207382fd6d972162b05054ce19c741",
+    "frame-agent.js.map": "ce6f198983f95ade8b37fa6425b0f280812b02ffa93c4dc1b2957e30d2aefcc3",
     "inference.js": "5799afc035119dd23928e177467567a3e89c87829ab3aa6afc781484c1f0b5af",
     "licenses/@babel_runtime-LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76",
     "licenses/@base-ui_react-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
@@ -226,6 +226,7 @@
     "licenses/vfile-license": "05811400116ed61f1a7693b78fe8ca6598c155a12f3978e609db4df648a4cb3d",
     "licenses/vfile-message-license": "dd1081884a92952802f4803110a6bb543acea9a814c786d58605b4c1219b5ebb",
     "licenses/wasm-feature-detect-LICENSE": "bcf29b4fd3ec2cb5f9d40a0866da446f6da62170d2ccedf4aeca9cf9406dd20c",
+    "licenses/webextension-polyfill-LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "licenses/webidl-conversions-LICENSE.md": "a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c",
     "licenses/whatwg-url-LICENSE.txt": "6b7a1792144374d84dc5ed3655b8bbe2754d06f4f1f64a9fb8b9de2d6f448b85",
     "licenses/yaml-LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
@@ -233,7 +234,7 @@
     "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
     "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
     "licenses/zwitch-license": "ca4662cb5d1b738fbe5350c0d5485ba11773b4b7208974082ae6e129a52d631d",
-    "manifest.json": "d2b10a9c810356ddb0f93a1c1f054d034c0b768c62821a1c4cf5abb0457cfef1",
+    "manifest.json": "9818f864ae0fa37e7e617d50084e566c5744d208a5140bb9bc7f58148fb8c522",
     "manrope-latin-wght-normal-73PUZEUA.woff2": "a30ddcd349703aff7464c34bef3fffdff405ee50c113440d7c8693c02d210972",
     "media/icon-128.png": "046fc8702746ec70d79611641cc7eb13dc5b2f44976651884212ed3cf1395968",
     "media/icon-16.png": "31cb0cc626200eb9127b0c86bd57a9048ad296d0580eec4b20592ca7b182cd46",
@@ -255,34 +256,40 @@
     "ocr/tesseract-core-simd-lstm.wasm.js": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
     "ocr/worker.min.js": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
     "offscreen.html": "6663936252c9e7a0f580b9015f73df49838acc7ede1716689dfc6510881275b3",
-    "offscreen.js": "e3c8e9b7225b98b5469a83685ae0e628b612f58b698fa49565a2e9c48f42ef72",
-    "offscreen.js.map": "f61f572601e8f072c2f35f4de0dfb79be7e53a265c839912402dac290c15f20d",
+    "offscreen.js": "90ebd2bbb701da34f7689b38d79c90fdf26ccff867fee3f321a3ffe48c3838c7",
+    "offscreen.js.map": "9fa8dea99b1fcdbfdd4598e54ddae68c5e33e5c400b37b7824c9ba3f442e9bb9",
     "outfit-latin-wght-normal-5FXBKKJF.woff2": "6c18d579fd87c3776be068b762cbc83fde3acb543d49eabd3ade842eb987e887",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
     "sidepanel.css": "d65069c883887ea3c485e371def48a17031047b30c3c633ca91339a745612493",
     "sidepanel.css.map": "d67c3d30603b3be6a8068c156f51b3dd17f942580e9718adf923c5621196fb2f",
     "sidepanel.html": "c573a6fd1e89418f559b2084b564f15d2e73468787b893299cddaeeb914dc2f4",
-    "sidepanel.js": "4bb541201298eec46c9d1aa2363fbb171615aadd329d1c51b0219be047c47c94",
-    "sidepanel.js.map": "5b28fc375d1c4932ea0476a0f1ecf5ce2c5c39ef95d7f6182678f9645241d6ce",
-    "theme-page.js": "dcbba567088a31a8ccf575b748bd046cc21c06f817bb0271de7bb744e2c647ad",
-    "theme-page.js.map": "54e4f43f10c26beb4a30492c31505cb7b35004b635172d3237201555c82eedda",
-    "third-party.json": "6a6e5eb179068056e401992bc8a851c8316913da834f0f7ece405b82b4e9b135",
+    "sidepanel.js": "4e71d7e37aeebf4e4a097a2f048a743d68366173326c2bfd76b636411db89fbc",
+    "sidepanel.js.map": "9a9fdce83c765c68d060a87417d6fae24c879a322dbbbd7aa7b308cb3f2f1036",
+    "theme-page.js": "796255b3a4d7ae22e2c10aa28fa3fcc24b5e132826a848580547a4139e1d1184",
+    "theme-page.js.map": "c411d0afb3792ea8cdb7187be84c90e5bd5f482beb682ec71ea5169926f07114",
+    "third-party.json": "b11430b164fe93cf21ed290f8e45b4be9f5d035d89de28bc3e3acb58853feaac",
     "vision-policy.json": "d885022d8ab0bc4f3cd07a065464ce3f4b87a869de09b35861dcc67dda43c7c1",
     "widget.html": "02e067f49f69098d2210b8eabd442c4fa55070ad851f4540106d60ef1728ef04",
-    "worker.js": "41b74d0e456118262235fb3e8f8f66c1b9cc506b639b9f38dac4abbeed39de4c",
-    "worker.js.map": "4501ce5150e21f68ac39870623cb16a28bdaa9729889b0d7b43ca6115acb71ee"
+    "worker.js": "ca4f2fdaa19bb0b29afa86adf350d878a04e9016e08d242feb9f3da1cf501fe3",
+    "worker.js.map": "1cd197092ebbdfd37157549c0c342a06340ebc59591d358ccfcdb439ab33753d"
+  },
+  "target": "chromium",
+  "buildTargets": {
+    "chromium": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89",
+    "firefox": "f875a94db65e0335d425dd189a5166812fb151b3762384e228a6ce8914e88799"
   },
   "extensionVersion": "0.10.1",
   "validation": {
     "selection": "complete",
     "tier": "full",
-    "runId": "15251e6a-857f-48b5-bf30-376fac268234",
-    "buildDigest": "16688e4073b4caa7435c08e10196662c0d56110f166955f0fcd71894363c06ba"
+    "runId": "browser-support-20261017-final-4",
+    "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
   },
+  "browsers": [],
   "scope": "live",
-  "evaluatedAt": "2026-10-17T10:31:31.220Z",
-  "passed": false,
+  "evaluatedAt": "2026-10-17T21:44:37.625Z",
+  "passed": true,
   "files": [
     "tests/browser/live/authentication.spec.ts",
     "tests/browser/live/edit.spec.ts",
@@ -300,72 +307,100 @@
     {
       "id": "70f6afe7e350c931056e-7557d055867933e97b21",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 38408,
+      "disposalMs": 6566.893000000004
     },
     {
       "id": "70f6afe7e350c931056e-39dfd278c7dfc4c99486",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
-      "status": "failed"
+      "status": "passed",
+      "elapsedMs": 13476,
+      "disposalMs": 2231.7209999999977
     },
     {
       "id": "9ed70afab1bbfad1daab-734b32180cba89f70f11",
       "name": " / live-desktop / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 27954,
+      "disposalMs": 5046.998900000006
     },
     {
       "id": "7a6b7f055de881ba5856-ad4d9c9304397444eca1",
       "name": " / live-desktop / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
-      "status": "timedOut"
+      "status": "passed",
+      "elapsedMs": 37125,
+      "disposalMs": 5345.607900000003
     },
     {
       "id": "49def915946a04ed21ee-45e36e9b474cdacd13be",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
-      "status": "failed"
+      "status": "passed",
+      "elapsedMs": 23096,
+      "disposalMs": 4896.330799999996
     },
     {
       "id": "49def915946a04ed21ee-5453017254bcb6f06e39",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 44983,
+      "disposalMs": 4598.416500000021
     },
     {
       "id": "ad78825e3796ab356f51-d2ed8d38ec30f8d30837",
       "name": " / live-desktop / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
-      "status": "failed"
+      "status": "passed",
+      "elapsedMs": 52745,
+      "disposalMs": 7684.9563999999955
     },
     {
       "id": "70f6afe7e350c931056e-aa97a084a2637475fe22",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 35003,
+      "disposalMs": 5269.962699999996
     },
     {
       "id": "70f6afe7e350c931056e-850d0a7b6c9e50af7ffd",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 14152,
+      "disposalMs": 2781.2309000000023
     },
     {
       "id": "9ed70afab1bbfad1daab-65a17190a0f75dde6d28",
       "name": " / live-narrow / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 25133,
+      "disposalMs": 5253.8348000000115
     },
     {
       "id": "7a6b7f055de881ba5856-6d134c5c0d3dee279752",
       "name": " / live-narrow / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
-      "status": "timedOut"
+      "status": "passed",
+      "elapsedMs": 46660,
+      "disposalMs": 8598.593999999997
     },
     {
       "id": "49def915946a04ed21ee-ea1cfd200293b6352c6e",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 26657,
+      "disposalMs": 9972.985799999995
     },
     {
       "id": "49def915946a04ed21ee-93a15e68c7ee3673f4ec",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
-      "status": "timedOut"
+      "status": "passed",
+      "elapsedMs": 52378,
+      "disposalMs": 8104.374000000011
     },
     {
       "id": "ad78825e3796ab356f51-392b863573ed61745407",
       "name": " / live-narrow / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 51332,
+      "disposalMs": 10691.738299999997
     }
   ]
 }

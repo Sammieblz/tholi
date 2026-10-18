@@ -1,3 +1,6 @@
+import { closeNativeSidebar, openNativeSidebar } from "../../platform/sidebar";
+import { browserTarget } from "../../platform/api";
+import { api } from "../../platform/api";
 import { useEffect, useRef, useState } from "react";
 import { beginJourney } from "../../../../../packages/goal-planner/task-journey";
 import { liveReport } from "../../../../../packages/live-diagnostics";
@@ -96,7 +99,7 @@ export function useGuidanceController(widget = false) {
       return;
     }
     const timer = setTimeout(() => {
-      void chrome.runtime
+      void api.runtime
         .sendMessage({
           type: "NLP_SUGGEST",
           text: goal,
@@ -114,7 +117,7 @@ export function useGuidanceController(widget = false) {
   }, [goal, view?.status]);
   useEffect(() => {
     let current = true;
-    void chrome.runtime
+    void api.runtime
       .sendMessage({ type: "GET_MEMORY" })
       .then((r) => {
         if (current) setStoredMemory(memorySummary(r.memory));
@@ -130,7 +133,7 @@ export function useGuidanceController(widget = false) {
     const refresh = () => {
       if (reading) return;
       reading = true;
-      void chrome.runtime
+      void api.runtime
         .sendMessage({ type: "GET_TASKS" })
         .then((r) => {
           if (current) setSavedTasks(r.tasks || []);
@@ -144,7 +147,7 @@ export function useGuidanceController(widget = false) {
       if (!current) return;
       refresh();
       try {
-        const r = await chrome.runtime.sendMessage({ type: "GET_JOURNEYS" });
+        const r = await api.runtime.sendMessage({ type: "GET_JOURNEYS" });
         if (current) setJourneys(r.journeys || []);
       } catch {
         // The worker may be restarting.
@@ -180,10 +183,13 @@ export function useGuidanceController(widget = false) {
         (type === "CONTINUE_TASK" && view?.continuationOrigin)
       ) {
         startTarget = await requestCurrentSiteAccess(
-          type === "CONTINUE_TASK" ? view!.continuationOrigin! : undefined,
+          type === "CONTINUE_TASK"
+            ? view!.continuationOrigin!
+            : context?.origin,
+          context?.tabId,
         );
       }
-      const r = await chrome.runtime.sendMessage(
+      const r = await api.runtime.sendMessage(
         type === "START"
           ? {
               type,
@@ -277,8 +283,11 @@ export function useGuidanceController(widget = false) {
     setError("");
     try {
       if (!active) {
-        const startTarget = await requestCurrentSiteAccess();
-        const started = await chrome.runtime.sendMessage({
+        const startTarget = await requestCurrentSiteAccess(
+          context?.origin,
+          context?.tabId,
+        );
+        const started = await api.runtime.sendMessage({
           type: "START",
           routeId: LIVE_ROUTE_ID,
           routeVersion: LIVE_VERSION,
@@ -287,9 +296,9 @@ export function useGuidanceController(widget = false) {
         if (started.error) throw new Error(started.error);
         if (started.view) setView(started.view);
       }
-      const context = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
-      if (context.error) throw new Error(context.error);
-      const page = pageSnapshotSchema.parse(context.page);
+      const pageContext = await api.runtime.sendMessage({ type: "GET_PAGE" });
+      if (pageContext.error) throw new Error(pageContext.error);
+      const page = pageSnapshotSchema.parse(pageContext.page);
       let proposal;
       if (aiEnabled) {
         try {
@@ -307,15 +316,15 @@ export function useGuidanceController(widget = false) {
         }
       }
       if (controller.signal.aborted) return;
-      const current = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+      const current = await api.runtime.sendMessage({ type: "GET_SESSION" });
       if (
-        current.sessionId !== context.sessionId ||
-        current.documentId !== context.documentId
+        current.sessionId !== pageContext.sessionId ||
+        current.documentId !== pageContext.documentId
       )
         throw new Error(
           "The document changed while planning. Try again on the current page.",
         );
-      const reply = await chrome.runtime.sendMessage({
+      const reply = await api.runtime.sendMessage({
         type: "SET_GOAL",
         goal: safeGoal,
         revision: page.revision,
@@ -365,7 +374,7 @@ export function useGuidanceController(widget = false) {
     planning.current = controller;
     void (async () => {
       try {
-        const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
+        const current = await api.runtime.sendMessage({ type: "GET_PAGE" });
         if (current.error || current.journey?.id !== task.id) return;
         const fresh = pageSnapshotSchema.parse(current.page);
         const proposal = await model.current.propose(
@@ -375,7 +384,7 @@ export function useGuidanceController(widget = false) {
           current.journey,
         );
         if (controller.signal.aborted) return;
-        const latest = await chrome.runtime.sendMessage({
+        const latest = await api.runtime.sendMessage({
           type: "GET_SESSION",
         });
         if (
@@ -384,7 +393,7 @@ export function useGuidanceController(widget = false) {
           latest.view?.journey?.id !== task.id
         )
           return;
-        const reply = await chrome.runtime.sendMessage({
+        const reply = await api.runtime.sendMessage({
           type: "SET_GOAL",
           goal: task.goal,
           revision: fresh.revision,
@@ -419,7 +428,7 @@ export function useGuidanceController(widget = false) {
     setBusy(true);
     setError("");
     try {
-      const reply = await chrome.runtime.sendMessage({
+      const reply = await api.runtime.sendMessage({
         type: "GUIDE_CONTROL",
         controlId,
       });
@@ -493,7 +502,7 @@ export function useGuidanceController(widget = false) {
     planning.current?.abort();
     setBusy(true);
     try {
-      const reply = await chrome.runtime.sendMessage({
+      const reply = await api.runtime.sendMessage({
         type: "UI_RESET_SESSION",
       });
       if (reply.error) throw Error(reply.error);
@@ -535,7 +544,8 @@ export function useGuidanceController(widget = false) {
     setPreferences(next);
     try {
       if (next.surface === "sidebar" && widget) {
-        const opened = await chrome.runtime.sendMessage({
+        if (browserTarget() === "firefox") await openNativeSidebar(0);
+        const opened = await api.runtime.sendMessage({
           type: "UI_OPEN_SIDEBAR",
         });
         if (opened.error) {
@@ -548,7 +558,7 @@ export function useGuidanceController(widget = false) {
       if (next.surface === "widget" && !view) {
         await command("START");
       }
-      const r = await chrome.runtime.sendMessage({
+      const r = await api.runtime.sendMessage({
         type: "UI_SAVE",
         preferences: next,
       });
@@ -561,7 +571,7 @@ export function useGuidanceController(widget = false) {
       if (next.surface === "widget" && !widget) {
         let ready = false;
         for (let attempt = 0; attempt < 30; attempt++) {
-          const state = await chrome.runtime.sendMessage({
+          const state = await api.runtime.sendMessage({
             type: "UI_WIDGET_STATUS",
           });
           if (state.ready) {
@@ -572,7 +582,7 @@ export function useGuidanceController(widget = false) {
         }
         if (!ready) {
           const restored = { ...next, surface: "sidebar" as const };
-          await chrome.runtime.sendMessage({
+          await api.runtime.sendMessage({
             type: "UI_SAVE",
             preferences: restored,
           });
@@ -583,16 +593,10 @@ export function useGuidanceController(widget = false) {
           return;
         }
 
-        const tab = await chrome.tabs.get(context!.tabId!);
-        const close = (
-          chrome.sidePanel as typeof chrome.sidePanel & {
-            close?: (options: { windowId: number }) => Promise<void>;
-          }
-        ).close;
-        if (close) await close({ windowId: tab.windowId }).catch(() => {});
-        else
+        const tab = await api.tabs.get(context!.tabId!);
+        if (!(await closeNativeSidebar(tab.windowId!).catch(() => false)))
           setError(
-            "The widget is ready. Close Chrome's sidebar to make more room.",
+            "The widget is ready. Close your browser's sidebar to make more room.",
           );
       }
     } catch {

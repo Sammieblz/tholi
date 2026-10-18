@@ -267,3 +267,23 @@
     height: 180px;
   }
 }
+
+.browser-choice {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  font-size: 14px;
+}
+.browser-choice select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+.download-card code {
+  overflow-wrap: anywhere;
+}

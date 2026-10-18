@@ -39,7 +39,7 @@ export class LocalModel {
     const model = api();
     if (!model)
       throw new Error(
-        "On-device AI is unavailable in this Chrome installation.",
+        "On-device AI is unavailable in this browser installation.",
       );
     // Called directly from the user's button handler so model download retains user activation.
     if (!this.session) this.creation = new AbortController();

@@ -4,6 +4,7 @@ import { installSidebarTabHarness } from "./sidebar-tab";
 import {
   chromium,
   expect,
+  test,
   type BrowserContext,
   type Worker,
   type Page,
@@ -147,18 +148,50 @@ export async function openNavigatorExtension(
     panel.evaluate(
       async () => await chrome.runtime.sendMessage({ type: "STOP" }),
     );
-  const close = async () => {
-    await context.close();
-    const target = resolve(directory);
-    if (
-      !target.startsWith(resolve(tmpdir()) + sep) ||
-      !basename(target).startsWith("navigator-e2e-")
-    )
-      throw new Error("Unsafe temporary cleanup target");
-    await rm(target, { recursive: true, force: true });
+  const dispose = async (operation: () => Promise<void>) => {
+    const info = test.info(),
+      bodyBudget = info.timeout,
+      started = performance.now();
+    const cleanupBudget = 30000;
+    // Profile/trace disposal is infrastructure work. Keep the original body
+    // deadline and allow only the time actually spent in bounded cleanup.
+    if (bodyBudget) info.setTimeout(bodyBudget + cleanupBudget);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        operation(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(Error("Browser profile disposal exceeded thirty seconds")),
+            cleanupBudget,
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+      const elapsedMs = performance.now() - started;
+      if (bodyBudget)
+        info.setTimeout(bodyBudget + Math.min(elapsedMs, cleanupBudget));
+      await info.attach("browser-disposal", {
+        body: Buffer.from(JSON.stringify({ elapsedMs, cleanupBudget })),
+        contentType: "application/json",
+      });
+    }
   };
+  const close = () =>
+    dispose(async () => {
+      await context.close();
+      const target = resolve(directory);
+      if (
+        !target.startsWith(resolve(tmpdir()) + sep) ||
+        !basename(target).startsWith("navigator-e2e-")
+      )
+        throw new Error("Unsafe temporary cleanup target");
+      await rm(target, { recursive: true, force: true });
+    });
   const restart = async () => {
-    await context.close();
+    await dispose(() => context.close());
     await initialize();
   };
   return {

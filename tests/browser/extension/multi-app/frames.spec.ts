@@ -1,3 +1,4 @@
+import { embeddedControlsHtml } from "../../../fixtures/multi-app/frame-html";
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
 test("authorized frame controls bind to their own document and hide behind parent dialogs", async () => {
@@ -12,7 +13,7 @@ test("authorized frame controls bind to their own document and hide behind paren
     await app.context.route("**/embedded-controls", (route) =>
       route.fulfill({
         contentType: "text/html",
-        body: '<label>Embedded search<input aria-label="Embedded search" style="width:400px;height:40px"></label><button aria-label="Menu" aria-expanded="false">Menu</button>',
+        body: embeddedControlsHtml,
       }),
     );
     await app.page.goto("http://127.0.0.1:5173/frame-host");
@@ -109,10 +110,14 @@ test("an ungranted embedded origin remains unscanned and exposes selective acces
     await expect(allow).toBeVisible();
     await app.panel.evaluate(() => {
       (globalThis as any).__requestedFrameOrigins = [];
-      chrome.permissions.request = async (permissions) => {
+      chrome.permissions.request = ((
+        permissions: any,
+        callback?: (granted: boolean) => void,
+      ) => {
         (globalThis as any).__requestedFrameOrigins = permissions.origins;
-        return false;
-      };
+        callback?.(false);
+        return Promise.resolve(false);
+      }) as typeof chrome.permissions.request;
     });
     await allow.click();
     await expect(app.panel.getByRole("alert")).toContainText(

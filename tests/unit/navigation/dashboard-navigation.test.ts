@@ -159,8 +159,10 @@ test("a missing qualifier or committing request cannot become menu exploration",
 
 test("an older connected backend falls back locally before processing settings context", async () => {
   vi.stubGlobal("chrome", {
+    runtime: { getURL: (path: string) => "chrome-extension://test/" + path },
     storage: {
       local: {
+        setAccessLevel: async () => {},
         get: async () => ({
           backend: {
             enabled: true,
