@@ -1,14 +1,14 @@
 ---
 title: Evolution and evidence
 tags: [tholi, architecture, history, evidence]
-sources: 17 release documents outside v0.10.1
+sources: 17 historical release documents outside v0.10.1, CHANGELOG.md, four v0.11.0 release documents
 ---
 
 # Evolution and evidence
 
 Tholi grew from a controlled navigation demonstration into generic live discovery, retained journeys, offline language interpretation, contextual platform guides and masked OCR assistance. The continuing invariant is that a click, focus, menu reveal, review action or animation cannot by itself establish the requested outcome. Historical passing reports describe their declared cases and evaluated bytes. They do not certify today's checkout or authorize packaging, deployment or publication.
 
-This note covers all 17 release Markdown documents outside `docs/releases/v0.10.1/`. The companion [[history.json]] preserves version-scoped concepts, exact source lines, explicit citations and separately marked inferences. Current source paths in its `evidence_files` are navigation aids for the code graph; they do not assert that present source equals a historical archive.
+This note preserves the 17 historical release Markdown documents outside `docs/releases/v0.10.1/` and adds `CHANGELOG.md` plus all four `v0.11.0` release documents from source commit `360f710`. The companion [[history.json]] preserves version-scoped concepts, exact source lines, explicit citations and separately marked inferences. Current source paths in its `evidence_files` are navigation aids for the code graph; they do not assert that present source equals a historical archive. The obsolete `offscreen-client.ts` evidence link was removed rather than redirecting a historical claim to a different current owner.
 
 ## 11 October: declared evidence, effects and generic discovery
 
@@ -109,6 +109,50 @@ The [maintenance record](../../docs/releases/records/2026-10-maintenance.md) con
 Final maintenance verification completed **17 October 2026**: all 12 local commands passed, totaling **476 unique automated tests**: 271 core, 11 NLP, 17 multi-app, four vision, 90 extension, 12 NLP browser, seven multi-app browser, three continuity, two reliability, 29 UI, 16 live and 14 acceptance. Eleven gate reports bound the same 272 extension assets; website checks bound 37 built files plus source/entry HTML, and applicable API bytes matched. The 116 scenarios remained 60 live, 30 controlled and 26 authored; this run recorded **70/70** live targets/verifications and **60/60** supported completions. Earlier 71/72 interaction counts are different historical runs, not contradictory case denominators.
 
 This later record still says GitHub CI had not been rerun, native docking/host/download permission dialogs, screen-reader and signed-in checks were pending, and no commit, tag or replacement extension/backend archive was created. The [[Evolution and evidence]] graph must preserve those unfinished checks alongside successful automation.
+
+## 18–19 October: bounded local assistance and responsive cancellation
+
+The [0.11.0 changelog](../../CHANGELOG.md) and [release notes](../../docs/releases/v0.11.0/README.md) identify an **unreleased** minor source version. Product, extension, optional API and workspaces now use the same version, with checks against drift and mismatched release tags. Existing eligible downloads and 0.10.1 media retain their own version; no replacement archive, signing, publication or deployment is established. Permissions, add-on ID, knowledge identifiers, public API contracts and frozen model/corpus bytes remain preserved. There is no new cloud requirement or cross-browser synchronization.
+
+The [navigation reliability record](../../docs/releases/v0.11.0/navigation-reliability.md) addresses several practical failures in existing owners: retaining destinations through scan churn, normalizing authentication phrases and Unicode punctuation without damaging quoted names or URLs, reconciling already-selected routes and foreground menus, and penalizing unreliable observed edges without inventing paths. The shared CPU queue now bounds pending work and lets user decisions outrank continuations and suggestions. Full-image privacy masking precedes optional foreground menu/dialog OCR, with viewport fallback. Selenium remains disposable validation infrastructure, not a shipped runtime crawler.
+
+**Assisted navigation is a meaningful authority change**, even though it is optional and off by default. The [shared safety policy](../../packages/safety-policy/assistance.ts) permits narrow menu reveals and explicitly requested view choices. The [background transport](../../apps/extension/src/background/ui-transport.ts) checks the preference, active pinned tab, native document, expanded surface, request and revision before sending an assistance request. The [content owner](../../apps/extension/src/content/page-coach.ts) refreshes again, checks the same live selected element, presentation and clipping, excludes forms, links, credentials, review screens and sensitive controls, and deduplicates attempts. A synthetic click or selection supplies **no success evidence**; the existing observation and outcome verifier still decide what happened. Sites may ignore synthetic events. This is controlled assistance rather than evidence of general unattended website automation.
+
+The [performance follow-up](../../docs/releases/v0.11.0/performance.md) is especially relevant to the local product. Both discovery paths exclude Tholi-owned UI so widget mounting cannot recursively scan itself. Irrelevant ticking text is ignored while controls, receipts, dialog changes and referenced accessible semantics remain observed. Reference bookkeeping clears at teardown. The [plan lifecycle](../../apps/extension/src/content/plan-lifecycle.ts) allows one automatic plan at a time and retains a recovery budget across changing fingerprints. Its retry key depends on task, verified progress and page identity; retries back off at 250, 500 and 1,000 ms, then pause with the destination retained. A timer clears its handle before requesting more work.
+
+Validated Pause and Stop bypass queued routine work and invalidate inference, pending results and frame observation immediately at the session owner, with native identities and generation fences guarding late results. This differs from promising instantaneous interruption of every CPU instruction: the [inference queue](../../packages/nlp/work-queue.ts) aborts stale jobs but starts the next CPU job only after the active call settles. It defaults to eight pending jobs and rejects lower-priority same-context work. That is a sensible serialization boundary.
+
+Embedding output tensors are disposed. OCR workers release after **10 seconds** idle, planning workers after **30 seconds**, and the inference host after **30 seconds** rather than 120. Startup and disposal are serialized. Hot vectors and content hashes each have a **1,024-entry** bound. The proposed 512-entry vector cache was rejected because a 600-control page plus query needs **601 ephemeral vectors** and otherwise thrashes on the second pass. The [existing real-model regression](../../tests/integration/nlp/real-model.test.ts) checks complete second-pass reuse and zero durable private embeddings. This is a concrete example of choosing a resource limit around the real supported working set.
+
+### The evidence cohorts remain separate
+
+| Cohort | Reported checks | Scope limitation |
+| --- | --- | --- |
+| `navigation-2026-10-18-final-v5`, before the version bump | 293 units + 47 core + 20 specialized + 2 Firefox + 32 UI = **394 PR cases**; 11 NLP + 17 multi-app + 4 vision; one paired browser experiment | Bound to historical **0.10.1** bytes; cannot certify 0.11.0 |
+| `version-0.11.0-2026-10-18` | **294 units** across 35 files, 62.5 s; types, versions and all builds; 215 relative documentation targets resolved; 421 external lock resolutions unchanged | Focused version-bump evidence; historical full evidence correctly rejected |
+| `performance-2026-10-19-v3` | 299 units + 47 core + 20 specialized + 2 Firefox + 32 UI = **400 PR cases**; 32 frozen model/OCR checks; one paired browser experiment | Full PR cohort predates the final cache change |
+| `performance-2026-10-19-v4-cache` | Types, application builds, **299 units + 32 model/OCR + one paired experiment** | Targeted final-cache checks; not a complete final-byte release certificate |
+
+The final cache change affects the NLP inference bundle and source maps; Chromium background, content and interface JavaScript are reported byte-identical to v3. That narrower equivalence does not combine the cohorts into a completed release gate. The [current validation checklist](../../docs/releases/v0.11.0/validation.md) still requires a coordinated frozen-build `test:full`, `verify-full.mjs`, target-specific native checks and deliberate packaging/release steps.
+
+The unchanged frozen quality gates pass at NLP precision/coverage 1.0 with zero measured false completions or boundary bypasses. Five multi-app platforms retain 1.0; **GitHub retains 0.9643 and one held-out target mismatch**. These are frozen target/corpus measurements. A controlled Prime journey reaches an independent receipt through login, delayed 2FA and cancellation review; it is explicitly **not verification of the user's signed-in Amazon account**. Signed-in Cloudflare/GitHub/Amazon, native permission UI, remaining installation checks and screen readers stay pending.
+
+### Final performance measurements and their limits
+
+The final reported host is Windows, Ryzen 7 5700U, 16 logical CPUs, 7.4 GiB RAM and Node 24.19.0. Chrome **155.0.8059.41** and Firefox **158.0** run serially with MiniLM q8 and one WASM thread.
+
+| Browser | Cold planning | Warm planning p95, 20 samples | Cold OCR | Warm OCR p95, 10 samples | Pause | Stop |
+| --- | --- | --- | --- | --- | --- | --- |
+| Chrome | 1,750 ms | 129 ms | 1,066 ms | 660 ms | 13 ms | 6 ms |
+| Firefox | 1,500 ms | 166 ms | 982 ms | 649 ms | 15 ms | 20 ms |
+
+The [paired test](../../tests/browser/extension/performance/paired.spec.ts) times the fixture's “Show search” goal through extension transport, separately invokes the packaged OCR worker on the frozen 1920×1080 viewport, and checks the expected OCR text. Pause follows eight queued routine page reads. Gates remain warm planning below 750 ms, warm OCR below 2,000 ms, and Pause/Stop below 1,000 ms. Those checks support responsive fixture behavior on this laptop; they do not measure every workflow, end-to-end screenshot capture or signed-in website reliability.
+
+In the 50,000-node mutation scene, the same highlight survives but frame p95 remains **250 ms in Chrome and 233 ms in Firefox**. Repeating after Stop produces **267 ms and 217 ms**. The ordering does not establish a causal speed improvement, and the test does not gate smooth frame delivery. The earlier pre-version sample was 283.5/200 ms, with warm planning 137/134 ms, warm OCR 585/585 ms and Stop 84/39 ms; those are different cohorts, not a controlled before/after comparison. An original stress run stopped near 18 MiB free host memory is incomplete and not a usable baseline.
+
+Working-set/private-commit samples include browser, website, UI, model and OCR processes. Worker disposal is verified, but those samples are neither isolated extension consumption nor peak RAM, and browser heap reservations may outlive workers. Hosted timing and weaker-CPU evidence remain pending. The final reported Chromium and Firefox digests are **build-tree digests**, not ZIP checksums; the full values remain in the performance source and companion graph.
+
+The current bottom line is stronger local responsiveness and more careful resource scheduling, with a useful but tightly bounded opt-in assistance capability. It still needs one coordinated final-byte certification and real user, signed-in and accessibility evidence before those engineering gains justify a general reliability or release claim.
 
 ## Reading the evidence correctly
 

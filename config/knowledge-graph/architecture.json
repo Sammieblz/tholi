@@ -6,7 +6,7 @@
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "README.md:1",
-      "description": "Product purpose, local CPU inference, build entrypoints, preview limitations, and high-level ownership."
+      "description": "Tholi 0.11.0 unreleased overview: local-first Chromium 140+ and Firefox 153+ developer targets, optional assisted navigation, build/install instructions and unresolved acceptance limits."
     },
     {
       "id": "agents_document",
@@ -118,7 +118,7 @@
       "file_type": "document",
       "source_file": "docs/architecture/frontend/extension.md",
       "source_location": "docs/architecture/frontend/extension.md:1",
-      "description": "Stable entrypoints, single mutable worker session, serialized service composition, content facade, inference transport, hooks, and settings owners."
+      "description": "Stable entrypoints, one background session, content facade, shared local inference client, platform adapters, snapshot hooks and opt-in assistance ownership."
     },
     {
       "id": "docs_architecture_frontend_guidance_document",
@@ -233,7 +233,7 @@
       "label": "Task-specific outcome verification",
       "file_type": "concept",
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:42",
+      "source_location": "docs/architecture/navigation.md:48",
       "description": "The extension verifies actual selected values, destinations, created items, deployment or membership states; wrong outcomes and unrelated toasts do not advance a task queue.",
       "evidence_files": [
         "apps/extension/src/content/page-coach.ts",
@@ -246,11 +246,13 @@
       "label": "Low-evidence viewport OCR",
       "file_type": "concept",
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
-      "description": "Default Tesseract runs in a separate local worker only when discovery evidence is insufficient; DOM bindings take precedence and OCR cannot prove completion.",
+      "source_location": "docs/architecture/navigation.md:46",
+      "description": "Local Tesseract follows insufficient DOM evidence; full-image privacy masks apply before one bounded foreground menu/dialog pass and masked viewport fallback. Capture-space coordinates stay ephemeral and OCR cannot prove completion.",
       "evidence_files": [
         "apps/extension/src/background/vision-service.ts",
+        "apps/extension/src/content/visual-guidance.ts",
         "apps/extension/src/inference/ocr-worker.ts",
+        "packages/vision/engine.ts",
         "packages/vision/fusion.ts"
       ]
     },
@@ -259,7 +261,7 @@
       "label": "Experimental Paddle OCR",
       "file_type": "concept",
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
+      "source_location": "docs/architecture/navigation.md:46",
       "description": "Included only by an explicit experimental build; startup/promotion gates have not passed and normal builds exclude it.",
       "evidence_files": [
         "packages/vision/paddle.ts",
@@ -271,7 +273,7 @@
       "label": "Reusable IndexedDB knowledge",
       "file_type": "concept",
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:46",
+      "source_location": "docs/architecture/navigation.md:52",
       "description": "IndexedDB v5 stores reusable site knowledge and parameterized saved routes separately from private active-session context; incompatible derived indexes rebuild.",
       "evidence_files": [
         "packages/site-memory/index.ts",
@@ -284,7 +286,7 @@
       "label": "Optional Fastify/SQLite mirror",
       "file_type": "concept",
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "description": "Explicitly connected single-owner service mirrors reusable knowledge with v1 compatibility and v2 workflow/visual negotiation; browser authority and local fallback remain.",
       "evidence_files": [
         "apps/api/src/server.ts",
@@ -306,14 +308,15 @@
     },
     {
       "id": "docs_architecture_sessions_worker_restore",
-      "label": "MV3 session restoration",
+      "label": "Chromium worker and Firefox event-page restoration",
       "file_type": "concept",
       "source_file": "docs/architecture/sessions.md",
       "source_location": "docs/architecture/sessions.md:11",
-      "description": "Worker restores trusted session storage while the content coach continues through suspension; restoration validates current session, tab, document, and origin.",
+      "description": "The Chromium service worker and Firefox event page restore privileged pinned state; current tab/document/session/origin validation and fresh observations survive suspension.",
       "evidence_files": [
         "apps/extension/src/background/worker-runtime.ts",
-        "packages/route-registry/session.ts"
+        "packages/route-registry/session.ts",
+        "tests/browser/extension/firefox/conformance.spec.ts"
       ]
     },
     {
@@ -346,9 +349,10 @@
       "file_type": "concept",
       "source_file": "docs/architecture/sessions.md",
       "source_location": "docs/architecture/sessions.md:11",
-      "description": "Chromium tests stop the real worker in running/waiting/paused states and use a changed test-only epoch rather than wrapper-close events to prove restart.",
+      "description": "Chromium tests terminate the real worker and use a new test-only epoch; Firefox conformance terminates the real event page and checks rehydration plus fresh inference. These are repository contracts, not runs performed for this graph.",
       "evidence_files": [
         "tests/browser/extension/core/lifecycle.spec.ts",
+        "tests/browser/extension/firefox/conformance.spec.ts",
         "tests/unit/navigation/lifecycle.test.ts"
       ]
     },
@@ -487,7 +491,7 @@
       "label": "Compromise/BM25/MiniLM pipeline",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:8",
+      "source_location": "docs/architecture/natural-language.md:15",
       "description": "Sanitized semantic metadata feeds BM25 and normalized mean-pooled MiniLM vectors alongside semantic/observed-route planning; current state is validated separately.",
       "evidence_files": [
         "packages/nlp/retrieval.ts",
@@ -500,7 +504,7 @@
       "label": "Versioned derived embedding cache",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:12",
+      "source_location": "docs/architecture/natural-language.md:19",
       "description": "SHA-256 plus pinned model revision keys a global 10,000-entry derived cache that can rebuild independently of original knowledge.",
       "evidence_files": [
         "packages/nlp/retrieval.ts",
@@ -510,13 +514,14 @@
     },
     {
       "id": "docs_architecture_natural_language_offscreen_inference",
-      "label": "Packaged CPU offscreen inference",
+      "label": "Packaged CPU inference across browser hosts",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:17",
-      "description": "Chrome offscreen document owns worker-based packaged q8 ONNX MiniLM with one CPU thread and packaged WASM; no remote model is required.",
+      "source_location": "docs/architecture/natural-language.md:24",
+      "description": "Shared packaged q8 MiniLM workers with one CPU thread and local WASM run under a Chromium offscreen document or Firefox MV3 event page; neither requires a remote model.",
       "evidence_files": [
-        "apps/extension/src/inference/offscreen-runtime.ts",
+        "apps/extension/src/platform/inference-host.ts",
+        "apps/extension/src/inference/worker-host.ts",
         "apps/extension/src/inference/nlp-worker.ts",
         "packages/nlp/model.ts"
       ]
@@ -526,11 +531,13 @@
       "label": "Inference cancellation and unloading",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:20",
-      "description": "Foreground planning preempts suggestions between model calls; Stop aborts pending work and closes offscreen resources, and idle resources unload after two minutes.",
+      "source_location": "docs/architecture/natural-language.md:32",
+      "description": "Foreground work takes priority; Stop cancels pending inference and disposes the shared browser host. Current code releases idle OCR workers after 10 seconds and NLP/host after 30 seconds; natural-language.md still contains superseded two-minute wording.",
       "evidence_files": [
-        "apps/extension/src/inference/offscreen-client.ts",
-        "apps/extension/src/inference/nlp-worker.ts"
+        "apps/extension/src/inference/client.ts",
+        "apps/extension/src/inference/worker-host.ts",
+        "apps/extension/src/platform/inference-host.ts",
+        "packages/nlp/work-queue.ts"
       ]
     },
     {
@@ -538,7 +545,7 @@
       "label": "Verified multi-task queue",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:27",
+      "source_location": "docs/architecture/natural-language.md:39",
       "description": "Queue advances on requested observed results; search focus is intermediate, review blocks, Skip records skipped, Pause retains, and Stop cancels.",
       "evidence_files": [
         "packages/navigation-core/queue.ts",
@@ -550,7 +557,7 @@
       "label": "Request/document/scan revision guards",
       "file_type": "concept",
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:24",
+      "source_location": "docs/architecture/natural-language.md:36",
       "description": "Plans carry identifiers tying asynchronous work to current request, document, and observation revision; changed scans replan from the original sentence.",
       "evidence_files": [
         "packages/navigation-core/contracts.ts",
@@ -600,7 +607,7 @@
       "file_type": "concept",
       "source_file": "docs/architecture/privacy.md",
       "source_location": "docs/architecture/privacy.md:13",
-      "description": "chrome.storage.session retains active requests, supplied values, entities, unfinished journeys, and the task ledger; private names, statuses, and vectors do not enter reusable knowledge.",
+      "description": "Privileged WebExtensions storage.session retains active requests, supplied values, entities, unfinished journeys and task navigation ledger; private entities/vectors remain outside reusable knowledge.",
       "evidence_files": [
         "apps/extension/src/background/worker-runtime.ts",
         "packages/navigation-core/privacy.ts"
@@ -744,8 +751,9 @@
       "file_type": "concept",
       "source_file": "docs/architecture/security.md",
       "source_location": "docs/architecture/security.md:11",
-      "description": "Users execute clicks/input/submissions; review explains consequential or unknown effects and starts verification after a user click. Heuristic risk cannot prove arbitrary server behavior.",
+      "description": "Default Guide leaves actions with the user. Optional assistance is restricted to fresh eligible ordinary menus and explicitly requested view choices; forms, credentials, links, final and unknown-effect actions remain manual. Heuristic risk is not proof of arbitrary server behavior.",
       "evidence_files": [
+        "packages/safety-policy/assistance.ts",
         "packages/safety-policy/index.ts",
         "packages/page-discovery/interaction-risk.ts",
         "apps/extension/src/content/page-coach.ts"
@@ -776,11 +784,11 @@
     },
     {
       "id": "docs_architecture_frontend_extension_worker_owner",
-      "label": "Single worker-owned session and journey",
+      "label": "Single background-owned session and journey",
       "file_type": "concept",
       "source_file": "docs/architecture/frontend/extension.md",
       "source_location": "docs/architecture/frontend/extension.md:5",
-      "description": "worker-runtime composes memory, vision, journey, attachment, routing, frames, and navigation services around live access to one mutable pinned session and one serialized queue.",
+      "description": "One mutable pinned session remains in the Chromium worker or Firefox event page. Routine cross-service work uses one queue; validated Pause/Stop bypass routine work to interrupt the same owner promptly.",
       "rationale": "Service extraction cannot introduce parallel session caches or competing journey owners.",
       "evidence_files": [
         "apps/extension/src/background/worker-runtime.ts",
@@ -1012,7 +1020,7 @@
       "label": "Deterministic PR validation gate",
       "file_type": "concept",
       "source_file": "AGENTS.md",
-      "source_location": "AGENTS.md:19",
+      "source_location": "AGENTS.md:21",
       "description": "npm run test:ci builds once and validates deterministic PR behavior; focused existing checks guide implementation and prepared builds require immutable verified artifacts.",
       "evidence_files": [
         "package.json"
@@ -1023,7 +1031,7 @@
       "label": "Same-run exact-byte release certification",
       "file_type": "rationale",
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:39",
+      "source_location": "CONTRIBUTING.md:41",
       "description": "Full-tier evidence must cover the final build before packaging. Do not rebuild afterward, overwrite existing archives, or aggregate focused historical reports as certification.",
       "rationale": "Independent or historical test evidence cannot certify different artifact bytes.",
       "evidence_files": [
@@ -1036,7 +1044,7 @@
       "label": "Frozen evaluation corpora",
       "file_type": "concept",
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:41",
+      "source_location": "CONTRIBUTING.md:43",
       "description": "Original fixture bytes, splits, hashes, and thresholds are preserved; calibration needs explicit versioning/independent review and predictions cannot regenerate expectations.",
       "evidence_files": [
         "tests/browser/acceptance/matrix.json",
@@ -1076,6 +1084,300 @@
       "source_location": "docs/README.md:3",
       "description": "Versioned records describe specific tested bytes and are neither current installation instructions nor broad current reliability guarantees.",
       "rationale": "Evidence must remain attached to the tested version/build, with current behavior and pending acceptance stated separately."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_document",
+      "label": "Browser platform ownership",
+      "file_type": "document",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:1",
+      "description": "Shared engine with typed adapters, native document identity, separate target hosts/settings/sidebar/builds and target-specific evidence."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_webextensions_boundary",
+      "label": "Typed WebExtensions platform boundary",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:5",
+      "description": "Mozilla webextension-polyfill centralizes common APIs; Chromium-specific capabilities are detected in adapters.",
+      "evidence_files": [
+        "apps/extension/src/platform/api.ts",
+        "apps/extension/src/platform/capabilities.ts"
+      ],
+      "rationale": "Browser differences belong at the adapter boundary while navigation, privacy and acceptance contracts stay shared."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_native_document_identity",
+      "label": "Mandatory native browser document identity",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:5",
+      "description": "Native document IDs remain mandatory; URL-only or synthetic fallbacks cannot substitute for safety APIs.",
+      "evidence_files": [
+        "apps/extension/src/platform/capabilities.ts",
+        "apps/extension/src/background/session-service.ts"
+      ],
+      "rationale": "Fail closed on missing safety capabilities instead of weakening stale-document protection."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_shared_inference_hosts",
+      "label": "Shared inference host for Chromium and Firefox",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:9",
+      "description": "Chromium offscreen and Firefox event-page hosts use the same request/cancel/dispose contract and lazy NLP/OCR workers; no hidden-tab keepalive.",
+      "evidence_files": [
+        "apps/extension/src/platform/inference-host.ts",
+        "apps/extension/src/inference/worker-host.ts"
+      ],
+      "rationale": "Preserve shared model settings, cancellation and budgets without parallel inference implementations."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_private_browser_settings",
+      "label": "Browser-specific protected settings",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:15",
+      "description": "Chromium TRUSTED_CONTEXTS storage preserves keys; Firefox backend/vision settings live in extension-origin tholi-private-settings IndexedDB.",
+      "evidence_files": [
+        "apps/extension/src/platform/private-settings.ts"
+      ],
+      "rationale": "Content scripts must not gain backend credentials because one browser lacks Chromium storage access levels."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_native_sidebar_adaptation",
+      "label": "Native sidebar activation and safe docking",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:17",
+      "description": "Maps sidePanel/sidebarAction, invokes activation before asynchronous work, retains widget after failed dock and validates session/document before removal.",
+      "evidence_files": [
+        "apps/extension/src/platform/sidebar.ts",
+        "apps/extension/src/background/ui-transport.ts"
+      ],
+      "rationale": "Native UI activation and transport differences must not discard the only usable guidance surface."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_firefox_widget_snapshot_port",
+      "label": "Firefox widget snapshot subscription",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:17",
+      "description": "Firefox embedded UI uses the existing runtime port instead of unavailable tab events; no second snapshot subscription.",
+      "evidence_files": [
+        "apps/extension/src/ui/hooks/useSessionSnapshot.ts",
+        "apps/extension/src/background/ui-transport.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_browser_platforms_permission_gesture_revalidation",
+      "label": "Visible origin intent and fresh permission checks",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:19",
+      "description": "Host permission requests begin in a genuine user gesture with visible origin intent and recheck active tab/origin after approval.",
+      "evidence_files": [
+        "apps/extension/src/platform/site-access.ts"
+      ],
+      "rationale": "Prevent asynchronous permission approval from binding a task to a different active website."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_browser_target_builds",
+      "label": "Separate target manifests and artifacts",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:23",
+      "description": "Common manifest derives Chromium dist/extension and Firefox dist/extension-firefox with event-page scripts, sidebar_action and stable Gecko ID.",
+      "evidence_files": [
+        "config/extension-targets.mjs",
+        "apps/extension/manifest.json"
+      ],
+      "rationale": "Retain stable entrypoint filenames while producing independently attributable target artifacts."
+    },
+    {
+      "id": "docs_architecture_browser_platforms_target_specific_certification",
+      "label": "Target-specific exact-artifact certification",
+      "file_type": "concept",
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:25",
+      "description": "Evidence identifies browser/version, target, run and artifact digest. Chromium evidence cannot certify Firefox artifacts.",
+      "evidence_files": [
+        "config/extension-targets.mjs",
+        "tests/browser/extension/firefox/conformance.spec.ts"
+      ],
+      "rationale": "Shared source does not establish equal behavior or certify another browser build."
+    },
+    {
+      "id": "docs_architecture_navigation_assisted_navigation",
+      "label": "Optional assisted navigation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "description": "Default-off assistance opens fresh ordinary disclosures or chooses explicitly requested view options; worker and content independently validate authority and binding.",
+      "evidence_files": [
+        "packages/safety-policy/assistance.ts",
+        "apps/extension/src/ui/hooks/useAssistance.ts",
+        "apps/extension/src/background/ui-transport.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ],
+      "rationale": "Reduce repetitive menu steps without handing final actions, credential handling or completion authority to synthetic interaction."
+    },
+    {
+      "id": "docs_architecture_navigation_retained_scan_recovery",
+      "label": "Retained destination during scan recovery",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:36",
+      "description": "Changing scans retain the destination and replan; pending indexing has bounded recovery while native document/session mismatch remains rejected.",
+      "evidence_files": [
+        "apps/extension/src/content/plan-lifecycle.ts",
+        "apps/extension/src/background/journey-service.ts"
+      ],
+      "rationale": "Observation revision churn is recoverable within one authorized document and must not silently widen authority."
+    },
+    {
+      "id": "docs_architecture_navigation_foreground_route_context",
+      "label": "Foreground controls and workflow reconciliation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:34",
+      "description": "Main-content/open-menu context, selected navigation and live routes reduce duplicate choices; equal distinct destinations still need a user choice.",
+      "evidence_files": [
+        "packages/navigation-core/workflows.ts",
+        "packages/goal-planner/index.ts"
+      ],
+      "rationale": "Use current state to avoid repeating intermediate steps while waiting for independently observed final effects."
+    },
+    {
+      "id": "docs_architecture_navigation_observed_route_timeout_feedback",
+      "label": "Bounded observed-route timeout feedback",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:54",
+      "description": "Idempotent timeouts reduce confidence only in already observed ordinary route edges; later verified success decays penalties and private destination content stays excluded.",
+      "evidence_files": [
+        "packages/site-memory/index.ts",
+        "packages/goal-planner/route-graph.ts"
+      ],
+      "rationale": "Learn from a failed attempt without inventing a route, declaring impossibility or persisting private text."
+    },
+    {
+      "id": "docs_architecture_natural_language_shared_phrase_normalization",
+      "label": "Shared authentication phrase normalization",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:8",
+      "description": "Interpretation and lexical retrieval share authentication aliases and punctuation normalization while protecting quoted names and URLs.",
+      "evidence_files": [
+        "packages/nlp/interpret.ts",
+        "packages/nlp/canonical.ts",
+        "packages/goal-planner/task-intent.ts"
+      ],
+      "rationale": "Natural sign-in/sign-up phrasing should agree across interpretation and retrieval without rewriting protected entities."
+    },
+    {
+      "id": "docs_architecture_natural_language_bounded_priority_inference",
+      "label": "Bounded latest-context priority inference",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:27",
+      "description": "Extension and API use the same bounded priority queue implementation. Each queue has one active CPU call and eight waiting requests; newest work replaces older work per document context and foreground planning cancels suggestions.",
+      "evidence_files": [
+        "packages/nlp/work-queue.ts",
+        "apps/extension/src/inference/nlp-worker.ts",
+        "apps/api/src/inference.ts"
+      ],
+      "rationale": "Bound resource use and discard stale delivery instead of running concurrent copies of the model."
+    },
+    {
+      "id": "apps_extension_src_inference_worker_host_idle_worker_release",
+      "label": "Current idle worker release budgets",
+      "file_type": "concept",
+      "source_file": "apps/extension/src/inference/worker-host.ts",
+      "source_location": "apps/extension/src/inference/worker-host.ts:41",
+      "description": "NLP workers release after 30 seconds; OCR after 10 seconds. The client releases the idle host after 30 seconds; one pending host startup/disposal is serialized.",
+      "evidence_files": [
+        "apps/extension/src/inference/client.ts",
+        "apps/extension/src/platform/inference-host.ts"
+      ],
+      "rationale": "Release heavy workers promptly without a late cleanup killing a resumed host."
+    },
+    {
+      "id": "apps_extension_src_content_plan_lifecycle_bounded_recovery_budget",
+      "label": "Three-attempt scan recovery budget",
+      "file_type": "concept",
+      "source_file": "apps/extension/src/content/plan-lifecycle.ts",
+      "source_location": "apps/extension/src/content/plan-lifecycle.ts:102",
+      "description": "Retries coalesce behind one in-flight plan; the recovery key follows request/task/verified progress/page rather than every fingerprint. Three retries pause checking with destination retained.",
+      "evidence_files": [
+        "apps/extension/src/content/plan-lifecycle.ts"
+      ],
+      "rationale": "Continuous page mutations must not replenish retries indefinitely or lose the destination."
+    },
+    {
+      "id": "apps_extension_src_background_message_router_priority_pause_stop",
+      "label": "Pause and Stop bypass routine queued work",
+      "file_type": "concept",
+      "source_file": "apps/extension/src/background/message-router.ts",
+      "source_location": "apps/extension/src/background/message-router.ts:305",
+      "description": "Validated Pause/Stop interrupt the same session owner directly; generation fences invalidate pending results rather than awaiting busy-page acknowledgment.",
+      "evidence_files": [
+        "apps/extension/src/background/message-router.ts",
+        "apps/extension/src/background/worker-runtime.ts"
+      ],
+      "rationale": "Users need a prompt way to halt observation and CPU work even while routine requests are queued."
+    },
+    {
+      "id": "packages_nlp_retrieval_bounded_hot_vector_cache",
+      "label": "Bounded 1,024-entry vector and hash caches",
+      "file_type": "concept",
+      "source_file": "packages/nlp/retrieval.ts",
+      "source_location": "packages/nlp/retrieval.ts:137",
+      "description": "Hot vectors and content hashes are each capped at 1,024 entries, sufficient for one 600-control page projection and its query; disposal clears both.",
+      "evidence_files": [
+        "packages/nlp/retrieval.ts",
+        "packages/nlp/model.ts"
+      ],
+      "rationale": "A 512-entry provisional cache thrashed on 601 texts; this budget preserves reuse without unbounded private-text retention."
+    },
+    {
+      "id": "apps_extension_src_content_visual_guidance_foreground_ocr_region",
+      "label": "Masked foreground-region OCR",
+      "file_type": "concept",
+      "source_file": "apps/extension/src/content/visual-guidance.ts",
+      "source_location": "apps/extension/src/content/visual-guidance.ts:93",
+      "description": "A visible actual foreground menu/dialog supplies an ephemeral bounded capture-space region; all privacy masks still apply across the full image.",
+      "evidence_files": [
+        "apps/extension/src/content/visual-guidance.ts",
+        "apps/extension/src/background/vision-service.ts",
+        "packages/vision/engine.ts"
+      ],
+      "rationale": "Improve useful text evidence in layered interfaces without reducing image masking or conferring action authority."
+    },
+    {
+      "id": "packages_page_discovery_incremental_relevant_mutation_observation",
+      "label": "Relevant mutations and owned-UI exclusion",
+      "file_type": "concept",
+      "source_file": "packages/page-discovery/incremental.ts",
+      "source_location": "packages/page-discovery/incremental.ts:222",
+      "description": "Both scan paths exclude Tholi shadow roots. Incremental observation tracks control/accessibility references, ignores unrelated ticking text and clears reference state on teardown.",
+      "evidence_files": [
+        "packages/page-discovery/incremental.ts",
+        "packages/page-discovery/index.ts"
+      ],
+      "rationale": "Prevent rendering the guide from recursively invalidating website discovery while preserving relevant control, receipt and accessibility changes."
+    },
+    {
+      "id": "packages_nlp_model_embedding_tensor_disposal",
+      "label": "Embedding tensor resource disposal",
+      "file_type": "concept",
+      "source_file": "packages/nlp/model.ts",
+      "source_location": "packages/nlp/model.ts:49",
+      "description": "Each extracted embedding vector releases its temporary output tensor in finally, including invalid-vector paths.",
+      "evidence_files": [
+        "packages/nlp/model.ts"
+      ],
+      "rationale": "Avoid retaining model output resources after the JavaScript vector has been copied."
     }
   ],
   "edges": [
@@ -1163,7 +1465,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:42",
+      "source_location": "docs/architecture/navigation.md:48",
       "weight": 1.0,
       "evidence": "Task-specific results, such as the requested selected value"
     },
@@ -1174,9 +1476,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
+      "source_location": "docs/architecture/navigation.md:46",
       "weight": 1.0,
-      "evidence": "Tesseract viewport OCR runs in a separate local worker"
+      "evidence": "Tesseract OCR runs in a separate local worker"
     },
     {
       "source": "docs_architecture_navigation_document",
@@ -1185,7 +1487,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
+      "source_location": "docs/architecture/navigation.md:46",
       "weight": 1.0,
       "evidence": "Paddle is available only in an explicit experimental build"
     },
@@ -1196,7 +1498,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:46",
+      "source_location": "docs/architecture/navigation.md:52",
       "weight": 1.0,
       "evidence": "IndexedDB v5 preserves site knowledge and parameterized saved routes."
     },
@@ -1207,7 +1509,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "The optional Fastify/SQLite service mirrors explicitly connected reusable knowledge"
     },
@@ -1231,7 +1533,7 @@
       "source_file": "docs/architecture/sessions.md",
       "source_location": "docs/architecture/sessions.md:11",
       "weight": 1.0,
-      "evidence": "The MV3 worker restores its pinned state from `chrome.storage.session`."
+      "evidence": "The Chromium service worker and Firefox MV3 event page restore pinned state"
     },
     {
       "source": "docs_architecture_sessions_document",
@@ -1394,7 +1696,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:8",
+      "source_location": "docs/architecture/natural-language.md:15",
       "weight": 1.0,
       "evidence": "The shared core combines BM25, normalized mean-pooled MiniLM vectors"
     },
@@ -1405,7 +1707,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:12",
+      "source_location": "docs/architecture/natural-language.md:19",
       "weight": 1.0,
       "evidence": "SHA-256 plus the pinned model revision"
     },
@@ -1416,9 +1718,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:17",
+      "source_location": "docs/architecture/natural-language.md:24",
       "weight": 1.0,
-      "evidence": "The extension runs packaged q8 ONNX weights in a worker owned by a Chrome"
+      "evidence": "The extension runs packaged q8 ONNX weights in a shared worker host:"
     },
     {
       "source": "docs_architecture_natural_language_document",
@@ -1427,9 +1729,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:20",
+      "source_location": "docs/architecture/natural-language.md:32",
       "weight": 1.0,
-      "evidence": "Stop aborts pending work and closes the offscreen document."
+      "evidence": "Stop aborts pending work and disposes the inference host."
     },
     {
       "source": "docs_architecture_natural_language_document",
@@ -1438,7 +1740,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:27",
+      "source_location": "docs/architecture/natural-language.md:39",
       "weight": 1.0,
       "evidence": "A search textbox focus is"
     },
@@ -1449,7 +1751,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:24",
+      "source_location": "docs/architecture/natural-language.md:36",
       "weight": 1.0,
       "evidence": "Plans carry request, document and scan revision identifiers."
     },
@@ -1495,7 +1797,7 @@
       "source_file": "docs/architecture/privacy.md",
       "source_location": "docs/architecture/privacy.md:13",
       "weight": 1.0,
-      "evidence": "Trusted `chrome.storage.session` holds active requests"
+      "evidence": "Trusted extension `storage.session` holds active requests"
     },
     {
       "source": "docs_architecture_privacy_document",
@@ -1649,7 +1951,7 @@
       "source_file": "docs/architecture/security.md",
       "source_location": "docs/architecture/security.md:19",
       "weight": 1.0,
-      "evidence": "Native Chrome access recovery and signed-in workflow verification remain separate pending checks."
+      "evidence": "Native browser access recovery and signed-in workflow verification remain separate pending checks."
     },
     {
       "source": "docs_architecture_frontend_extension_document",
@@ -1867,7 +2169,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "AGENTS.md:19",
+      "source_location": "AGENTS.md:21",
       "weight": 1.0,
       "evidence": "`npm run test:ci` is the deterministic PR gate."
     },
@@ -1878,7 +2180,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:39",
+      "source_location": "CONTRIBUTING.md:41",
       "weight": 1.0,
       "evidence": "Package with `npm run package:extension` and `npm run package:api` only after"
     },
@@ -1889,7 +2191,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:41",
+      "source_location": "CONTRIBUTING.md:43",
       "weight": 1.0,
       "evidence": "Frozen inputs live under `tests/fixtures`"
     },
@@ -2076,9 +2378,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
+      "source_location": "docs/architecture/navigation.md:46",
       "weight": 1.0,
-      "evidence": "Editable fields and all iframe pixels are masked."
+      "evidence": "Editable fields and all iframe pixels are masked across the full image before processing."
     },
     {
       "source": "docs_architecture_navigation_viewport_ocr",
@@ -2087,7 +2389,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:40",
+      "source_location": "docs/architecture/navigation.md:46",
       "weight": 1.0,
       "evidence": "Fresh DOM bindings take precedence."
     },
@@ -2098,7 +2400,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:42",
+      "source_location": "docs/architecture/navigation.md:48",
       "weight": 1.0,
       "evidence": "Wrong outcomes and unrelated toasts cannot advance the task queue."
     },
@@ -2109,7 +2411,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "The optional Fastify/SQLite service mirrors explicitly connected reusable knowledge"
     },
@@ -2120,7 +2422,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:34",
+      "source_location": "docs/architecture/navigation.md:38",
       "weight": 1.0,
       "evidence": "The optional HTTP adapter uses the same core;"
     },
@@ -2131,7 +2433,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "An unavailable or older backend falls back locally."
     },
@@ -2155,7 +2457,7 @@
       "source_file": "docs/architecture/sessions.md",
       "source_location": "docs/architecture/sessions.md:11",
       "weight": 1.0,
-      "evidence": "The MV3 worker restores its pinned state from `chrome.storage.session`."
+      "evidence": "The Chromium service worker and Firefox MV3 event page restore pinned state"
     },
     {
       "source": "docs_architecture_sessions_surface_visibility",
@@ -2362,7 +2664,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:13",
+      "source_location": "docs/architecture/natural-language.md:20",
       "weight": 1.0,
       "evidence": "keys the global 10,000-entry derived cache."
     },
@@ -2373,9 +2675,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:17",
+      "source_location": "docs/architecture/natural-language.md:24",
       "weight": 1.0,
-      "evidence": "The extension runs packaged q8 ONNX weights in a worker"
+      "evidence": "The extension runs packaged q8 ONNX weights in a shared worker host:"
     },
     {
       "source": "docs_architecture_natural_language_offscreen_inference",
@@ -2384,9 +2686,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:20",
+      "source_location": "docs/architecture/natural-language.md:32",
       "weight": 1.0,
-      "evidence": "Stop aborts pending work and closes the offscreen document."
+      "evidence": "Stop aborts pending work and disposes the inference host."
     },
     {
       "source": "docs_architecture_natural_language_task_queue",
@@ -2395,7 +2697,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:29",
+      "source_location": "docs/architecture/natural-language.md:41",
       "weight": 1.0,
       "evidence": "Review boundaries block the queue;"
     },
@@ -2406,7 +2708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:30",
+      "source_location": "docs/architecture/natural-language.md:42",
       "weight": 1.0,
       "evidence": "Pause retains the queue and Stop cancels it."
     },
@@ -2417,7 +2719,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:24",
+      "source_location": "docs/architecture/natural-language.md:36",
       "weight": 1.0,
       "evidence": "Plans carry request, document and scan revision identifiers."
     },
@@ -2428,7 +2730,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/natural-language.md",
-      "source_location": "docs/architecture/natural-language.md:41",
+      "source_location": "docs/architecture/natural-language.md:59",
       "weight": 1.0,
       "evidence": "A bearer token and an explicit extension-origin allowlist protect"
     },
@@ -2518,7 +2820,7 @@
       "source_file": "docs/architecture/privacy.md",
       "source_location": "docs/architecture/privacy.md:23",
       "weight": 1.0,
-      "evidence": "Viewport capture requires an active authorized HTTP/HTTPS tab and Chrome screenshot access."
+      "evidence": "Viewport capture requires an active authorized HTTP/HTTPS tab and browser screenshot access."
     },
     {
       "source": "docs_architecture_navigation_optional_api",
@@ -2934,7 +3236,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "AGENTS.md:19",
+      "source_location": "AGENTS.md:21",
       "weight": 1.0,
       "evidence": "`npm run test:full` is full certification, required before packaging."
     },
@@ -2945,7 +3247,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:41",
+      "source_location": "CONTRIBUTING.md:43",
       "weight": 1.0,
       "evidence": "Preserve original bytes, splits, hashes and thresholds."
     },
@@ -2956,7 +3258,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "THIRD_PARTY_NOTICES.md",
-      "source_location": "THIRD_PARTY_NOTICES.md:21",
+      "source_location": "THIRD_PARTY_NOTICES.md:22",
       "weight": 1.0,
       "evidence": "The model is used for semantic similarity, with no hosted inference service."
     },
@@ -2967,7 +3269,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "THIRD_PARTY_NOTICES.md",
-      "source_location": "THIRD_PARTY_NOTICES.md:27",
+      "source_location": "THIRD_PARTY_NOTICES.md:28",
       "weight": 1.0,
       "evidence": "Playwright discovery algorithms, Copyright Microsoft Corporation, Apache-2.0;"
     },
@@ -2978,7 +3280,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "THIRD_PARTY_NOTICES.md",
-      "source_location": "THIRD_PARTY_NOTICES.md:29",
+      "source_location": "THIRD_PARTY_NOTICES.md:30",
       "weight": 1.0,
       "evidence": "Paddle is experimental and not the default recognition engine."
     },
@@ -2989,7 +3291,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "AGENTS.md:19",
+      "source_location": "AGENTS.md:21",
       "weight": 1.0,
       "evidence": "PR or independently collected evidence cannot authorize a release."
     },
@@ -3002,7 +3304,11 @@
       "source_file": "docs/architecture/frontend/README.md",
       "source_location": "docs/architecture/frontend/README.md:73",
       "weight": 1.0,
-      "evidence": "UI draft hydration and engine plan publication independently use revision identity to reject stale asynchronous results; they protect different state owners."
+      "evidence": "UI draft hydration and engine plan publication independently use revision identity to reject stale asynchronous results; they protect different state owners.",
+      "evidence_locations": [
+        "docs/architecture/frontend/README.md:73",
+        "docs/architecture/natural-language.md:36"
+      ]
     },
     {
       "source": "docs_architecture_sessions_surface_visibility",
@@ -3013,7 +3319,11 @@
       "source_file": "docs/architecture/privacy.md",
       "source_location": "docs/architecture/privacy.md:35",
       "weight": 1.0,
-      "evidence": "A launcher that conceals the retained destination separates private task continuity from what remains visible on the page."
+      "evidence": "A launcher that conceals the retained destination separates private task continuity from what remains visible on the page.",
+      "evidence_locations": [
+        "docs/architecture/sessions.md:13",
+        "docs/architecture/privacy.md:13"
+      ]
     },
     {
       "source": "docs_architecture_authored_routes_mode_contracts",
@@ -3024,7 +3334,11 @@
       "source_file": "docs/architecture/authored-routes.md",
       "source_location": "docs/architecture/authored-routes.md:17",
       "weight": 1.0,
-      "evidence": "Both isolate controlled/sample flows from live product authority, using distinct contracts and state owners rather than shared fixture assumptions."
+      "evidence": "Both isolate controlled/sample flows from live product authority, using distinct contracts and state owners rather than shared fixture assumptions.",
+      "evidence_locations": [
+        "docs/architecture/authored-routes.md:17",
+        "docs/architecture/frontend/README.md:80"
+      ]
     },
     {
       "source": "docs_readme_historical_evidence_boundary",
@@ -3035,7 +3349,11 @@
       "source_file": "docs/architecture/frontend/README.md",
       "source_location": "docs/architecture/frontend/README.md:70",
       "weight": 1.0,
-      "evidence": "Both keep claims attached to the specific observed artifact rather than letting presentation or historical output certify current behavior."
+      "evidence": "Both keep claims attached to the specific observed artifact rather than letting presentation or historical output certify current behavior.",
+      "evidence_locations": [
+        "docs/README.md:3",
+        "docs/architecture/frontend/README.md:70"
+      ]
     },
     {
       "source": "readme_document",
@@ -3044,7 +3362,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:78",
+      "source_location": "README.md:85",
       "weight": 1.0,
       "evidence": "[contribution guide](CONTRIBUTING.md)"
     },
@@ -3055,7 +3373,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:80",
+      "source_location": "README.md:87",
       "weight": 1.0,
       "evidence": "[architecture](docs/architecture/README.md)"
     },
@@ -3066,7 +3384,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:82",
+      "source_location": "README.md:89",
       "weight": 1.0,
       "evidence": "[frontend ownership](docs/architecture/frontend/README.md)"
     },
@@ -3077,7 +3395,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:82",
+      "source_location": "README.md:89",
       "weight": 1.0,
       "evidence": "[navigation architecture](docs/architecture/navigation.md)"
     },
@@ -3088,7 +3406,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:82",
+      "source_location": "README.md:89",
       "weight": 1.0,
       "evidence": "[NLP](docs/architecture/natural-language.md)"
     },
@@ -3099,7 +3417,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:82",
+      "source_location": "README.md:89",
       "weight": 1.0,
       "evidence": "[the documentation index](docs/README.md)"
     },
@@ -3110,7 +3428,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:84",
+      "source_location": "README.md:91",
       "weight": 1.0,
       "evidence": "[Privacy](docs/architecture/privacy.md)"
     },
@@ -3121,7 +3439,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:84",
+      "source_location": "README.md:91",
       "weight": 1.0,
       "evidence": "[security](docs/architecture/security.md)"
     },
@@ -3132,7 +3450,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "README.md:92",
+      "source_location": "README.md:99",
       "weight": 1.0,
       "evidence": "[Third-party notices](THIRD_PARTY_NOTICES.md)"
     },
@@ -3143,7 +3461,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "AGENTS.md:21",
+      "source_location": "AGENTS.md:23",
       "weight": 1.0,
       "evidence": "[architecture](docs/architecture/README.md)"
     },
@@ -3176,7 +3494,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:43",
+      "source_location": "CONTRIBUTING.md:45",
       "weight": 1.0,
       "evidence": "[privacy](docs/architecture/privacy.md)"
     },
@@ -3187,7 +3505,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CONTRIBUTING.md",
-      "source_location": "CONTRIBUTING.md:43",
+      "source_location": "CONTRIBUTING.md:45",
       "weight": 1.0,
       "evidence": "[security](docs/architecture/security.md)"
     },
@@ -3308,7 +3626,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/README.md",
-      "source_location": "docs/README.md:45",
+      "source_location": "docs/README.md:52",
       "weight": 1.0,
       "evidence": "[authored routes and registry](architecture/authored-routes.md)"
     },
@@ -3319,7 +3637,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/README.md",
-      "source_location": "docs/README.md:51",
+      "source_location": "docs/README.md:58",
       "weight": 1.0,
       "evidence": "[Architecture index](architecture/README.md)"
     },
@@ -3451,7 +3769,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "[NLP](natural-language.md)"
     },
@@ -3462,7 +3780,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "[privacy](privacy.md)"
     },
@@ -3473,7 +3791,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/architecture/navigation.md",
-      "source_location": "docs/architecture/navigation.md:48",
+      "source_location": "docs/architecture/navigation.md:56",
       "weight": 1.0,
       "evidence": "[lifecycle](sessions.md)"
     },
@@ -3586,6 +3904,457 @@
       "source_location": "docs/architecture/frontend/shared-ui.md:7",
       "weight": 1.0,
       "evidence": "[frontend architecture](README.md)"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_webextensions_boundary",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:5",
+      "weight": 1.0,
+      "evidence": "`api.ts` is the typed Mozilla"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_native_document_identity",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:5",
+      "weight": 1.0,
+      "evidence": "Native document IDs remain mandatory;"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_shared_inference_hosts",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:9",
+      "weight": 1.0,
+      "evidence": "Both call the same request/cancel/dispose host,"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_private_browser_settings",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:15",
+      "weight": 1.0,
+      "evidence": "Firefox has no access-level API:"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_native_sidebar_adaptation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:17",
+      "weight": 1.0,
+      "evidence": "`sidebar.ts` maps `sidePanel` and `sidebarAction`."
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_firefox_widget_snapshot_port",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:17",
+      "weight": 1.0,
+      "evidence": "Firefox embeds have the content-script API subset:"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_permission_gesture_revalidation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:19",
+      "weight": 1.0,
+      "evidence": "Host permission requests use visible origin intent"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_browser_target_builds",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:23",
+      "weight": 1.0,
+      "evidence": "`config/extension-targets.mjs` derives manifests"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_document",
+      "target": "docs_architecture_browser_platforms_target_specific_certification",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:25",
+      "weight": 1.0,
+      "evidence": "Chromium evidence cannot certify Firefox bytes."
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_assisted_navigation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "The optional **Assisted navigation** setting"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_retained_scan_recovery",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:36",
+      "weight": 1.0,
+      "evidence": "A changed scan retains the destination"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_foreground_route_context",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:34",
+      "weight": 1.0,
+      "evidence": "Main-content or foreground-menu evidence"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_observed_route_timeout_feedback",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:54",
+      "weight": 1.0,
+      "evidence": "A bounded, idempotent timeout signal"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_shared_phrase_normalization",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:8",
+      "weight": 1.0,
+      "evidence": "Interpretation and lexical retrieval share authentication aliases"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_bounded_priority_inference",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:27",
+      "weight": 1.0,
+      "evidence": "one active CPU"
+    },
+    {
+      "source": "docs_architecture_natural_language_inference_lifecycle",
+      "target": "apps_extension_src_inference_worker_host_idle_worker_release",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "apps/extension/src/inference/worker-host.ts",
+      "source_location": "apps/extension/src/inference/worker-host.ts:41",
+      "weight": 1.0,
+      "evidence": "kind === \"ocr\" ? 10000 : 30000"
+    },
+    {
+      "source": "docs_architecture_navigation_retained_scan_recovery",
+      "target": "apps_extension_src_content_plan_lifecycle_bounded_recovery_budget",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "apps/extension/src/content/plan-lifecycle.ts",
+      "source_location": "apps/extension/src/content/plan-lifecycle.ts:102",
+      "weight": 1.0,
+      "evidence": "if (context.recoveryStep >= 3)"
+    },
+    {
+      "source": "docs_architecture_frontend_extension_worker_owner",
+      "target": "apps_extension_src_background_message_router_priority_pause_stop",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "apps/extension/src/background/message-router.ts",
+      "source_location": "apps/extension/src/background/message-router.ts:305",
+      "weight": 1.0,
+      "evidence": "if ([\"STOP\", \"PAUSE\"].includes(raw?.type))"
+    },
+    {
+      "source": "docs_architecture_natural_language_embedding_cache",
+      "target": "packages_nlp_retrieval_bounded_hot_vector_cache",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "packages/nlp/retrieval.ts",
+      "source_location": "packages/nlp/retrieval.ts:137",
+      "weight": 1.0,
+      "evidence": "while (this.hot.size > 1024)"
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "apps_extension_src_content_visual_guidance_foreground_ocr_region",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "apps/extension/src/content/visual-guidance.ts",
+      "source_location": "apps/extension/src/content/visual-guidance.ts:93",
+      "weight": 1.0,
+      "evidence": "Coordinates are ephemeral and all privacy masks still cover the full image."
+    },
+    {
+      "source": "docs_architecture_browser_platforms_native_document_identity",
+      "target": "docs_architecture_sessions_pinned_session",
+      "relation": "enforces",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:5",
+      "weight": 1.0,
+      "evidence": "Native document IDs remain mandatory;"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_shared_inference_hosts",
+      "target": "docs_architecture_natural_language_offscreen_inference",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:9",
+      "weight": 1.0,
+      "evidence": "Both call the same request/cancel/dispose host,"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_private_browser_settings",
+      "target": "docs_architecture_security_sender_validation",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:15",
+      "weight": 1.0,
+      "evidence": "Content scripts cannot read that database or request sidebar-only credentials."
+    },
+    {
+      "source": "docs_architecture_browser_platforms_native_sidebar_adaptation",
+      "target": "docs_architecture_sessions_surface_visibility",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:17",
+      "weight": 1.0,
+      "evidence": "Failed Dock retains the usable widget;"
+    },
+    {
+      "source": "docs_architecture_browser_platforms_browser_target_builds",
+      "target": "docs_architecture_frontend_extension_stable_entrypoints",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:23",
+      "weight": 1.0,
+      "evidence": "Entrypoint filenames remain stable."
+    },
+    {
+      "source": "docs_architecture_browser_platforms_target_specific_certification",
+      "target": "contributing_release_certification",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/browser-platforms.md",
+      "source_location": "docs/architecture/browser-platforms.md:25",
+      "weight": 1.0,
+      "evidence": "Evidence identifies target, browser/version, validation run and exact artifact digest."
+    },
+    {
+      "source": "docs_architecture_navigation_assisted_navigation",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "No synthetic click proves an outcome."
+    },
+    {
+      "source": "docs_architecture_navigation_assisted_navigation",
+      "target": "docs_architecture_security_consequential_review",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "Its shared policy refuses links, forms, credentials, final actions, unknown effects and cross-frame targets."
+    },
+    {
+      "source": "docs_architecture_navigation_assisted_navigation",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "content rechecks the live binding, visibility and risk."
+    },
+    {
+      "source": "docs_architecture_navigation_assisted_navigation",
+      "target": "docs_architecture_sessions_surface_visibility",
+      "relation": "requires_expanded_surface",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "Minimized, hidden, paused or stale guidance cannot act."
+    },
+    {
+      "source": "docs_architecture_navigation_retained_scan_recovery",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "retains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:36",
+      "weight": 1.0,
+      "evidence": "A changed scan retains the destination and replans from a fresh observation."
+    },
+    {
+      "source": "docs_architecture_navigation_retained_scan_recovery",
+      "target": "docs_architecture_browser_platforms_native_document_identity",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:36",
+      "weight": 1.0,
+      "evidence": "Native document and session mismatches still reject stale commands;"
+    },
+    {
+      "source": "docs_architecture_navigation_observed_route_timeout_feedback",
+      "target": "docs_architecture_navigation_indexeddb_knowledge",
+      "relation": "updates_existing_evidence",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:54",
+      "weight": 1.0,
+      "evidence": "Verified transitions retain their observed counts and latency."
+    },
+    {
+      "source": "docs_architecture_navigation_foreground_route_context",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "cannot_replace",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:34",
+      "weight": 1.0,
+      "evidence": "Neither reconciliation nor a click establishes final arrival."
+    },
+    {
+      "source": "docs_architecture_natural_language_bounded_priority_inference",
+      "target": "docs_architecture_natural_language_inference_lifecycle",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:29",
+      "weight": 1.0,
+      "evidence": "Foreground planning cancels stale suggestions;"
+    },
+    {
+      "source": "docs_architecture_natural_language_shared_phrase_normalization",
+      "target": "docs_architecture_natural_language_hybrid_retrieval",
+      "relation": "supports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:8",
+      "weight": 1.0,
+      "evidence": "Interpretation and lexical retrieval share authentication aliases"
+    },
+    {
+      "source": "docs_architecture_frontend_extension_document",
+      "target": "docs_architecture_browser_platforms_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:13",
+      "weight": 1.0,
+      "evidence": "[browser platforms](../browser-platforms.md)"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_browser_platforms_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:43",
+      "weight": 1.0,
+      "evidence": "[browser platforms](browser-platforms.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_browser_platforms_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:65",
+      "weight": 1.0,
+      "evidence": "[Browser adapters and target builds](architecture/browser-platforms.md)"
+    },
+    {
+      "source": "docs_architecture_navigation_incremental_discovery",
+      "target": "packages_page_discovery_incremental_relevant_mutation_observation",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "packages/page-discovery/incremental.ts",
+      "source_location": "packages/page-discovery/incremental.ts:222",
+      "weight": 1.0,
+      "evidence": "Mounting/removing our own overlay is not a website mutation."
+    },
+    {
+      "source": "docs_architecture_natural_language_inference_lifecycle",
+      "target": "packages_nlp_model_embedding_tensor_disposal",
+      "relation": "supported_by",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "packages/nlp/model.ts",
+      "source_location": "packages/nlp/model.ts:49",
+      "weight": 1.0,
+      "evidence": "output.dispose();"
     }
   ],
   "hyperedges": [
@@ -3643,5 +4412,8 @@
     }
   ],
   "input_tokens": 0,
-  "output_tokens": 0
+  "output_tokens": 0,
+  "source_revision": "360f710",
+  "source_version": "0.11.0",
+  "study_date": "2026-10-19"
 }

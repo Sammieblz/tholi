@@ -17,7 +17,7 @@ Generated output is ignored by Git and Prettier. The reviewed fragments and tour
 
 ## Revision snapshots
 
-`graphify-out/LATEST.md` identifies the most recently reviewed revision and links to its vault. The October 19 rescan reviews verified GitHub `main` commit `360f710` in `graphify-out/source-360f710`, preserving the existing `8c8b442` working checkout and its original graph. The refreshed outputs live in `graphify-out/latest`; source links resolve to the reviewed snapshot rather than implying those changes are checked out locally.
+The October 19 rescan reviewed GitHub `main` commit `360f710` in `graphify-out/source-360f710` while the working checkout was still at `8c8b442`. That historical map lives in `graphify-out/latest`, with source links into the isolated snapshot. The subsequent merge brought the 0.11.0 product changes into the working checkout. The default reviewed fragments and tours now describe that merged implementation; regenerating `graphify-out/obsidian` maps the current checkout. `source-manifest.json` records the actual revision and source hashes for each generated map.
 
 The generator accepts `--output PATH` and `--revision SHA` for this workflow. For the existing snapshot:
 

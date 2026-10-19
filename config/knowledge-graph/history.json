@@ -639,8 +639,7 @@
       "temporal_scope": "v0.8.0 architecture",
       "evidence_files": [
         "apps/extension/src/background/memory-service.ts",
-        "packages/navigation-core/storage.ts",
-        "apps/extension/src/inference/offscreen-client.ts"
+        "packages/navigation-core/storage.ts"
       ],
       "historical_evidence_only": true
     },
@@ -1510,6 +1509,537 @@
         "scripts/package-api.mjs"
       ],
       "historical_evidence_only": true
+    },
+    {
+      "id": "changelog_document",
+      "label": "Tholi changelog and unreleased source version",
+      "file_type": "document",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Version-scoped source document. Reported automated evidence does not certify a later build or authorize release.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "docs_releases_v0_11_0_readme_document",
+      "label": "Tholi 0.11.0 unreleased release notes",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Version-scoped source document. Reported automated evidence does not certify a later build or authorize release.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_document",
+      "label": "Navigation reliability implementation and pre-version evidence",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Version-scoped source document. Reported automated evidence does not certify a later build or authorize release.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_document",
+      "label": "Navigation responsiveness and memory evidence",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Version-scoped source document. Reported automated evidence does not certify a later build or authorize release.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "docs_releases_v0_11_0_validation_document",
+      "label": "Tholi 0.11.0 validation and pending release gates",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Version-scoped source document. Reported automated evidence does not certify a later build or authorize release.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "changelog_unreleased_source_download_distinction",
+      "label": "Unreleased source is separate from eligible downloads",
+      "file_type": "concept",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "0.11.0 is explicitly unreleased. Source versions, eligible downloads and published releases are distinct; dated records certify only their original tested bytes.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false
+    },
+    {
+      "id": "docs_releases_v0_11_0_readme_synchronized_versions_and_compatibility",
+      "label": "Synchronized version with preserved contracts",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Product, extension, optional API and bundled workspaces use 0.11.0. Existing package names, add-on ID, permissions, knowledge IDs, API contracts, frozen models and acceptance goals remain. No storage migration or cross-browser sync. Chromium 140+, Firefox 153+, Node 24.19.x; developer Firefox install disappears at restart; website on port 5174. Existing 0.10.1 media and eligible archive download version stay historical.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "package.json"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_readme_optional_assistance_default_off",
+      "label": "Optional assisted navigation remains default off",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Settings exposes explicit assisted navigation for eligible menu reveals and requested view options. Credentials, forms and final actions stay manual, with fresh document/safety checks. Synthetic clicks may be ignored by sites and never supply success evidence.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/safety-policy/assistance.ts",
+        "apps/extension/src/background/ui-transport.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_readme_pending_signedin_and_longframes",
+      "label": "Unreleased known limits and no publication",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L75",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Signed-in Cloudflare/GitHub/Amazon verification remains incomplete. Busy pages retain long frames and frozen GitHub target mismatch. No signing, store submission, deployment, tags or publication; full exact-byte certification needed before gated packaging.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "scripts/verify-full.mjs",
+        "scripts/package-extension.mjs"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_retained_destination_scan_recovery",
+      "label": "Retained destination through bounded scan recovery",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L10",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Journey service and plan lifecycle retain destination, retry fresh scans and bound pending-index recovery while preserving native document/session rejection. Runtime now owns recovery; old test retries removed.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "apps/extension/src/background/journey-service.ts",
+        "apps/extension/src/content/plan-lifecycle.ts",
+        "tests/unit/navigation/lifecycle.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_natural_auth_punctuation",
+      "label": "Natural authentication language and protected names",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L11",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Shared phrase normalization handles sign-up/sign-in aliases, synonyms and Unicode punctuation while protecting quoted names and URLs. Existing task-intent, Compromise and retrieval owners carry the changes.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/goal-planner/task-intent.ts",
+        "packages/nlp/retrieval.ts",
+        "tests/integration/nlp/real-model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_foreground_routes_and_edge_reliability",
+      "label": "Foreground reconciliation and observed-route reliability",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L12",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Live route/selected/open state, foreground ranking, destination deduplication and bounded action attempts avoid already-open menu guidance. Auth intent can explore grounded account menus. Timeout penalties apply idempotently to existing observed edges and decay on verified success; no route or outcome invented.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/navigation-core/workflows.ts",
+        "packages/navigation-core/exploration.ts",
+        "packages/site-memory/index.ts",
+        "packages/goal-planner/route-graph.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_bounded_priority_cpu_queue",
+      "label": "Bounded priority inference queue",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Shared queue serializes one active CPU call, cancels stale work and replaces latest per context. User destinations/decisions outrank continuations and suggestions. Source defaults to 8 pending jobs, rejects lower-priority same-context work, and drains only after active run settles; abort is not a claim of instantaneous CPU preemption.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/nlp/work-queue.ts",
+        "tests/unit/navigation/local-model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_masked_foreground_ocr",
+      "label": "Mask full image before foreground OCR",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L16",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Full-image privacy masking precedes optional menu/dialog region recognition, with viewport fallback. MiniLM/Tesseract weights, corpora, acceptance goals, thread count and safety budgets unchanged; Paddle experimental. No LLM/backend required. Selenium remains test infrastructure, not runtime crawling.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "apps/extension/src/content/visual-guidance.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_native_harness_corrections",
+      "label": "Browser harness memory and focus corrections",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L44",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Firefox uses BiDi local-directory installation instead of ZIP/base64 expansion after actual OOM. Chromium partial startup cleans profile. Keyboard oracle foregrounds real test panel without changing sidebar website context; held context receives live session updates. Assertions unchanged; interrupted/source-edited runs not certification.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/support/firefox-extension.ts",
+        "tests/support/branded-extension.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_preversion_v5_cohort",
+      "label": "Pre-version 0.10.1 cohort:394 PR +32 model +1 paired",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L63",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Before the 0.11.0 bump, run navigation-2026-10-18-final-v5 passed 293 units across 35 files, 47 core, 20 specialized, 2 Firefox and 32 UI cases: 394 PR cases total. The same verified build also passed 11 NLP + 17 multi-app + 4 vision tests and one serial paired experiment. Wrapper times: units 63 s, core 321 s, specialized 119 s, Firefox 34 s, UI 149 s, models 60 s, paired 87 s. These historical 0.10.1 bytes cannot certify 0.11.0.",
+      "temporal_scope": "October 18, 2026 pre-version 0.10.1 artifact cohort; not 0.11.0 certification",
+      "historical_evidence_only": true,
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_preversion_v5_performance",
+      "label": "Pre-version paired measurements and limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L100",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Pre-version measurements on Ryzen 7 5700U, 16 logical CPUs, 7.4 GiB RAM, Node 24.19.0, MiniLM q8 and one WASM thread: Chrome 155 / Firefox 158 cold planning 1211/1075 ms, warm p95 (20) 137/134 ms, cold OCR 940/869 ms, warm OCR p95 (10) 585/585 ms, Stop 84/39 ms. Whole-browser working set after planning 906/1158 MiB and after OCR 1023/1039 MiB is neither isolated nor peak memory. The 50,000-node scene retained long frame p95 of 283.5/200 ms. Local core time 5.3 minutes does not verify the hosted 10-minute target.",
+      "temporal_scope": "October 18, 2026 pre-version 0.10.1 artifact cohort; not 0.11.0 certification",
+      "historical_evidence_only": true,
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_navigation_reliability_unchanged_frozen_accuracy_limits",
+      "label": "Unchanged frozen quality and GitHub mismatch",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L78",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Frozen inputs remain 200 NLP, 360 multi-app and 64 vision cases. NLP precision/coverage is 1.0, with zero measured false completions or boundary bypasses. Five multi-app platforms achieve 1.0; GitHub retains 0.9643 and one target mismatch. Frozen first-target results do not establish real signed-in workflow success.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/integration/nlp/real-model.test.ts",
+        "tests/integration/multi-app/model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_validation_version_bump_focused_cohort",
+      "label": "Version bump cohort:294 units, not full gate",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L14",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Run version-0.11.0-2026-10-18 passed 294 units across 35 files in 62.5 s, strict types, version checks and all application/fixture builds. All 215 relative documentation targets resolved; all 421 external lock resolutions were unchanged. Historical media, frozen inputs and archives were unchanged. Full gates correctly rejected historical evidence; the pre-version v5 results cannot be relabeled.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "scripts/verify-full.mjs"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "label": "Complete final-byte and manual gates remain pending",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L45",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "A coordinated test:full must run against one frozen build with unit, model, extension, UI, live-site, both acceptance groups, branded browsers and paired performance. verify-full must accept target-specific evidence. Native Chrome/Edge/Brave/Firefox installation, permissions and surfaces, accessibility, signed-in checks, packaging, candidate review, commit/tag and publication remain unchecked. No unchecked item is a pass.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "scripts/verify-full.mjs",
+        "docs/development/releasing.md"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_self_observation_and_semantic_mutations",
+      "label": "Exclude owned UI and irrelevant mutation loops",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Both scanning paths exclude owned shadow roots; widget mount/removal cannot cause website rescans. Unrelated ticking text ignored; controls,modals,receipts and referenced accessibility semantics still update. Reference bookkeeping bounded by control index and cleared on stop.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/page-discovery/incremental.ts",
+        "packages/page-discovery/index.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_coalesced_replan_bounded_backoff",
+      "label": "One automatic plan and bounded recovery",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L14",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "One automatic plan runs at a time and subsequent requests coalesce. Recovery budget survives changing fingerprints; repeated invalidation pauses with the destination retained. The retry key includes request, active task, verified progress and page key; three retries use 250/500/1000 ms before pausing. Timer handles clear before further work.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "apps/extension/src/content/plan-lifecycle.ts",
+        "tests/unit/navigation/lifecycle.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_pause_stop_priority_and_fences",
+      "label": "Immediate validated Pause and Stop bypass routine queue",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Validated cancellation goes to same owner before queued routine reads; invalidates pending results,inference andframe observations without waiting page acknowledgment. Native identities and generation fences prevent stale restarts. Pause/Stop enabled during planning or another active tab;Resume retains availability checks; canceled submissions discarded.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "apps/extension/src/background/journey-service.ts",
+        "apps/extension/src/ui/app/useGuidanceController.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_idle_worker_tensor_release",
+      "label": "Tensor disposal and idle worker release",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L25",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Embedding output tensors are disposed; observation caches clear on teardown. OCR workers idle for 10 s, planning workers 30 s, and the inference host 30 s rather than 120 s before release. Serialized startup/disposal prevents canceled startup from creating another worker after native context lookup. Browser reservations can outlive workers, so this does not prove a fixed RAM saving.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/nlp/model.ts",
+        "apps/extension/src/inference/worker-host.ts",
+        "apps/extension/src/inference/client.ts",
+        "tests/unit/navigation/local-model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_private_projection_cache_budget",
+      "label": "1024-entry caches retain601 ephemeral vectors",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L30",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Hot vectors and content hashes each have a 1,024-entry bound. The rejected 512-entry vector budget re-embedded all 601 active page/query texts on a second pass. Existing regression coverage verifies 601 ephemeral vectors are reused without durable private embeddings. The bound fits the 600-control projection plus query without changing frozen model/corpus or privacy policy.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/nlp/retrieval.ts",
+        "tests/integration/nlp/real-model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_performance_v3_cohort",
+      "label": "Performance v3:400 PR +32 model +1 paired",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L55",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Run performance-2026-10-19-v3 passed 299 units + 47 core + 20 specialized + 2 Firefox + 32 UI = 400 PR cases. Frozen NLP, multi-app and OCR tests passed 32 cases, plus one paired test. This full PR cohort precedes the final cache adjustment and cannot certify later final bytes.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+      "label": "Final cache adjustment:299 +32 +1 focused checks",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L57",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Run performance-2026-10-19-v4-cache verified final types, all application builds, 299 units, 32 model/OCR tests and one paired experiment. The cache adjustment changes the NLP inference bundle and source maps; Chromium background, content and interface JavaScript remain byte-identical to v3. API parity, cancellation and the 601-text private-cache regression are included. This is not complete final-byte certification.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "packages/nlp/retrieval.ts",
+        "tests/integration/nlp/real-model.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_final_paired_timings",
+      "label": "Final paired Chrome/Firefox performance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L88",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Windows, Ryzen 7 5700U, 16 logical CPUs, 7.4 GiB RAM, Node 24.19.0; Chrome 155.0.8059.41 / Firefox 158.0 run serially with MiniLM q8 and one WASM thread. Cold planning 1750/1500 ms; warm p95 (20 samples) 129/166 ms; cold OCR 1066/982 ms; warm OCR p95 (10) 660/649 ms; Pause 13/15 ms; Stop 6/20 ms. Pause follows eight queued routine reads. Gates: warm planning <750 ms, OCR <2000 ms, Pause and Stop <1000 ms. These fixture and hardware measurements are not universal guarantees.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_busy_scene_noncausal_and_memory_limits",
+      "label": "Long-frame stress remains; memory samples not isolation",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L96",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "The same highlight remains through a 50,000-node mutation scene. Frame p95 is 250 ms in Chrome and 233 ms in Firefox; the later stopped scene gives 267/217 ms. Ordered samples do not establish causal improvement or smoothness. Whole-browser working-set/private-commit includes browser, page, UI, models and OCR; it is neither extension-isolated nor peak memory. The original stress run stopped at about 18 MiB free is incomplete, not a before/after baseline. Hosted and weaker-CPU evidence remains pending.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_controlled_prime_not_signedin_amazon",
+      "label": "Controlled Prime receipt verifies fixture only",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L66",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "The controlled Prime fixture covers login, delayed 2FA, documents, membership menus, cancellation review and an independent website receipt. The user signed-in Amazon account is explicitly unverified. This does not establish native permission or universal workflow reliability.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "tests/browser/extension/reliability/prime.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_final_tree_digests_not_archives",
+      "label": "Final tree digests and no release artifacts",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L108",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Final Chromium build-tree digest: e8a49f8ce6b92e52261f0b92874d906f004a150e4a3308e2331577954a01c3ed. Firefox: c8305022d0d7dfb35fd2c944a143d7a175481f567dbddf0ef2347058d0a8924a. These are tree digests, not ZIP checksums. October 18 digests are superseded; local output reports and v3 cohort snapshots are not releases. No archive, signing, publication or deployment occurred.",
+      "temporal_scope": "v0.11.0 unreleased; October 18-19, 2026",
+      "historical_evidence_only": false,
+      "evidence_files": [
+        "scripts/verify-full.mjs"
+      ]
     }
   ],
   "edges": [
@@ -2667,6 +3197,501 @@
       "source_location": "L3",
       "evidence": "Later matching-byte local evidence still records no new archive/commit/tag and pending native/signed-in checks.",
       "weight": 0.85
+    },
+    {
+      "source": "changelog_document",
+      "target": "changelog_unreleased_source_download_distinction",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Unreleased source is separate from eligible downloads. 0.11.0 is explicitly unreleased. Source versions, eligible downloads and published releases are distinct; dated records certify only their original tested bytes."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_readme_synchronized_versions_and_compatibility",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Synchronized version with preserved contracts. Product, extension, optional API and bundled workspaces use 0.11.0. Existing package names, add-on ID, permissions, knowledge IDs, API contracts, frozen models and acceptance goals remain. No storage migration or cross-browser sync. Chromium 140+, Firefox 153+, Node 24.19.x; developer Firefox install disappears at restart; website on port 5174. Existing 0.10.1 media and eligible archive download version stay historical."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_readme_optional_assistance_default_off",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Optional assisted navigation remains default off. Settings exposes explicit assisted navigation for eligible menu reveals and requested view options. Credentials, forms and final actions stay manual, with fresh document/safety checks. Synthetic clicks may be ignored by sites and never supply success evidence."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_readme_pending_signedin_and_longframes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Unreleased known limits and no publication. Signed-in Cloudflare/GitHub/Amazon verification remains incomplete. Busy pages retain long frames and frozen GitHub target mismatch. No signing, store submission, deployment, tags or publication; full exact-byte certification needed before gated packaging."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_retained_destination_scan_recovery",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Retained destination through bounded scan recovery. Journey service and plan lifecycle retain destination, retry fresh scans and bound pending-index recovery while preserving native document/session rejection. Runtime now owns recovery; old test retries removed."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_natural_auth_punctuation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Natural authentication language and protected names. Shared phrase normalization handles sign-up/sign-in aliases, synonyms and Unicode punctuation while protecting quoted names and URLs. Existing task-intent, Compromise and retrieval owners carry the changes."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_foreground_routes_and_edge_reliability",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Foreground reconciliation and observed-route reliability. Live route/selected/open state, foreground ranking, destination deduplication and bounded action attempts avoid already-open menu guidance. Auth intent can explore grounded account menus. Timeout penalties apply idempotently to existing observed edges and decay on verified success; no route or outcome invented."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_bounded_priority_cpu_queue",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Bounded priority inference queue. Shared queue serializes one active CPU call, cancels stale work and replaces latest per context. User destinations/decisions outrank continuations and suggestions. Source defaults to 8 pending jobs, rejects lower-priority same-context work, and drains only after active run settles; abort is not a claim of instantaneous CPU preemption."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_masked_foreground_ocr",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Mask full image before foreground OCR. Full-image privacy masking precedes optional menu/dialog region recognition, with viewport fallback. MiniLM/Tesseract weights, corpora, acceptance goals, thread count and safety budgets unchanged; Paddle experimental. No LLM/backend required. Selenium remains test infrastructure, not runtime crawling."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_native_harness_corrections",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Browser harness memory and focus corrections. Firefox uses BiDi local-directory installation instead of ZIP/base64 expansion after actual OOM. Chromium partial startup cleans profile. Keyboard oracle foregrounds real test panel without changing sidebar website context; held context receives live session updates. Assertions unchanged; interrupted/source-edited runs not certification."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_preversion_v5_cohort",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Pre-version 0.10.1 cohort:394 PR +32 model +1 paired. Before the 0.11.0 bump, run navigation-2026-10-18-final-v5 passed 293 units across 35 files, 47 core, 20 specialized, 2 Firefox and 32 UI cases: 394 PR cases total. The same verified build also passed 11 NLP + 17 multi-app + 4 vision tests and one serial paired experiment. Wrapper times: units 63 s, core 321 s, specialized 119 s, Firefox 34 s, UI 149 s, models 60 s, paired 87 s. These historical 0.10.1 bytes cannot certify 0.11.0."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_preversion_v5_performance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Pre-version paired measurements and limits. Pre-version measurements on Ryzen 7 5700U, 16 logical CPUs, 7.4 GiB RAM, Node 24.19.0, MiniLM q8 and one WASM thread: Chrome 155 / Firefox 158 cold planning 1211/1075 ms, warm p95 (20) 137/134 ms, cold OCR 940/869 ms, warm OCR p95 (10) 585/585 ms, Stop 84/39 ms. Whole-browser working set after planning 906/1158 MiB and after OCR 1023/1039 MiB is neither isolated nor peak memory. The 50,000-node scene retained long frame p95 of 283.5/200 ms. Local core time 5.3 minutes does not verify the hosted 10-minute target."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_unchanged_frozen_accuracy_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Unchanged frozen quality and GitHub mismatch. Frozen inputs remain 200 NLP, 360 multi-app and 64 vision cases. NLP precision/coverage is 1.0, with zero measured false completions or boundary bypasses. Five multi-app platforms achieve 1.0; GitHub retains 0.9643 and one target mismatch. Frozen first-target results do not establish real signed-in workflow success."
+    },
+    {
+      "source": "docs_releases_v0_11_0_validation_document",
+      "target": "docs_releases_v0_11_0_validation_version_bump_focused_cohort",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Version bump cohort:294 units, not full gate. Run version-0.11.0-2026-10-18 passed 294 units across 35 files in 62.5 s, strict types, version checks and all application/fixture builds. All 215 relative documentation targets resolved; all 421 external lock resolutions were unchanged. Historical media, frozen inputs and archives were unchanged. Full gates correctly rejected historical evidence; the pre-version v5 results cannot be relabeled."
+    },
+    {
+      "source": "docs_releases_v0_11_0_validation_document",
+      "target": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Complete final-byte and manual gates remain pending. A coordinated test:full must run against one frozen build with unit, model, extension, UI, live-site, both acceptance groups, branded browsers and paired performance. verify-full must accept target-specific evidence. Native Chrome/Edge/Brave/Firefox installation, permissions and surfaces, accessibility, signed-in checks, packaging, candidate review, commit/tag and publication remain unchecked. No unchecked item is a pass."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_self_observation_and_semantic_mutations",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Exclude owned UI and irrelevant mutation loops. Both scanning paths exclude owned shadow roots; widget mount/removal cannot cause website rescans. Unrelated ticking text ignored; controls,modals,receipts and referenced accessibility semantics still update. Reference bookkeeping bounded by control index and cleared on stop."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_coalesced_replan_bounded_backoff",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records One automatic plan and bounded recovery. One automatic plan runs at a time and subsequent requests coalesce. Recovery budget survives changing fingerprints; repeated invalidation pauses with the destination retained. The retry key includes request, active task, verified progress and page key; three retries use 250/500/1000 ms before pausing. Timer handles clear before further work."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_pause_stop_priority_and_fences",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Immediate validated Pause and Stop bypass routine queue. Validated cancellation goes to same owner before queued routine reads; invalidates pending results,inference andframe observations without waiting page acknowledgment. Native identities and generation fences prevent stale restarts. Pause/Stop enabled during planning or another active tab;Resume retains availability checks; canceled submissions discarded."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_idle_worker_tensor_release",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Tensor disposal and idle worker release. Embedding output tensors are disposed; observation caches clear on teardown. OCR workers idle for 10 s, planning workers 30 s, and the inference host 30 s rather than 120 s before release. Serialized startup/disposal prevents canceled startup from creating another worker after native context lookup. Browser reservations can outlive workers, so this does not prove a fixed RAM saving."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_private_projection_cache_budget",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records 1024-entry caches retain601 ephemeral vectors. Hot vectors and content hashes each have a 1,024-entry bound. The rejected 512-entry vector budget re-embedded all 601 active page/query texts on a second pass. Existing regression coverage verifies 601 ephemeral vectors are reused without durable private embeddings. The bound fits the 600-control projection plus query without changing frozen model/corpus or privacy policy."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_performance_v3_cohort",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Performance v3:400 PR +32 model +1 paired. Run performance-2026-10-19-v3 passed 299 units + 47 core + 20 specialized + 2 Firefox + 32 UI = 400 PR cases. Frozen NLP, multi-app and OCR tests passed 32 cases, plus one paired test. This full PR cohort precedes the final cache adjustment and cannot certify later final bytes."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Final cache adjustment:299 +32 +1 focused checks. Run performance-2026-10-19-v4-cache verified final types, all application builds, 299 units, 32 model/OCR tests and one paired experiment. The cache adjustment changes the NLP inference bundle and source maps; Chromium background, content and interface JavaScript remain byte-identical to v3. API parity, cancellation and the 601-text private-cache regression are included. This is not complete final-byte certification."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_final_paired_timings",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Final paired Chrome/Firefox performance. Windows, Ryzen 7 5700U, 16 logical CPUs, 7.4 GiB RAM, Node 24.19.0; Chrome 155.0.8059.41 / Firefox 158.0 run serially with MiniLM q8 and one WASM thread. Cold planning 1750/1500 ms; warm p95 (20 samples) 129/166 ms; cold OCR 1066/982 ms; warm OCR p95 (10) 660/649 ms; Pause 13/15 ms; Stop 6/20 ms. Pause follows eight queued routine reads. Gates: warm planning <750 ms, OCR <2000 ms, Pause and Stop <1000 ms. These fixture and hardware measurements are not universal guarantees."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_busy_scene_noncausal_and_memory_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Long-frame stress remains; memory samples not isolation. The same highlight remains through a 50,000-node mutation scene. Frame p95 is 250 ms in Chrome and 233 ms in Firefox; the later stopped scene gives 267/217 ms. Ordered samples do not establish causal improvement or smoothness. Whole-browser working-set/private-commit includes browser, page, UI, models and OCR; it is neither extension-isolated nor peak memory. The original stress run stopped at about 18 MiB free is incomplete, not a before/after baseline. Hosted and weaker-CPU evidence remains pending."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_controlled_prime_not_signedin_amazon",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Controlled Prime receipt verifies fixture only. The controlled Prime fixture covers login, delayed 2FA, documents, membership menus, cancellation review and an independent website receipt. The user signed-in Amazon account is explicitly unverified. This does not establish native permission or universal workflow reliability."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_document",
+      "target": "docs_releases_v0_11_0_performance_final_tree_digests_not_archives",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly records Final tree digests and no release artifacts. Final Chromium build-tree digest: e8a49f8ce6b92e52261f0b92874d906f004a150e4a3308e2331577954a01c3ed. Firefox: c8305022d0d7dfb35fd2c944a143d7a175481f567dbddf0ef2347058d0a8924a. These are tree digests, not ZIP checksums. October 18 digests are superseded; local output reports and v3 cohort snapshots are not releases. No archive, signing, publication or deployment occurred."
+    },
+    {
+      "source": "changelog_document",
+      "target": "docs_releases_v0_11_0_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Tholi 0.11.0 unreleased release notes."
+    },
+    {
+      "source": "changelog_document",
+      "target": "docs_releases_v0_11_0_performance_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Navigation responsiveness and memory evidence."
+    },
+    {
+      "source": "changelog_document",
+      "target": "docs_releases_v0_11_0_validation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Tholi 0.11.0 validation and pending release gates."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_navigation_reliability_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Navigation reliability implementation and pre-version evidence."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_validation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Tholi 0.11.0 validation and pending release gates."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_document",
+      "target": "docs_releases_v0_11_0_performance_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Navigation responsiveness and memory evidence."
+    },
+    {
+      "source": "docs_releases_v0_11_0_validation_document",
+      "target": "docs_releases_v0_11_0_performance_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Navigation responsiveness and memory evidence."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_document",
+      "target": "docs_releases_v0_11_0_validation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "evidence": "The source document explicitly links to Tholi 0.11.0 validation and pending release gates."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_preversion_v5_cohort",
+      "target": "docs_releases_v0_11_0_validation_version_bump_focused_cohort",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L63",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_performance_v3_cohort",
+      "target": "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L55",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_validation_version_bump_focused_cohort",
+      "target": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L14",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+      "target": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L57",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_final_paired_timings",
+      "target": "docs_releases_v0_11_0_performance_busy_scene_noncausal_and_memory_limits",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L88",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_readme_optional_assistance_default_off",
+      "target": "docs_releases_v0_11_0_performance_controlled_prime_not_signedin_amazon",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L22",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_bounded_priority_cpu_queue",
+      "target": "docs_releases_v0_11_0_performance_pause_stop_priority_and_fences",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L15",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_navigation_reliability_retained_destination_scan_recovery",
+      "target": "docs_releases_v0_11_0_performance_coalesced_replan_bounded_backoff",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/navigation-reliability.md",
+      "source_location": "L10",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_11_0_performance_private_projection_cache_budget",
+      "target": "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L30",
+      "weight": 0.95,
+      "evidence": "Distinct implementation/evidence scopes remain explicit; no automatic completion or release inference."
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks",
+      "target": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L48",
+      "weight": 0.95,
+      "evidence": "Native and signed-in limits remain unresolved in the current unreleased release checklist."
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_october17_acceptance_and_pending_boundaries",
+      "target": "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L83",
+      "weight": 0.95,
+      "evidence": "Historical coordinated passes cannot certify later0.11source orfinalbytes."
     }
   ],
   "hyperedges": [
@@ -2716,12 +3741,61 @@
       "source_file": "docs/releases/v0.9.0/validation.md",
       "source_location": "L1",
       "evidence": "Focus/menu/review are intermediate or handoff evidence; completion requires fresh requested subject/result."
+    },
+    {
+      "id": "docs_releases_v0_11_0_validation_evidence_cohorts",
+      "label": "Separate0.11evidence cohorts",
+      "nodes": [
+        "docs_releases_v0_11_0_navigation_reliability_preversion_v5_cohort",
+        "docs_releases_v0_11_0_validation_version_bump_focused_cohort",
+        "docs_releases_v0_11_0_performance_performance_v3_cohort",
+        "docs_releases_v0_11_0_performance_performance_v4_cache_cohort",
+        "docs_releases_v0_11_0_validation_complete_finalbyte_gate_pending"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/validation.md",
+      "source_location": "L1",
+      "evidence": "Source records separate guarded runtime behavior,controlled measurements andunfinished release/native checks."
+    },
+    {
+      "id": "docs_releases_v0_11_0_performance_bounded_local_resources",
+      "label": "Bounded local responsiveness and resource lifecycle",
+      "nodes": [
+        "docs_releases_v0_11_0_performance_coalesced_replan_bounded_backoff",
+        "docs_releases_v0_11_0_navigation_reliability_bounded_priority_cpu_queue",
+        "docs_releases_v0_11_0_performance_idle_worker_tensor_release",
+        "docs_releases_v0_11_0_performance_private_projection_cache_budget",
+        "docs_releases_v0_11_0_performance_self_observation_and_semantic_mutations"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/performance.md",
+      "source_location": "L1",
+      "evidence": "Source records separate guarded runtime behavior,controlled measurements andunfinished release/native checks."
+    },
+    {
+      "id": "docs_releases_v0_11_0_readme_assistance_truth_boundary",
+      "label": "Assistance requires fresh verification",
+      "nodes": [
+        "docs_releases_v0_11_0_readme_optional_assistance_default_off",
+        "docs_releases_v0_11_0_performance_controlled_prime_not_signedin_amazon",
+        "docs_releases_v0_11_0_readme_pending_signedin_and_longframes"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.11.0/README.md",
+      "source_location": "L1",
+      "evidence": "Source records separate guarded runtime behavior,controlled measurements andunfinished release/native checks."
     }
   ],
   "input_tokens": 0,
   "output_tokens": 0,
   "extraction_metadata": {
-    "scope": "17 release docs excluding v0.10.1",
-    "evidence_files_note": "Current existing source paths for parent AST bridging; not claims that present source equals historical release bytes."
+    "scope": "17 historical release documents excluding v0.10.1, plus CHANGELOG.md and all four v0.11.0 release documents; source 360f710",
+    "evidence_files_note": "Only current existing source navigation aids retained; deleted historical offscreen-client.ts link removed. Historical claims remain version scoped; current code is not asserted identical to historical bytes."
   }
 }

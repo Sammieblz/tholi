@@ -2,7 +2,7 @@
   "nodes": [
     {
       "id": "docs_guides_getting_started_document",
-      "label": "Chrome setup and native verification",
+      "label": "Browser setup and native verification",
       "file_type": "document",
       "source_file": "docs/guides/getting-started.md",
       "source_location": "L1",
@@ -10,7 +10,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Repository source document or HTML entry: Chrome setup and native verification",
+      "description": "Current Windows setup for Chromium 140+ and Firefox 153+ unsigned developer preview, browser-specific surface recovery and pending manual checks.",
       "evidence_files": []
     },
     {
@@ -296,10 +296,11 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
-      "rationale": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
+      "description": "Use Windows, Node 24.19.x, npm ci and build:extension. Default build creates dist/extension for Chromium 140+ and dist/extension-firefox for Firefox 153+. Chromium loads unpacked; Firefox loads manifest temporarily through about:debugging and removes it on restart. Reload extension and refresh tabs after rebuilding.",
+      "rationale": "Use Windows, Node 24.19.x, npm ci and build:extension. Default build creates dist/extension for Chromium 140+ and dist/extension-firefox for Firefox 153+. Chromium loads unpacked; Firefox loads manifest temporarily through about:debugging and removes it on restart. Reload extension and refresh tabs after rebuilding.",
       "evidence_files": [
-        "apps/extension/manifest.json",
+        "config/extension-targets.mjs",
+        "config/browsers.json",
         "scripts/build-extension.mjs"
       ]
     },
@@ -323,16 +324,16 @@
     },
     {
       "id": "docs_guides_getting_started_pending_native_verification",
-      "label": "Native Chrome and assistive checks remain pending",
+      "label": "Manual native permissions and assistive checks remain pending",
       "file_type": "concept",
       "source_file": "docs/guides/getting-started.md",
-      "source_location": "L23",
+      "source_location": "L42",
       "source_url": null,
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
-      "rationale": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
+      "description": "The manual checklist remains pending for native permission grant/denial/capture activation, keyboard and screen-reader speech, native zoom, signed-in workflows and related recovery. Browser-support records automated native surface execution separately; that does not complete manual review.",
+      "rationale": "The manual checklist remains pending for native permission grant/denial/capture activation, keyboard and screen-reader speech, native zoom, signed-in workflows and related recovery. Browser-support records automated native surface execution separately; that does not complete manual review.",
       "evidence_files": [
         "scripts/package-extension.mjs",
         "tests/support/permission-variant.ts"
@@ -378,22 +379,21 @@
       "label": "Backend bearer and exact extension-origin allowlist",
       "file_type": "concept",
       "source_file": "docs/guides/backend.md",
-      "source_location": "L1",
+      "source_location": "L15",
       "source_url": null,
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
-      "rationale": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
+      "description": "First startup writes a random token to .navigator-api/connection.json without allowed origins. Exact chrome-extension 32 letter ID or Firefox moz-extension internal UUID is required; add-on ID is not the UUID. API-host access is separately granted. Tokens use protected Chromium storage or Firefox extension-origin IndexedDB, never content storage.",
+      "rationale": "First startup writes a random token to .navigator-api/connection.json without allowed origins. Exact chrome-extension 32 letter ID or Firefox moz-extension internal UUID is required; add-on ID is not the UUID. API-host access is separately granted. Tokens use protected Chromium storage or Firefox extension-origin IndexedDB, never content storage.",
       "evidence_files": [
         "apps/api/src/server.ts",
-        "apps/extension/src/platform/backend-client.ts",
-        "apps/extension/src/ui/hooks/useBackendSettings.ts"
+        "apps/extension/src/platform/private-settings.ts"
       ]
     },
     {
       "id": "docs_guides_backend_revision_stamped_v2",
-      "label": "Revision-stamped v2 backend protocol",
+      "label": "Revision-stamped v 2 backend protocol",
       "file_type": "concept",
       "source_file": "docs/guides/backend.md",
       "source_location": "L1",
@@ -401,8 +401,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
-      "rationale": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "description": "Negotiate /v 2/health; v 2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "rationale": "Negotiate /v 2/health; v 2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
       "evidence_files": [
         "apps/api/src/server.ts",
         "packages/navigation-core/index.ts"
@@ -418,8 +418,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
-      "rationale": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "description": "Authenticated POST /v 2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "rationale": "Authenticated POST /v 2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
       "evidence_files": [
         "apps/api/src/ocr.ts",
         "apps/api/src/server.ts",
@@ -539,8 +539,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
-      "rationale": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "description": "Authentication and 2 FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "rationale": "Authentication and 2 FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
       "evidence_files": [
         "apps/extension/src/content/plan-lifecycle.ts",
         "apps/extension/src/background/journey-service.ts"
@@ -573,8 +573,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
-      "rationale": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "description": "IndexedDB v 5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "rationale": "IndexedDB v 5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
       "evidence_files": [
         "apps/extension/src/background/memory-service.ts",
         "packages/navigation-core/index.ts"
@@ -607,8 +607,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
-      "rationale": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "description": "navigator-live-debug-v 1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "rationale": "navigator-live-debug-v 1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
       "evidence_files": [
         "tests/unit/safety/live-diagnostics.test.ts",
         "tests/browser/extension/core/live-navigation.spec.ts"
@@ -676,8 +676,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
-      "rationale": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "description": "Expanded requires usable 400 x 560, Standard 340 x 360, Compact 280 x 240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "rationale": "Expanded requires usable 400 x 560, Standard 340 x 360, Compact 280 x 240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
       "evidence_files": [
         "tests/unit/presentation/widget-density.test.ts",
         "apps/extension/src/ui/widget/widget-shell.ts"
@@ -807,16 +807,16 @@
     },
     {
       "id": "docs_development_naming_component_versions_and_eligible_download",
-      "label": "Source, component and eligible-download versions differ",
+      "label": "Unified release version; eligible download remains independently gated",
       "file_type": "concept",
       "source_file": "docs/development/naming.md",
-      "source_location": "L5",
+      "source_location": "L17",
       "source_url": null,
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
-      "rationale": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
+      "description": "Product, extension, API and bundled workspaces now share root release number 0.11.0 (unreleased). Website version comes independently from checksum-verified eligible archives; no eligible archive means source setup. Historical 0.10.0 download and 0.10.1 media claims remain dated evidence.",
+      "rationale": "Product, extension, API and bundled workspaces now share root release number 0.11.0 (unreleased). Website version comes independently from checksum-verified eligible archives; no eligible archive means source setup. Historical 0.10.0 download and 0.10.1 media claims remain dated evidence.",
       "evidence_files": [
         "package.json",
         "apps/api/package.json",
@@ -851,11 +851,12 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
-      "rationale": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
+      "description": "Current packagers create tholi-VERSION.zip, tholi-firefox-VERSION.zip and tholi-api-VERSION.tgz only after full evidence verification. Existing original or legacy archives are immutable; renaming, versioning or building cannot create or certify a release.",
+      "rationale": "Current packagers create tholi-VERSION.zip, tholi-firefox-VERSION.zip and tholi-api-VERSION.tgz only after full evidence verification. Existing original or legacy archives are immutable; renaming, versioning or building cannot create or certify a release.",
       "evidence_files": [
         "scripts/package-extension.mjs",
-        "scripts/package-api.mjs"
+        "scripts/package-api.mjs",
+        "docs/development/releasing.md"
       ]
     },
     {
@@ -885,12 +886,12 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
-      "rationale": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
+      "description": "Use Windows Node 24.19.x, npm ci and Playwright Chromium plus Firefox. npm test owns units; check types/fast/build; test:ci deterministic PR; test:full complete certification. Browser aliases require production and prebuilt fixtures. Actual Firefox extension uses Selenium/geckodriver; Playwright Firefox tests website.",
+      "rationale": "Use Windows Node 24.19.x, npm ci and Playwright Chromium plus Firefox. npm test owns units; check types/fast/build; test:ci deterministic PR; test:full complete certification. Browser aliases require production and prebuilt fixtures. Actual Firefox extension uses Selenium/geckodriver; Playwright Firefox tests website.",
       "evidence_files": [
         "scripts/test.mjs",
-        "config/testing/vitest.ts",
-        "config/testing/playwright.ts"
+        "config/testing/playwright.ts",
+        "config/testing/vitest.ts"
       ]
     },
     {
@@ -922,12 +923,12 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
-      "rationale": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
+      "description": "Full certification includes unit/model/core/integration/UI/live, native Firefox, Chrome/Edge/Brave, paired browser performance and separate complete Chromium/Firefox acceptance owners. Every owner, frozen ID, project and both target digests must match one coordinated immutable build and run.",
+      "rationale": "Full certification includes unit/model/core/integration/UI/live, native Firefox, Chrome/Edge/Brave, paired browser performance and separate complete Chromium/Firefox acceptance owners. Every owner, frozen ID, project and both target digests must match one coordinated immutable build and run.",
       "evidence_files": [
-        "scripts/test.mjs",
         "scripts/verify-full.mjs",
-        ".github/workflows/full-validation.yml"
+        "scripts/evidence.mjs",
+        "config/testing/playwright.ts"
       ]
     },
     {
@@ -940,12 +941,12 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
-      "rationale": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
+      "description": "Build demo, test fixtures, Chromium extension, Firefox extension, website and API once; build-manifest also hashes pinned model/OCR assets. Prepared mode verifies all immutable artifacts before skipping preparation.",
+      "rationale": "Build demo, test fixtures, Chromium extension, Firefox extension, website and API once; build-manifest also hashes pinned model/OCR assets. Prepared mode verifies all immutable artifacts before skipping preparation.",
       "evidence_files": [
         "scripts/build-manifest.mjs",
         "scripts/test.mjs",
-        "scripts/artifact-files.mjs"
+        "scripts/build-extension.mjs"
       ]
     },
     {
@@ -1167,7 +1168,7 @@
     },
     {
       "id": "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
-      "label": "Latest cleanup validation remains incomplete",
+      "label": "Historical cleanup cohort incomplete",
       "file_type": "concept",
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
@@ -1175,8 +1176,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
-      "rationale": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
+      "description": "Historical October 17 cleanup cohort:285 units and deterministic/model groups passed; public regressions 8 passed 6 failed; final PR stopped under memory pressure, acceptance incomplete. Later browser and 0.11.0 records supersede its current-status role. It remains incomplete evidence for its dated bytes.",
+      "rationale": "Historical October 17 cleanup cohort:285 units and deterministic/model groups passed; public regressions 8 passed 6 failed; final PR stopped under memory pressure, acceptance incomplete. Later browser and 0.11.0 records supersede its current-status role. It remains incomplete evidence for its dated bytes.",
       "evidence_files": [
         "scripts/evidence.mjs",
         "scripts/verify-full.mjs"
@@ -1184,7 +1185,7 @@
     },
     {
       "id": "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
-      "label": "Live regression causes remain unresolved",
+      "label": "Historical cleanup live failures",
       "file_type": "concept",
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
@@ -1192,8 +1193,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
-      "rationale": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
+      "description": "Historical cleanup failures include geometry deadlines, picker readiness, planner timeout and an unresolved-origin JSON parse. A final harness correction passed types without then completing clean acceptance. Later browser-support investigation records distinct persistence failures; no assumed single cause.",
+      "rationale": "Historical cleanup failures include geometry deadlines, picker readiness, planner timeout and an unresolved-origin JSON parse. A final harness correction passed types without then completing clean acceptance. Later browser-support investigation records distinct persistence failures; no assumed single cause.",
       "evidence_files": [
         "tests/browser/acceptance/wikipedia.spec.ts",
         "tests/support/acceptance-runner.ts"
@@ -1237,7 +1238,7 @@
     },
     {
       "id": "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit",
-      "label": "Severe busy-page animation remains unresolved",
+      "label": "Historical cleanup severe-load limitation",
       "file_type": "concept",
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
@@ -1245,8 +1246,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
-      "rationale": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
+      "description": "Historical cleanup stress sample measured 1150.1 ms frame p95 retaining one highlight. Later browser/performance cohorts have different bytes and timings; all retain long-frame limitations and cannot establish a causal speedup.",
+      "rationale": "Historical cleanup stress sample measured 1150.1 ms frame p95 retaining one highlight. Later browser/performance cohorts have different bytes and timings; all retain long-frame limitations and cannot establish a causal speedup.",
       "evidence_files": [
         "tests/browser/extension/ui/extension.spec.ts"
       ]
@@ -1330,8 +1331,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
-      "rationale": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "description": "Light/dark 1440 x 960 30 fps VP 9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "rationale": "Light/dark 1440 x 960 30 fps VP 9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
       "evidence_files": [
         "apps/web/src/features/marketing/ProductVideo.tsx",
         "apps/public/media/video/manifest.json",
@@ -1426,7 +1427,7 @@
     },
     {
       "id": "_github_workflows_ci_pr_parallel_jobs",
-      "label": "PR workflow builds then runs four groups",
+      "label": "PR workflow builds then runs five groups",
       "file_type": "concept",
       "source_file": ".github/workflows/ci.yml",
       "source_location": "L1",
@@ -1434,8 +1435,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
-      "rationale": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
+      "description": "Windows pull_request/main/manual workflow builds once, then runs core, ui, integration, firefox, unit (max parallel 3). Read-only contents, cancellable superseded runs and run_id-run_attempt identity retained; validate rejects failed/canceled dependencies.",
+      "rationale": "Windows pull_request/main/manual workflow builds once, then runs core, ui, integration, firefox, unit (max parallel 3). Read-only contents, cancellable superseded runs and run_id-run_attempt identity retained; validate rejects failed/canceled dependencies.",
       "evidence_files": [
         ".github/workflows/ci.yml",
         "scripts/test.mjs"
@@ -1443,7 +1444,7 @@
     },
     {
       "id": "_github_workflows_full_validation_full_scheduled_jobs",
-      "label": "Scheduled full workflow and seven owned groups",
+      "label": "Scheduled full workflow and eleven owned groups",
       "file_type": "concept",
       "source_file": ".github/workflows/full-validation.yml",
       "source_location": "L1",
@@ -1451,8 +1452,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
-      "rationale": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
+      "description": "Nightly 06:00 UTC/manual/v* workflow builds once; eleven groups:acceptance-chromium, acceptance-firefox, browser-performance, brands, firefox, live, core, models, ui, integration, unit. Each verifies artifacts and uploads only owned evidence; certification merges matching current-attempt reports.",
+      "rationale": "Nightly 06:00 UTC/manual/v* workflow builds once; eleven groups:acceptance-chromium, acceptance-firefox, browser-performance, brands, firefox, live, core, models, ui, integration, unit. Each verifies artifacts and uploads only owned evidence; certification merges matching current-attempt reports.",
       "evidence_files": [
         ".github/workflows/full-validation.yml",
         "scripts/verify-full.mjs"
@@ -1468,8 +1469,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "description": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
-      "rationale": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
+      "description": "verify-full precedes package:extension/API; candidates only on tags or explicit manual package input. Version-check requires exact vVERSION tag. Native permission/accessibility and signed-in checks remain separately pending; workflow never submits browser-store releases.",
+      "rationale": "verify-full precedes package:extension/API; candidates only on tags or explicit manual package input. Version-check requires exact vVERSION tag. Native permission/accessibility and signed-in checks remain separately pending; workflow never submits browser-store releases.",
       "evidence_files": [
         ".github/workflows/full-validation.yml",
         "scripts/package-extension.mjs",
@@ -1559,6 +1560,309 @@
         "apps/web/src/features/preferences/cookies.ts",
         "tests/unit/website/website-preferences.test.ts"
       ]
+    },
+    {
+      "id": "docs_development_releasing_document",
+      "label": "Versioning and release procedure",
+      "file_type": "document",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "One root release number, guarded version preparation, final-byte dual-target certification and immutable candidate packaging.",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_document",
+      "label": "October 17 Chromium/Firefox implementation evidence",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Dated browser-specific implementation, measurements, passes and incomplete aggregate certification; no signed release.",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_development_releasing_root_release_number",
+      "label": "Root package owns one product release number",
+      "file_type": "rationale",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Root package, API, extension and bundled workspaces advance together. Package identities, protocol/storage schemas, model revisions and consent versions remain independent compatibility identifiers.",
+      "evidence_files": [
+        "scripts/version.mjs",
+        "package.json",
+        "package-lock.json"
+      ],
+      "rationale": "Root package, API, extension and bundled workspaces advance together. Package identities, protocol/storage schemas, model revisions and consent versions remain independent compatibility identifiers."
+    },
+    {
+      "id": "docs_development_releasing_guarded_version_preparation",
+      "label": "Version preparation validates before mutating metadata",
+      "file_type": "rationale",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "release:version accepts increasing browser-compatible X.Y.Z after matching release notes exist; synchronizes workspace versions, internal pins, lock metadata and manifest without external upgrades, commit, tag, build or package.",
+      "evidence_files": [
+        "scripts/version.mjs"
+      ],
+      "rationale": "release:version accepts increasing browser-compatible X.Y.Z after matching release notes exist; synchronizes workspace versions, internal pins, lock metadata and manifest without external upgrades, commit, tag, build or package."
+    },
+    {
+      "id": "docs_development_releasing_version_drift_and_tag_guard",
+      "label": "Version check rejects drift and mismatched tags",
+      "file_type": "rationale",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L29",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "check:version verifies metadata, lockfile, internal pins, manifest and release-note heading; CI version tag must equal vVERSION. Version changes require fresh artifact evidence.",
+      "evidence_files": [
+        "scripts/version.mjs",
+        "scripts/verify-full.mjs"
+      ],
+      "rationale": "check:version verifies metadata, lockfile, internal pins, manifest and release-note heading; CI version tag must equal vVERSION. Version changes require fresh artifact evidence."
+    },
+    {
+      "id": "docs_development_releasing_dual_target_candidate_gate",
+      "label": "Both targets require current complete certification",
+      "file_type": "rationale",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L34",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "test:full must pass on final immutable bytes; neither PR/focused evidence nor Chromium results certify Firefox. Packagers reverify without rebuilding and create new target-specific archives.",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs",
+        "scripts/verify-full.mjs"
+      ],
+      "rationale": "test:full must pass on final immutable bytes; neither PR/focused evidence nor Chromium results certify Firefox. Packagers reverify without rebuilding and create new target-specific archives."
+    },
+    {
+      "id": "docs_development_releasing_publication_is_separate",
+      "label": "Prepared version and candidate are not publication",
+      "file_type": "rationale",
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L49",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Preparation remains unreleased until certification and deliberate publication; native/manual review, checksums and notes precede publication. Full workflow does not submit store releases.",
+      "evidence_files": [
+        ".github/workflows/full-validation.yml"
+      ],
+      "rationale": "Preparation remains unreleased until certification and deliberate publication; native/manual review, checksums and notes precede publication. Full workflow does not submit store releases."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_shared_engine_dual_targets",
+      "label": "One local engine targets two browser families",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Common engine targets Chromium 140+ and Firefox 153+ with separate generated manifests and artifacts; Firefox remains unsigned temporary-install preview. Safari/WebKit outside scope.",
+      "evidence_files": [
+        "config/extension-targets.mjs",
+        "scripts/build-extension.mjs",
+        "config/browsers.json"
+      ],
+      "rationale": "Common engine targets Chromium 140+ and Firefox 153+ with separate generated manifests and artifacts; Firefox remains unsigned temporary-install preview. Safari/WebKit outside scope."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_firefox_widget_privilege_boundary",
+      "label": "Firefox Dock requires native toolbar handoff",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L20",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Web-embedded Firefox extension frames lack privileged sidebar/tab APIs. Snapshot port remains usable; rejected Dock keeps widget and asks for toolbar action rather than broadening privileges.",
+      "evidence_files": [
+        "docs/guides/getting-started.md",
+        "tests/browser/extension/firefox/conformance.spec.ts"
+      ],
+      "rationale": "Web-embedded Firefox extension frames lack privileged sidebar/tab APIs. Snapshot port remains usable; rejected Dock keeps widget and asks for toolbar action rather than broadening privileges."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_browser_automation_ownership",
+      "label": "Native Firefox extension and Playwright website are distinct owners",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Selenium/geckodriver executes installed Firefox extension; Playwright Firefox tests website. Gecko BiDi cannot intercept privileged extension context, so deterministic website interception and packaged CSP/settings/transport checks remain separate.",
+      "evidence_files": [
+        "config/testing/playwright.ts",
+        "tests/support/firefox-extension.ts",
+        "tests/support/browser-test.ts"
+      ],
+      "rationale": "Selenium/geckodriver executes installed Firefox extension; Playwright Firefox tests website. Gecko BiDi cannot intercept privileged extension context, so deterministic website interception and packaged CSP/settings/transport checks remain separate."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_dated_firefox_acceptance_pass",
+      "label": "Dated Firefox 90-sample pass is not current certification",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L31",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "October 17 browser-support-20261017-final-4 records Firefox 12 cases 90 samples across both viewports with zero false arrivals, automation or leaks. Chromium incomplete means aggregate gate rejects; later 0.11.0 artifacts require fresh certification.",
+      "evidence_files": [
+        "docs/releases/v0.11.0/validation.md"
+      ],
+      "rationale": "October 17 browser-support-20261017-final-4 records Firefox 12 cases 90 samples across both viewports with zero false arrivals, automation or leaks. Chromium incomplete means aggregate gate rejects; later 0.11.0 artifacts require fresh certification."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_dated_native_browser_passes",
+      "label": "Dated native branded and Firefox surface evidence",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L12",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Chrome 155, Edge 155, Brave 1.97.59 and Firefox 158 executed dated final bytes and native surfaces. Firefox additionally tested event-page restart, private storage, masked capture and authorized frames. Manual permission dialogs, screen-reader and signed-in checks remain pending.",
+      "evidence_files": [
+        "tests/browser/extension/branded/smoke.spec.ts",
+        "tests/browser/extension/firefox/conformance.spec.ts",
+        "tests/support/webdriver-surfaces.ts"
+      ],
+      "rationale": "Chrome 155, Edge 155, Brave 1.97.59 and Firefox 158 executed dated final bytes and native surfaces. Firefox additionally tested event-page restart, private storage, masked capture and authorized frames. Manual permission dialogs, screen-reader and signed-in checks remain pending."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_chromium_persistence_blocker",
+      "label": "Historical Chromium persistence failures blocked aggregate release",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L69",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Seven IndexedDB abort events at 5008-5020 ms identify the existing 5 second transaction deadline as failure mechanism; underlying cause unresolved. Memory pressure correlation is not causal proof. No deadline/storage relaxation to obtain a pass.",
+      "evidence_files": [
+        "tests/browser/acceptance/wikipedia.spec.ts"
+      ],
+      "rationale": "Seven IndexedDB abort events at 5008-5020 ms identify the existing 5 second transaction deadline as failure mechanism; underlying cause unresolved. Memory pressure correlation is not causal proof. No deadline/storage relaxation to obtain a pass."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_dated_paired_performance",
+      "label": "Paired browser performance has workload-specific limits",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L43",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Dated shared-host runs met unchanged warm planning 750 ms, OCR 2000 ms, Stop 1000 ms budgets. 50,000 node frame p95 Chrome 266.6 ms/Firefox 150 ms remains visibly slow. Whole-browser memory snapshots are neither isolated extension memory nor peaks.",
+      "evidence_files": [
+        "tests/browser/extension/performance/paired.spec.ts",
+        "docs/releases/v0.11.0/performance.md"
+      ],
+      "rationale": "Dated shared-host runs met unchanged warm planning 750 ms, OCR 2000 ms, Stop 1000 ms budgets. 50,000 node frame p95 Chrome 266.6 ms/Firefox 150 ms remains visibly slow. Whole-browser memory snapshots are neither isolated extension memory nor peaks."
+    },
+    {
+      "id": "docs_releases_v0_10_1_browser_support_bounded_disposable_teardown",
+      "label": "Teardown preserves deadlines and user profiles",
+      "file_type": "rationale",
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L63",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Browser teardown has separate 30 second bound. Forced cleanup requires executable, PID and exact temporary-profile identity and remains failure; no user profile closed or product response/verification deadline relaxed.",
+      "evidence_files": [
+        "tests/support/firefox-extension.ts",
+        "tests/support/branded-extension.ts"
+      ],
+      "rationale": "Browser teardown has separate 30 second bound. Forced cleanup requires executable, PID and exact temporary-profile identity and remains failure; no user profile closed or product response/verification deadline relaxed."
+    },
+    {
+      "id": "docs_development_testing_readme_independent_browser_acceptance_owners",
+      "label": "Complete acceptance is owned separately per target",
+      "file_type": "rationale",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L44",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "acceptance-chromium and acceptance-firefox each cover frozen IDs and both viewports; CI keeps independent reports but release still requires both in same run/build. Pure engine/model tests execute once.",
+      "evidence_files": [
+        "scripts/test.mjs",
+        "scripts/verify-full.mjs",
+        "tests/browser/acceptance-firefox/matrix.spec.ts",
+        "tests/support/acceptance-runner.ts"
+      ],
+      "rationale": "acceptance-chromium and acceptance-firefox each cover frozen IDs and both viewports; CI keeps independent reports but release still requires both in same run/build. Pure engine/model tests execute once."
+    },
+    {
+      "id": "docs_development_testing_readme_branded_and_paired_release_requirements",
+      "label": "Full evidence includes brands, native Firefox and paired budgets",
+      "file_type": "rationale",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L42",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "verify-full requires Chrome/Edge/Brave versions and native surfaces, Firefox event-page/settings/native-surface owner, both target digests and paired supported-version measurements.",
+      "evidence_files": [
+        "scripts/verify-full.mjs",
+        "tests/browser/extension/performance/paired.spec.ts"
+      ],
+      "rationale": "verify-full requires Chrome/Edge/Brave versions and native surfaces, Firefox event-page/settings/native-surface owner, both target digests and paired supported-version measurements."
+    },
+    {
+      "id": "docs_development_testing_readme_browser_tool_resolution",
+      "label": "Official browser tools and disposable profiles",
+      "file_type": "rationale",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L40",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Native Firefox resolution includes Windows App Paths and Store registration; THOLI_FIREFOX_BINARY overrides. Chrome/Edge installed, Brave official pinned portable or override. Playwright Firefox is website-only; profiles isolated.",
+      "evidence_files": [
+        "config/testing/browser-tools.json",
+        "tests/support/firefox-extension.ts",
+        "tests/support/branded-extension.ts",
+        "scripts/fetch-browser-tools.mjs"
+      ],
+      "rationale": "Native Firefox resolution includes Windows App Paths and Store registration; THOLI_FIREFOX_BINARY overrides. Chrome/Edge installed, Brave official pinned portable or override. Playwright Firefox is website-only; profiles isolated."
     }
   ],
   "edges": [
@@ -1570,7 +1874,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/getting-started.md",
       "source_location": "L1",
-      "evidence": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
+      "evidence": "Use Windows, Node 24.19.x, npm ci and build:extension. Default build creates dist/extension for Chromium 140+ and dist/extension-firefox for Firefox 153+. Chromium loads unpacked; Firefox loads manifest temporarily through about:debugging and removes it on restart. Reload extension and refresh tabs after rebuilding.",
       "weight": 1
     },
     {
@@ -1591,8 +1895,8 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/guides/getting-started.md",
-      "source_location": "L23",
-      "evidence": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
+      "source_location": "L42",
+      "evidence": "The manual checklist remains pending for native permission grant/denial/capture activation, keyboard and screen-reader speech, native zoom, signed-in workflows and related recovery. Browser-support records automated native surface execution separately; that does not complete manual review.",
       "weight": 1
     },
     {
@@ -1624,8 +1928,8 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/guides/backend.md",
-      "source_location": "L1",
-      "evidence": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
+      "source_location": "L15",
+      "evidence": "First startup writes a random token to .navigator-api/connection.json without allowed origins. Exact chrome-extension 32 letter ID or Firefox moz-extension internal UUID is required; add-on ID is not the UUID. API-host access is separately granted. Tokens use protected Chromium storage or Firefox extension-origin IndexedDB, never content storage.",
       "weight": 1
     },
     {
@@ -1636,7 +1940,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/backend.md",
       "source_location": "L1",
-      "evidence": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "evidence": "Negotiate /v 2/health; v 2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
       "weight": 1
     },
     {
@@ -1647,7 +1951,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/backend.md",
       "source_location": "L1",
-      "evidence": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "evidence": "Authenticated POST /v 2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
       "weight": 1
     },
     {
@@ -1724,7 +2028,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/journeys.md",
       "source_location": "L7",
-      "evidence": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "evidence": "Authentication and 2 FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
       "weight": 1
     },
     {
@@ -1746,7 +2050,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/journeys.md",
       "source_location": "L23",
-      "evidence": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "evidence": "IndexedDB v 5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
       "weight": 1
     },
     {
@@ -1768,7 +2072,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/troubleshooting.md",
       "source_location": "L1",
-      "evidence": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "evidence": "navigator-live-debug-v 1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
       "weight": 1
     },
     {
@@ -1812,7 +2116,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/using-tholi.md",
       "source_location": "L21",
-      "evidence": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "evidence": "Expanded requires usable 400 x 560, Standard 340 x 360, Compact 280 x 240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
       "weight": 1
     },
     {
@@ -1899,8 +2203,8 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/development/naming.md",
-      "source_location": "L5",
-      "evidence": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
+      "source_location": "L17",
+      "evidence": "Product, extension, API and bundled workspaces now share root release number 0.11.0 (unreleased). Website version comes independently from checksum-verified eligible archives; no eligible archive means source setup. Historical 0.10.0 download and 0.10.1 media claims remain dated evidence.",
       "weight": 1
     },
     {
@@ -1922,7 +2226,7 @@
       "confidence_score": 1,
       "source_file": "docs/development/naming.md",
       "source_location": "L5",
-      "evidence": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
+      "evidence": "Current packagers create tholi-VERSION.zip, tholi-firefox-VERSION.zip and tholi-api-VERSION.tgz only after full evidence verification. Existing original or legacy archives are immutable; renaming, versioning or building cannot create or certify a release.",
       "weight": 1
     },
     {
@@ -1944,7 +2248,7 @@
       "confidence_score": 1,
       "source_file": "docs/development/testing/README.md",
       "source_location": "L1",
-      "evidence": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
+      "evidence": "Use Windows Node 24.19.x, npm ci and Playwright Chromium plus Firefox. npm test owns units; check types/fast/build; test:ci deterministic PR; test:full complete certification. Browser aliases require production and prebuilt fixtures. Actual Firefox extension uses Selenium/geckodriver; Playwright Firefox tests website.",
       "weight": 1
     },
     {
@@ -1966,7 +2270,7 @@
       "confidence_score": 1,
       "source_file": "docs/development/testing/README.md",
       "source_location": "L16",
-      "evidence": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
+      "evidence": "Full certification includes unit/model/core/integration/UI/live, native Firefox, Chrome/Edge/Brave, paired browser performance and separate complete Chromium/Firefox acceptance owners. Every owner, frozen ID, project and both target digests must match one coordinated immutable build and run.",
       "weight": 1
     },
     {
@@ -1977,7 +2281,7 @@
       "confidence_score": 1,
       "source_file": "docs/development/testing/README.md",
       "source_location": "L24",
-      "evidence": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
+      "evidence": "Build demo, test fixtures, Chromium extension, Firefox extension, website and API once; build-manifest also hashes pinned model/OCR assets. Prepared mode verifies all immutable artifacts before skipping preparation.",
       "weight": 1
     },
     {
@@ -2120,7 +2424,7 @@
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
-      "evidence": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
+      "evidence": "Historical October 17 cleanup cohort:285 units and deterministic/model groups passed; public regressions 8 passed 6 failed; final PR stopped under memory pressure, acceptance incomplete. Later browser and 0.11.0 records supersede its current-status role. It remains incomplete evidence for its dated bytes.",
       "weight": 1
     },
     {
@@ -2131,7 +2435,7 @@
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
-      "evidence": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
+      "evidence": "Historical cleanup failures include geometry deadlines, picker readiness, planner timeout and an unresolved-origin JSON parse. A final harness correction passed types without then completing clean acceptance. Later browser-support investigation records distinct persistence failures; no assumed single cause.",
       "weight": 1
     },
     {
@@ -2164,7 +2468,7 @@
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
       "source_location": "L38",
-      "evidence": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
+      "evidence": "Historical cleanup stress sample measured 1150.1 ms frame p95 retaining one highlight. Later browser/performance cohorts have different bytes and timings; all retain long-frame limitations and cannot establish a causal speedup.",
       "weight": 1
     },
     {
@@ -2219,7 +2523,7 @@
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/website.md",
       "source_location": "L62",
-      "evidence": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "evidence": "Light/dark 1440 x 960 30 fps VP 9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
       "weight": 1
     },
     {
@@ -2285,7 +2589,7 @@
       "confidence_score": 1,
       "source_file": ".github/workflows/ci.yml",
       "source_location": "L1",
-      "evidence": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
+      "evidence": "Windows pull_request/main/manual workflow builds once, then runs core, ui, integration, firefox, unit (max parallel 3). Read-only contents, cancellable superseded runs and run_id-run_attempt identity retained; validate rejects failed/canceled dependencies.",
       "weight": 1
     },
     {
@@ -2296,7 +2600,7 @@
       "confidence_score": 1,
       "source_file": ".github/workflows/full-validation.yml",
       "source_location": "L1",
-      "evidence": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
+      "evidence": "Nightly 06:00 UTC/manual/v* workflow builds once; eleven groups:acceptance-chromium, acceptance-firefox, browser-performance, brands, firefox, live, core, models, ui, integration, unit. Each verifies artifacts and uploads only owned evidence; certification merges matching current-attempt reports.",
       "weight": 1
     },
     {
@@ -2307,7 +2611,7 @@
       "confidence_score": 1,
       "source_file": ".github/workflows/full-validation.yml",
       "source_location": "L1",
-      "evidence": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
+      "evidence": "verify-full precedes package:extension/API; candidates only on tags or explicit manual package input. Version-check requires exact vVERSION tag. Native permission/accessibility and signed-in checks remain separately pending; workflow never submits browser-store releases.",
       "weight": 1
     },
     {
@@ -2615,7 +2919,7 @@
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/website.md",
       "source_location": "L138",
-      "evidence": "Website UI pass did not recertify full engine or replace eligible 0.10.0 download.",
+      "evidence": "Historical website UI pass did not certify the engine or replace its independently eligible download.",
       "weight": 1
     },
     {
@@ -2648,7 +2952,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/backend.md",
       "source_location": "L1",
-      "evidence": "Optional backend uses private bearer token, exact Chrome extension origin allowlist and explicit API-host grant.",
+      "evidence": "Optional backend uses private bearer token, exact Chromium or Firefox installation origin allowlist and explicit API-host grant.",
       "weight": 1
     },
     {
@@ -2659,7 +2963,7 @@
       "confidence_score": 1,
       "source_file": "docs/guides/backend.md",
       "source_location": "L1",
-      "evidence": "v2 OCR accepts revision stamps and advertises its engine through /v2/health.",
+      "evidence": "v 2 OCR accepts revision stamps and advertises its engine through /v 2/health.",
       "weight": 1
     },
     {
@@ -2914,6 +3218,281 @@
       "source_location": "L23",
       "evidence": "Skill corpus provenance and application artifact provenance are distinct evidence systems with different shipment boundaries.",
       "weight": 0.75
+    },
+    {
+      "source": "docs_development_releasing_document",
+      "target": "docs_development_releasing_root_release_number",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L3",
+      "evidence": "Root package, API, extension and bundled workspaces advance together. Package identities, protocol/storage schemas, model revisions and consent versions remain independent compatibility identifiers.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_document",
+      "target": "docs_development_releasing_guarded_version_preparation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L15",
+      "evidence": "release:version accepts increasing browser-compatible X.Y.Z after matching release notes exist; synchronizes workspace versions, internal pins, lock metadata and manifest without external upgrades, commit, tag, build or package.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_document",
+      "target": "docs_development_releasing_version_drift_and_tag_guard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L29",
+      "evidence": "check:version verifies metadata, lockfile, internal pins, manifest and release-note heading; CI version tag must equal vVERSION. Version changes require fresh artifact evidence.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_document",
+      "target": "docs_development_releasing_dual_target_candidate_gate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L34",
+      "evidence": "test:full must pass on final immutable bytes; neither PR/focused evidence nor Chromium results certify Firefox. Packagers reverify without rebuilding and create new target-specific archives.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_document",
+      "target": "docs_development_releasing_publication_is_separate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L49",
+      "evidence": "Preparation remains unreleased until certification and deliberate publication; native/manual review, checksums and notes precede publication. Full workflow does not submit store releases.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_shared_engine_dual_targets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L5",
+      "evidence": "Common engine targets Chromium 140+ and Firefox 153+ with separate generated manifests and artifacts; Firefox remains unsigned temporary-install preview. Safari/WebKit outside scope.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_firefox_widget_privilege_boundary",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L20",
+      "evidence": "Web-embedded Firefox extension frames lack privileged sidebar/tab APIs. Snapshot port remains usable; rejected Dock keeps widget and asks for toolbar action rather than broadening privileges.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_browser_automation_ownership",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L22",
+      "evidence": "Selenium/geckodriver executes installed Firefox extension; Playwright Firefox tests website. Gecko BiDi cannot intercept privileged extension context, so deterministic website interception and packaged CSP/settings/transport checks remain separate.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_dated_firefox_acceptance_pass",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L31",
+      "evidence": "October 17 browser-support-20261017-final-4 records Firefox 12 cases 90 samples across both viewports with zero false arrivals, automation or leaks. Chromium incomplete means aggregate gate rejects; later 0.11.0 artifacts require fresh certification.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_dated_native_browser_passes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L12",
+      "evidence": "Chrome 155, Edge 155, Brave 1.97.59 and Firefox 158 executed dated final bytes and native surfaces. Firefox additionally tested event-page restart, private storage, masked capture and authorized frames. Manual permission dialogs, screen-reader and signed-in checks remain pending.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_chromium_persistence_blocker",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L69",
+      "evidence": "Seven IndexedDB abort events at 5008-5020 ms identify the existing 5 second transaction deadline as failure mechanism; underlying cause unresolved. Memory pressure correlation is not causal proof. No deadline/storage relaxation to obtain a pass.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_dated_paired_performance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L43",
+      "evidence": "Dated shared-host runs met unchanged warm planning 750 ms, OCR 2000 ms, Stop 1000 ms budgets. 50,000 node frame p95 Chrome 266.6 ms/Firefox 150 ms remains visibly slow. Whole-browser memory snapshots are neither isolated extension memory nor peaks.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_document",
+      "target": "docs_releases_v0_10_1_browser_support_bounded_disposable_teardown",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L63",
+      "evidence": "Browser teardown has separate 30 second bound. Forced cleanup requires executable, PID and exact temporary-profile identity and remains failure; no user profile closed or product response/verification deadline relaxed.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_independent_browser_acceptance_owners",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L44",
+      "evidence": "acceptance-chromium and acceptance-firefox each cover frozen IDs and both viewports; CI keeps independent reports but release still requires both in same run/build. Pure engine/model tests execute once.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_branded_and_paired_release_requirements",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L42",
+      "evidence": "verify-full requires Chrome/Edge/Brave versions and native surfaces, Firefox event-page/settings/native-surface owner, both target digests and paired supported-version measurements.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_browser_tool_resolution",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L40",
+      "evidence": "Native Firefox resolution includes Windows App Paths and Store registration; THOLI_FIREFOX_BINARY overrides. Chrome/Edge installed, Brave official pinned portable or override. Playwright Firefox is website-only; profiles isolated.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_root_release_number",
+      "target": "docs_development_naming_component_versions_and_eligible_download",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L3",
+      "evidence": "Root project, extension, API and bundled workspaces share release number; eligible archive remains separately gated.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_dual_target_candidate_gate",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L36",
+      "evidence": "Only same-run final immutable full evidence authorizes packagers; changing version requires new evidence.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_releasing_guarded_version_preparation",
+      "target": "docs_development_releasing_version_drift_and_tag_guard",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/releasing.md",
+      "source_location": "L23",
+      "evidence": "Prepare synchronizes metadata; check verifies drift and exact CI version tags.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_dated_firefox_acceptance_pass",
+      "target": "docs_development_testing_readme_independent_browser_acceptance_owners",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L31",
+      "evidence": "A complete Firefox owner remains independent but cannot override missing Chromium acceptance for aggregate certification.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_chromium_persistence_blocker",
+      "target": "docs_releases_v0_10_1_browser_support_dated_firefox_acceptance_pass",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L69",
+      "evidence": "No complete clean Chromium report exists; Firefox passing owner does not certify aggregate final bytes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_browser_automation_ownership",
+      "target": "docs_releases_v0_10_1_browser_support_firefox_widget_privilege_boundary",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L20",
+      "evidence": "Native API and BiDi limitations require separate real-extension/native-surface checks.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_browser_support_dated_native_browser_passes",
+      "target": "docs_guides_getting_started_pending_native_verification",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/browser-support.md",
+      "source_location": "L33",
+      "evidence": "Automated native installation and surface checks are separate from manual permission/accessibility review.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_branded_and_paired_release_requirements",
+      "target": "docs_development_releasing_dual_target_candidate_gate",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L42",
+      "evidence": "Full validation requires both digests and supported native browser evidence; Chromium cannot certify Firefox.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_independent_browser_acceptance_owners",
+      "target": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L44",
+      "evidence": "Both complete target owners retain frozen IDs, viewports and independent acceptance oracles.",
+      "weight": 1
     }
   ],
   "hyperedges": [
@@ -2931,7 +3510,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/development/testing/README.md",
-      "source_location": "L24"
+      "source_location": "L24",
+      "evidence": "One immutable build, one coordinated full run, complete cases, gated packaging",
+      "weight": 1
     },
     {
       "id": "docs_releases_v0_10_1_website_local_product_boundaries",
@@ -2947,11 +3528,13 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/releases/v0.10.1/website.md",
-      "source_location": "L107"
+      "source_location": "L107",
+      "evidence": "Website-local practice, mock accounts, consent and launch drafts",
+      "weight": 1
     },
     {
       "id": "docs_releases_v0_10_1_repository_cleanup_incomplete_release_evidence",
-      "label": "Latest cleanup evidence leaves release certification and native verification incomplete",
+      "label": "Historical cleanup cohort remains incomplete evidence for its dated bytes",
       "nodes": [
         "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
         "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
@@ -2960,10 +3543,12 @@
         "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit"
       ],
       "relation": "participate_in",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1,
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
       "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
-      "source_location": "L38"
+      "source_location": "L38",
+      "evidence": "The dated cleanup cohort records separate incomplete runs, live failures, hosted timing pending and severe-load limits; later cohorts cannot be merged into this identity.",
+      "weight": 0.85
     }
   ],
   "input_tokens": 0,
