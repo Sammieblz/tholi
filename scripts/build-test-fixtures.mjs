@@ -23,7 +23,10 @@ await build({
   bundle: true,
   format: "iife",
   platform: "browser",
-  target: "chrome120",
+  target: ["chrome140", "firefox153"],
+  alias: {
+    "webextension-polyfill": resolve("tests/fixtures/multi-app/transport.ts"),
+  },
   jsx: "automatic",
   define: { "process.env.NODE_ENV": '"production"' },
   loader: { ".woff2": "file" },

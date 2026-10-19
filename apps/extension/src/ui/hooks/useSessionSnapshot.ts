@@ -1,3 +1,4 @@
+import { api } from "../../platform/api";
 import { useEffect, useState } from "react";
 import type { RoutePreview } from "../../../../../packages/route-registry";
 import type { SessionView } from "../../../../../packages/shared-types";
@@ -13,7 +14,12 @@ export function useSessionSnapshot(widget: boolean) {
     routes: RoutePreview[];
     reason?: string;
     sessionRoute?: RoutePreview;
-    session?: { tabId: number; view?: SessionView };
+    session?: {
+      tabId: number;
+      sessionId?: string;
+      documentId?: string;
+      view?: SessionView;
+    };
   }>();
   useEffect(() => {
     let current = true;
@@ -23,7 +29,7 @@ export function useSessionSnapshot(widget: boolean) {
       refreshAppearance();
       if (reading) return;
       reading = true;
-      chrome.runtime
+      api.runtime
         .sendMessage({ type: "GET_CONTEXT" })
         .then((r) => {
           if (current && r?.routes) {
@@ -37,16 +43,18 @@ export function useSessionSnapshot(widget: boolean) {
         });
     };
     refresh();
-    const port = chrome.runtime.connect({
+    const port = api.runtime.connect({
       name: widget ? "tholi-widget" : "tholi-panel",
     });
     port?.onMessage.addListener(refresh);
-    chrome.tabs.onActivated.addListener(refresh);
+    // Firefox embeds expose the content-script API subset; the worker port
+    // remains the single snapshot subscription on both surfaces.
+    api.tabs?.onActivated.addListener(refresh);
     const interval = setInterval(refresh, 1000);
     return () => {
       current = false;
       clearInterval(interval);
-      chrome.tabs.onActivated.removeListener(refresh);
+      api.tabs?.onActivated.removeListener(refresh);
       port?.disconnect();
     };
   }, []);

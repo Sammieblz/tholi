@@ -1,3 +1,5 @@
+import { api, type Runtime } from "../platform/api";
+import { hostPermissionPattern } from "../platform/site-access";
 import { pageSnapshotSchema } from "../../../../packages/page-model/index";
 import type { PinnedSession } from "../../../../packages/route-registry/session";
 type Frame = {
@@ -24,7 +26,7 @@ export async function stopFrames() {
   if (old)
     await Promise.allSettled(
       [...old.frames.values()].map((f) =>
-        chrome.tabs.sendMessage(
+        api.tabs.sendMessage(
           old.tabId,
           {
             type: "FRAME_STOP",
@@ -51,7 +53,7 @@ export async function startFrames(
     frames: new Map<number, Frame>(),
   });
   const available = (
-    (await chrome.webNavigation.getAllFrames({ tabId: session.tabId })) || []
+    (await api.webNavigation.getAllFrames({ tabId: session.tabId })) || []
   )
     .filter((f) => f.frameId !== 0 && /^https?:/.test(f.url))
     .slice(0, 16);
@@ -61,7 +63,9 @@ export async function startFrames(
     const origin = new URL(frame.url).origin;
     if (
       origin === session.origin ||
-      (await chrome.permissions.contains({ origins: [origin + "/*"] }))
+      (await api.permissions.contains({
+        origins: [hostPermissionPattern(origin)],
+      }))
     )
       allowed.push(frame);
     else missing.add(origin);
@@ -69,7 +73,7 @@ export async function startFrames(
   const mainLimit = allowed.length
     ? Math.max(1000, Math.floor(5000 / (allowed.length + 1)))
     : 5000;
-  await chrome.tabs
+  await api.tabs
     .sendMessage(session.tabId, {
       type: "FRAME_ACCESS",
       sessionId: session.sessionId,
@@ -84,7 +88,7 @@ export async function startFrames(
   for (const frame of allowed) {
     if (scope !== current) return;
     try {
-      const injected = await chrome.scripting.executeScript({
+      const injected = await api.scripting.executeScript({
         target: { tabId: session.tabId, frameIds: [frame.frameId] },
         files: ["frame-agent.js"],
       });
@@ -97,7 +101,7 @@ export async function startFrames(
         parentFrameId: frame.parentFrameId,
       };
       current.frames.set(f.frameId, f);
-      await chrome.tabs.sendMessage(
+      await api.tabs.sendMessage(
         session.tabId,
         {
           type: "FRAME_START",
@@ -124,7 +128,7 @@ export async function setFramePresentation(
   const current = scope;
   await Promise.allSettled(
     [...current.frames.values()].map((frame) =>
-      chrome.tabs.sendMessage(
+      api.tabs.sendMessage(
         session.tabId,
         {
           type: "FRAME_PRESENTATION",
@@ -141,13 +145,13 @@ export async function setFramePresentation(
 }
 export async function frameVisibilityMessage(
   raw: any,
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   if (
     !scope ||
     !session ||
-    sender.id !== chrome.runtime.id ||
+    sender.id !== api.runtime.id ||
     sender.tab?.id !== scope.tabId ||
     raw.sessionId !== scope.sessionId ||
     raw.nonce !== scope.nonce
@@ -189,7 +193,7 @@ export async function frameVisibilityMessage(
       if (v?.placement && v.placement !== "viewport") placement = v.placement;
       current = scope.frames.get(current.parentFrameId);
     }
-    await chrome.tabs
+    await api.tabs
       .sendMessage(session.tabId, {
         type: "FRAME_VISIBILITY_PARENT",
         sessionId: session.sessionId,
@@ -204,7 +208,7 @@ export async function frameVisibilityMessage(
 }
 export function frameMessage(
   raw: any,
-  sender: chrome.runtime.MessageSender,
+  sender: Runtime.MessageSender,
   session?: PinnedSession,
 ) {
   if (
@@ -212,7 +216,7 @@ export function frameMessage(
     !session ||
     raw.sessionId !== scope.sessionId ||
     raw.nonce !== scope.nonce ||
-    sender.id !== chrome.runtime.id ||
+    sender.id !== api.runtime.id ||
     sender.tab?.id !== scope.tabId
   )
     return;
@@ -236,7 +240,7 @@ export async function routeFrameGuide(raw: any, session: PinnedSession) {
     f.documentId !== raw.reference.documentId
   )
     return { error: "Frame document changed. Replan using fresh evidence." };
-  return chrome.tabs.sendMessage(
+  return api.tabs.sendMessage(
     session.tabId,
     {
       ...raw,
@@ -253,7 +257,7 @@ export async function clearFrames(session: PinnedSession) {
   if (scope?.sessionId === session.sessionId)
     await Promise.allSettled(
       [...scope.frames.values()].map((f) =>
-        chrome.tabs.sendMessage(
+        api.tabs.sendMessage(
           session.tabId,
           {
             type: "FRAME_CLEAR",

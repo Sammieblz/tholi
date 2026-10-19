@@ -64,7 +64,7 @@ export function SessionActions(props: GuidanceProps) {
   return (
     <div className="tholi-session-actions">
       <button
-        disabled={props.pending || props.disabled}
+        disabled={props.paused && (props.pending || props.disabled)}
         aria-label={props.paused ? "Resume navigation" : "Pause navigation"}
         onClick={() => props.onCommand(props.paused ? "RESUME" : "PAUSE")}
       >
@@ -75,7 +75,7 @@ export function SessionActions(props: GuidanceProps) {
         )}
         <span>{props.paused ? "Resume" : "Pause"}</span>
       </button>
-      <button disabled={props.disabled} onClick={() => props.onCommand("STOP")}>
+      <button onClick={() => props.onCommand("STOP")}>
         <Square width={15} aria-hidden="true" />
         Stop
       </button>

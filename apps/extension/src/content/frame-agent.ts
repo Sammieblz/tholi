@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import {
   GuidanceOverlay,
   setGuidanceVisible,
@@ -24,7 +25,7 @@ if (!(globalThis as any)[marker]) {
   let visibilityCleanup: (() => void) | undefined;
   let presentationRevision = 0;
   const send = (type: string, extra: Record<string, unknown>) =>
-    chrome.runtime
+    api.runtime
       .sendMessage({ type, sessionId, nonce, frameId, documentId, ...extra })
       .catch(() => {});
   const snapshot = () => {
@@ -82,8 +83,8 @@ if (!(globalThis as any)[marker]) {
     for (const name of ["click", "change", "focusin"] as const)
       document.removeEventListener(name, event, true);
   };
-  chrome.runtime.onMessage.addListener((raw, sender, respond) => {
-    if (sender.id !== chrome.runtime.id || !raw?.type?.startsWith("FRAME_"))
+  api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (sender.id !== api.runtime.id || !raw?.type?.startsWith("FRAME_"))
       return;
     if (raw.type === "FRAME_START") {
       teardown();

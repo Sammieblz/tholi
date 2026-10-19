@@ -4,7 +4,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 
 ## Using Tholi
 
-- [Chrome setup, permissions and native verification](guides/getting-started.md)
+- [Browser setup, permissions and native verification](guides/getting-started.md)
 - [Guide, Conversation, widget and local website](guides/using-tholi.md)
 - [Continuous journeys and return routing](guides/journeys.md)
 - [Session lifecycle](architecture/sessions.md)
@@ -26,8 +26,15 @@ The local website at **http://127.0.0.1:5174/docs** publishes selected current r
 - [Product naming, metadata and compatibility](development/naming.md)
 - [Project-local design skills and provenance](../.codex/README.md)
 
+## Releases
+
+- [0.11.0 release notes and compatibility](releases/v0.11.0/README.md) · [validation status](releases/v0.11.0/validation.md)
+- [Changelog](../CHANGELOG.md) and [versioning/release procedure](development/releasing.md)
+
 ## Design and implementation records
 
+- [Navigation responsiveness, cancellation and memory follow-up](releases/v0.11.0/performance.md)
+- [Navigation recovery, context, assisted mode and validation](releases/v0.11.0/navigation-reliability.md)
 - [Current UI audit, implementation, skills, and validation](releases/v0.10.1/ui-audit.md)
 - [Real website screenshot sources and regeneration](development/media-capture.md)
 - [Website redesign, genuine video, public docs, cookie controls and launch drafts](releases/v0.10.1/website.md)
@@ -54,3 +61,6 @@ The authored demo route engine remains separate because it supplies deterministi
 - [Cleanup measurements](releases/v0.10.1/repository-cleanup.md)
 
 Release records are grouped by version under `releases/vVERSION`. Unversioned October 2026 history stays under `releases/records`; it makes no current guarantee.
+
+- [Browser adapters and target builds](architecture/browser-platforms.md)
+- [Chromium and Firefox implementation evidence](releases/v0.10.1/browser-support.md)

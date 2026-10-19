@@ -1,0 +1,12 @@
+export const acceptanceHtml = `<!doctype html><html lang="en"><body style="font:16px sans-serif;margin:24px">
+<h1>Independent catalogue fixture</h1><input type="search" aria-label="Search catalogue" placeholder="Search catalogue">
+<details><summary>Appearance</summary><fieldset><legend>Text size</legend><input type="radio" name="size" id="small" checked><label for="small">Small</label><input type="radio" name="size" id="large"><label for="large">Large</label></fieldset><fieldset><legend>Color</legend><input type="radio" name="color" id="light" checked><label for="light">Light</label><input type="radio" name="color" id="dark"><label for="dark">Dark</label></fieldset><fieldset><legend>Width</legend><input type="radio" name="width" id="standard" checked><label for="standard">Standard</label><input type="radio" name="width" id="wide"><label for="wide">Wide</label></fieldset></details>
+<button id="languages" aria-controls="picker" aria-haspopup="menu" aria-expanded="false">7 languages</button><div id="picker" role="menu" hidden><a href="/acceptance/french">French</a></div>
+<button>Delete account</button><nav aria-label="Account"><button>Settings</button></nav><nav aria-label="Display"><button>Settings</button></nav>
+<button type="button">Edit draft</button><form method="post" action="/edit"><input aria-label="Draft title"><button>Continue publication</button></form>
+<section id="twins"><button>Help</button><button>Help</button></section>
+<nav><button id="unrelated-popup" aria-haspopup="dialog" aria-expanded="false">Categories</button><button id="unrelated-action">Feedback</button><span id="change-here"></span></nav>
+<input type="password" value="SENTINEL_PASSWORD"><input autocomplete="one-time-code" value="SENTINEL_OTP"><input name="credit-card" value="SENTINEL_CARD"><div contenteditable>SENTINEL_EDITABLE</div>
+<div style="height:1500px"></div><h2 id="references">References</h2><div style="height:1000px"></div>
+<script>document.querySelector('#languages').onclick=()=>{document.querySelector('#picker').hidden=false;document.querySelector('#languages').setAttribute('aria-expanded','true')};document.querySelector('#unrelated-popup').onclick=()=>{const h=document.createElement('h1');h.textContent='Notifications';document.body.append(h)};document.querySelector('#unrelated-action').onclick=()=>{document.querySelector('#change-here').innerHTML='<button>Notifications</button>'};</script>
+</body></html>`;

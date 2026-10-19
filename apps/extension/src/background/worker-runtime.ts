@@ -1,3 +1,9 @@
+import {
+  configureNativeSidebar,
+  openNativeSidebar,
+  hasNativeSidebar,
+} from "../platform/sidebar";
+import { api, browserTarget } from "../platform/api";
 import { resumeJourney } from "../../../../packages/goal-planner/task-journey";
 import {
   suspendedJourneySchema,
@@ -23,8 +29,10 @@ import {
   invalidateUi,
   mountWidget,
   preferredSurface,
+  rememberSurface,
   restoreSurface,
   watchNativePanels,
+  restoreSurface as restoreWidgetSurface,
 } from "./ui-transport";
 import { createVisionService } from "./vision-service";
 let session: PinnedSession | undefined;
@@ -125,7 +133,7 @@ const navigationStarts = new Map<
   number,
   { sessionId: string; journeyId: string; key: string; at: number }
 >();
-const ready = chrome.storage.session
+const ready = api.storage.session
   .get(["navigatorSession", "navigatorJourneys"])
   .then((data) => {
     session = restoreSession(data.navigatorSession);
@@ -137,7 +145,7 @@ const ready = chrome.storage.session
     if (session?.view?.journey)
       session.view.journey = resumeJourney(session.view.journey);
   });
-chrome.runtime.onInstalled.addListener((details) => {
+api.runtime.onInstalled.addListener((details) => {
   if (details.reason !== "update") return;
   void ready.then(async () => {
     if (session?.view) {
@@ -156,14 +164,14 @@ chrome.runtime.onInstalled.addListener((details) => {
 const save = async () => {
   invalidateUi();
   void mountWidget(session);
-  await chrome.storage.session.set({ navigatorJourneys: suspended });
-  if (session) await chrome.storage.session.set({ navigatorSession: session });
-  else await chrome.storage.session.remove("navigatorSession");
+  await api.storage.session.set({ navigatorJourneys: suspended });
+  if (session) await api.storage.session.set({ navigatorSession: session });
+  else await api.storage.session.remove("navigatorSession");
 };
 void ready.then(() => mountWidget(session, true));
 const live = () => session?.routeId === LIVE_ROUTE_ID;
 const activeTab = async () =>
-  (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+  (await api.tabs.query({ active: true, lastFocusedWindow: true }))[0];
 const originOf = (url?: string) => {
   try {
     return url ? new URL(url).origin : undefined;
@@ -174,51 +182,68 @@ const originOf = (url?: string) => {
 type ContextForcreateSessionService = Parameters<
   typeof createSessionService
 >[0];
-const { inScope, acceptView, attachSession, startFrames, stopSession } =
-  createSessionService({
-    get session() {
-      return session;
-    },
-    set session(value: ContextForcreateSessionService["session"]) {
-      session = value;
-    },
-    get live() {
-      return live;
-    },
-    get originOf() {
-      return originOf;
-    },
-    get ledgerNavigationEvent() {
-      return ledgerNavigationEvent;
-    },
-    set ledgerNavigationEvent(
-      value: ContextForcreateSessionService["ledgerNavigationEvent"],
-    ) {
-      ledgerNavigationEvent = value;
-    },
-    get refreshMemory() {
-      return refreshMemory;
-    },
-    get remember() {
-      return remember;
-    },
-    get save() {
-      return save;
-    },
-    get knownSites() {
-      return knownSites;
-    },
-    get knownTasks() {
-      return knownTasks;
-    },
-    get navigationStarts() {
-      return navigationStarts;
-    },
-  });
+const {
+  inScope,
+  acceptView,
+  attachSession,
+  startFrames,
+  stopSession,
+  interruptSession,
+  startSession,
+} = createSessionService({
+  get goalGeneration() {
+    return goalGeneration;
+  },
+  get activeTab() {
+    return activeTab;
+  },
+  get lastObservation() {
+    return lastObservation;
+  },
+  set lastObservation(value: string) {
+    lastObservation = value;
+  },
+  get session() {
+    return session;
+  },
+  set session(value: ContextForcreateSessionService["session"]) {
+    session = value;
+  },
+  get live() {
+    return live;
+  },
+  get originOf() {
+    return originOf;
+  },
+  get ledgerNavigationEvent() {
+    return ledgerNavigationEvent;
+  },
+  set ledgerNavigationEvent(
+    value: ContextForcreateSessionService["ledgerNavigationEvent"],
+  ) {
+    ledgerNavigationEvent = value;
+  },
+  get refreshMemory() {
+    return refreshMemory;
+  },
+  get remember() {
+    return remember;
+  },
+  get save() {
+    return save;
+  },
+  get knownSites() {
+    return knownSites;
+  },
+  get knownTasks() {
+    return knownTasks;
+  },
+  get navigationStarts() {
+    return navigationStarts;
+  },
+});
 
-chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: false })
-  .catch(() => {});
+void configureNativeSidebar();
 let queue: Promise<unknown> = ready;
 function enqueue<T>(operation: () => Promise<T>): Promise<T> {
   const next = queue.then(operation);
@@ -227,6 +252,12 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
 }
 type ContextForregisterMessages = Parameters<typeof registerMessages>[0];
 registerMessages({
+  get interruptSession() {
+    return interruptSession;
+  },
+  get startSession() {
+    return startSession;
+  },
   get session() {
     return session;
   },
@@ -430,7 +461,7 @@ registerNavigationEvents({
   },
 });
 
-chrome.permissions.onAdded.addListener(() => {
+api.permissions.onAdded.addListener(() => {
   if (session && live() && session.view?.status === "running")
     void startFrames(session).catch(() => {});
   void recoverWebsiteAccess().catch(() => {});
@@ -448,7 +479,7 @@ async function recoverWebsiteAccess() {
   ) {
     const url = new URL(tab.url);
     if (
-      !(await chrome.permissions.contains({
+      !(await api.permissions.contains({
         origins: [url.protocol + "//" + url.hostname + "/*"],
       }))
     )
@@ -473,23 +504,54 @@ async function recoverWebsiteAccess() {
       void attemptVision(session.sessionId, session.view.request.id);
   }
 }
-chrome.action.onClicked.addListener((tab) => {
-  if (
+async function showWidgetForTab(tab: { id?: number; url?: string }) {
+  if (tab.id === undefined || !tab.url || !/^https?:/.test(tab.url)) return;
+  await enqueue(async () => {
+    if (!session) {
+      const result = await startSession({
+        routeId: LIVE_ROUTE_ID,
+        routeVersion: "1.0.0",
+        tabId: tab.id,
+        origin: originOf(tab.url),
+      });
+      if (result && "error" in result) return;
+    }
+    if (!session || session.tabId !== tab.id) return;
+    await restoreWidgetSurface(session, "widget");
+    await mountWidget(session, true);
+  });
+}
+api.action.onClicked.addListener((tab) => {
+  const captured = session;
+  const native =
+    hasNativeSidebar() &&
     tab.windowId !== undefined &&
-    (preferredSurface(session) !== "widget" ||
+    (browserTarget() === "firefox" ||
+      preferredSurface(session) !== "widget" ||
       !session ||
       session.tabId !== tab.id ||
       !session.documentId ||
-      session.navigationPending)
-  )
-    void chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
-  void recoverWebsiteAccess()
+      session.navigationPending);
+  // Firefox's embedded widget cannot call sidebarAction. The toolbar is the
+  // explicit native user action; do not remove its widget until opening succeeds.
+  const opened = native ? openNativeSidebar(tab.windowId!) : Promise.resolve();
+  void opened
     .then(async () => {
-      const current = session;
-      if (current && current.tabId === tab.id) await restoreSurface(current);
+      await recoverWebsiteAccess();
+      if (captured && captured === session && captured.tabId === tab.id) {
+        const frame = await api.webNavigation.getFrame({
+          tabId: captured.tabId,
+          frameId: 0,
+        });
+        if (captured !== session || frame?.documentId !== captured.documentId)
+          return;
+        await restoreSurface(captured, native ? "sidebar" : undefined);
+      }
+      if (native && !session) await rememberSurface("sidebar");
+      if (!hasNativeSidebar()) await showWidgetForTab(tab);
       await mountWidget(session, true);
     })
-    .catch(() => {});
+    .catch(() => showWidgetForTab(tab));
 });
 watchNativePanels(() => session);
 // Follow browser-confirmed server redirects only for the active authentication

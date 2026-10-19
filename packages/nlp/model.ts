@@ -42,7 +42,12 @@ export class MiniLM implements Embedder {
         pooling: "mean",
         normalize: true,
       });
-      const vector = Array.from(output.data as Float32Array);
+      let vector: number[];
+      try {
+        vector = Array.from(output.data as Float32Array);
+      } finally {
+        output.dispose();
+      }
       if (
         vector.length !== DIMENSIONS ||
         vector.some((v) => !Number.isFinite(v))

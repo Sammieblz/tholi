@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tholi",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Your next step, made clear. Local website guidance while you stay in control.",
   "permissions": [
     "activeTab",
@@ -34,10 +34,7 @@
     "http://localhost/*",
     "https://en.wikipedia.org/*"
   ],
-  "optional_host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "icons": {
     "16": "media/icon-16.png",
     "32": "media/icon-32.png",
@@ -53,10 +50,7 @@
         "*.woff2",
         "media/*.png"
       ],
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ]
+      "matches": ["http://*/*", "https://*/*"]
     }
   ]
 }

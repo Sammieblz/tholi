@@ -89,6 +89,33 @@ export function captureMetadata() {
       if (element.shadowRoot) walk(element.shadowRoot);
   };
   walk(document);
+  // Prefer an actual open foreground menu/dialog over unrelated page chrome.
+  // Coordinates are ephemeral and all privacy masks still cover the full image.
+  const focusRegions = [
+    ...document.querySelectorAll<HTMLElement>(
+      "[role=menu],[role=listbox],[role=dialog],dialog[open]",
+    ),
+  ]
+    .filter(
+      (element) =>
+        !element.closest("[data-tholi-ui],[hidden],[inert],[aria-hidden=true]"),
+    )
+    .reverse()
+    .map((element) => {
+      const box = element.getBoundingClientRect();
+      const x = Math.max(0, box.left),
+        y = Math.max(0, box.top);
+      const width = Math.min(innerWidth, box.right) - x,
+        height = Math.min(innerHeight, box.bottom) - y;
+      const hit =
+        width > 0 && height > 0
+          ? document.elementFromPoint?.(x + width / 2, y + height / 2)
+          : null;
+      return { x, y, width, height, visible: !!hit && element.contains(hit) };
+    })
+    .filter((box) => box.visible && box.width >= 40 && box.height >= 24)
+    .slice(0, 1)
+    .map(({ visible, ...box }) => box);
   document
     .querySelectorAll<HTMLElement>(
       "[data-tholi-ui],#internet-navigator-overlay",
@@ -101,6 +128,7 @@ export function captureMetadata() {
     height: innerHeight,
     viewportRevision: revision,
     masks: masks.filter((m) => m.width > 0 && m.height > 0),
+    focusRegions,
     at: Date.now(),
   };
 }

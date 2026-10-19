@@ -10,6 +10,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
+          setupFiles: [resolve("tests/support/browser-api-mock.ts")],
           environment: "node",
           include: ["tests/unit/**/*.test.ts"],
         },

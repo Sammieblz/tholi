@@ -1,3 +1,4 @@
+import { api } from "../../platform/api";
 import { useEffect, useState } from "react";
 
 export function useBackendSettings(widget: boolean) {
@@ -9,11 +10,11 @@ export function useBackendSettings(widget: boolean) {
   });
   useEffect(() => {
     if (widget) return;
-    void chrome.runtime
+    void api.runtime
       .sendMessage({ type: "GET_VISION" })
       .then((r) => setVisionBackend(!!r.backend))
       .catch(() => {});
-    void chrome.runtime
+    void api.runtime
       .sendMessage({ type: "GET_BACKEND" })
       .then((r) => {
         if (!r.error) setBackend(r);

@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import { fullyUnclipped } from "../../../../packages/browser-adapter/geometry";
 import { scrollTarget } from "../../../../packages/browser-adapter/scroll-target";
 import {
@@ -66,6 +67,8 @@ import {
   type TaskJourney,
 } from "../../../../packages/page-model/index";
 import { sanitizeGoal } from "../../../../packages/privacy-redaction/index";
+import { assistanceKind } from "../../../../packages/safety-policy/assistance";
+import { taskWords } from "../../../../packages/goal-planner/task-intent";
 import type { SessionView } from "../../../../packages/shared-types/index";
 import { frameElement } from "./frame-visibility";
 import { compose as composeService } from "./observation-composition";
@@ -125,6 +128,13 @@ export class PageCoach {
         owner.planningRevision = value;
       },
       requestReplan: owner.requestReplan.bind(owner),
+      pause: owner.pause.bind(owner),
+      get planningInFlight() {
+        return owner.planningInFlight;
+      },
+      set planningInFlight(value: object | undefined) {
+        owner.planningInFlight = value;
+      },
       get verifiedDestination() {
         return owner.verifiedDestination;
       },
@@ -242,12 +252,14 @@ export class PageCoach {
   private beforeUrl?: string;
   private selectedAt = 0;
   private planningRevision = "";
+  private planningInFlight: object | undefined;
   private verifiedDestination?: string;
   private workflowWaitTimer?: ReturnType<typeof setTimeout>;
   private cancelScroll?: () => void;
   private recoveryKey = "";
   private recoveryStep = 0;
   private recoveryTimer?: ReturnType<typeof setTimeout>;
+  private assistedSteps = new Set<string>();
   private inputHandoff?: BoundControl;
   private frames = new Map<
     number,
@@ -345,7 +357,7 @@ export class PageCoach {
     if (this.view.status === "waiting") this.view.status = "running";
     this.selected = undefined;
     if (this.externalControl)
-      void chrome.runtime
+      void api.runtime
         .sendMessage({ type: "CLEAR_FRAME_GUIDANCE" })
         .catch(() => {});
     this.externalControl = undefined;
@@ -358,8 +370,10 @@ export class PageCoach {
     this.overlay.clear();
   }
   private teardown() {
+    this.planningInFlight = undefined;
     this.inputHandoff = undefined;
     clearTimeout(this.recoveryTimer);
+    this.recoveryTimer = undefined;
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener("click", this.clicked, true);
@@ -792,6 +806,7 @@ export class PageCoach {
     ) {
       this.view.journey.reroutes++;
       this.clearTarget();
+      this.publish(this.view);
       this.replan();
       return;
     }
@@ -816,11 +831,13 @@ export class PageCoach {
     } = {},
   ) {
     this.refresh();
-    if (this.view.status !== "running" || this.view.page?.revision !== revision)
+    if (this.view.status !== "running" || !this.view.page)
       return {
-        error:
-          "The page changed while planning. Try the goal again using the current controls.",
+        error: "Resume navigation before sending a destination.",
       };
+    // Optional browser-model proposals contain control IDs. A changed scan
+    // discards those hints and uses fresh semantic planning, never stale IDs.
+    if (this.view.page.revision !== revision) proposal = undefined;
     if (options.journeyId) {
       if (
         this.view.journey?.id !== options.journeyId ||
@@ -976,6 +993,77 @@ export class PageCoach {
       this.view.liveDiagnostics.planning = undefined;
     this.refresh();
     return this.select(id);
+  }
+  assistStep(controlId: string, revision: number, requestId: string) {
+    this.refresh();
+    const request = this.view.request,
+      page = this.view.page;
+    if (
+      !guidanceVisible() ||
+      document.visibilityState === "hidden" ||
+      this.view.status !== "running" ||
+      this.pending ||
+      !request ||
+      request.id !== requestId ||
+      request.status !== "active" ||
+      !page ||
+      page.revision !== revision ||
+      ["credentials", "two-factor", "authorization", "review"].includes(
+        page.screen?.kind || "",
+      ) ||
+      this.view.journey?.workflow?.status === "review" ||
+      this.view.selectedControlId !== controlId
+    )
+      return { assisted: false };
+    const target = this.discovery.bindings.get(controlId),
+      task = request.tasks[request.active];
+    if (
+      !target ||
+      this.selected?.element !== target.element ||
+      !target.element.isConnected ||
+      !presented(target.element) ||
+      !fullyUnclipped(target.geometry) ||
+      target.element.closest(
+        "form,[contenteditable],[role=textbox],[data-sensitive=true]",
+      ) ||
+      target.element.matches(
+        "a,[type=submit],[type=reset],input:not([type=radio])",
+      )
+    )
+      return { assisted: false };
+    const kind = assistanceKind(target.control, task);
+    if (
+      !kind ||
+      (kind === "reveal" &&
+        !target.element.matches("button,summary,[role=button]"))
+    )
+      return { assisted: false };
+    const key = hash(
+      [request.id, page.stateKey, target.control.signature].join("|"),
+    );
+    if (this.assistedSteps.has(key)) return { assisted: false };
+    this.assistedSteps.add(key);
+    while (this.assistedSteps.size > 64)
+      this.assistedSteps.delete(this.assistedSteps.values().next().value!);
+    if (kind === "select") {
+      if (!(target.element instanceof HTMLSelectElement))
+        return { assisted: false };
+      const options = [...target.element.options].filter(
+        (option) =>
+          !option.disabled &&
+          taskWords(option.label).trim() ===
+            taskWords(task.desiredValue!).trim(),
+      );
+      if (options.length !== 1) return { assisted: false };
+      this.interacted();
+      target.element.selectedIndex = options[0].index;
+      target.element.dispatchEvent(new Event("input", { bubbles: true }));
+      target.element.dispatchEvent(new Event("change", { bubbles: true }));
+    } else target.element.click();
+    // A synthetic interaction supplies no success evidence. Existing observation
+    // and outcome verification decide what happened, including ignored clicks.
+    queueMicrotask(() => this.refresh());
+    return { assisted: true };
   }
   private select(id: string, observed?: ObservedTransition) {
     if (this.view.status !== "running")
@@ -1201,6 +1289,19 @@ export class PageCoach {
         return;
       }
       this.record("timeout", "deadline-expired");
+      if (
+        this.before &&
+        this.selected &&
+        ["navigation", "expand"].includes(this.selected.control.kind) &&
+        this.selected.control.risk === "ordinary" &&
+        !this.selected.control.reference?.frameId
+      )
+        this.view.routeFeedback = {
+          id: crypto.randomUUID(),
+          from: this.before.stateKey,
+          signature: this.selected.control.signature,
+          outcome: "timeout",
+        };
       this.view.status = "running";
       this.view.instruction =
         "Still waiting for the website. Your destination is retained.";
@@ -1396,6 +1497,7 @@ export class PageCoach {
         reason:
           "The requested control interaction was verified in the embedded application.",
       };
+      if (this.view.journey) this.view.journey.status = "completed";
       this.completeQueuedTask();
     }
     this.publish(this.view);
@@ -1424,7 +1526,7 @@ export class PageCoach {
         element,
         "Scroll to the embedded application to see its highlighted control.",
       );
-    void chrome.runtime
+    void api.runtime
       .sendMessage({
         type: "GUIDE_FRAME",
         reference: control.reference,
@@ -1464,6 +1566,8 @@ export class PageCoach {
       this.view.goalPlan?.reason ||
       "Checking the current page. Your destination is retained.";
     this.planningRevision = "";
+    this.recoveryKey = "";
+    this.recoveryStep = 0;
     this.observe();
     this.refresh();
     if (

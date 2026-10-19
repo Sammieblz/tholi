@@ -1,6 +1,16 @@
-# Chrome setup and native verification
+# Browser setup and native verification
 
-Build with `npm ci` and `npm run build:extension` using Node 24.19.x. Open `chrome://extensions`, enable Developer mode, and load `dist/extension` unpacked. After each build, select Reload for **Tholi** and refresh existing website tabs to replace injected scripts. Confirm version **0.10.1** in Chrome's extension details.
+Use Windows and Node 24.19.x. Run `npm ci` and `npm run build:extension`. The normal build produces both targets with the same pinned local model, single-thread WASM and safety boundaries. Focus a target with `npm run build:extension -- --target=chromium` or `--target=firefox`.
+
+## Chromium: Chrome, Edge and Brave
+
+Use Chromium **140 or newer**. Open `chrome://extensions`, `edge://extensions` or `brave://extensions`. Enable **Developer mode**, select **Load unpacked**, and choose `dist/extension`. Reload Tholi after rebuilding, then refresh existing website tabs. Other current Chromium browsers are compatible only when the required native document, scripting, storage and surface capabilities pass; that is not explicit branded verification.
+
+## Firefox developer preview
+
+Use Firefox **153 or newer**, rather than an older ESR. Open `about:debugging`, select **This Firefox → Load Temporary Add-on**, and choose `dist/extension-firefox/manifest.json`. The add-on ID is `tholi@ilunonsen.com`. This unsigned preview is removed when Firefox restarts; load it again for the next development session. Reload after a build and refresh website tabs. Signing and store publication are separate work.
+
+The website's `/download?browser=firefox` selector preserves a shareable installation choice. A Chromium archive is never offered as a Firefox artifact. When an eligible target archive is unavailable, use source setup. Existing product footage was captured in Chrome.
 
 On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
 
@@ -10,19 +20,19 @@ Switch between Guide and Conversation during the same task. Try Pause, Resume, S
 
 Close the widget with X and confirm it becomes a 44-pixel launcher. The task should continue observing without expanded highlights or automatic guidance scrolling. Reveal a relevant menu on the website, then restore Tholi: the same destination, draft and conversation should remain, with fresh guidance. Repeat through a recognized document transition and worker restart. Reset current session should clear unfinished tasks and conversation while preserving learned knowledge and saved routes.
 
-During a deliberate drag, approach within 24 pixels of the right viewport edge and release on the docking preview. Chrome should open its configured native panel side before the widget disappears. If Chrome rejects activation, the widget must remain and explain toolbar/Dock recovery. Test native panel close/reopen only on versions exposing the lifecycle events. These checks remain pending until performed in native Chrome.
+During a deliberate drag, approach within 24 pixels of the right viewport edge and release on the docking preview. Chromium should open its configured native panel side before the widget disappears. If the browser rejects activation, the widget must remain and explain toolbar/Dock recovery. Test native panel close/reopen only on versions exposing the lifecycle events. Firefox restricts privileged APIs inside website-embedded extension iframes. Its explicit Dock action retains the widget and asks you to click **Tholi in the browser toolbar**. That native user action opens the sidebar before removing the widget. The same session retains destination, draft and conversation. Embedded-origin permissions also use the privileged sidebar. See [browser validation](../releases/v0.10.1/browser-support.md) for measured and pending checks.
 
 ## Access recovery
 
-DOM discovery and screenshot access are separate. A saved site grant can permit scanning while Chrome still requires renewed toolbar activation for viewport capture. If Tholi requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
+DOM discovery and screenshot access are separate. A saved site grant can permit scanning while the browser still requires renewed toolbar activation for viewport capture. If Tholi requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
 
-Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted Chrome pages cannot be scanned.
+Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted browser pages cannot be scanned.
 
 While **Explore page controls** is active, an ungranted embedded origin exposes an **Allow ORIGIN** action even before a destination is entered. This page-access notice is separate from task-owned instructions. The action requests only that origin; declining leaves its controls unscanned. Paused, stopped and completed sessions do not revive old permission prompts.
 
 ## Pending native checks
 
-Record Chrome version, manifest version, build provenance, date and result. Automated extension-page tests do not establish native permission dialogs, side-panel behavior or actual screen-reader speech.
+Record browser name/version, manifest version, build provenance, date and result. Automated extension-page tests do not establish native permission dialogs, native sidebar behavior or actual screen-reader speech.
 
 | Check                                                                           | Status  |
 | ------------------------------------------------------------------------------- | ------- |

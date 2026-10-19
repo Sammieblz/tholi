@@ -1,3 +1,7 @@
+import { requestOriginAccess } from "../../platform/site-access";
+import { openNativeSidebar } from "../../platform/sidebar";
+import { browserTarget } from "../../platform/api";
+import { api } from "../../platform/api";
 import { JourneyDetails } from "../features/journey/JourneyDetails";
 import { AdvancedTools } from "../features/advanced/AdvancedTools";
 import { WorkflowPanel } from "../features/journey/WorkflowPanel";
@@ -52,12 +56,13 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       verifiedSteps={displayedView?.verifiedSteps}
       progress={presentRouteProgress(displayedView, presentation)}
       preferences={preferences}
+      assistanceAvailable
       onPreferences={(next) => void changePreferences(next)}
       draft={goal}
       onDraft={setGoal}
       onSubmit={() => void submit()}
       messages={messages}
-      logo={chrome.runtime.getURL("media/tholi_brand_logo.png")}
+      logo={api.runtime.getURL("media/tholi_brand_logo.png")}
       active={active}
       paused={paused}
       pending={busy || !hydrated || !context}
@@ -77,30 +82,37 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       notice={notice}
       widget={widget}
       onMinimize={() =>
-        void chrome.runtime.sendMessage({ type: "UI_MINIMIZE" }).then((r) => {
+        void api.runtime.sendMessage({ type: "UI_MINIMIZE" }).then((r) => {
           if (r.error) setError(r.error);
         })
       }
       onNewDestination={newDestination}
       onResetSession={() => void resetCurrentSession()}
       onExpand={() =>
-        void chrome.runtime.sendMessage({ type: "UI_WIDGET_EXPAND" })
+        void api.runtime.sendMessage({ type: "UI_WIDGET_EXPAND" })
       }
       onMoveAside={() =>
-        void chrome.runtime.sendMessage({ type: "UI_WIDGET_MOVE" })
+        void api.runtime.sendMessage({ type: "UI_WIDGET_MOVE" })
       }
       onWidgetLayout={(action) =>
-        void chrome.runtime
+        void api.runtime
           .sendMessage({ type: "UI_WIDGET_LAYOUT", action })
           .then((r) => {
             if (r.error) setError(r.error);
           })
       }
-      onDock={() =>
-        void chrome.runtime.sendMessage({ type: "UI_DOCK" }).then((r) => {
-          if (r.error) setError(r.error);
-        })
-      }
+      onDock={() => {
+        const opening =
+          browserTarget() === "firefox"
+            ? openNativeSidebar()
+            : Promise.resolve();
+        void opening
+          .then(() => api.runtime.sendMessage({ type: "UI_DOCK" }))
+          .then((r) => {
+            if (r.error) setError(r.error);
+          })
+          .catch((error) => setError(error.message));
+      }}
       onCommand={(type) =>
         type === "WHY" ? void explainCurrentStep() : void command(type)
       }
@@ -156,7 +168,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        const r = await chrome.runtime.sendMessage({
+                        const r = await api.runtime.sendMessage({
                           type: "CLARIFY",
                           choice: choice.id,
                         });
@@ -188,13 +200,18 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
                     key={origin}
                     disabled={busy || otherTab}
                     onClick={async () => {
-                      const granted = await chrome.permissions.request({
-                        origins: [origin + "/*"],
-                      });
-                      if (!granted)
+                      try {
+                        if (!(await requestOriginAccess(origin)))
+                          setError(
+                            "Access was not granted. Other page controls remain available.",
+                          );
+                      } catch (error) {
                         setError(
-                          "Access was not granted. Other page controls remain available.",
+                          error instanceof Error
+                            ? error.message
+                            : "Website access is unavailable.",
                         );
+                      }
                     }}
                   >
                     Allow {origin}
@@ -213,7 +230,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
                 workflow={attentionWorkflow}
                 disabled={busy || otherTab || noticeView?.status !== "running"}
                 onMessage={async (message) => {
-                  const r = await chrome.runtime.sendMessage(message);
+                  const r = await api.runtime.sendMessage(message);
                   if (r.noticeView) setView(r.noticeView);
                   if (r.error) setError(r.error);
                 }}

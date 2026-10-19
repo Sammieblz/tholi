@@ -38,6 +38,22 @@ test("real pinned CPU OCR recognizes light/dark labels with scaled image coordin
       expect(target!.box.x).toBeLessThan(25);
       expect(result.requestId).toBe(request.requestId);
       expect(result.viewportRevision).toBe(3);
+      const focused = await engine.recognize({
+        ...request,
+        focusRegions: [{ x: 5, y: 5, width: 300, height: 65 }],
+      });
+      const focusedTarget = focused.regions.find(
+        (r) => r.text.trim() === "Deploy website",
+      );
+      expect(focusedTarget).toBeDefined();
+      expect(focusedTarget!.box.x).toBeGreaterThan(10);
+      expect(focusedTarget!.box.x).toBeLessThan(25);
+      await expect(
+        engine.recognize({
+          ...request,
+          focusRegions: [{ x: 300, y: 0, width: 100, height: 90 }],
+        }),
+      ).rejects.toThrow("viewport");
     }
     const large = {
       ...(await input()),

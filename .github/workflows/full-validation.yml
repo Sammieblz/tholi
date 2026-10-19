@@ -45,9 +45,21 @@ jobs:
       max-parallel: 3
       matrix:
         include:
-          - group: acceptance
+          - group: acceptance-chromium
             evidence: |
               output/acceptance/results.json
+          - group: acceptance-firefox
+            evidence: |
+              output/acceptance/results-firefox.json
+          - group: browser-performance
+            evidence: |
+              output/qa/browser-performance.json
+          - group: brands
+            evidence: |
+              output/qa/branded-build.json
+          - group: firefox
+            evidence: |
+              output/qa/firefox-build.json
           - group: live
             evidence: |
               output/acceptance/live-regressions.json
@@ -85,7 +97,22 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
       - run: node scripts/build-manifest.mjs --verify
       - run: npx playwright install chromium
-        if: matrix.group != 'unit' && matrix.group != 'models'
+        if: contains(fromJSON('["core", "integration", "live", "acceptance-chromium"]'), matrix.group)
+      - run: npx playwright install chromium firefox
+        if: matrix.group == 'ui'
+      - uses: actions/cache@v4
+        if: contains(fromJSON('["firefox", "brands", "browser-performance", "acceptance-firefox"]'), matrix.group)
+        with:
+          path: ~/.cache/selenium
+          key: ${{ runner.os }}-selenium-${{ hashFiles('config/testing/browser-tools.json', 'package-lock.json') }}-${{ matrix.group }}
+          restore-keys: ${{ runner.os }}-selenium-${{ hashFiles('config/testing/browser-tools.json', 'package-lock.json') }}-
+      - uses: actions/cache@v4
+        if: matrix.group == 'brands'
+        with:
+          path: output/browser-tools
+          key: ${{ runner.os }}-browser-tools-${{ hashFiles('config/testing/browser-tools.json') }}
+      - run: npm run fetch:browser-tools
+        if: matrix.group == 'brands'
       - run: npm run test:full -- --group ${{ matrix.group }}
       - uses: actions/upload-artifact@v4
         if: always()

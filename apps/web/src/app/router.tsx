@@ -18,6 +18,7 @@ type RouteLocation = {
 const RouterContext = createContext({
   path: "/",
   hash: "",
+  search: "",
   go: (_path: string) => {},
 });
 let nextKey = 0;
@@ -83,7 +84,18 @@ export function Router({ children }: { children: ReactNode }) {
       removeEventListener("hashchange", change);
     };
   }, []);
+  const previousFocusLocation = useRef<RouteLocation | undefined>(undefined);
   useEffect(() => {
+    const previous = previousFocusLocation.current;
+    previousFocusLocation.current = route;
+    // Query choices update the same page. Keep the user's focus and scroll.
+    if (
+      previous &&
+      previous.path === route.path &&
+      previous.hash === route.hash &&
+      previous.search !== route.search
+    )
+      return;
     let fragment = "";
     try {
       fragment = decodeURIComponent(route.hash.slice(1));
@@ -172,7 +184,9 @@ export function Router({ children }: { children: ReactNode }) {
     setRoute(nextRoute);
   }, []);
   return (
-    <RouterContext.Provider value={{ path: route.path, hash: route.hash, go }}>
+    <RouterContext.Provider
+      value={{ path: route.path, hash: route.hash, search: route.search, go }}
+    >
       {children}
     </RouterContext.Provider>
   );

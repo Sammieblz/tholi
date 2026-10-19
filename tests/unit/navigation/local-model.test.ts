@@ -4,6 +4,10 @@ import {
   modelAvailability,
 } from "../../../apps/extension/src/inference/browser-language-model";
 import type { PageSnapshot } from "../../../packages/page-model/index";
+import {
+  InferenceQueue,
+  inferencePriority,
+} from "../../../packages/nlp/work-queue";
 const page: PageSnapshot = {
   origin: "https://example.org",
   path: "/",
@@ -36,6 +40,129 @@ const page: PageSnapshot = {
   ],
 };
 afterEach(() => vi.unstubAllGlobals());
+it("releases idle model/OCR workers and resolves outstanding work on disposal", async () => {
+  vi.useFakeTimers();
+  const workers: any[] = [];
+  class WorkerStub {
+    onmessage?: (event: any) => void;
+    onerror?: (event: any) => void;
+    onmessageerror?: () => void;
+    terminate = vi.fn();
+    postMessage = vi.fn();
+    constructor() {
+      workers.push(this);
+    }
+  }
+  vi.stubGlobal("Worker", WorkerStub);
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: (file: string) => `chrome-extension://test/${file}` },
+  });
+  const { createInferenceHost } =
+    await import("../../../apps/extension/src/inference/worker-host");
+  const host = createInferenceHost();
+  try {
+    const nlp = host.request({ type: "PLAN_NLP", id: "plan" });
+    const ocr = host.request({ type: "OCR_REQUEST", id: "ocr" });
+    workers[0].onmessage({ data: { id: "plan", value: "plan" } });
+    workers[1].onmessage({ data: { id: "ocr", value: "ocr" } });
+    expect((await nlp).value).toBe("plan");
+    expect((await ocr).value).toBe("ocr");
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(workers[1].terminate).toHaveBeenCalledOnce();
+    expect(workers[0].terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const pending = host.request({ type: "PLAN_NLP", id: "pending" });
+    host.dispose();
+    expect((await pending).error).toContain("canceled");
+    expect(workers[2].terminate).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    host.dispose();
+    vi.useRealTimers();
+  }
+});
+it("does not create a model host after cancellation during native context lookup", async () => {
+  let completeLookup!: (contexts: unknown[]) => void;
+  const getContexts = vi.fn(
+    () =>
+      new Promise<unknown[]>((resolve) => {
+        completeLookup = resolve;
+      }),
+  );
+  const createDocument = vi.fn(async () => {}),
+    closeDocument = vi.fn(async () => {}),
+    sendMessage = vi.fn();
+  vi.stubGlobal("chrome", {
+    runtime: {
+      getURL: () => "chrome-extension://test/",
+      ContextType: { OFFSCREEN_DOCUMENT: "OFFSCREEN_DOCUMENT" },
+      getContexts,
+      sendMessage,
+    },
+    offscreen: {
+      createDocument,
+      closeDocument,
+      Reason: { WORKERS: "WORKERS" },
+    },
+  });
+  const { requestInferenceHost, disposeInferenceHost } =
+    await import("../../../apps/extension/src/platform/inference-host");
+  const signal = new AbortController();
+  const request = requestInferenceHost(
+    { type: "PLAN_NLP", id: "old" },
+    signal.signal,
+  ).catch((error) => error.name);
+  await vi.waitFor(() => expect(getContexts).toHaveBeenCalledOnce());
+  signal.abort();
+  await disposeInferenceHost();
+  completeLookup([]);
+  expect(await request).toBe("AbortError");
+  expect(createDocument).not.toHaveBeenCalled();
+  expect(sendMessage).not.toHaveBeenCalled();
+});
+it("coalesces obsolete planning, prioritizes foreground work and cancels without stale delivery", async () => {
+  const started: string[] = [],
+    release = new Map<string, () => void>();
+  const queue = new InferenceQueue<string, string>(async (value) => {
+    started.push(value);
+    await new Promise<void>((resolve) => release.set(value, resolve));
+    return value;
+  }, 2);
+  const background = queue
+    .submit("suggest", "document", 1, "suggest")
+    .catch((e) => e.message);
+  const replaced = queue
+    .submit("old", "document", 0, "old")
+    .catch((e) => e.message);
+  const latest = queue
+    .submit("new", "document", 0, "new")
+    .catch((e) => e.message);
+  const deferred = queue
+    .submit("another-suggestion", "document", 1, "unused")
+    .catch((e) => e.message);
+  expect(await background).toContain("canceled");
+  expect(await replaced).toContain("canceled");
+  expect(await deferred).toContain("deferred");
+  const automatic = queue
+    .submit(
+      "old-continuation",
+      "document",
+      inferencePriority({ request: {} }, false),
+      "unused",
+    )
+    .catch((e) => e.message);
+  expect(await automatic).toContain("deferred");
+  expect(inferencePriority({ request: {}, choice: "decision" }, false)).toBe(0);
+  expect(inferencePriority({}, true)).toBe(2);
+  release.get("suggest")!();
+  await vi.waitFor(() => expect(started).toEqual(["suggest", "new"]));
+  queue.cancel();
+  expect(await latest).toContain("canceled");
+  release.get("new")!();
+  await Promise.resolve();
+  expect(started).not.toContain("old");
+});
 it("reports unavailable API and never creates a remote inference dependency", async () => {
   vi.stubGlobal("LanguageModel", undefined);
   expect(await modelAvailability()).toBe("unavailable");
@@ -124,4 +251,45 @@ it("rejects invented IDs even if a model ignores the response constraint, and ab
   await expect(model.propose(page, "Help", aborted.signal)).rejects.toThrow();
   expect(clone).toHaveBeenCalledOnce();
   await model.close();
+});
+
+it("recovers a local inference host after cancellation and ignores replies from the disposed worker", async () => {
+  const workers: any[] = [];
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: (path: string) => "chrome-extension://test/" + path },
+  });
+  vi.stubGlobal(
+    "Worker",
+    class {
+      onmessage: any;
+      onerror: any;
+      onmessageerror: any;
+      postMessage = vi.fn();
+      terminate = vi.fn();
+      constructor() {
+        workers.push(this);
+      }
+    },
+  );
+  const { createInferenceHost } =
+    await import("../../../apps/extension/src/inference/worker-host");
+  const host = createInferenceHost();
+  try {
+    const canceled = host.request({ type: "PLAN_NLP", id: "old" });
+    await host.request({ type: "CANCEL_NLP" });
+    expect(await canceled).toEqual({ id: "old", error: "Planning canceled." });
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const fresh = host.request({ type: "PLAN_NLP", id: "fresh" });
+    workers[0].onmessage({ data: { id: "old", value: "stale" } });
+    workers[1].onmessage({ data: { id: "fresh", value: "current" } });
+    expect(await fresh).toEqual({ id: "fresh", value: "current" });
+    const failed = host.request({ type: "PLAN_NLP", id: "failed" });
+    workers[1].onerror({ preventDefault: vi.fn() });
+    expect((await failed).error).toMatch(/failed/);
+    const recovered = host.request({ type: "PLAN_NLP", id: "recovered" });
+    workers[2].onmessage({ data: { id: "recovered", value: "recovered" } });
+    expect((await recovered).value).toBe("recovered");
+  } finally {
+    host.dispose();
+  }
 });

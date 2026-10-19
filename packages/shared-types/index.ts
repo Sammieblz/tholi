@@ -75,6 +75,7 @@ export interface SessionView {
     version: number;
   };
   memoryError?: string;
+  routeFeedback?: import("../page-model").RouteFeedback;
   selectedControlId?: string;
   diagnostics?: Diagnostics;
   liveDiagnostics?: import("../live-diagnostics").LiveDiagnostics;

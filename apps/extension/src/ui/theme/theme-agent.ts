@@ -1,3 +1,4 @@
+import { api } from "../../platform/api";
 import {
   contrastPageTheme,
   observePageTheme,
@@ -25,14 +26,13 @@ export function startPageAppearance() {
       state.theme = theme;
       applySurfaces();
       if (window === window.top)
-        void chrome.runtime
+        void api.runtime
           .sendMessage({ type: "PAGE_THEME_CHANGED" })
           .catch(() => {});
     });
   };
-  chrome.runtime.onMessage.addListener((raw, sender, respond) => {
-    if (sender.id !== chrome.runtime.id || raw?.type !== "READ_PAGE_THEME")
-      return;
+  api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (sender.id !== api.runtime.id || raw?.type !== "READ_PAGE_THEME") return;
     applySurfaces();
     respond({ theme: state.theme });
   });

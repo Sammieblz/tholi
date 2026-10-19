@@ -199,6 +199,8 @@ export const siteKnowledgeSchema = z
             active: z.boolean(),
             samples: z.number().nonnegative().optional(),
             meanMs: z.number().nonnegative().optional(),
+            failures: z.number().int().nonnegative().max(32).optional(),
+            feedbackIds: z.array(z.string().uuid()).max(32).optional(),
             action: z
               .object({ kind: z.literal("control"), signature: z.string() })
               .strict()

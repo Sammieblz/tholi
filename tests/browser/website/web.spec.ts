@@ -109,6 +109,9 @@ for (const width of [375])
       await page.evaluate(() => sessionStorage.getItem("tholi-demo-account")),
     ).toBeNull();
     await page.goto("/download");
+    await page
+      .getByLabel("Your browser", { exact: true })
+      .selectOption("chrome");
     if (width === 375)
       expect(
         await page
@@ -127,7 +130,7 @@ for (const width of [375])
     if (manifest) {
       await expect(
         page.getByRole("link", {
-          name: "Download extension preview",
+          name: "Download Chromium preview",
           exact: true,
         }),
       ).toHaveAttribute("href", manifest.url);
@@ -146,11 +149,25 @@ for (const width of [375])
       );
       await expect(
         page.getByRole("link", {
-          name: "Download extension preview",
+          name: "Download Chromium preview",
           exact: true,
         }),
       ).toHaveCount(0);
     }
+    await page
+      .getByLabel("Your browser", { exact: true })
+      .selectOption("firefox");
+    await expect(page).toHaveURL(/browser=firefox/);
+    await expect(
+      page.getByText("Firefox developer preview", { exact: false }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Temporary installation is removed when Firefox restarts/),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
+      "chrome",
+    );
     await page.screenshot({
       path: info.outputPath(`download-${width}.png`),
       fullPage: true,
@@ -267,4 +284,53 @@ test("download loading and failed requests remain distinct from unavailable rele
   await expect(page.getByRole("status")).toContainText(
     "No packaged download is available",
   );
+  const release = (target: "chromium" | "firefox") => ({
+    target,
+    version: "0.10.1",
+    url:
+      "/downloads/tholi" +
+      (target === "firefox" ? "-firefox" : "") +
+      "-0.10.1.zip",
+    sha256: "a".repeat(64),
+    bytes: 1024,
+    status: "fixture",
+    minimumBrowserVersion: target === "firefox" ? "153" : "140",
+    installationKind: target === "firefox" ? "temporary" : "unpacked",
+  });
+  await page.unroute("**/downloads/manifest.json");
+  await page.route("**/downloads/manifest.json", (route) =>
+    route.fulfill({
+      json: {
+        schemaVersion: 2,
+        targets: { chromium: release("chromium"), firefox: release("firefox") },
+      },
+    }),
+  );
+  const selector = page.getByLabel("Your browser", { exact: true });
+  await selector.focus();
+  await page.keyboard.press("Home");
+  await expect(selector).toHaveValue("chrome");
+  await page.keyboard.press("End");
+  await expect(selector).toHaveValue("firefox");
+  await expect(selector).toBeFocused();
+  await expect(
+    page.getByRole("link", {
+      name: "Download Firefox developer preview",
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/downloads/tholi-firefox-0.10.1.zip");
+  await page.getByLabel("Your browser", { exact: true }).selectOption("edge");
+  await expect(
+    page.getByRole("link", { name: "Download Chromium preview", exact: true }),
+  ).toHaveAttribute("href", "/downloads/tholi-0.10.1.zip");
+  await page.goBack();
+  await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
+    "firefox",
+  );
+  await expect(
+    page.getByRole("link", {
+      name: "Download Firefox developer preview",
+      exact: true,
+    }),
+  ).toBeVisible();
 });

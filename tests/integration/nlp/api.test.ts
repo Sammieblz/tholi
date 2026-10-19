@@ -19,11 +19,12 @@ test("authenticated API uses the shared real NLP core, explicit CORS, SQLite per
   const directory = await mkdtemp(join(tmpdir(), "navigator-api-test-")),
     database = join(directory, "test.sqlite"),
     token = "a".repeat(64),
-    origin = "chrome-extension://" + "a".repeat(32);
+    origin = "chrome-extension://" + "a".repeat(32),
+    firefoxOrigin = "moz-extension://01234567-89ab-cdef-0123-456789abcdef";
   const options = {
     database,
     token,
-    origins: [origin],
+    origins: [origin, firefoxOrigin],
     models: resolve("assets/models"),
     worker: new URL("../../../apps/api/dist/inference.js", import.meta.url),
   };
@@ -46,6 +47,28 @@ test("authenticated API uses the shared real NLP core, explicit CORS, SQLite per
     expect((await app.inject({ url: "/v1/health", headers })).statusCode).toBe(
       200,
     );
+    expect(
+      (
+        await app.inject({
+          url: "/v1/health",
+          headers: { ...headers, origin: firefoxOrigin },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await app.inject({
+          url: "/v1/health",
+          headers: {
+            ...headers,
+            origin: firefoxOrigin.replace("01234567", "ffffffff"),
+          },
+        })
+      ).statusCode,
+    ).toBe(403);
+    await expect(
+      createApi({ ...options, origins: ["moz-extension://*"] }),
+    ).rejects.toThrow("explicitly name");
     const observation = fixture(),
       input = {
         requestId: crypto.randomUUID(),

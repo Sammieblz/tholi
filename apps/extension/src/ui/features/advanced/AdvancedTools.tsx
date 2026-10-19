@@ -1,3 +1,4 @@
+import { api } from "../../../platform/api";
 import type { RouteStrategy } from "../../../../../../packages/page-model";
 import { LiveInspector } from "./LiveInspector";
 import { unresolvedTitle } from "../../app/presentationLabels";
@@ -52,7 +53,7 @@ export function AdvancedTools({
   return !widget ? (
     <div className="tholi-advanced-tools">
       <p className="small tholi-tool-context">
-        {statusLabel} · {chrome.runtime.getManifest().version}
+        {statusLabel} · {api.runtime.getManifest().version}
       </p>
       <label>
         Route preference
@@ -173,13 +174,13 @@ export function AdvancedTools({
                 try {
                   if (backend.enabled) {
                     const url = new URL(backend.url);
-                    const granted = await chrome.permissions.request({
+                    const granted = await api.permissions.request({
                       origins: [url.protocol + "//" + url.hostname + "/*"],
                     });
                     if (!granted)
                       throw new Error("API access was not granted.");
                   }
-                  const r = await chrome.runtime.sendMessage({
+                  const r = await api.runtime.sendMessage({
                     type: "SET_BACKEND",
                     ...backend,
                   });
@@ -224,7 +225,7 @@ export function AdvancedTools({
           <p className="small">
             {aiAvailability === "unavailable"
               ? "On-device AI is unavailable on this device. Semantic planning works without it."
-              : "Experimental LLM support runs locally in Chrome. Enabling it may download the browser's model. MiniLM works offline without this option."}
+              : "Experimental LLM support runs locally where the browser provides it. Enabling it may download the browser's model. MiniLM works offline without this option."}
           </p>
         </details>
       )}
@@ -370,7 +371,7 @@ export function AdvancedTools({
           )}
           <p className="small">
             Open menus to reveal more controls. The list refreshes as you
-            browse. You make every click.
+            browse. You control the website.
           </p>
         </details>
       )}

@@ -1,3 +1,9 @@
+import type { createSessionService } from "./session-service";
+import {
+  getPrivateSetting,
+  setPrivateSetting,
+} from "../platform/private-settings";
+import { api, type Tabs } from "../platform/api";
 import type { createJourneyService } from "./journey-service";
 import type { SuspendedJourney } from "../../../../packages/navigation-core/continuity";
 import { taskKey } from "../../../../packages/goal-planner/task-journey";
@@ -5,8 +11,6 @@ import { suspendJourney } from "../../../../packages/navigation-core/continuity"
 import { continuesDestination } from "../../../../packages/navigation-core/queue";
 import {
   hash,
-  LIVE_ROUTE_ID,
-  LIVE_VERSION,
   livePreview,
   supportsLiveUrl,
   type SavedTask,
@@ -17,20 +21,18 @@ import {
   routeRegistry,
 } from "../../../../packages/route-registry/index";
 import {
-  sessionLocked,
   sessionSchema,
   validPinnedView,
   type PinnedSession,
 } from "../../../../packages/route-registry/session";
 import { messageSchema } from "../../../../packages/route-schema/index";
-import { routeSupportsUrl } from "../../../../packages/safety-policy/index";
 import { BackgroundMemory } from "../../../../packages/site-memory/background";
 import { IndexedDBDerivedStore } from "../../../../packages/site-memory/derived";
 import {
   IndexedDBSiteMemory,
   memorySummary,
 } from "../../../../packages/site-memory/index";
-import { cancelNlp } from "../inference/offscreen-client";
+import { cancelNlp } from "../inference/client";
 import {
   backendSettings,
   deleteBackendMemory,
@@ -60,8 +62,9 @@ interface Context {
   cancelVision: () => void;
   goalGeneration: number;
   stopSession: (reason?: string) => Promise<void>;
+  interruptSession: ReturnType<typeof createSessionService>["interruptSession"];
   suspended: SuspendedJourney[];
-  activeTab: () => Promise<chrome.tabs.Tab>;
+  activeTab: () => Promise<Tabs.Tab>;
   ready: Promise<void>;
   originOf: (url?: string) => string | undefined;
   memoryEpoch: number;
@@ -83,13 +86,14 @@ interface Context {
   lastVisionKey: string;
   attemptVision: (sessionId: string, requestId: string) => Promise<void>;
   attachSession: () => Promise<PinnedSession | undefined>;
+  startSession: ReturnType<typeof createSessionService>["startSession"];
   memoryJobs: BackgroundMemory;
   lastObservation: string;
   startFrames: (current: PinnedSession) => Promise<void>;
 }
 
 export function registerMessages(context: Context) {
-  chrome.runtime.onMessage.addListener((raw, sender, respond) => {
+  api.runtime.onMessage.addListener((raw, sender, respond) => {
     if (raw?.type === "UI_RESET_SESSION") {
       if (!trustedUi(sender, context.session)) {
         respond({ error: "Trusted Tholi interface required." });
@@ -109,13 +113,13 @@ export function registerMessages(context: Context) {
           context.session = undefined;
           await clearSurfacePresentation(prior);
           context.suspended = [];
-          await chrome.storage.session.remove([
+          await api.storage.session.remove([
             "navigatorSession",
             "navigatorJourneys",
             "tholiConversation",
             "tholiDraft",
           ]);
-          await chrome.storage.session.set({
+          await api.storage.session.set({
             tholiSessionReset: crypto.randomUUID(),
           });
           invalidateUi();
@@ -137,7 +141,7 @@ export function registerMessages(context: Context) {
           const tab =
             pinned === undefined
               ? await context.activeTab()
-              : await chrome.tabs.get(pinned);
+              : await api.tabs.get(pinned);
           const appearance = tab ? await tabAppearance(tab) : undefined;
           if (!trustedUi(sender, context.session))
             throw Error("The website changed.");
@@ -201,7 +205,7 @@ export function registerMessages(context: Context) {
           const value = frameMessage(raw, sender, context.session);
           if (!value || !context.session)
             return { error: "Stale frame observation" };
-          await chrome.tabs.sendMessage(context.session.tabId, {
+          await api.tabs.sendMessage(context.session.tabId, {
             type:
               raw.type === "FRAME_OBSERVATION"
                 ? "FRAME_OBSERVATION_PARENT"
@@ -229,7 +233,7 @@ export function registerMessages(context: Context) {
         .enqueue(async () => {
           if (
             !context.session ||
-            sender.id !== chrome.runtime.id ||
+            sender.id !== api.runtime.id ||
             sender.tab?.id !== context.session.tabId ||
             sender.documentId !== context.session.documentId
           )
@@ -257,19 +261,39 @@ export function registerMessages(context: Context) {
         .catch(() => respond({ error: "Frame unavailable" }));
       return true;
     }
+    // Reject stale UI intent before it can cancel work for the current document.
+    // Queued handlers recheck identity after asynchronous observation as well.
     if (
-      sender.id === chrome.runtime.id &&
+      ["SET_GOAL", "STOP", "PAUSE"].includes(raw?.type) &&
       trustedUi(sender, context.session) &&
-      ["SET_GOAL", "CLARIFY", "STOP", "PAUSE", "RESUME_JOURNEY"].includes(
-        raw?.type,
-      )
+      ((raw.sessionId && raw.sessionId !== context.session?.sessionId) ||
+        (raw.documentId && raw.documentId !== context.session?.documentId))
+    ) {
+      respond({
+        error:
+          "This destination belongs to a previous page. Send it on the current page.",
+      });
+      return;
+    }
+    if (
+      sender.id === api.runtime.id &&
+      trustedUi(sender, context.session) &&
+      messageSchema.safeParse(raw).success &&
+      [
+        "SET_GOAL",
+        "CLARIFY",
+        "STOP",
+        "PAUSE",
+        "RESUME",
+        "RESUME_JOURNEY",
+      ].includes(raw?.type)
     ) {
       context.goalGeneration++;
       context.cancelVision();
     }
     if (raw?.type === "VISION_INVALIDATED") {
       if (
-        sender.id === chrome.runtime.id &&
+        sender.id === api.runtime.id &&
         sender.tab?.id === context.session?.tabId &&
         sender.documentId === context.session?.documentId &&
         raw.sessionId === context.session?.sessionId
@@ -278,9 +302,32 @@ export function registerMessages(context: Context) {
       respond({ ok: true });
       return;
     }
+    if (["STOP", "PAUSE"].includes(raw?.type)) {
+      if (
+        !trustedUi(sender, context.session) ||
+        !messageSchema.safeParse(raw).success
+      ) {
+        respond({ error: "Trusted Tholi interface required." });
+        return;
+      }
+      if (
+        (raw.sessionId && raw.sessionId !== context.session?.sessionId) ||
+        (raw.documentId && raw.documentId !== context.session?.documentId)
+      ) {
+        respond({ error: "This control belongs to a previous task or page." });
+        return;
+      }
+      // This path owns the same session, but never waits behind discovery,
+      // memory writes or page-message acknowledgments in the routine queue.
+      void context.ready
+        .then(() => context.interruptSession(raw.type))
+        .then((session) => respond(session ? structuredClone(session) : {}))
+        .catch((error) => respond({ error: error.message }));
+      return true;
+    }
     if (raw?.type === "GET_MEMORY") {
       if (
-        sender.id !== chrome.runtime.id ||
+        sender.id !== api.runtime.id ||
         !trustedUi(sender, context.session) ||
         !messageSchema.safeParse(raw).success
       ) {
@@ -335,11 +382,25 @@ export function registerMessages(context: Context) {
         );
       return true;
     }
+    const queuedGeneration = context.goalGeneration;
     context
       .enqueue(async () => {
-        if (sender.id !== chrome.runtime.id)
-          return { error: "Invalid sender." };
+        if (sender.id !== api.runtime.id) return { error: "Invalid sender." };
+        if (
+          queuedGeneration !== context.goalGeneration &&
+          [
+            "START",
+            "RESUME",
+            "CONTINUE_TASK",
+            "SET_GOAL",
+            "GUIDE_CONTROL",
+            "RESUME_JOURNEY",
+          ].includes(raw?.type)
+        )
+          return context.session ? structuredClone(context.session) : {};
         if (raw?.type === "SESSION_UPDATE") {
+          if (queuedGeneration !== context.goalGeneration)
+            return { error: "Superseded session update." };
           if (
             !context.session ||
             raw.sessionId !== context.session.sessionId ||
@@ -351,7 +412,7 @@ export function registerMessages(context: Context) {
           if (
             context.session.view?.status === "stopped" ||
             (context.session.view?.status === "paused" &&
-              raw.view?.status === "running")
+              !["paused", "stopped"].includes(raw.view?.status))
           )
             return { error: "Inactive session update." };
           const incoming = validPinnedView(context.session, raw.view);
@@ -410,7 +471,14 @@ export function registerMessages(context: Context) {
             await context.save();
             return { ok: true };
           }
+          const becamePaused =
+            incoming.status === "paused" &&
+            context.session.view?.status !== "paused";
           await context.acceptView(incoming);
+          if (becamePaused) {
+            context.cancelVision();
+            void cancelNlp().catch(() => {});
+          }
           if (
             !incoming.selectedControlId &&
             (incoming.stateId === "verified" ||
@@ -433,29 +501,21 @@ export function registerMessages(context: Context) {
             context.session.view?.goalPlan?.action?.kind !== "visual"
           )
             return { error: "No visual suggestion is pending." };
-          const response = await chrome.tabs.sendMessage(
-            context.session.tabId,
-            {
-              type: "RECHECK_JOURNEY",
-              sessionId: context.session.sessionId,
-            },
-          );
+          const response = await api.tabs.sendMessage(context.session.tabId, {
+            type: "RECHECK_JOURNEY",
+            sessionId: context.session.sessionId,
+          });
           if (response.view) await context.acceptView(response.view);
           await context.save();
           return context.session;
         }
         if (command.type === "GET_VISION")
           return {
-            backend: !!(await chrome.storage.local.get("vision")).vision
+            backend: !!(await getPrivateSetting<{ backend: boolean }>("vision"))
               ?.backend,
           };
         if (command.type === "SET_VISION") {
-          await chrome.storage.local.setAccessLevel({
-            accessLevel: "TRUSTED_CONTEXTS",
-          });
-          await chrome.storage.local.set({
-            vision: { backend: command.backend },
-          });
+          await setPrivateSetting("vision", { backend: command.backend });
           return { ok: true };
         }
         if (command.type === "REQUEST_VISION") {
@@ -520,15 +580,12 @@ export function registerMessages(context: Context) {
             resumeStatus: undefined,
           };
           context.session.view.goalPlan = undefined;
-          const response = await chrome.tabs.sendMessage(
-            context.session.tabId,
-            {
-              type: "RESTORE_JOURNEY",
-              sessionId: context.session.sessionId,
-              journey: entry.journey,
-              request: context.session.view.request,
-            },
-          );
+          const response = await api.tabs.sendMessage(context.session.tabId, {
+            type: "RESTORE_JOURNEY",
+            sessionId: context.session.sessionId,
+            journey: entry.journey,
+            request: context.session.view.request,
+          });
           if (response?.view) await context.acceptView(response.view);
           await context.save();
           return context.session;
@@ -627,7 +684,7 @@ export function registerMessages(context: Context) {
             : [];
           const siteAccessRequired =
             available &&
-            !(await chrome.permissions.contains({
+            !(await api.permissions.contains({
               origins: [
                 new URL(tab!.url!).protocol +
                   "//" +
@@ -714,63 +771,22 @@ export function registerMessages(context: Context) {
             view: context.session?.view,
           };
         }
-        if (command.type === "START") {
-          const dynamic =
-              command.routeId === LIVE_ROUTE_ID &&
-              command.routeVersion === LIVE_VERSION,
-            route = routeRegistry.get(command.routeId, command.routeVersion);
-          if (!dynamic && !route)
-            return {
-              error: "This route version is unavailable. Choose a task again.",
-            };
-          const tab = await context.activeTab();
-          if (tab?.id === undefined || !supportsLiveUrl(tab.url || ""))
-            return {
-              error:
-                "Select a website tab and click the extension icon to grant access.",
-            };
-          if (
-            (command.tabId !== undefined && command.tabId !== tab.id) ||
-            (command.origin && command.origin !== context.originOf(tab.url))
-          )
-            return {
-              error:
-                "The tab changed while granting access. Start navigation on the current website again.",
-            };
-          if (!dynamic && !routeSupportsUrl(route!, tab.url!))
-            return {
-              error: "The selected task is unavailable on this website.",
-            };
-          if (sessionLocked(context.session))
-            return {
-              error:
-                "Stop the current navigation before starting another task.",
-            };
-          await context.stopSession();
-          context.session = {
-            sessionId: crypto.randomUUID(),
-            tabId: tab.id,
-            routeId: command.routeId,
-            routeVersion: command.routeVersion,
-            origin: context.originOf(tab.url),
-          };
-          context.lastObservation = "";
-          await context.save();
-          try {
-            return await context.attachSession();
-          } catch (error) {
-            context.session = undefined;
-            await context.save();
-            return {
-              error:
-                "Tholi could not access this page. Click its toolbar icon on the website, refresh the page, then try again. If Chrome asks for this site's access, allow it to continue. Browser pages and documents without HTML controls are unsupported.",
-            };
-          }
-        }
+        if (command.type === "START") return context.startSession(command);
         if (!context.session)
           return command.type === "STOP"
             ? {}
             : { error: "Start navigation first." };
+        if (
+          command.type === "SET_GOAL" &&
+          ((command.sessionId &&
+            command.sessionId !== context.session.sessionId) ||
+            (command.documentId &&
+              command.documentId !== context.session.documentId))
+        )
+          return {
+            error:
+              "This destination belongs to a previous page. Send it on the current page.",
+          };
         if (command.type === "STOP") {
           await context.stopSession();
           return structuredClone(context.session);
@@ -799,7 +815,7 @@ export function registerMessages(context: Context) {
           // granted. Request only the clicked link's origin; validate the actual
           // destination after that grant, before observing or advancing the task.
           const expected = new URL(nav.origin);
-          const granted = await chrome.permissions.contains({
+          const granted = await api.permissions.contains({
             origins: [expected.protocol + "//" + expected.hostname + "/*"],
           });
           if (!granted)
@@ -866,10 +882,12 @@ export function registerMessages(context: Context) {
               }
             : { ...command, sessionId: context.session.sessionId };
         try {
-          const reply = await chrome.tabs.sendMessage(
+          const reply = await api.tabs.sendMessage(
             context.session.tabId,
             outgoing,
           );
+          if (queuedGeneration !== context.goalGeneration)
+            return structuredClone(context.session);
           if (reply?.error) return reply;
           if (command.type === "GET_PAGE")
             return {

@@ -151,6 +151,29 @@ export function GuidanceHeader(
                     />
                     Advanced controls
                   </label>
+                  {props.assistanceAvailable && (
+                    <>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!prefs.assisted}
+                          aria-describedby="tholi-assistance-description"
+                          onChange={(event) =>
+                            props.onPreferences({
+                              ...prefs,
+                              assisted: event.target.checked,
+                            })
+                          }
+                        />
+                        Assisted navigation
+                      </label>
+                      <p id="tholi-assistance-description" className="small">
+                        Tholi may open menus and select requested view options.
+                        You handle forms, sign-in and final actions. Turn this
+                        off or Pause to take over.
+                      </p>
+                    </>
+                  )}
                   <button
                     onClick={() => {
                       if (props.widget && props.onDock) {

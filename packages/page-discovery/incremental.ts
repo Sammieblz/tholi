@@ -5,6 +5,9 @@ export const controlSelector =
   'a[href],button,input:not([type="hidden"]),select,textarea,summary,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="combobox"],[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"],[role="option"],[role="treeitem"],[role="textbox"],[role="searchbox"],[contenteditable="true"],h1,h2,h3,h4,h5,h6,[role="heading"]';
 export const surfaceSelector =
   'dialog,[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover],nav,header,footer,[role="navigation"],[role="banner"],[role="contentinfo"],main,[role="main"]';
+const ownedUi = "#internet-navigator-overlay,[data-tholi-ui]";
+const observationText =
+  'h1,h2,h3,h4,h5,h6,[role="heading"],[role="status"],[role="alert"],[aria-live],main p,[role="main"] p';
 
 /** DOM-only scheduler. It never clicks, reads input values or retains page text. */
 export class IncrementalControlIndex {
@@ -25,11 +28,21 @@ export class IncrementalControlIndex {
   private changed = false;
   private lastFlush = 0;
   private priority?: HTMLElement;
+  private references = new Map<
+    Document | ShadowRoot,
+    Map<string, Set<HTMLElement>>
+  >();
+  private names = new WeakMap<
+    HTMLElement,
+    { root: Document | ShadowRoot; ids: string[] }
+  >();
   constructor(public limit = 5000) {}
   setLimit(limit: number) {
     this.limit = Math.max(1, Math.min(5000, limit));
-    for (const e of [...this.elements].slice(this.limit))
+    for (const e of [...this.elements].slice(this.limit)) {
+      this.trackReferences(e, true);
       this.elements.delete(e);
+    }
   }
   start(notify: () => void) {
     if (!this.stopped) return;
@@ -106,13 +119,43 @@ export class IncrementalControlIndex {
           (c) => c !== this.priority && this.priorityRank(c) < rank,
         );
       if (!victim) return;
+      this.trackReferences(victim, true);
       this.elements.delete(victim);
       this.dirty.delete(victim);
     }
+    this.trackReferences(e);
     if (this.elements.has(e)) return;
     this.elements.add(e);
     this.dirty.add(e);
     this.changed = true;
+  }
+  private trackReferences(e: HTMLElement, removed = false) {
+    const root = e.getRootNode() as Document | ShadowRoot;
+    const ids = removed
+      ? []
+      : [e.getAttribute("aria-labelledby"), e.getAttribute("aria-describedby")]
+          .filter(Boolean)
+          .join(" ")
+          .split(/\s+/)
+          .filter(Boolean);
+    const previous = this.names.get(e);
+    if (previous?.root === root && previous.ids.join(" ") === ids.join(" "))
+      return;
+    if (previous)
+      for (const id of previous.ids) {
+        const owners = this.references.get(previous.root)?.get(id);
+        owners?.delete(e);
+        if (!owners?.size) this.references.get(previous.root)?.delete(id);
+      }
+    this.names.set(e, { root, ids });
+    if (!ids.length) return;
+    let references = this.references.get(root);
+    if (!references) this.references.set(root, (references = new Map()));
+    for (const id of ids) {
+      let owners = references.get(id);
+      if (!owners) references.set(id, (owners = new Set()));
+      owners.add(e);
+    }
   }
   private priorityRank(e: HTMLElement) {
     if (e === this.priority || e === document.activeElement) return 6;
@@ -133,13 +176,27 @@ export class IncrementalControlIndex {
       : 0;
   }
   private mark(e: HTMLElement) {
+    let relevant = !!e.closest(observationText) || e.matches(surfaceSelector);
     let current: HTMLElement | null = e;
     for (
       let depth = 0;
       current && depth < 8;
       depth++, current = current.parentElement
     ) {
-      if (this.elements.has(current)) this.dirty.add(current);
+      if (this.elements.has(current)) {
+        this.dirty.add(current);
+        relevant = true;
+      }
+      if (current.id) {
+        const owners = this.references
+          .get(current.getRootNode() as Document | ShadowRoot)
+          ?.get(current.id);
+        if (owners)
+          for (const control of owners) {
+            this.dirty.add(control);
+            relevant = true;
+          }
+      }
     }
     if (e.matches('h1,h2,h3,h4,h5,h6,[role="heading"]')) {
       const region = e.closest(surfaceSelector) || e.parentElement;
@@ -147,7 +204,7 @@ export class IncrementalControlIndex {
         for (const c of this.elements)
           if (region.contains(c)) this.dirty.add(c);
     }
-    this.changed = true;
+    this.changed ||= relevant;
   }
   private attach(root: Document | ShadowRoot) {
     if (this.roots.has(root)) return;
@@ -160,7 +217,18 @@ export class IncrementalControlIndex {
             : r.target instanceof ShadowRoot
               ? r.target.host
               : r.target.parentElement;
-        if (!e || e.closest("#internet-navigator-overlay,[data-tholi-ui]")) continue;
+        if (!e || e.closest("#internet-navigator-overlay,[data-tholi-ui]"))
+          continue;
+        // Mounting/removing our own overlay is not a website mutation. In
+        // particular, never attach an observer to the widget's shadow root.
+        if (
+          r.type === "childList" &&
+          [...r.addedNodes, ...r.removedNodes].length &&
+          [...r.addedNodes, ...r.removedNodes].every(
+            (node) => node instanceof Element && node.matches(ownedUi),
+          )
+        )
+          continue;
         if (
           r.type === "attributes" &&
           [
@@ -174,7 +242,12 @@ export class IncrementalControlIndex {
           ].includes(r.attributeName!)
         ) {
           this.mark(e as HTMLElement);
-          for (const c of this.elements) if (e.contains(c)) this.dirty.add(c);
+          for (const c of this.elements)
+            if (e.contains(c)) {
+              this.dirty.add(c);
+              this.changed = true;
+            }
+          if (r.attributeName === "aria-busy") this.changed = true;
         } else this.mark(e as HTMLElement);
         if (
           r.type === "attributes" &&
@@ -228,8 +301,19 @@ export class IncrementalControlIndex {
     this.observers.set(root, observer);
   }
   private enqueue(root: Element, foreground = false) {
-    if (this.queued.has(root) || this.stopped) return;
+    if (this.queued.has(root) || this.stopped || root.closest(ownedUi)) return;
+    // Plain ticking text has no controls to index. Receipts and semantic
+    // headings still invalidate observation even when they contain no buttons.
+    if (
+      !root.children.length &&
+      !root.shadowRoot &&
+      !root.matches(controlSelector + "," + surfaceSelector)
+    ) {
+      this.mark(root as HTMLElement);
+      return;
+    }
     this.queued.add(root);
+    this.changed ||= root.matches(surfaceSelector);
     this.complete = false;
     this.add(root as HTMLElement);
     if (root.shadowRoot) {
@@ -275,6 +359,7 @@ export class IncrementalControlIndex {
   private prune() {
     for (const e of this.elements)
       if (!e.isConnected) {
+        this.trackReferences(e, true);
         this.elements.delete(e);
         this.dirty.delete(e);
         this.changed = true;
@@ -284,6 +369,7 @@ export class IncrementalControlIndex {
         this.observers.get(root)?.disconnect();
         this.observers.delete(root);
         this.roots.delete(root);
+        this.references.delete(root);
       }
     if (this.elements.size < this.limit) this.saturated = false;
   }
@@ -332,6 +418,11 @@ export class IncrementalControlIndex {
     for (const observer of this.observers.values()) observer.disconnect();
     this.observers.clear();
     this.roots.clear();
+    this.elements.clear();
+    this.dirty.clear();
+    this.priority = undefined;
+    this.references.clear();
+    this.names = new WeakMap();
     this.walkers = [];
     this.queued = new WeakSet();
     for (const name of ["focusin", "change", "input", "pointerover"] as const)

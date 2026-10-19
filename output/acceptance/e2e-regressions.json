@@ -1,13 +1,13 @@
 {
   "artifactFiles": {
     "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
-    "THIRD_PARTY_NOTICES.md": "4e178aa8b9eca8b7272c89eff9ed297ad6513f3c7b7910de9325a84186aaf819",
-    "content.js": "4dc3358491ff983fd851b62db0a078a6c12b44e4b0466637e6d66cba71dd205a",
-    "content.js.map": "0def3bb701edfec19d3a815c877080a2f0962d1a9e50499d6298c4432112fbe6",
+    "THIRD_PARTY_NOTICES.md": "acf7a0f83e3e7a4cfb526fb19738477ecf5e10f4e54cd1879feaff85dd4899ba",
+    "content.js": "cc8ad37eeb4ae5c32e10bf41ef99900d0ff1c051da0fadbb0b7fad4beb0a17e9",
+    "content.js.map": "003118af4fb22e233a96a1e1fd629284e34df25255bb542ea6b3c869d2b380cb",
     "discovery-lock.json": "4aa189c178714f51ffdaab3272389f3a3d3c71d5652fe74014a322c5cd6d6f6a",
-    "frame-agent.js": "dca7e397605e588ea33f8ffc460c2d9b54c9c0306c4255768c84e387fc5be6dc",
-    "frame-agent.js.map": "ccccc9c20dbd96751e973f1852cdf358f8d7e5b7c86d184fb604b1adf171dab1",
-    "inference.js": "5799afc035119dd23928e177467567a3e89c87829ab3aa6afc781484c1f0b5af",
+    "frame-agent.js": "1efa0b7cc0ad219a57c2ef8552ffef0b9c2af5b10c5618efb9c9729483c6d4a0",
+    "frame-agent.js.map": "76df1877e1a7cc14232d2373a5c874a9969b7d21c708cb47607482a2bbbe922e",
+    "inference.js": "b966757ebc5df976ca062b80b85f9512ddc0c1cac81d07ad7d8a61583891acba",
     "licenses/@babel_runtime-LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76",
     "licenses/@base-ui_react-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
     "licenses/@base-ui_utils-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
@@ -226,6 +226,7 @@
     "licenses/vfile-license": "05811400116ed61f1a7693b78fe8ca6598c155a12f3978e609db4df648a4cb3d",
     "licenses/vfile-message-license": "dd1081884a92952802f4803110a6bb543acea9a814c786d58605b4c1219b5ebb",
     "licenses/wasm-feature-detect-LICENSE": "bcf29b4fd3ec2cb5f9d40a0866da446f6da62170d2ccedf4aeca9cf9406dd20c",
+    "licenses/webextension-polyfill-LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "licenses/webidl-conversions-LICENSE.md": "a889cc4dbee2ae172c179856b25d75b0b7a5a136e1b97109b9b590b2ff1a879c",
     "licenses/whatwg-url-LICENSE.txt": "6b7a1792144374d84dc5ed3655b8bbe2754d06f4f1f64a9fb8b9de2d6f448b85",
     "licenses/yaml-LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869",
@@ -233,7 +234,7 @@
     "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
     "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
     "licenses/zwitch-license": "ca4662cb5d1b738fbe5350c0d5485ba11773b4b7208974082ae6e129a52d631d",
-    "manifest.json": "d2b10a9c810356ddb0f93a1c1f054d034c0b768c62821a1c4cf5abb0457cfef1",
+    "manifest.json": "dc551369a82eee24d242d85b489276b069412c6f93f8b9934ade697b613b90cd",
     "manrope-latin-wght-normal-73PUZEUA.woff2": "a30ddcd349703aff7464c34bef3fffdff405ee50c113440d7c8693c02d210972",
     "media/icon-128.png": "046fc8702746ec70d79611641cc7eb13dc5b2f44976651884212ed3cf1395968",
     "media/icon-16.png": "31cb0cc626200eb9127b0c86bd57a9048ad296d0580eec4b20592ca7b182cd46",
@@ -248,40 +249,207 @@
     "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
     "ocr-lock.json": "2d9400385852cab1afb909cf9260876e45c1a58e8f6a839bbf64c190eff1aa7d",
-    "ocr-worker.js": "a670af4337a9d24d40dc560d2e70aa38b866ccd4abee667882748fe2d4cdd19a",
+    "ocr-worker.js": "769ec50f0aa263b788566b69060618e466466a1b8ac0ced9328c182182997fda",
     "ocr/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "ocr/eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
     "ocr/tesseract-core-lstm.wasm.js": "775a35df6f2ae100e02609443e6bd5cafcd07983dd6175454ca4a432a7730687",
     "ocr/tesseract-core-simd-lstm.wasm.js": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
     "ocr/worker.min.js": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
     "offscreen.html": "6663936252c9e7a0f580b9015f73df49838acc7ede1716689dfc6510881275b3",
-    "offscreen.js": "e3c8e9b7225b98b5469a83685ae0e628b612f58b698fa49565a2e9c48f42ef72",
-    "offscreen.js.map": "f61f572601e8f072c2f35f4de0dfb79be7e53a265c839912402dac290c15f20d",
+    "offscreen.js": "da602eb10b9f003629f2aee30a428e48fe8a3357e94cbee0b31fe8ebff594bac",
+    "offscreen.js.map": "64ca2c7be3fb49144a161d9ed47c893ffc206c47e0a1899b6269dbba714d9f0d",
     "outfit-latin-wght-normal-5FXBKKJF.woff2": "6c18d579fd87c3776be068b762cbc83fde3acb543d49eabd3ade842eb987e887",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
-    "sidepanel.css": "d65069c883887ea3c485e371def48a17031047b30c3c633ca91339a745612493",
-    "sidepanel.css.map": "d67c3d30603b3be6a8068c156f51b3dd17f942580e9718adf923c5621196fb2f",
+    "sidepanel.css": "c642113af24bcd9a02bafc7b2d6e9882eb44020f24566f81360e16d3e0634cb8",
+    "sidepanel.css.map": "3e53e64990c436bf3d0f09e2b1046f0b9dfc7d6c222d12475a4e665250fa68c2",
     "sidepanel.html": "c573a6fd1e89418f559b2084b564f15d2e73468787b893299cddaeeb914dc2f4",
-    "sidepanel.js": "4bb541201298eec46c9d1aa2363fbb171615aadd329d1c51b0219be047c47c94",
-    "sidepanel.js.map": "5b28fc375d1c4932ea0476a0f1ecf5ce2c5c39ef95d7f6182678f9645241d6ce",
-    "theme-page.js": "dcbba567088a31a8ccf575b748bd046cc21c06f817bb0271de7bb744e2c647ad",
-    "theme-page.js.map": "54e4f43f10c26beb4a30492c31505cb7b35004b635172d3237201555c82eedda",
-    "third-party.json": "6a6e5eb179068056e401992bc8a851c8316913da834f0f7ece405b82b4e9b135",
+    "sidepanel.js": "077fbb9e4a01180601fbd06c03ff9949a0591ec7bd439382f367e2c23069ef20",
+    "sidepanel.js.map": "856f25789d581245fae582db35c77cd891161314f6546850f4c36dc548df33b8",
+    "theme-page.js": "796255b3a4d7ae22e2c10aa28fa3fcc24b5e132826a848580547a4139e1d1184",
+    "theme-page.js.map": "c411d0afb3792ea8cdb7187be84c90e5bd5f482beb682ec71ea5169926f07114",
+    "third-party.json": "b11430b164fe93cf21ed290f8e45b4be9f5d035d89de28bc3e3acb58853feaac",
     "vision-policy.json": "d885022d8ab0bc4f3cd07a065464ce3f4b87a869de09b35861dcc67dda43c7c1",
     "widget.html": "02e067f49f69098d2210b8eabd442c4fa55070ad851f4540106d60ef1728ef04",
-    "worker.js": "41b74d0e456118262235fb3e8f8f66c1b9cc506b639b9f38dac4abbeed39de4c",
-    "worker.js.map": "4501ce5150e21f68ac39870623cb16a28bdaa9729889b0d7b43ca6115acb71ee"
+    "worker.js": "e360751e1171ab5d9781badaf6733257e5ae3386e2a5e67dba71c4ef6fc70fdc",
+    "worker.js.map": "a435c8cae4d1ebff603903b65a3552cb8ae59c5c5d2d805661a11021e9cf2b9d"
   },
-  "extensionVersion": "0.10.1",
+  "target": "chromium",
+  "buildTargets": {
+    "chromium": "8a6f1b43b274bb0537e26779f906764c612add63c1da46c7065a407e7588e5cd",
+    "firefox": "367f1455b6b07cc3d71c64dd5545bd4ada359766935f53b597a35900cad68994"
+  },
+  "extensionVersion": "0.11.0",
   "validation": {
     "selection": "complete",
-    "tier": "full",
-    "runId": "15251e6a-857f-48b5-bf30-376fac268234",
-    "buildDigest": "16688e4073b4caa7435c08e10196662c0d56110f166955f0fcd71894363c06ba"
+    "tier": "pr",
+    "runId": "performance-2026-10-19-v3",
+    "buildDigest": "8a6f1b43b274bb0537e26779f906764c612add63c1da46c7065a407e7588e5cd"
   },
+  "browsers": [
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    }
+  ],
   "scope": "e2e",
-  "evaluatedAt": "2026-10-17T09:59:48.787Z",
+  "evaluatedAt": "2026-10-19T05:32:17.211Z",
   "passed": true,
   "files": [
     "tests/browser/extension/core/accessibility.spec.ts",
@@ -304,237 +472,321 @@
     {
       "id": "ddd864604af8a6a0198f-5caeafcdf5fc8beb38a7",
       "name": " / core-desktop / tests\\browser\\extension\\core\\accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 17537,
+      "disposalMs": 889.4326999999976
     },
     {
       "id": "70f6afe7e350c931056e-78c5f7253066072ade7f",
       "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8351,
+      "disposalMs": 777.9804000000004
     },
     {
       "id": "70f6afe7e350c931056e-b30027230f52d8220562",
       "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7357,
+      "disposalMs": 1028.8732999999993
     },
     {
       "id": "70f6afe7e350c931056e-638d1e32b33de3a0f80a",
       "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7207,
+      "disposalMs": 1081.8163000000059
     },
     {
       "id": "70f6afe7e350c931056e-c1e5d96ae014bc19f0bc",
       "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 12267,
+      "disposalMs": 953.0538000000015
     },
     {
       "id": "d23bd77383021f8f1c37-c136595d52bf2437753a",
       "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / cloudflare: account settings survives an unmounted menu without substituting product settings",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7912,
+      "disposalMs": 783.6985000000059
     },
     {
       "id": "d23bd77383021f8f1c37-4fccf2e3dd94510b96da",
       "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / github: account settings survives an unmounted menu without substituting product settings",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 11281,
+      "disposalMs": 1052.1454000000085
     },
     {
       "id": "da119938d3268322a91b-ee5f444ec7573367880d",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 3260
     },
     {
       "id": "da119938d3268322a91b-effa1d5873edd7644117",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 2645
     },
     {
       "id": "da119938d3268322a91b-b0fe67c118663d4da7b2",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / login excludes synthetic secrets and requires resume",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 1953
     },
     {
       "id": "da119938d3268322a91b-67ed155d1b0e52b5a605",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 1723
     },
     {
       "id": "da119938d3268322a91b-fc278d0545d7f94a2df1",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 1901
     },
     {
       "id": "da119938d3268322a91b-4569ec84a7de348b05ba",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / production localhost access is available without a toolbar grant",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 710
     },
     {
       "id": "da119938d3268322a91b-cda108e7cf0021b0f000",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 2268
     },
     {
       "id": "da119938d3268322a91b-1d00303a55b1ba347aae",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 462
     },
     {
       "id": "da119938d3268322a91b-6a75c4668893f3d1d34b",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 498
     },
     {
       "id": "da119938d3268322a91b-076d2c793fd057bed7f3",
       "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 1978
     },
     {
       "id": "7a6b7f055de881ba5856-524ebaeceb7f3683bb69",
       "name": " / core-desktop / tests\\browser\\extension\\core\\geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 9327,
+      "disposalMs": 1183.3956999999937
     },
     {
       "id": "1f1785dee40219527314-070dc4bb76ca9d3e29f4",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8306,
+      "disposalMs": 893.4716000000044
     },
     {
       "id": "1f1785dee40219527314-56ce7a14cc21c6fc5746",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6847,
+      "disposalMs": 762.6708000000071
     },
     {
       "id": "1f1785dee40219527314-be21f435b08ad4792b7c",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep running pinned",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6661,
+      "disposalMs": 1063.8457000000053
     },
     {
       "id": "1f1785dee40219527314-437b9479dd0a4779aaa7",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6139,
+      "disposalMs": 461.2792000000045
     },
     {
       "id": "1f1785dee40219527314-6ec96b1af719c96694dd",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep waiting pinned",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6019,
+      "disposalMs": 676.6068999999843
     },
     {
       "id": "1f1785dee40219527314-d70e5278bf6ff91639e1",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6313,
+      "disposalMs": 478.5315000000119
     },
     {
       "id": "1f1785dee40219527314-597074e75fe172678687",
       "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep paused pinned",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 5014,
+      "disposalMs": 480.9145000000135
     },
     {
       "id": "23aa19f1721e64a18ead-b3a0ff37e08a4f53c045",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 10721,
+      "disposalMs": 731.2235999999975
     },
     {
       "id": "23aa19f1721e64a18ead-7a0956c620b829c1e6bb",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 5157,
+      "disposalMs": 412.14220000000205
     },
     {
       "id": "23aa19f1721e64a18ead-81a5634f1aaf1f2235e8",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7334,
+      "disposalMs": 1542.752600000007
     },
     {
       "id": "23aa19f1721e64a18ead-1b4c07b5776b2e1e2407",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 12451,
+      "disposalMs": 2007.9329000000143
     },
     {
       "id": "23aa19f1721e64a18ead-bd3933e53c136e41e9e6",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8772,
+      "disposalMs": 777.8942999999854
     },
     {
       "id": "23aa19f1721e64a18ead-9af36e646dd32ee1e408",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7685,
+      "disposalMs": 986.8546000000206
     },
     {
       "id": "23aa19f1721e64a18ead-ca7ec0b7bb01545a734e",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8468,
+      "disposalMs": 949.6520999999775
     },
     {
       "id": "23aa19f1721e64a18ead-8cab36428ca2c3553739",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7691,
+      "disposalMs": 1118.0394000000088
     },
     {
       "id": "23aa19f1721e64a18ead-1a454340f45fc5d70cb7",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 5099,
+      "disposalMs": 566.9457000000111
     },
     {
       "id": "23aa19f1721e64a18ead-8eba35e1c8783c2e4460",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 7199,
+      "disposalMs": 812.9545999999973
     },
     {
       "id": "23aa19f1721e64a18ead-925ae3ca7b96eeda0496",
       "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 18392,
+      "disposalMs": 5911.054700000008
     },
     {
       "id": "a3c2465ddc327f7e7bba-1c094d1726e7ac73ef4d",
       "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8936,
+      "disposalMs": 785.4488000000129
     },
     {
       "id": "a3c2465ddc327f7e7bba-4a30cd92bb411900760d",
       "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8122,
+      "disposalMs": 890.0021999999881
     },
     {
       "id": "af04636c97843afb0727-b12bd7332448f7394a23",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8852,
+      "disposalMs": 1020.9565000000293
     },
     {
       "id": "af04636c97843afb0727-78bafa935906f7b29ef3",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a wrong native selection cannot complete the destination",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6974,
+      "disposalMs": 798.398899999971
     },
     {
       "id": "af04636c97843afb0727-f6fffe7b4167aaeb2a67",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 12569,
+      "disposalMs": 1372.3153000000166
     },
     {
       "id": "af04636c97843afb0727-e5356fcfbed58b72cfda",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6214,
+      "disposalMs": 818.3341000000364
     },
     {
       "id": "af04636c97843afb0727-78e5a106d8db1b52bc93",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 15763,
+      "disposalMs": 4706.447999999975
     },
     {
       "id": "af04636c97843afb0727-2d4f52115b9886cd71df",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 11213,
+      "disposalMs": 797.6879999999655
     },
     {
       "id": "af04636c97843afb0727-b3fcb2b109b82d41386e",
       "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 6818,
+      "disposalMs": 786.3001999999979
     },
     {
       "id": "23aa19f1721e64a18ead-042cc410042fbb986f65",
       "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 11715,
+      "disposalMs": 830.0256999999983
     },
     {
       "id": "23aa19f1721e64a18ead-daddecff84299e99c2b6",
       "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
-      "status": "passed"
+      "status": "passed",
+      "elapsedMs": 8489,
+      "disposalMs": 806.4398000000001
     }
   ]
 }

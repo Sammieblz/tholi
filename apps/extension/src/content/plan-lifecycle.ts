@@ -46,6 +46,8 @@ interface Context {
   memory: SiteMemory | undefined;
   workflowWaitTimer: NodeJS.Timeout | undefined;
   planningRevision: string;
+  planningInFlight: object | undefined;
+  pause: () => void;
   requestReplan: () => void;
   recoveryKey: string;
   recoveryStep: number;
@@ -81,6 +83,42 @@ interface Context {
     | { error: string; view?: undefined };
 }
 
+function retryPlanning(context: Context) {
+  const request = context.view.request;
+  if (!request || context.view.status !== "running") return;
+  // A ticking fingerprint is not a new recovery budget. Only a different task,
+  // verified progress, document/page or explicit Resume gets a fresh budget.
+  const key = [
+    request.id,
+    request.active,
+    context.view.verifiedSteps,
+    context.view.page?.pageKey,
+  ].join(":");
+  if (context.recoveryKey !== key) {
+    context.recoveryKey = key;
+    context.recoveryStep = 0;
+  }
+  clearTimeout(context.recoveryTimer);
+  if (context.recoveryStep >= 3) {
+    context.pause();
+    context.view.instruction =
+      "This page keeps changing. I’ve paused checking to avoid slowing it down. Your destination is saved; resume when the page settles.";
+    context.publish(context.view);
+    return;
+  }
+  const delay = 250 * 2 ** context.recoveryStep++;
+  context.recoveryTimer = setTimeout(() => {
+    context.recoveryTimer = undefined;
+    if (
+      context.view.request?.id !== request.id ||
+      context.view.status !== "running"
+    )
+      return;
+    context.planningRevision = "";
+    context.requestReplan();
+  }, delay);
+}
+
 export function installPlan(context: Context, plan: GoalPlan) {
   context.view.goalPlan = plan;
   context.view.instruction = plan.reason;
@@ -106,6 +144,10 @@ export function installRequest(
   savedRouteId?: string,
 ) {
   context.refresh();
+  // Pending indexing carries intent only, never a target binding. Retain it on
+  // the latest scan of this authorized document even while the layout changes.
+  if (result.status === "pending-indexing" && !result.plan && context.view.page)
+    result = { ...result, revision: context.view.page.revision };
   if (
     result.request &&
     context.view.request &&
@@ -168,6 +210,10 @@ export function installRequest(
         context.view.instruction =
           "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
         context.publish(context.view);
+        if (!w.pendingAction.final) {
+          context.planningRevision = "";
+          context.requestReplan();
+        }
       },
       Math.max(
         0,
@@ -202,8 +248,12 @@ export function installRequest(
         context.view.page.screen?.kind || "",
       )
     ) {
-      const key =
-        (result.request?.id || "") + ":" + context.view.page.fingerprint;
+      const key = [
+        result.request?.id,
+        result.request?.active,
+        context.view.verifiedSteps,
+        context.view.page.pageKey,
+      ].join(":");
       if (key !== context.recoveryKey) {
         context.recoveryKey = key;
         context.recoveryStep = 0;
@@ -215,6 +265,7 @@ export function installRequest(
         context.recoveryStep++;
         clearTimeout(context.recoveryTimer);
         context.recoveryTimer = setTimeout(() => {
+          context.recoveryTimer = undefined;
           if (
             context.view.request?.id !== result.request?.id ||
             context.view.status !== "running"
@@ -298,11 +349,16 @@ export function installRequest(
       status: "unresolved",
       confidence: 0,
       issue: result.status === "clarification" ? "ambiguous" : "no-match",
+      recoveryStage:
+        result.status === "pending-indexing" ? "retrieval" : undefined,
       steps: [],
       reason: result.reason,
     };
     context.view.instruction = result.reason;
     context.publish(context.view);
+    if (result.status === "pending-indexing") {
+      retryPlanning(context);
+    }
   }
   return { view: context.view };
 }
@@ -322,6 +378,8 @@ export function requestReplan(context: Context) {
     !request ||
     !page ||
     !context.requestPlanner ||
+    context.planningInFlight ||
+    context.recoveryTimer ||
     !["active", "clarification"].includes(request.status) ||
     context.view.status !== "running"
   )
@@ -330,12 +388,14 @@ export function requestReplan(context: Context) {
   const revision = `${page.revision}:${request.active}:${context.view.verifiedSteps}:${context.view.journey?.totalVerified ?? context.view.journey?.progress.length ?? 0}:${request.tasks[request.active]?.searchPhase || ""}:${context.view.journey?.workflow?.revision || 0}`;
   if (context.planningRevision === revision) return;
   context.planningRevision = revision;
+  const token = {};
+  context.planningInFlight = token;
   const id = request.id,
     active = request.active;
   void context
     .requestPlanner(request, page, context.verifiedDestination)
     .then((result) => {
-      if (context.planningRevision !== revision) return;
+      if (context.planningInFlight !== token) return;
       if (
         context.view.status !== "running" ||
         context.view.request?.id !== id ||
@@ -343,15 +403,29 @@ export function requestReplan(context: Context) {
         !["active", "clarification"].includes(context.view.request.status)
       )
         return;
-      if (context.view.page?.revision !== result.revision) {
-        context.planningRevision = "";
-        context.requestReplan();
+      if (context.planningRevision !== revision) {
+        retryPlanning(context);
+        return;
+      }
+      if (
+        context.view.page?.revision !== result.revision &&
+        result.status !== "pending-indexing"
+      ) {
+        retryPlanning(context);
         return;
       }
       const installed = context.installRequest(
         result,
         context.view.journey?.strategy,
       );
+      if (
+        !("error" in installed) &&
+        result.status !== "pending-indexing" &&
+        result.plan?.issue !== "no-match"
+      ) {
+        context.recoveryKey = "";
+        context.recoveryStep = 0;
+      }
       // Installation refreshes the document again. A layout-only revision can
       // invalidate this result without triggering a structural replan. Retry
       // only that rejected result, leaving newer plans and ended tasks alone.
@@ -364,11 +438,18 @@ export function requestReplan(context: Context) {
         context.view.request?.id === id &&
         context.view.request.active === active
       ) {
-        context.planningRevision = "";
-        context.requestReplan();
+        retryPlanning(context);
       }
     })
     .catch(() => {
-      if (context.planningRevision === revision) context.planningRevision = "";
+      if (
+        context.planningInFlight === token &&
+        context.planningRevision === revision
+      )
+        context.planningRevision = "";
+    })
+    .finally(() => {
+      if (context.planningInFlight === token)
+        context.planningInFlight = undefined;
     });
 }

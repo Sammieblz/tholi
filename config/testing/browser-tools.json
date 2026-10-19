@@ -1,0 +1,8 @@
+{
+  "geckodriverVersion": "0.37.1",
+  "brave": {
+    "version": "1.97.59",
+    "url": "https://github.com/brave/brave-browser/releases/download/v1.97.59/brave-v1.97.59-win32-x64.zip",
+    "sha256": "b9e2f348cf440a1f97bc977bf5fa59b5a8593ddf4c2095fb57516993d52ebe38"
+  }
+}

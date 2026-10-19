@@ -19,3 +19,5 @@ output/reliability/
 apps/public/downloads/
 
 output/build-manifest.json
+
+output/browser-tools/

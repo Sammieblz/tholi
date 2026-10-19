@@ -11,11 +11,21 @@ async function fixture(holdHydration = false) {
         held = false;
         waiting.splice(0).forEach((release) => release());
       };
-      chrome.runtime.sendMessage = (async (message: any) => {
-        const reply = await send(message);
-        if (message.type === "UI_GET" && held)
-          await new Promise<void>((resolve) => waiting.push(resolve));
-        return reply;
+      chrome.runtime.sendMessage = ((
+        message: any,
+        callback?: (reply: any) => void,
+      ) => {
+        const result = (async () => {
+          const reply = await send(message);
+          if (message.type === "UI_GET" && held)
+            await new Promise<void>((resolve) => waiting.push(resolve));
+          return reply;
+        })();
+        if (typeof callback === "function") {
+          void result.then(callback);
+          return;
+        }
+        return result;
       }) as typeof chrome.runtime.sendMessage;
     });
     await app.panel.reload();
@@ -73,6 +83,35 @@ test("Guide and Conversation keep one journey and grounded evidence", async ({},
   try {
     await destination(app, "Account settings");
     const id = (await app.view()).request.id;
+    const menu = app.page.getByRole("button", {
+      name: "Account menu",
+      exact: true,
+    });
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await app.panel
+      .getByRole("button", { name: "Tholi settings", exact: true })
+      .evaluate((node) => (node as HTMLButtonElement).click());
+    const assistance = app.panel.getByRole("checkbox", {
+      name: "Assisted navigation",
+      exact: true,
+    });
+    await expect(assistance).not.toBeChecked();
+    await assistance.evaluate((node) => (node as HTMLInputElement).click());
+    await app.panel
+      .getByRole("button", { name: "Tholi settings", exact: true })
+      .evaluate((node) => (node as HTMLButtonElement).click());
+    await app.page.bringToFront();
+    await expect(menu).toHaveAttribute("aria-expanded", "true");
+    expect((await app.view()).request.id).toBe(id);
+    expect((await app.view()).goalPlan.status).not.toBe("completed");
+    await app.panel.evaluate(async () => {
+      const { tholiPreferences } =
+        await chrome.storage.local.get("tholiPreferences");
+      await chrome.runtime.sendMessage({
+        type: "UI_SAVE",
+        preferences: { ...tholiPreferences, assisted: false },
+      });
+    });
     const protectedStorage = await app.panel.evaluate(async () => {
       const current = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
       const [result] = await chrome.scripting.executeScript({

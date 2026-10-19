@@ -9,7 +9,10 @@ import {
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
 import { shortestRoute } from "../../../packages/goal-planner/route-graph";
-import { mergeObservation } from "../../../packages/site-memory/index";
+import {
+  mergeObservation,
+  applyRouteFeedback,
+} from "../../../packages/site-memory/index";
 import { modelContext } from "../../../packages/goal-planner/model-context";
 import type {
   SiteMemory,
@@ -170,6 +173,27 @@ it("calculates fastest and fewest-click paths, avoiding cycles, predictions and 
       (e) => e.signature,
     ),
   ).toEqual([direct.signature]);
+  const feedback = {
+    id: crypto.randomUUID(),
+    from: page.stateKey,
+    signature: shortcut.signature,
+    outcome: "timeout",
+  };
+  const version = memory.version;
+  applyRouteFeedback(memory, feedback);
+  applyRouteFeedback(memory, feedback);
+  expect(memory.version).toBe(version + 1);
+  expect(memory.transitions[1].failures).toBe(1);
+  for (let i = 0; i < 5; i++)
+    applyRouteFeedback(memory, { ...feedback, id: crypto.randomUUID() });
+  expect(
+    shortestRoute(page, memory, new Set(["end"]), "fastest")?.map(
+      (e) => e.signature,
+    ),
+  ).toEqual([direct.signature]);
+  const count = memory.transitions.length;
+  applyRouteFeedback(memory, { ...feedback, signature: "invented" });
+  expect(memory.transitions).toHaveLength(count);
   direct.risk = "consequential";
   shortcut.enabled = false;
   expect(shortestRoute(page, memory, new Set(["end"]))).toBeUndefined();
@@ -196,6 +220,17 @@ it("preserves menu state vertices and learns repeated transition timing", () => 
   expect(
     memory.transitions.find((e) => e.evidence === "observed"),
   ).toMatchObject({ samples: 2, meanMs: 3000 });
+  const feedback = {
+    id: crypto.randomUUID(),
+    from: before.stateKey,
+    signature: transition.signature,
+    outcome: "timeout",
+  };
+  applyRouteFeedback(memory, feedback);
+  memory = mergeObservation(memory, after, transition);
+  expect(
+    memory.transitions.find((edge) => edge.evidence === "observed")?.failures,
+  ).toBe(0);
 });
 it("passes bounded verified task context to the model and saves no document IDs or input values", () => {
   const discovery = fixture(

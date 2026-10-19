@@ -7,6 +7,7 @@ import type {
 } from "../page-model";
 import { words } from "../nlp/retrieval";
 import { hasCommitLanguage } from "../safety-policy/action-language";
+import { authenticationIntent } from "../goal-planner/task-intent";
 
 const textOf = (c: PageControl) =>
   [
@@ -116,6 +117,7 @@ export function exploreDestination(
   // Settings are reached through account/profile/navigation menus, even when
   // the destination itself is not mounted yet. No site, URL or selector table.
   const settings = /\b(settings?|preferences?)\b/i.test(target);
+  const authentication = authenticationIntent(target);
   const candidates = page.controls
     .filter((c) => {
       const text = textOf(c);
@@ -141,12 +143,16 @@ export function exploreDestination(
         ) &&
         // Purpose must come from the current control's name/description, not an
         // unrelated enclosing dashboard heading.
-        (settings && area
-          ? subject(c.label + " " + (c.description || "")) === area
-          : purposeTerms.length > 0 &&
-            purposeTerms.every((w) =>
-              words(c.label + " " + (c.description || "")).includes(w),
-            ))
+        (authentication
+          ? /\b(account|profile|user|navigation|menu)\b/i.test(
+              c.label + " " + (c.description || ""),
+            )
+          : settings && area
+            ? subject(c.label + " " + (c.description || "")) === area
+            : purposeTerms.length > 0 &&
+              purposeTerms.every((w) =>
+                words(c.label + " " + (c.description || "")).includes(w),
+              ))
       );
     })
     .map((c) => ({

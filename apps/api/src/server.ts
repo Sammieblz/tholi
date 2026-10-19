@@ -48,11 +48,15 @@ export async function createApi(options: ApiOptions) {
     throw new Error("Use a generated token of at least 32 characters.");
   if (
     options.origins.some(
-      (origin) => !/^chrome-extension:\/\/[a-p]{32}$/.test(origin),
+      (origin) =>
+        !/^chrome-extension:\/\/[a-p]{32}$/.test(origin) &&
+        !/^moz-extension:\/\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(
+          origin,
+        ),
     )
   )
     throw new Error(
-      "CORS origins must explicitly name installed Chrome extensions.",
+      "CORS origins must explicitly name installed Chromium or Firefox extensions.",
     );
   const app = Fastify({
     bodyLimit: 8 * 1024 * 1024,
