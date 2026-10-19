@@ -5,6 +5,38 @@ import { acceptanceServer } from "../../../support/fixture-server";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+async function measureBusyPage() {
+  const root = document.getElementById("internet-navigator-overlay");
+  const times: number[] = [];
+  let previous = performance.now(),
+    count = 0;
+  const timer = setInterval(() => {
+    const storm = document.getElementById("storm")!;
+    for (let i = 0; i < 100; i++)
+      storm.children[(count + i) % 50000].textContent = String(count);
+    count += 100;
+  }, 50);
+  try {
+    await new Promise<void>((resolve) => {
+      const tick = (now: number) => {
+        times.push(now - previous);
+        previous = now;
+        if (times.length === 120) resolve();
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  } finally {
+    clearInterval(timer);
+  }
+  return {
+    frameP95Ms: times.sort((a, b) => a - b)[Math.floor(times.length * 0.95)],
+    nodes: document.getElementById("storm")!.children.length,
+    highlightPresent: !!root,
+    sameHighlight:
+      document.getElementById("internet-navigator-overlay") === root,
+  };
+}
 function processMemory(processId: number) {
   if (!Number.isSafeInteger(processId) || processId < 1)
     throw Error("Browser process identity is required for memory measurements");
@@ -43,6 +75,7 @@ test("paired browser CPU planning, OCR and busy-page measurements retain the sam
           beforeInference: processMemory(processId),
           afterPlanning: {} as unknown,
           afterOcr: {} as unknown,
+          afterStop: {} as unknown,
         };
         await app.start();
         const planning = [];
@@ -135,46 +168,29 @@ test("paired browser CPU planning, OCR and busy-page measurements retain the sam
           storm.append(batch);
           document.body.append(storm);
         });
-        const busy = await app.site(async () => {
-          const root = document.getElementById("internet-navigator-overlay");
-          const times: number[] = [];
-          let previous = performance.now(),
-            count = 0;
-          const timer = setInterval(() => {
-            const storm = document.getElementById("storm")!;
-            for (let i = 0; i < 100; i++)
-              storm.children[(count + i) % 50000].textContent = String(count);
-            count += 100;
-          }, 50);
-          try {
-            await new Promise<void>((resolve) => {
-              const tick = (now: number) => {
-                times.push(now - previous);
-                previous = now;
-                if (times.length === 120) resolve();
-                else requestAnimationFrame(tick);
-              };
-              requestAnimationFrame(tick);
-            });
-          } finally {
-            clearInterval(timer);
-          }
-          return {
-            frameP95Ms: times.sort((a, b) => a - b)[
-              Math.floor(times.length * 0.95)
-            ],
-            nodes: document.getElementById("storm")!.children.length,
-            highlightPresent: !!root,
-            sameHighlight:
-              document.getElementById("internet-navigator-overlay") === root,
-          };
+        const busy = await app.site(measureBusyPage);
+        const pause = await app.extension(async () => {
+          const api = (globalThis as any).browser || (globalThis as any).chrome;
+          // Queue routine reads first. User cancellation must preempt these
+          // rather than waiting for every page scan to finish.
+          const reads = Array.from({ length: 8 }, () =>
+            api.runtime.sendMessage({ type: "GET_PAGE" }).catch(() => {}),
+          );
+          const start = performance.now();
+          const reply = await api.runtime.sendMessage({ type: "PAUSE" });
+          const ms = performance.now() - start;
+          await Promise.allSettled(reads);
+          return { ms, status: reply.view?.status };
         });
+        expect(pause.status).toBe("paused");
         const stop = await app.extension(async () => {
           const start = performance.now();
           const api = (globalThis as any).browser || (globalThis as any).chrome;
           await api.runtime.sendMessage({ type: "STOP" });
           return performance.now() - start;
         });
+        memory.afterStop = processMemory(processId);
+        const stoppedBaseline = await app.site(measureBusyPage);
         const p95 = (values: number[]) =>
           values.sort((a, b) => a - b)[Math.floor(values.length * 0.95)];
         const measurement = {
@@ -189,7 +205,9 @@ test("paired browser CPU planning, OCR and busy-page measurements retain the sam
           },
           ocr: { coldMs: ocr.coldMs, warmP95Ms: p95(ocr.values), samples: 10 },
           busy,
+          stoppedBaseline,
           stopMs: stop,
+          pauseMs: pause.ms,
           processId,
           memory,
         };
@@ -202,6 +220,7 @@ test("paired browser CPU planning, OCR and busy-page measurements retain the sam
       expect(measurement.planning.warmP95Ms).toBeLessThan(750);
       expect(measurement.ocr.warmP95Ms).toBeLessThan(2000);
       expect(measurement.stopMs).toBeLessThan(1000);
+      expect(measurement.pauseMs).toBeLessThan(1000);
       expect(measurement.busy.highlightPresent).toBe(true);
       expect(measurement.busy.sameHighlight).toBe(true);
       expect(measurement.busy.nodes).toBe(50000);

@@ -188,8 +188,12 @@ const {
   attachSession,
   startFrames,
   stopSession,
+  interruptSession,
   startSession,
 } = createSessionService({
+  get goalGeneration() {
+    return goalGeneration;
+  },
   get activeTab() {
     return activeTab;
   },
@@ -248,6 +252,9 @@ function enqueue<T>(operation: () => Promise<T>): Promise<T> {
 }
 type ContextForregisterMessages = Parameters<typeof registerMessages>[0];
 registerMessages({
+  get interruptSession() {
+    return interruptSession;
+  },
   get startSession() {
     return startSession;
   },

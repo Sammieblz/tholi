@@ -169,6 +169,63 @@ it("replans from fresh evidence when the scan changes during automatic plan inst
     coach.stop();
   }
 });
+it("coalesces scan churn and bounds recovery across changing fingerprints without losing the destination", async () => {
+  vi.useFakeTimers();
+  let page = { ...fixture(), controls: [] };
+  const snapshot = vi
+    .spyOn(PageDiscovery.prototype, "snapshot")
+    .mockImplementation(() => page);
+  const request = interpretRequest("Cancel my Prime membership");
+  const coach = new PageCoach(vi.fn());
+  coach.view.request = request;
+  let release: (() => void) | undefined;
+  const planner = vi.fn(
+    async (_request: NavigationRequest, observation: PageSnapshot) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return {
+        requestId: request.id,
+        documentId: "doc",
+        revision: observation.revision,
+        status: "pending-indexing",
+        request,
+        reason: "Checking the changing page",
+        activity: {
+          embedded: 0,
+          cacheHits: 0,
+          llmCalls: 0,
+          modelRevision: "test",
+        },
+      } satisfies PlanResult;
+    },
+  );
+  Object.assign(coach, { requestPlanner: planner });
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      for (let mutation = 0; mutation < 10; mutation++) {
+        page = {
+          ...page,
+          revision: page.revision + 1,
+          fingerprint: `${attempt}:${mutation}`,
+        };
+        coach.recheckJourney();
+      }
+      expect(planner).toHaveBeenCalledTimes(attempt + 1);
+      release!();
+      await vi.advanceTimersByTimeAsync(1100);
+    }
+    expect(coach.view.status).toBe("paused");
+    expect(coach.view.request?.original).toBe(request.original);
+    expect(coach.view.verifiedSteps).toBe(0);
+    expect(coach.view.instruction).toContain("avoid slowing");
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(planner).toHaveBeenCalledTimes(4);
+    expect(snapshot).toHaveBeenCalled();
+  } finally {
+    coach.stop();
+  }
+});
 it("resuming a review request clears paused guidance while preserving the boundary", () => {
   const coach = new PageCoach(vi.fn());
   coach.view.goalPlan = {

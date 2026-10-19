@@ -9,6 +9,9 @@ It follows the `0.10.1` source series; it does not replace an existing download.
 
 ## Changes
 
+- Pre-release performance follow-up: stop self-observation/replanning loops,
+  prioritize Pause/Stop and release idle workers. See [measurements and validation
+  scope](performance.md), including cache sizing and heavy-page limitations.
 - Keep a destination through transient scan changes, with bounded recovery and
   fresh observations instead of repeatedly showing a page-change error.
 - Interpret natural sign-up/sign-in requests, synonyms and Unicode punctuation

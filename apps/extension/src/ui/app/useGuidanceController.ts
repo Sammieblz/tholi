@@ -103,7 +103,12 @@ export function useGuidanceController(widget = false) {
   const [storedMemory, setStoredMemory] = useState(memorySummary());
   useEffect(() => {
     let current = true;
-    if (!goal.trim() || view?.status !== "running") {
+    if (
+      busy ||
+      !goal.trim() ||
+      view?.status !== "running" ||
+      goal.trim() === view.request?.original.trim()
+    ) {
       setSuggestions([]);
       return;
     }
@@ -123,7 +128,7 @@ export function useGuidanceController(widget = false) {
       current = false;
       clearTimeout(timer);
     };
-  }, [goal, view?.status]);
+  }, [goal, view?.status, view?.request?.original, busy]);
   useEffect(() => {
     let current = true;
     void api.runtime
@@ -206,7 +211,16 @@ export function useGuidanceController(widget = false) {
               routeVersion: route?.version || LIVE_VERSION,
               ...startTarget,
             }
-          : { type, ...payload },
+          : {
+              type,
+              ...payload,
+              ...(["STOP", "PAUSE"].includes(type)
+                ? {
+                    sessionId: context?.session?.sessionId,
+                    documentId: context?.session?.documentId,
+                  }
+                : {}),
+            },
       );
       if (r?.error) setError(r.error);
       if (r?.view) setView(r.view);
@@ -343,6 +357,7 @@ export function useGuidanceController(widget = false) {
         ...(saved ? { savedRouteId: saved.id } : {}),
         ...(proposal ? { proposal } : {}),
       });
+      if (controller.signal.aborted) return;
       if (reply.error) throw new Error(reply.error);
       if (reply.view) {
         setView(reply.view);

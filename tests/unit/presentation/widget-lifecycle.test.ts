@@ -89,6 +89,54 @@ afterEach(() => {
     .forEach((element) => element.remove());
 });
 
+it("Pause and Stop bypass a blocked routine queue and unresponsive page without accepting stale controls", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const local = await import("../../../apps/extension/src/inference/client");
+  const cancel = vi.spyOn(local, "cancelNlp").mockResolvedValue();
+  api.tabs.sendMessage.mockImplementation(() => new Promise(() => {}));
+  const save = vi.fn(async () => {});
+  const context = {
+    session,
+    goalGeneration: 0,
+    ready: Promise.resolve(),
+    save,
+    enqueue: vi.fn(() => new Promise(() => {})),
+    cancelVision: vi.fn(),
+    navigationStarts: new Map(),
+  };
+  const { createSessionService } =
+    await import("../../../apps/extension/src/background/session-service");
+  const service = createSessionService(context as any);
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  registerMessages({
+    ...context,
+    interruptSession: service.interruptSession,
+  } as any);
+  const handle = listen.mock.calls[0][0];
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  for (const type of ["PAUSE", "STOP"]) {
+    session.view!.status = "running";
+    session.view!.request = { id, status: "active" } as any;
+    const respond = vi.fn();
+    handle({ type, sessionId: id, documentId: "document-a" }, panel, respond);
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledOnce());
+    expect(context.enqueue).not.toHaveBeenCalled();
+    expect(session.view!.status).toBe(type === "PAUSE" ? "paused" : "stopped");
+    expect(session.view!.request!.status).toBe(
+      type === "PAUSE" ? "paused" : "canceled",
+    );
+    expect(session.view!.page).toBeUndefined();
+  }
+  expect(cancel).toHaveBeenCalledTimes(2);
+  const stale = vi.fn();
+  handle({ type: "STOP", sessionId: id, documentId: "older" }, panel, stale);
+  expect(stale.mock.calls[0][0].error).toBeTruthy();
+  expect(cancel).toHaveBeenCalledTimes(2);
+});
+
 it("scan churn retains submitted intent but suggestions cannot install a task", async () => {
   const { api, session, sender } = environment();
   const page = { ...fixture(), revision: 1 };
@@ -159,7 +207,7 @@ it("scan churn retains submitted intent but suggestions cannot install a task", 
     },
     panel,
   );
-  expect(planning).toHaveBeenCalledTimes(4);
+  expect(planning).toHaveBeenCalledTimes(2);
   expect(reply).not.toHaveProperty("error");
   expect(session.view!.request?.original).toBe("Open Help");
   expect(session.view!.verifiedSteps).toBe(3);

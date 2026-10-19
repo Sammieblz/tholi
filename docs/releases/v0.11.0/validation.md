@@ -31,6 +31,16 @@ cannot make historical acceptance or PR reports into release evidence.
 
 ## Release checklist
 
+### October 19 performance follow-up
+
+The October 18 artifact digests above have been superseded. The subsequent
+[performance record](performance.md) identifies the full PR cohort, the final
+cache adjustment, its targeted checks and the current target digests. They remain
+separate evidence cohorts; this is not a complete final-byte release certificate.
+Earlier measurements remain historical rather than relabeled passes.
+
+### Remaining release gates
+
 - [x] Types, version consistency and application builds pass on final source.
 - [ ] Complete `npm run test:full` passes in one coordinated run against a frozen
       build, including unit, model, extension, UI, live-site and both browser acceptance

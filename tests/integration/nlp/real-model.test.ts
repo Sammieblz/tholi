@@ -294,6 +294,30 @@ test("semantic cache invalidates content independently of control state and mode
   page.revision++;
   await core.plan(input("Open Languages", page));
   expect(core.index.activity.embedded).toBeGreaterThan(first);
+  // Private page/query vectors remain ephemeral, but a complete supported
+  // projection must be reusable without paying for every CPU embedding again.
+  let calls = 0;
+  const ephemeralStore = new MemoryDerivedStore();
+  const ephemeral = new SemanticIndex(
+    {
+      async embed(texts) {
+        calls += texts.length;
+        return texts.map(() => Array(384).fill(0));
+      },
+      async dispose() {},
+    },
+    ephemeralStore,
+  );
+  const activePage = Array.from(
+    { length: 601 },
+    (_, i) => `private active page ${i}`,
+  );
+  for (const text of activePage) await ephemeral.vector(text, undefined, false);
+  const cold = calls;
+  for (const text of activePage) await ephemeral.vector(text, undefined, false);
+  expect(calls).toBe(cold);
+  expect(ephemeralStore.embeddings.size).toBe(0);
+  await ephemeral.dispose();
 });
 test("cancellation stops real model indexing between CPU calls", async () => {
   const controller = new AbortController();

@@ -62,6 +62,7 @@ interface Context {
   cancelVision: () => void;
   goalGeneration: number;
   stopSession: (reason?: string) => Promise<void>;
+  interruptSession: ReturnType<typeof createSessionService>["interruptSession"];
   suspended: SuspendedJourney[];
   activeTab: () => Promise<Tabs.Tab>;
   ready: Promise<void>;
@@ -263,7 +264,7 @@ export function registerMessages(context: Context) {
     // Reject stale UI intent before it can cancel work for the current document.
     // Queued handlers recheck identity after asynchronous observation as well.
     if (
-      raw?.type === "SET_GOAL" &&
+      ["SET_GOAL", "STOP", "PAUSE"].includes(raw?.type) &&
       trustedUi(sender, context.session) &&
       ((raw.sessionId && raw.sessionId !== context.session?.sessionId) ||
         (raw.documentId && raw.documentId !== context.session?.documentId))
@@ -277,9 +278,15 @@ export function registerMessages(context: Context) {
     if (
       sender.id === api.runtime.id &&
       trustedUi(sender, context.session) &&
-      ["SET_GOAL", "CLARIFY", "STOP", "PAUSE", "RESUME_JOURNEY"].includes(
-        raw?.type,
-      )
+      messageSchema.safeParse(raw).success &&
+      [
+        "SET_GOAL",
+        "CLARIFY",
+        "STOP",
+        "PAUSE",
+        "RESUME",
+        "RESUME_JOURNEY",
+      ].includes(raw?.type)
     ) {
       context.goalGeneration++;
       context.cancelVision();
@@ -294,6 +301,29 @@ export function registerMessages(context: Context) {
         context.cancelVision();
       respond({ ok: true });
       return;
+    }
+    if (["STOP", "PAUSE"].includes(raw?.type)) {
+      if (
+        !trustedUi(sender, context.session) ||
+        !messageSchema.safeParse(raw).success
+      ) {
+        respond({ error: "Trusted Tholi interface required." });
+        return;
+      }
+      if (
+        (raw.sessionId && raw.sessionId !== context.session?.sessionId) ||
+        (raw.documentId && raw.documentId !== context.session?.documentId)
+      ) {
+        respond({ error: "This control belongs to a previous task or page." });
+        return;
+      }
+      // This path owns the same session, but never waits behind discovery,
+      // memory writes or page-message acknowledgments in the routine queue.
+      void context.ready
+        .then(() => context.interruptSession(raw.type))
+        .then((session) => respond(session ? structuredClone(session) : {}))
+        .catch((error) => respond({ error: error.message }));
+      return true;
     }
     if (raw?.type === "GET_MEMORY") {
       if (
@@ -352,10 +382,25 @@ export function registerMessages(context: Context) {
         );
       return true;
     }
+    const queuedGeneration = context.goalGeneration;
     context
       .enqueue(async () => {
         if (sender.id !== api.runtime.id) return { error: "Invalid sender." };
+        if (
+          queuedGeneration !== context.goalGeneration &&
+          [
+            "START",
+            "RESUME",
+            "CONTINUE_TASK",
+            "SET_GOAL",
+            "GUIDE_CONTROL",
+            "RESUME_JOURNEY",
+          ].includes(raw?.type)
+        )
+          return context.session ? structuredClone(context.session) : {};
         if (raw?.type === "SESSION_UPDATE") {
+          if (queuedGeneration !== context.goalGeneration)
+            return { error: "Superseded session update." };
           if (
             !context.session ||
             raw.sessionId !== context.session.sessionId ||
@@ -367,7 +412,7 @@ export function registerMessages(context: Context) {
           if (
             context.session.view?.status === "stopped" ||
             (context.session.view?.status === "paused" &&
-              raw.view?.status === "running")
+              !["paused", "stopped"].includes(raw.view?.status))
           )
             return { error: "Inactive session update." };
           const incoming = validPinnedView(context.session, raw.view);
@@ -426,7 +471,14 @@ export function registerMessages(context: Context) {
             await context.save();
             return { ok: true };
           }
+          const becamePaused =
+            incoming.status === "paused" &&
+            context.session.view?.status !== "paused";
           await context.acceptView(incoming);
+          if (becamePaused) {
+            context.cancelVision();
+            void cancelNlp().catch(() => {});
+          }
           if (
             !incoming.selectedControlId &&
             (incoming.stateId === "verified" ||
@@ -834,6 +886,8 @@ export function registerMessages(context: Context) {
             context.session.tabId,
             outgoing,
           );
+          if (queuedGeneration !== context.goalGeneration)
+            return structuredClone(context.session);
           if (reply?.error) return reply;
           if (command.type === "GET_PAGE")
             return {

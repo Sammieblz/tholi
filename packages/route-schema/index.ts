@@ -247,9 +247,21 @@ export const messageSchema = z.discriminatedUnion("type", [
       routeVersion: z.string().min(1),
     })
     .strict(),
-  z.object({ type: z.literal("PAUSE") }).strict(),
+  z
+    .object({
+      type: z.literal("PAUSE"),
+      sessionId: z.string().uuid().optional(),
+      documentId: z.string().min(1).max(200).optional(),
+    })
+    .strict(),
   z.object({ type: z.literal("RESUME") }).strict(),
-  z.object({ type: z.literal("STOP") }).strict(),
+  z
+    .object({
+      type: z.literal("STOP"),
+      sessionId: z.string().uuid().optional(),
+      documentId: z.string().min(1).max(200).optional(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("GUIDE_CONTROL"),

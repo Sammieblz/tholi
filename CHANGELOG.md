@@ -2,6 +2,10 @@
 
 ## 0.11.0 · Unreleased
 
+Performance follow-up: responsive Pause/Stop, bounded recovery, widget scan
+exclusion, idle worker release and dense-page cache reuse.
+[Measurements and validation scope](docs/releases/v0.11.0/performance.md).
+
 Optional assisted navigation, quieter scan recovery, improved intent/context
 handling, bounded inference scheduling and focused OCR. Versions are synchronized
 across product components. [Release notes, compatibility and known limits](docs/releases/v0.11.0/README.md) ·

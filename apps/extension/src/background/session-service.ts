@@ -6,7 +6,11 @@ import {
   taskKey,
 } from "../../../../packages/goal-planner/task-journey";
 import { appendLedger } from "../../../../packages/navigation-core/continuity";
-import { advanceQueue } from "../../../../packages/navigation-core/queue";
+import {
+  advanceQueue,
+  pauseQueue,
+  stopQueue,
+} from "../../../../packages/navigation-core/queue";
 import {
   hash,
   LIVE_ROUTE_ID,
@@ -31,6 +35,7 @@ import {
 import { getSurfacePresentation } from "./ui-transport";
 
 interface Context {
+  goalGeneration: number;
   session: PinnedSession | undefined;
   activeTab: () => Promise<Tabs.Tab>;
   lastObservation: string;
@@ -85,13 +90,19 @@ export function createSessionService(context: Context) {
 
   async function attachSession() {
     if (!context.session) throw new Error("No pinned session.");
+    const attaching = context.session,
+      generation = context.goalGeneration;
+    const interrupted = () =>
+      context.session !== attaching || context.goalGeneration !== generation;
     const uiPresentation = await getSurfacePresentation(context.session);
+    if (interrupted()) return context.session;
     if (context.live()) context.refreshMemory(context.session.origin!);
     const previousDocument = context.session.documentId;
     const injected = await api.scripting.executeScript({
       target: { tabId: context.session.tabId },
       files: ["content.js"],
     });
+    if (interrupted()) return context.session;
     if (!injected[0]?.documentId)
       throw Error("This browser lacks required native document identity.");
     context.session.documentId = injected[0].documentId;
@@ -110,6 +121,7 @@ export function createSessionService(context: Context) {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
       });
+      if (interrupted()) return context.session;
       await acceptView(reply.view);
       context.session.pendingNavigation = undefined;
       await context.remember();
@@ -120,6 +132,7 @@ export function createSessionService(context: Context) {
     const navigation = context.session.pendingNavigation;
     const tab = navigation && (await api.tabs.get(context.session.tabId)),
       url = tab?.url && new URL(tab.url);
+    if (interrupted()) return context.session;
     const verified = !!(
       navigation &&
       url &&
@@ -185,6 +198,7 @@ export function createSessionService(context: Context) {
         : {}),
     });
     const freshPresentation = await getSurfacePresentation(context.session);
+    if (interrupted()) return context.session;
     if (freshPresentation !== uiPresentation)
       await api.tabs
         .sendMessage(
@@ -229,32 +243,59 @@ export function createSessionService(context: Context) {
       );
   }
 
-  async function stopSession(reason = "Navigation stopped.") {
-    await stopFrames();
+  async function interruptSession(action: "PAUSE" | "STOP", reason?: string) {
+    const current = context.session;
     cancelBackendPlanning();
-    await cancelNlp();
+    // Invalidate state before any I/O. A busy/frozen content script or inference
+    // worker cannot withhold the user's cancellation or keep the UI running.
+    void cancelNlp().catch(() => {});
+    void stopFrames().catch(() => {});
     context.navigationStarts.clear();
-    if (!context.session) return;
-    try {
-      const reply = await api.tabs.sendMessage(context.session.tabId, {
-        type: "CONTROL_SESSION",
-        sessionId: context.session.sessionId,
-        action: "STOP",
-      });
-      if (reply?.view) await acceptView(reply.view);
-    } catch {}
-    if (context.session.view)
-      context.session.view = {
-        ...context.session.view,
-        status: "stopped",
-        controls: context.session.view.controls ? [] : undefined,
+    if (!current) return;
+    if (current.view) {
+      const view = current.view;
+      current.view = {
+        ...view,
+        status: action === "STOP" ? "stopped" : "paused",
+        request:
+          view.request &&
+          (action === "STOP"
+            ? stopQueue(view.request)
+            : pauseQueue(view.request)),
+        journey:
+          view.journey && action === "STOP" && view.journey.workflow
+            ? {
+                ...view.journey,
+                workflow: { ...view.journey.workflow, status: "canceled" },
+              }
+            : view.journey,
+        clarification: action === "STOP" ? undefined : view.clarification,
+        controls: view.controls ? [] : undefined,
         selectedControlId: undefined,
         page: undefined,
-        instruction: reason,
+        instruction:
+          reason ||
+          (action === "STOP"
+            ? "Navigation stopped."
+            : "Navigation paused. Resume to discover the current page."),
       };
-    context.session.navigationPending = false;
-    context.session.pendingNavigation = undefined;
+    }
+    if (action === "STOP") {
+      current.navigationPending = false;
+      current.pendingNavigation = undefined;
+    }
+    void api.tabs
+      .sendMessage(current.tabId, {
+        type: "CONTROL_SESSION",
+        sessionId: current.sessionId,
+        action,
+      })
+      .catch(() => {});
     await context.save();
+    return current;
+  }
+  async function stopSession(reason = "Navigation stopped.") {
+    await interruptSession("STOP", reason);
   }
   async function startSession(command: {
     routeId: string;
@@ -262,6 +303,7 @@ export function createSessionService(context: Context) {
     tabId?: number;
     origin?: string;
   }) {
+    const generation = context.goalGeneration;
     const dynamic =
         command.routeId === LIVE_ROUTE_ID &&
         command.routeVersion === LIVE_VERSION,
@@ -272,6 +314,7 @@ export function createSessionService(context: Context) {
       };
     await requireNavigationCapabilities();
     const tab = await context.activeTab();
+    if (generation !== context.goalGeneration) return context.session;
     if (tab?.id === undefined || !supportsLiveUrl(tab.url || ""))
       return {
         error:
@@ -294,6 +337,7 @@ export function createSessionService(context: Context) {
         error: "Stop the current navigation before starting another task.",
       };
     await stopSession();
+    if (generation !== context.goalGeneration) return context.session;
     context.session = {
       sessionId: crypto.randomUUID(),
       tabId: tab.id,
@@ -320,6 +364,7 @@ export function createSessionService(context: Context) {
     attachSession,
     startFrames,
     stopSession,
+    interruptSession,
     startSession,
   };
 }

@@ -69,19 +69,17 @@ export function createJourneyService(context: Context) {
         throw new Error(
           "This destination belongs to a previous page. Send it on the current page.",
         );
-      let reply = await api.tabs.sendMessage(context.session.tabId, {
+      const query = sanitizeGoal(
+        raw.text || raw.goal || raw.request?.original || "",
+      );
+      const reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
+        ...(query ? { query } : {}),
       });
       if (!reply.page) throw new Error("Fresh page observation required.");
       // A destination is an intent, not a binding to a control. Plan on the
       // fresh scan; native document/session identity remains mandatory below.
-      if (raw.text || raw.goal || raw.request?.original)
-        reply = await api.tabs.sendMessage(context.session.tabId, {
-          type: "GET_PAGE",
-          sessionId: context.session.sessionId,
-          query: sanitizeGoal(raw.text || raw.goal || raw.request.original),
-        });
       const request = fromContent
         ? requestSchema.parse(raw.request)
         : raw.type === "CLARIFY"
@@ -151,7 +149,7 @@ export function createJourneyService(context: Context) {
       input.savedRoute = (
         context.knownTasks.get(captured.journey.origin) || []
       ).find((t) => t.id === captured.journey!.savedRouteId);
-    for (let attempt = 0; attempt < 4; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       let value;
       try {
         value = await backendNlp(input, raw.type === "NLP_SUGGEST", site);

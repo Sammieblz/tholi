@@ -33,6 +33,7 @@ The local website at **http://127.0.0.1:5174/docs** publishes selected current r
 
 ## Design and implementation records
 
+- [Navigation responsiveness, cancellation and memory follow-up](releases/v0.11.0/performance.md)
 - [Navigation recovery, context, assisted mode and validation](releases/v0.11.0/navigation-reliability.md)
 - [Current UI audit, implementation, skills, and validation](releases/v0.10.1/ui-audit.md)
 - [Real website screenshot sources and regeneration](development/media-capture.md)

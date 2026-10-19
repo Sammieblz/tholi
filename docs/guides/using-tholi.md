@@ -18,6 +18,13 @@ Long clarification choices wrap into full-width buttons. On short sidebars, smal
 
 Conversation centers the transcript rather than repeating the Guide card. It uses existing local NLP and actual navigation events. Enter sends; Shift+Enter adds a line. Navigation commands, compatible corrections/references, grounded clarification replies, copying guidance, and **Why this step?** are supported. Unsupported questions do not produce invented answers. Switching modes retains the draft and task. The latest 80 messages remain in trusted browser-session storage.
 
+Pause and Stop remain available while planning. Both cancel local inference and
+stop observation without waiting for the website to acknowledge. Automatic
+recovery is bounded: if a page keeps invalidating its scans, Tholi pauses checking
+and retains the destination. Resume after the page settles. Idle OCR workers are
+released after 10 seconds and planning workers after 30 seconds; resuming after
+release may require a cold model start.
+
 ## Widget and continuity
 
 Choose **Use floating widget** in settings. Default size is 360 × 420 CSS pixels, minimum 240 × 180 where the viewport permits. The shell contains the drag handle, name and Close action. Drag the handle, use arrow keys to move, Shift+arrow keys to resize, or open **Widget menu** for labeled placement and size controls. **Reset position** restores the default bounds. **Expand widget** requests 420 × 620, clamped to the viewport.

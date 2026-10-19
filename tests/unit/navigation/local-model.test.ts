@@ -40,6 +40,87 @@ const page: PageSnapshot = {
   ],
 };
 afterEach(() => vi.unstubAllGlobals());
+it("releases idle model/OCR workers and resolves outstanding work on disposal", async () => {
+  vi.useFakeTimers();
+  const workers: any[] = [];
+  class WorkerStub {
+    onmessage?: (event: any) => void;
+    onerror?: (event: any) => void;
+    onmessageerror?: () => void;
+    terminate = vi.fn();
+    postMessage = vi.fn();
+    constructor() {
+      workers.push(this);
+    }
+  }
+  vi.stubGlobal("Worker", WorkerStub);
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: (file: string) => `chrome-extension://test/${file}` },
+  });
+  const { createInferenceHost } =
+    await import("../../../apps/extension/src/inference/worker-host");
+  const host = createInferenceHost();
+  try {
+    const nlp = host.request({ type: "PLAN_NLP", id: "plan" });
+    const ocr = host.request({ type: "OCR_REQUEST", id: "ocr" });
+    workers[0].onmessage({ data: { id: "plan", value: "plan" } });
+    workers[1].onmessage({ data: { id: "ocr", value: "ocr" } });
+    expect((await nlp).value).toBe("plan");
+    expect((await ocr).value).toBe("ocr");
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(workers[1].terminate).toHaveBeenCalledOnce();
+    expect(workers[0].terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const pending = host.request({ type: "PLAN_NLP", id: "pending" });
+    host.dispose();
+    expect((await pending).error).toContain("canceled");
+    expect(workers[2].terminate).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    host.dispose();
+    vi.useRealTimers();
+  }
+});
+it("does not create a model host after cancellation during native context lookup", async () => {
+  let completeLookup!: (contexts: unknown[]) => void;
+  const getContexts = vi.fn(
+    () =>
+      new Promise<unknown[]>((resolve) => {
+        completeLookup = resolve;
+      }),
+  );
+  const createDocument = vi.fn(async () => {}),
+    closeDocument = vi.fn(async () => {}),
+    sendMessage = vi.fn();
+  vi.stubGlobal("chrome", {
+    runtime: {
+      getURL: () => "chrome-extension://test/",
+      ContextType: { OFFSCREEN_DOCUMENT: "OFFSCREEN_DOCUMENT" },
+      getContexts,
+      sendMessage,
+    },
+    offscreen: {
+      createDocument,
+      closeDocument,
+      Reason: { WORKERS: "WORKERS" },
+    },
+  });
+  const { requestInferenceHost, disposeInferenceHost } =
+    await import("../../../apps/extension/src/platform/inference-host");
+  const signal = new AbortController();
+  const request = requestInferenceHost(
+    { type: "PLAN_NLP", id: "old" },
+    signal.signal,
+  ).catch((error) => error.name);
+  await vi.waitFor(() => expect(getContexts).toHaveBeenCalledOnce());
+  signal.abort();
+  await disposeInferenceHost();
+  completeLookup([]);
+  expect(await request).toBe("AbortError");
+  expect(createDocument).not.toHaveBeenCalled();
+  expect(sendMessage).not.toHaveBeenCalled();
+});
 it("coalesces obsolete planning, prioritizes foreground work and cancels without stale delivery", async () => {
   const started: string[] = [],
     release = new Map<string, () => void>();

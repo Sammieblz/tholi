@@ -128,6 +128,13 @@ export class PageCoach {
         owner.planningRevision = value;
       },
       requestReplan: owner.requestReplan.bind(owner),
+      pause: owner.pause.bind(owner),
+      get planningInFlight() {
+        return owner.planningInFlight;
+      },
+      set planningInFlight(value: object | undefined) {
+        owner.planningInFlight = value;
+      },
       get verifiedDestination() {
         return owner.verifiedDestination;
       },
@@ -245,6 +252,7 @@ export class PageCoach {
   private beforeUrl?: string;
   private selectedAt = 0;
   private planningRevision = "";
+  private planningInFlight: object | undefined;
   private verifiedDestination?: string;
   private workflowWaitTimer?: ReturnType<typeof setTimeout>;
   private cancelScroll?: () => void;
@@ -362,8 +370,10 @@ export class PageCoach {
     this.overlay.clear();
   }
   private teardown() {
+    this.planningInFlight = undefined;
     this.inputHandoff = undefined;
     clearTimeout(this.recoveryTimer);
+    this.recoveryTimer = undefined;
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener("click", this.clicked, true);
@@ -796,6 +806,7 @@ export class PageCoach {
     ) {
       this.view.journey.reroutes++;
       this.clearTarget();
+      this.publish(this.view);
       this.replan();
       return;
     }
@@ -1486,6 +1497,7 @@ export class PageCoach {
         reason:
           "The requested control interaction was verified in the embedded application.",
       };
+      if (this.view.journey) this.view.journey.status = "completed";
       this.completeQueuedTask();
     }
     this.publish(this.view);
@@ -1554,6 +1566,8 @@ export class PageCoach {
       this.view.goalPlan?.reason ||
       "Checking the current page. Your destination is retained.";
     this.planningRevision = "";
+    this.recoveryKey = "";
+    this.recoveryStep = 0;
     this.observe();
     this.refresh();
     if (

@@ -132,8 +132,9 @@ export class SemanticIndex {
   private remember(text: string, vector: number[]) {
     this.hot.delete(text);
     this.hot.set(text, vector);
-    while (this.hot.size > 10000)
-      this.hot.delete(this.hot.keys().next().value!);
+    // Retain one complete 600-control projection plus its active queries.
+    // A smaller LRU thrashes on private pages whose vectors cannot persist.
+    while (this.hot.size > 1024) this.hot.delete(this.hot.keys().next().value!);
   }
   constructor(
     private embedder: Embedder,
@@ -251,7 +252,7 @@ export class SemanticIndex {
         hash =
           this.hashes.get(embeddingText) || (await semanticHash(embeddingText));
       this.hashes.set(embeddingText, hash);
-      while (this.hashes.size > 10000)
+      while (this.hashes.size > 1024)
         this.hashes.delete(this.hashes.keys().next().value!);
       if (!ephemeral || clean)
         entries.push({

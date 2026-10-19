@@ -7,9 +7,12 @@ type Entry = {
 /** One host implementation for the offscreen document and Firefox event page. */
 export function createInferenceHost() {
   let nlp: Worker | undefined, ocr: Worker | undefined;
+  const idle: Partial<Record<"nlp" | "ocr", ReturnType<typeof setTimeout>>> =
+    {};
   const planning = new Map<string, Entry>(),
     recognition = new Map<string, Entry>();
   function cancel(kind: "nlp" | "ocr", error: string) {
+    clearTimeout(idle[kind]);
     const entries = kind === "nlp" ? planning : recognition;
     (kind === "nlp" ? nlp : ocr)?.terminate();
     if (kind === "nlp") nlp = undefined;
@@ -32,6 +35,11 @@ export function createInferenceHost() {
       clearTimeout(entry.timer);
       entries.delete(data.id);
       entry.resolve(data);
+      if (!entries.size)
+        idle[kind] = setTimeout(
+          () => cancel(kind, "Idle worker released."),
+          kind === "ocr" ? 10000 : 30000,
+        );
     };
     worker.onerror = (event) => {
       event.preventDefault();
@@ -58,6 +66,7 @@ export function createInferenceHost() {
         return Promise.resolve({ ok: true });
       }
       const kind = message.type === "OCR_REQUEST" ? "ocr" : "nlp";
+      clearTimeout(idle[kind]);
       const worker =
         kind === "nlp" ? (nlp ||= start(kind)) : (ocr ||= start(kind));
       const entries = kind === "nlp" ? planning : recognition,
