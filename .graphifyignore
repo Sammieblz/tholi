@@ -1,0 +1,17 @@
+# Repository code, contracts, docs and tests are the corpus.
+# Exclude vendored guidance, generated output and binary benchmark/media assets.
+.codex/
+.agents/
+.git/
+node_modules/
+dist/
+output/
+graphify-out/
+assets/models/
+assets/ocr/
+assets/paddle/
+apps/public/
+package-lock.json
+tests/fixtures/**/*.png
+tests/fixtures/**/*.sha256
+config/knowledge-graph/

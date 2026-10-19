@@ -1,0 +1,2727 @@
+{
+  "nodes": [
+    {
+      "id": "docs_releases_v0_6_5_build_evidence_document",
+      "label": "Historical build evidence, October 2026 — v0.6.5; 2026-10-11",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.5; 2026-10-11): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "v0.6.5; 2026-10-11",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_5_build_evidence_v0_6_5_predeclared_acceptance",
+      "label": "v0.6.5 predeclared acceptance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.5; 2026-10-11): The predeclared `tests/browser/acceptance/matrix.json` contains five structurally different articles × six goal families × two layouts = **60 supported live attempts**. Final evaluation (2026-10-11T06:27:52.090Z) passed all 14 benchmark tests and all 112 declared attached cases, with no missing or unexpected cases. Windows, Node v24.19.0, Chromium 156.0.8078.4; optional AI disabled. Matrix SHA256: `a9519448312c3d465e2bd4d5cb1282cc6471964a68c67d0f1174f11c147dce29`.",
+      "temporal_scope": "v0.6.5; 2026-10-11",
+      "evidence_files": [
+        "tests/browser/acceptance/matrix.json"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_5_build_evidence_v0_6_5_intermediate_outcome_limits",
+      "label": "v0.6.5 intermediate outcome limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.5; 2026-10-11): Live unresolved/stopped: 0/60. Generic fixtures include eight intentional unresolved decisions; authored fixtures include eight expected stops. All suites recorded zero false-success claims, Navigator automation, known synthetic secret leakage and model calls in these tested cases. These are sample measurements with actual denominators, not universal website percentages or model accuracy. Language-picker completion means awaiting a choice; focus means the field is focused, not that a search was submitted. Authored state-case conformance is separate from live supported-goal completion.",
+      "temporal_scope": "v0.6.5; 2026-10-11",
+      "evidence_files": [
+        "packages/page-discovery/outcomes.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_5_build_evidence_v0_6_5_matching_bytes_and_native_limits",
+      "label": "v0.6.5 matching bytes and native limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.5; 2026-10-11): `npm run package:extension` passed after all three complete reports matched the production build. The ZIP was read back and all ten members matched the evaluated bytes. Candidate: `output/releases/internet-navigator-0.6.5.zip`; SHA256 **f54b3c99d146b18f7d98d7dfd67ea5329e60c8bcd81742344ef0ba8f5067fbd3**. Adjacent SHA256/provenance files identify the baseline commit, dirty tree, metrics and pending checks. Packaging refuses overwriting the archive.",
+      "temporal_scope": "v0.6.5; 2026-10-11",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "docs/guides/getting-started.md"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_6_build_evidence_document",
+      "label": "Historical build evidence, October 2026 — v0.6.6; 2026-10-11",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.6; 2026-10-11): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "v0.6.6; 2026-10-11",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_6_build_evidence_v0_6_6_edit_effect_classification",
+      "label": "v0.6.6 Edit effect classification",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.6; 2026-10-11): The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.",
+      "temporal_scope": "v0.6.6; 2026-10-11",
+      "evidence_files": [
+        "packages/page-discovery/interaction-risk.ts",
+        "packages/page-discovery/form-context.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_6_build_evidence_v0_6_6_context_and_fingerprints",
+      "label": "v0.6.6 context and fingerprints",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.6; 2026-10-11): The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.",
+      "temporal_scope": "v0.6.6; 2026-10-11",
+      "evidence_files": [
+        "packages/page-discovery/structure.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_6_build_evidence_v0_6_6_revised_historical_acceptance",
+      "label": "v0.6.6 revised historical acceptance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.6; 2026-10-11): The v0.6.6 matrix revision adds generic negative cases for an opaque Edit action and an implicit POST submit, making 30 generic cases (18 negative) and 116 total attached cases. The six live goal families remain unchanged. Editing is separate regression coverage: generic fixtures verify page/section entry selection, actual editor navigation and publishing/unknown-effect boundaries; live Wikipedia tests check the article Edit target and actual highlight geometry at both widths. Those live Edit tests do not publish anything or establish a complete editing workflow. The previous matrix did not cover editing, and its passing measurements did not establish general navigation accuracy. The three v0.6.5 reports are retained under their version-prefixed filenames.",
+      "temporal_scope": "v0.6.6; 2026-10-11",
+      "evidence_files": [
+        "tests/browser/acceptance/matrix.json",
+        "tests/browser/live/edit.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_6_build_evidence_v0_6_6_retained_failed_iterations",
+      "label": "v0.6.6 retained failed iterations",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.6; 2026-10-11): Earlier reports and failures remain version/iteration-prefixed in `output/acceptance`; `edit-iteration-notes.json` explains the scope assertion correction, diagnostics-export enable-state race and live fundraising-banner geometry oracle. The banner could put the language control below the fold at document top; the live oracle now checks a direction cue offscreen and halo alignment onscreen rather than requiring a halo unconditionally. These corrections preserve independent website/geometry assertions and all case denominators. The complete final reports bind to identical production build bytes.",
+      "temporal_scope": "v0.6.6; 2026-10-11",
+      "evidence_files": [
+        "tests/browser/live/geometry.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_7_build_evidence_document",
+      "label": "Historical build evidence, October 2026 — v0.6.7; 2026-10-11",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.7; 2026-10-11): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "v0.6.7; 2026-10-11",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_7_build_evidence_v0_6_7_superseded_wikipedia_owners",
+      "label": "v0.6.7 superseded Wikipedia owners",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L28",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.7; 2026-10-11): The prior Wikipedia-specific coach, route packs, sample allowlist, URL policy, scope/continueOnNavigation schema fields, inspection helpers and superseded tests were removed. Shared authored-route functionality remains for controlled demo regression cases. Documentation reflects the new architecture and bounded extension-owned IndexedDB store.",
+      "temporal_scope": "v0.6.7; 2026-10-11",
+      "evidence_files": [
+        "packages/route-engine/index.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_7_build_evidence_v0_6_7_grounded_structural_context",
+      "label": "v0.6.7 grounded structural context",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.7; 2026-10-11): The collector adds heading ancestry, named regions and transient viewport placement to actual controls. Generic matching incorporates nested context and penalizes extra nearest-section qualifiers, fixing the live Edit Plot versus Plot inspirations ambiguity. Structure changes invalidate signatures/revisions and refresh browser-local memory. Stored metadata omits transient placement. No website selector or URL route was added to product code.",
+      "temporal_scope": "v0.6.7; 2026-10-11",
+      "evidence_files": [
+        "packages/page-discovery/structure.ts",
+        "packages/goal-planner/model-context.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_7_build_evidence_v0_6_7_model_contract_is_not_quality_evidence",
+      "label": "v0.6.7 model contract is not quality evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L40",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.7; 2026-10-11): Optional model input uses goal-ranked bounded retrieval with opener relationships, states, destinations, layout and scan/omission counts rather than the first 180 controls. Each request clones a pristine system session, times out after 30 seconds and destroys its clone. Structured intent is validated against an unambiguous live route, original clear matches, requested context, target scope and declared control operation. Scope constrains targets while preserving openers. Empty/invalid/unsafe AI preserves semantic routes and boundaries. Accepted intent replans using fresh control IDs when a menu replaces its children. Details are in [page-context.md](../../architecture/page-context.md).",
+      "temporal_scope": "v0.6.7; 2026-10-11",
+      "evidence_files": [
+        "apps/extension/src/inference/browser-language-model.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_7_build_evidence_v0_6_7_origin_and_coverage_limits",
+      "label": "v0.6.7 origin and coverage limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.7; 2026-10-11): Live regressions use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. The test then clicks that link and independently verifies the actual French document. Navigator correctly stops at the new origin and does not claim a completed language goal there; fresh toolbar invocation/Start is required. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.",
+      "temporal_scope": "v0.6.7; 2026-10-11",
+      "evidence_files": [
+        "apps/extension/src/platform/site-access.ts",
+        "tests/browser/live/language.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_8_build_evidence_document",
+      "label": "Historical build evidence, October 2026 — v0.6.8; 2026-10-11",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.8; 2026-10-11): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "v0.6.8; 2026-10-11",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_8_build_evidence_v0_6_8_persistent_destination_journeys",
+      "label": "v0.6.8 persistent destination journeys",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.8; 2026-10-11): Persistent task journeys retain the original destination and verified progress through menus, modals, intermediate documents and linked popup tabs. Optional on-device model follow-ups receive the destination and bounded verified history. Weighted observed routing compares fastest/fewest-interaction paths; provisional estimates distinguish observed and predicted upcoming steps. Saved tasks persist in browser-owned IndexedDB and rebind current controls after website changes. Shared navigation schemas replace duplicated contracts; unused full-memory transfer on fresh-page requests is removed. Panel feeds allow one outstanding poll and ignore replies after teardown. See [task-routing.md](../../guides/journeys.md).",
+      "temporal_scope": "v0.6.8; 2026-10-11",
+      "evidence_files": [
+        "packages/goal-planner/task-journey.ts",
+        "packages/goal-planner/route-graph.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_8_build_evidence_v0_6_8_origin_grant_continuity",
+      "label": "v0.6.8 origin grant continuity",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.8; 2026-10-11): Live Spanish regressions independently open the correct picker, guide Español, reach the actual Spanish article and retain the same task at its permission boundary. Chrome withholds an ungranted host's tab URL. Navigator offers access to the clicked link's expected origin, then checks the actual URL and originating tab after permission, before observing or advancing. Without that grant it cannot claim task completion. Permitted local fixtures verify continuation/completion; actual Spanish-host permission prompts and denial/retry remain in [chrome-handoff.md](../../guides/getting-started.md). No Wikipedia product selector or fixed article route was added.",
+      "temporal_scope": "v0.6.8; 2026-10-11",
+      "evidence_files": [
+        "apps/extension/src/platform/site-access.ts",
+        "apps/extension/src/background/navigation-events.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_8_build_evidence_v0_6_8_bounded_polling_and_unexplained_stalls",
+      "label": "v0.6.8 bounded polling and unexplained stalls",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.8; 2026-10-11): Persistent task journeys retain the original destination and verified progress through menus, modals, intermediate documents and linked popup tabs. Optional on-device model follow-ups receive the destination and bounded verified history. Weighted observed routing compares fastest/fewest-interaction paths; provisional estimates distinguish observed and predicted upcoming steps. Saved tasks persist in browser-owned IndexedDB and rebind current controls after website changes. Shared navigation schemas replace duplicated contracts; unused full-memory transfer on fresh-page requests is removed. Panel feeds allow one outstanding poll and ignore replies after teardown. See [task-routing.md](../../guides/journeys.md).",
+      "temporal_scope": "v0.6.8; 2026-10-11",
+      "evidence_files": [
+        "apps/extension/src/ui/hooks/useSessionSnapshot.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_9_build_evidence_document",
+      "label": "Historical build evidence, October 2026 — v0.6.9; 2026-10-11",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.9; 2026-10-11): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "v0.6.9; 2026-10-11",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_9_build_evidence_v0_6_9_authentication_intent",
+      "label": "v0.6.9 authentication intent",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.9; 2026-10-11): Login/account goals now retain workflow context without requiring a destination value. Generic task wording recognizes login/log in/sign in and create account/register/sign up, with qualifiers preserved. Declared entry links/menus remain distinct from credential submission. Form-local evidence identifies safe fields without borrowing a page heading for unrelated appearance/search forms. Focus advances navigation evidence but never proves authentication success. Stored plain auth journeys upgrade during restoration. Unknown/unusable routes show an unavailable estimate and a reason beside the journey.",
+      "temporal_scope": "v0.6.9; 2026-10-11",
+      "evidence_files": [
+        "packages/goal-planner/authentication.ts",
+        "packages/page-discovery/form-context.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_9_build_evidence_v0_6_9_browser_confirmed_redirect_evidence",
+      "label": "v0.6.9 browser-confirmed redirect evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.9; 2026-10-11): Live Wikipedia reproductions revealed that account links redirect from the article origin to a separate authentication origin. The new required **webNavigation** permission associates a recent selected authentication link with a browser-confirmed server redirect in the pinned tab or linked popup. It retains only origins and URL hashes; raw redirect queries are never stored. The actual destination requires its own host grant and exact final URL validation before coach observation. Typed, unrelated and client-script navigation cannot supply this redirect evidence. See [task routing](../../guides/journeys.md), [privacy](../../architecture/privacy.md) and [security](../../architecture/security.md).",
+      "temporal_scope": "v0.6.9; 2026-10-11",
+      "evidence_files": [
+        "apps/extension/manifest.json",
+        "apps/extension/src/background/navigation-events.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_6_9_build_evidence_v0_6_9_real_form_evidence_limits",
+      "label": "v0.6.9 real form evidence limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L26",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.6.9; 2026-10-11): Four new live regressions independently follow the actual entry links and inspect the real authentication form at both widths. They verify the same retained journey and a usable Continue button at the ungranted host. A test-only collector validates the live form's username target; this is **not** evidence that the extension has observed that host after a native grant. Browser fixtures verify actual coach continuation across menus, documents, popup tabs and a real HTTP server redirect, then safe-field focus and submission review. No credentials are submitted or accounts created. Native host-permission grant/denial/retry and actual live coach activation beyond the grant remain pending.",
+      "temporal_scope": "v0.6.9; 2026-10-11",
+      "evidence_files": [
+        "tests/browser/live/authentication.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_document",
+      "label": "v0.7.0 validation and installation — v0.7.0; 2026-10-12",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): The default navigation path now uses Compromise, lexical BM25 and a bundled, CPU-only MiniLM model through the shared navigation core. The extension owns live discovery, fresh binding and outcome verification. The optional Fastify/SQLite backend uses the same core in a worker thread; browser knowledge remains authoritative and backend failure falls back to local processing.",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_v0_7_0_default_hybrid_offline_pipeline",
+      "label": "v0.7.0 default hybrid offline pipeline",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): The default navigation path now uses Compromise, lexical BM25 and a bundled, CPU-only MiniLM model through the shared navigation core. The extension owns live discovery, fresh binding and outcome verification. The optional Fastify/SQLite backend uses the same core in a worker thread; browser knowledge remains authoritative and backend failure falls back to local processing.",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "evidence_files": [
+        "packages/nlp/interpret.ts",
+        "packages/nlp/retrieval.ts",
+        "packages/nlp/model.ts",
+        "packages/navigation-core/index.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_v0_7_0_ordered_explicit_tasks",
+      "label": "v0.7.0 ordered explicit tasks",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L10",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): Requests retain their original English sentence, requested values, qualifiers and exclusions. Grounded clarification does not require retyping. Up to three explicit tasks run in order; each outcome must be verified before the next task starts. Pause retains the queue, Stop cancels it, and Skip records a skipped task. Search-field focus is intermediate progress for an article search.",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "evidence_files": [
+        "packages/navigation-core/queue.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_v0_7_0_frozen_nlp_comparison",
+      "label": "v0.7.0 frozen NLP comparison",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L70",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): | Pipeline                                                | Accepted-target precision | Supported positive route coverage | | ------------------------------------------------------- | ------------------------- | --------------------------------- | | Existing matching                                       | 40/40 (100%)              | 40/48 (83.3%)                     | | Embeddings alone, raw top result without abstention     | 55/80 (68.8%)             | 48/48 (100%)                      | | Hybrid interpretation, retrieval and eligibility checks | 62/62 (100%)              | 48/48 (100%)                      |",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "evidence_files": [
+        "packages/nlp/retrieval.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_v0_7_0_real_inference_versus_model_fakes",
+      "label": "v0.7.0 real inference versus model fakes",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L82",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): The real-model/API/migration suite passed 10 tests. The production extension NLP browser suite passed eight tests, including offline inference, clarification, task ordering, document/popup continuation, search outcomes, pause/resume, restart, backend fallback and live Wikipedia language targeting. Separate embedding activity was 92 embedded texts and 8,043 cache hits in the corpus run, with zero LLM calls. Experimental LLM support remains opt-in.",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "evidence_files": [
+        "apps/extension/src/inference/nlp-worker.ts",
+        "tests/browser/extension/nlp/navigation.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_0_validation_v0_7_0_complete_historical_bytes_and_retained_failures",
+      "label": "v0.7.0 complete historical bytes and retained failures",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L30",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.0; 2026-10-12): | Check                                | Result                      | | ------------------------------------ | --------------------------- | | TypeScript, extension and API builds | Passed                      | | Unit tests                           | 121/121 passed              | | Real-model, API and migration tests  | 10/10 passed                | | Offline NLP extension/browser tests  | 8/8 passed                  | | Complete extension regressions       | 86/86 passed                | | Complete live Wikipedia regressions  | 16/16 passed                | | Existing accuracy matrix             | 14 tests / 116 cases passed | | ZIP readback against evaluated build | All 125 files match         |",
+      "temporal_scope": "v0.7.0; 2026-10-12",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_1_navigation_fixes_document",
+      "label": "v0.7.1: references, footer discovery and natural-language questions — v0.7.1; October2026",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.1; October2026): The reported DreamWorks requests exposed two discovery/binding defects and a separate question-framing gap. The current live article has a References heading. In the previous build, a 600-control partial scan retained its contents link but omitted the real heading and both footer Privacy policy links. Dense related-link navigation consumed the scan. A contents entry clipped inside a scrolling sidebar was also classified as visible, allowing its raw rectangle to paint over unrelated footer text.",
+      "temporal_scope": "v0.7.1; October2026",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_structural_discovery_reservation",
+      "label": "v0.7.1 structural discovery reservation",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L11",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.1; October2026): The scanner now reserves coverage for interface controls, headings, footer landmarks and navigation, filling unused capacity within the same 600-control limit. It recognizes ARIA banner/contentinfo regions as structural boundaries. Footer links no longer borrow article-heading context. Fresh scans determine availability independently of cached semantic embeddings.",
+      "temporal_scope": "v0.7.1; October2026",
+      "evidence_files": [
+        "packages/page-discovery/incremental.ts",
+        "packages/page-discovery/structure.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_clipped_section_arrival",
+      "label": "v0.7.1 clipped section arrival",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L17",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.1; October2026): Discovery and overlay geometry now respect ancestor overflow clipping. Section completion requires the actual destination to be fully unclipped and in the viewport. A fragment link needs a matching real heading or labelled region; missing or misleading fragment destinations cannot supply a navigation target. Geometry and heading metadata are cached only within one scan, avoiding repeated DOM work without retaining stale geometry.",
+      "temporal_scope": "v0.7.1; October2026",
+      "evidence_files": [
+        "packages/browser-adapter/geometry.ts",
+        "packages/page-discovery/outcomes.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_questions_and_missing_targets",
+      "label": "v0.7.1 questions and missing targets",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.1; October2026): Compromise interpretation now handles generic question openings such as **Where can I read the privacy policy?** and **Where are the references?**. The complete original sentence remains in the request. No Wikipedia selector, article URL or special References/Privacy navigation script was added to the product; those URLs and selectors belong to independent test oracles.",
+      "temporal_scope": "v0.7.1; October2026",
+      "evidence_files": [
+        "packages/nlp/interpret.ts",
+        "tests/browser/live/reported-page.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_stale_rejection_and_harness_readiness",
+      "label": "v0.7.1 stale rejection and harness readiness",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L69",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.7.1; October2026): The live zoom gate exposed an explicitly rejected stale scan after responsive reflow. Its test client now refreshes and resubmits only that rejection, at most three times; other errors and all target/geometry/outcome assertions are unchanged. The failed full-run report and trace are preserved as `v0.7.1-responsive-stale-rejection`. A subsequent isolated desktop attempt timed out during startup, before testing geometry; its trace is retained under `output/qa/v0.7.1-geometry-startup-retry`. The startup stall's precise cause is unestablished. Fresh isolated and full-run desktop geometry checks passed.",
+      "temporal_scope": "v0.7.1; October2026",
+      "evidence_files": [
+        "tests/support/acceptance-runner.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_document",
+      "label": "Contextual web-app navigation — v0.8.0 architecture",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): `packages/navigation-core` owns workflow interpretation and planning. `workflow-contracts.ts` validates entity slots, milestones, outcome evidence, surface coverage and control references. The original request and three-task queue stay separate from internal workflow milestones. Corrections invalidate dependent guidance; named references use compatible session entities. Ambiguous live targets return grounded choices. Guides have versioned provenance and contain no selectors, coordinates, account identifiers or automatically followed URLs.",
+      "temporal_scope": "v0.8.0 architecture",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_workflow_and_guide_ownership",
+      "label": "v0.8.0 workflow and guide ownership",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): `packages/navigation-core` owns workflow interpretation and planning. `workflow-contracts.ts` validates entity slots, milestones, outcome evidence, surface coverage and control references. The original request and three-task queue stay separate from internal workflow milestones. Corrections invalidate dependent guidance; named references use compatible session entities. Ambiguous live targets return grounded choices. Guides have versioned provenance and contain no selectors, coordinates, account identifiers or automatically followed URLs.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "packages/navigation-core/workflow-contracts.ts",
+        "packages/navigation-core/guides.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_incremental_registry_budget",
+      "label": "v0.8.0 incremental registry budget",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L14",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): The extension owns discovery, DOM binding and verification. Its incremental registry processes added/removed/changed subtrees in approximately 8 ms slices, coalesces notifications, reserves structural/global controls and admits new active dialog controls under saturation. A session retains at most 5,000 controls across the tab and authorized frames; planning receives at most 600. Query, focus, scroll, resize and Chrome SPA-navigation events reprioritize discovery. Open shadow roots are discovered on traversal, foreground reconciliation, interaction and periodic idle reconciliation. Coverage reports omitted and virtualized items. Unknown content is not evidence that a requested control does not exist.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "packages/page-discovery/incremental.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_active_metadata_and_frame_identity",
+      "label": "v0.8.0 active metadata and frame identity",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L31",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): Geometry, clipping, current availability and modal/occlusion checks use the current DOM. Recycled nodes get new semantic signatures. Frame references include tab, frame, Chrome document identity and control identity; a nonce and browser sender identity validate frame messages. Denied embedded origins expose selective-access recovery. Overlays stay local to the target frame, and parent visibility hides covered frames. Frame scanning shares the tab's control budget.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "apps/extension/manifest.json",
+        "apps/extension/src/background/frame-coordinator.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_asynchronous_storage_authority",
+      "label": "v0.8.0 asynchronous storage authority",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L47",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): A verified picker reveal retains its choice handoff while its fresh expanded state remains present; replanning cannot substitute its search field. Explicit following tasks can advance after the requested reveal. A closed picker requires fresh planning. Durable memory runs in a separate, bounded background queue, coalescing ordinary observations while retaining distinct verified edges. Live planning and sidebar polls read cached committed knowledge rather than waiting for storage. Stalled IndexedDB transactions abort after five seconds, preserving previous knowledge. Forget/Clear and route deletion discard pending writes and drain the current writer before deletion, including optional backend mirroring. Derived embedding/index writes use the same background scheduling policy. A cache read that exceeds 200 ms falls back to CPU computation and briefly bypasses the unavailable cache; persistence cannot become an inference prerequisite. Worker errors and a 30-second request deadline settle outstanding calls and replace the worker rather than leaving Chrome message ports pending. Such errors never count as task completion.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "apps/extension/src/background/memory-service.ts",
+        "packages/navigation-core/storage.ts",
+        "apps/extension/src/inference/offscreen-client.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_private_session_and_durable_semantics",
+      "label": "v0.8.0 private session and durable semantics",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L79",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): IndexedDB v4 preserves Wikipedia knowledge and reusable routes. Migration sanitizes raw knowledge for the six platform families, clears affected indexes and removes legacy derived embeddings whose origin provenance is unknown. Original public knowledge survives. Only allowlisted reusable interface semantics are durable on private applications; unknown item text, private paths, supplied values, option names, statuses and their embeddings stay in trusted session storage or inference memory. Saved journeys contain parameterized purposes and steps, and request values again. SQLite applies the same policy. The service never logs session requests or authenticated screenshots.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "packages/navigation-core/privacy.ts",
+        "packages/navigation-core/storage.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_revision_stamped_v2_and_fallback",
+      "label": "v0.8.0 revision stamped v2 and fallback",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L88",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): The optional single-owner API preserves `/v1` and adds `/v2/health`, `/observations`, `/knowledge`, `/suggestions`, `/plans`, `/routes`, `/forget`, `/clear` and generated `/openapi.json`. v2 plans require `protocolVersion: 2` and `contextRevision`; results echo request/document/observation/context revisions and may include workflow and target reference. Observations accept snapshots, frame envelopes or bounded deltas; stale delta bases return 409 and require a fresh projection. Delta assembly is bounded session memory; only structural semantics persist. An older backend, connection failure or pending inference falls back to local processing. Browser IndexedDB remains authoritative. Loopback defaults, generated bearer credentials, explicit extension-origin CORS and HTTPS self-hosting rules remain unchanged.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "packages/navigation-core/contracts-v2.ts",
+        "apps/extension/src/platform/backend-client.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_architecture_v0_8_0_requested_result_evidence",
+      "label": "v0.8.0 requested result evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L69",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 architecture): Consequential or unknown effects get a distinct review stage. Navigator highlights the review target and the user acts on the website. Verification rejects unchanged, busy, stale, negative or unrelated outcomes. Preferences require requested state; creation requires the requested new item; deployments and memberships require specific status evidence. After two minutes, Wait/Retry/replanning keep the task incomplete. Pause retains context; Stop cancels it; Skip records a skipped task.",
+      "temporal_scope": "v0.8.0 architecture",
+      "evidence_files": [
+        "packages/navigation-core/evidence.ts",
+        "apps/extension/src/content/outcome-verification.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_validation_document",
+      "label": "v0.8.0 validation and installation — v0.8.0 incomplete final validation snapshot",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 incomplete final validation snapshot): This candidate adds incremental discovery and contextual workflow guidance to the offline Compromise/BM25/MiniLM engine. General HTTP/HTTPS discovery is independent of the six documented platform guides. Every interaction remains user performed and every highlight requires fresh live control evidence.",
+      "temporal_scope": "v0.8.0 incomplete final validation snapshot",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_validation_v0_8_0_pending_final_gates",
+      "label": "v0.8.0 pending final gates",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 incomplete final validation snapshot): | Gate                                                         | Result                | | ------------------------------------------------------------ | --------------------- | | TypeScript and production builds                             | Passed                | | Unit tests                                                   | 143/143 passed        | | Multi-app real model, runtime, API and migration             | 17/17 passed          | | Original real-model NLP, API and migration                   | 12/12 passed          | | Offline production NLP browser tests                         | 11/11 passed          | | Dynamic-app, activation, frame and performance browser tests | 7/7 passed            | | Extension regression suite                                   | 86/86 passed          | | Live Wikipedia regression suite                              | Final run in progress | | Original accuracy matrix                                     | Final run pending     |",
+      "temporal_scope": "v0.8.0 incomplete final validation snapshot",
+      "evidence_files": [
+        "docs/releases/v0.8.0/validation.md"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_validation_v0_8_0_retained_github_default_branch_miss",
+      "label": "v0.8.0 retained GitHub default branch miss",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L109",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 incomplete final validation snapshot): All platforms meet the declared 95% precision and 85% coverage gates. Each also returns six held-out clarifications and six unsupported results. The remaining GitHub mismatch is retained in the report: “Change the default branch to dev in that repository” selects **Search repositories** where the fixture oracle expects **Settings**. No false completion or review-boundary bypass was observed in the declared cases. These are first-target results on initial-screen fixtures, not passes for every authenticated workflow. Complete simulated journeys are tested separately; actual signed-in checks remain pending.",
+      "temporal_scope": "v0.8.0 incomplete final validation snapshot",
+      "evidence_files": [
+        "packages/navigation-core/guides.ts",
+        "tests/unit/navigation/workflows.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_validation_v0_8_0_storage_cache_and_hydration_failures",
+      "label": "v0.8.0 storage cache and hydration failures",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L57",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 incomplete final validation snapshot): Final live runs initially recorded compact-layout polling timeouts before a section-edit request and after opening a language picker. Isolated unchanged-build checks passed, but the full rerun reproduced the language failures. Traces showed sidebar reads waiting behind the same command queue that awaited memory work. Storage was moved to the separate queue described above; the deliberately blocked writer test and both compact-layout language checks pass on the rebuilt extension. The first failure report is retained at `output/qa/v0.8.0-final-live-first-run.json`, with second-run language traces in `output/qa/v0.8.0-final-live-{spanish,picker}-second-run.zip`. The underlying reason for the storage stall is unestablished; no assertions, corpus expectations or deadlines were relaxed.",
+      "temporal_scope": "v0.8.0 incomplete final validation snapshot",
+      "evidence_files": [
+        "tests/unit/storage/background-memory.test.ts",
+        "tests/unit/storage/derived-availability.test.ts",
+        "tests/unit/storage/memory-transaction.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_validation_v0_8_0_picker_intent_and_fixture_performance",
+      "label": "v0.8.0 picker intent and fixture performance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L85",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.8.0 incomplete final validation snapshot): The final live suite also exposed a different picker race: “Change language” was interpreted as `choose`, while the handoff guard covered only `reveal`. After a verified opening, replanning selected the popup search field. The guard now covers both intents using the same fresh expanded-control evidence; an unspecified preference remains incomplete and cannot advance a following task. The regression covers that distinction without changing the frozen corpora. The trace is retained at `output/qa/v0.8.0-final-picker-verification.zip`.",
+      "temporal_scope": "v0.8.0 incomplete final validation snapshot",
+      "evidence_files": [
+        "packages/navigation-core/continuity.ts",
+        "tests/browser/extension/multi-app/dynamic.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_capabilities_document",
+      "label": "Workflow capability matrix — Maintained current coverage reference in historical directory",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Maintained coverage reference; directory version is not an immutable publication date. Current coverage; the original filename is retained for existing links. Automated fixtures are distinct from real-site verification. No signed-in workflow below is certified by a corpus or fixture pass.",
+      "temporal_scope": "Maintained current coverage reference in historical directory",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_capabilities_maintained_six_platform_coverage_boundaries",
+      "label": "Maintained six platform coverage boundaries",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Maintained coverage reference; directory version is not an immutable publication date. Current coverage; the original filename is retained for existing links. Automated fixtures are distinct from real-site verification. No signed-in workflow below is certified by a corpus or fixture pass.",
+      "temporal_scope": "Maintained current coverage reference in historical directory",
+      "evidence_files": [
+        "packages/navigation-core/guides.ts",
+        "docs/guides/getting-started.md"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_capabilities_maintained_first_target_versus_journey_evidence",
+      "label": "Maintained first target versus journey evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Maintained coverage reference; directory version is not an immutable publication date. The 360-case corpus tests interpretation and the **first grounded route target** on independently authored initial-screen fixtures, not all real account journeys. Each platform has 20 calibration cases and 40 held-out cases. Runtime tests cover complete simulated journeys and failure boundaries. Chromium tests exercise DOM discovery, overlays, dynamic menus, frames and performance. Real bundled MiniLM inference is tested separately in Node and the production extension. Simulated fixtures and public-page checks do not count as signed-in workflow passes.",
+      "temporal_scope": "Maintained current coverage reference in historical directory",
+      "evidence_files": [
+        "tests/unit/navigation/workflows.test.ts",
+        "tests/browser/extension/reliability/prime.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_capabilities_maintained_official_guide_provenance",
+      "label": "Maintained official guide provenance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L34",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Maintained coverage reference; directory version is not an immutable publication date. Cloudflare guide provenance is the official [Git integration documentation](https://developers.cloudflare.com/pages/get-started/git-integration/) and [Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/). Other sources and fetched-content SHA-256 values are in `packages/navigation-core/guides.ts`. The current Prime guide uses Amazon's official Prime-cancellation article and semantic predicates. Amazon.com account and country variants still require fresh live evidence and signed-in checks.",
+      "temporal_scope": "Maintained current coverage reference in historical directory",
+      "evidence_files": [
+        "packages/navigation-core/guides.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_8_0_capabilities_maintained_ocr_and_inaccessible_interface_limits",
+      "label": "Maintained OCR and inaccessible interface limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L52",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Maintained coverage reference; directory version is not an immutable publication date. Limits: English desktop Chrome interfaces, Jira Cloud tenant hosts and Amazon.com. Closed shadow roots, native file pickers and ungranted frames cannot be inspected by DOM discovery. File selection is a manual handoff. Virtualized/unmounted items and omitted projection content remain explicitly incomplete coverage. Tesseract provides text-only viewport assistance, including some canvas text. Editable fields and all iframe pixels are masked. Icon-only interfaces and unseen screens remain limitations. Paddle is available only in an experimental build and has not passed promotion gates. Hosted inference, custom training and a required LLM remain deferred. See [native checks](../../guides/getting-started.md).",
+      "temporal_scope": "Maintained current coverage reference in historical directory",
+      "evidence_files": [
+        "packages/vision/engine.ts",
+        "packages/vision/paddle.ts",
+        "apps/extension/src/background/vision-service.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_document",
+      "label": "v0.9.0 implementation and validation — v0.9.0 implementation",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.0 implementation): Continuous journeys retain objective, requested values, exclusions and outcome predicates independently of the current document or control. Every 25 verified interactions creates a compact checkpoint; the detailed history remains bounded to 30 events. Heap-based graph search has no twelve-step cutoff, preserves its frontier between bounded planning slices, and revalidates the first live edge. Budget exhaustion does not complete a task.",
+      "temporal_scope": "v0.9.0 implementation",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_v0_9_0_continuous_checkpointed_search",
+      "label": "v0.9.0 continuous checkpointed search",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.0 implementation): Continuous journeys retain objective, requested values, exclusions and outcome predicates independently of the current document or control. Every 25 verified interactions creates a compact checkpoint; the detailed history remains bounded to 30 events. Heap-based graph search has no twelve-step cutoff, preserves its frontier between bounded planning slices, and revalidates the first live edge. Budget exhaustion does not complete a task.",
+      "temporal_scope": "v0.9.0 implementation",
+      "evidence_files": [
+        "packages/goal-planner/route-graph.ts",
+        "packages/goal-planner/task-journey.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_v0_9_0_parked_journeys_and_observed_return",
+      "label": "v0.9.0 parked journeys and observed return",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.0 implementation): Five unfinished journeys can be retained in trusted browser-session storage. Resuming requires a fresh observation. The session ledger records only Navigator-observed documents, SPA states and surfaces. Browser Back recommendations name one observed predecessor at a time; forward interactions are never assumed reversible. Site controls and observed dismissal mechanisms remain user-performed. New GitHub repository guidance describes creation-menu, form-entry, input, review and requested-item verification milestones using official documentation, without destination URLs or selectors.",
+      "temporal_scope": "v0.9.0 implementation",
+      "evidence_files": [
+        "packages/navigation-core/continuity.ts",
+        "apps/extension/src/background/journey-service.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_v0_9_0_grounded_offline_ocr_and_privacy",
+      "label": "v0.9.0 grounded offline OCR and privacy",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.0 implementation): Capture covers the active authorized HTTP/HTTPS viewport. Editable fields and frames without verified access are masked; overlays are hidden during capture. Unknown/redirected frame mappings remain masked. Navigation, viewport changes and interactions cancel stale recognition. Images and recognized private text are temporary. Browser processing is the default; the explicit backend OCR setting permits temporary image transmission to the configured service. The authenticated `/v2/ocr` API validates PNG dimensions, four MB/four megapixel limits and returns stamped regions; its worker has no SQLite access. Existing API protocols remain available. IndexedDB v5 and SQLite migrations preserve original knowledge and require fresh control binding.",
+      "temporal_scope": "v0.9.0 implementation",
+      "evidence_files": [
+        "packages/vision/engine.ts",
+        "packages/vision/contracts.ts",
+        "apps/extension/src/background/vision-service.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_v0_9_0_held_out_routes_and_creation_receipt",
+      "label": "v0.9.0 held out routes and creation receipt",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L17",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.0 implementation): Creation verification requires a fresh, named creation receipt or created-item signal. A matching repository heading alone is insufficient. If a signed-in interface supplies no such evidence, the task remains unverified.",
+      "temporal_scope": "v0.9.0 implementation",
+      "evidence_files": [
+        "packages/navigation-core/evidence.ts",
+        "tests/integration/vision/routes.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_document",
+      "label": "v0.9.1 reliability pass — v0.9.1 packaged pre-cleanup candidate",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.1 packaged pre-cleanup candidate): Historical snapshot of the packaged candidate before the cleanup pass. Metrics and bundled Paddle claims below apply to that archive, not the current build. Normal builds now exclude Paddle/OpenCV assets. See [maintenance](../records/2026-10-maintenance.md) for cleanup verification and [the README](../../../README.md) for current setup.",
+      "temporal_scope": "v0.9.1 packaged pre-cleanup candidate",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_v0_9_1_authentication_and_subject_evidence",
+      "label": "v0.9.1 authentication and subject evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L8",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.1 packaged pre-cleanup candidate): The default extension retains destinations through credential and one-time-code screens, performs bounded automatic recovery, and verifies menu, document and review transitions. Inputs and editor contents are excluded. A review click never establishes completion; Prime status must explicitly identify Prime and confirm cancellation. Account headings cannot substitute for navigation controls in a result workflow.",
+      "temporal_scope": "v0.9.1 packaged pre-cleanup candidate",
+      "evidence_files": [
+        "packages/goal-planner/authentication.ts",
+        "packages/navigation-core/evidence.ts",
+        "tests/browser/extension/reliability/prime.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_v0_9_1_all_iframe_pixel_masking",
+      "label": "v0.9.1 all iframe pixel masking",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L12",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.1 packaged pre-cleanup candidate): Viewport OCR masks discovered input, textarea and contenteditable fields, including open shadow roots, and all iframe rectangles. Authorized frames still support frame-local DOM discovery; their pixels remain masked because permission alone does not provide trustworthy field-mask geometry. OCR guidance inside frames is therefore unavailable in this candidate.",
+      "temporal_scope": "v0.9.1 packaged pre-cleanup candidate",
+      "evidence_files": [
+        "apps/extension/src/background/vision-service.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_v0_9_1_failed_paddle_promotion",
+      "label": "v0.9.1 failed Paddle promotion",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.1 packaged pre-cleanup candidate): Tesseract remains the verified default. PaddleOCR.js 0.4.2 and PP-OCRv6 tiny detector/recognizer assets are bundled with source and model hashes. OpenCV function generation was adapted to static closures without loosening extension CSP; the SDK image adapter uses OffscreenCanvas pixels. The current Paddle pipeline still fails its startup deadline, so it is explicitly experimental and has NOT passed promotion gates. A completed comparison test must never be reported as a successful Paddle gate. The policy file keeps it disabled by default.",
+      "temporal_scope": "v0.9.1 packaged pre-cleanup candidate",
+      "evidence_files": [
+        "packages/vision/paddle.ts",
+        "scripts/fetch-paddle.mjs",
+        "scripts/opencv-csp.mjs",
+        "scripts/verify-reliability-release.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_v0_9_1_frozen_tesseract_fixture_evidence",
+      "label": "v0.9.1 frozen Tesseract fixture evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L20",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.1 packaged pre-cleanup candidate): The frozen, authored 32-image UI corpus contains eight calibration images and 24 held-out images, including canvas text, small labels, dark/light themes, duplicate labels and absent targets. Corpus and image hashes are verified before evaluation. These are simulated UI fixtures, not authenticated screenshots. The extension performs real local model inference offline.",
+      "temporal_scope": "v0.9.1 packaged pre-cleanup candidate",
+      "evidence_files": [
+        "tests/browser/extension/reliability/vision.spec.ts",
+        "scripts/create-ui-corpus.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_2_navigation_document",
+      "label": "Dashboard settings navigation: 0.9.2 — v0.9.2 focused rebuilt unpacked extension",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.2 focused rebuilt unpacked extension): Ordinary destinations such as “Account settings” previously required the final control to be mounted. A relevant account menu could be visible while the planner reported no route. A generic “Settings” label could also lose the distinction between account and repository settings.",
+      "temporal_scope": "v0.9.2 focused rebuilt unpacked extension",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_2_navigation_v0_9_2_grounded_account_menu_exploration",
+      "label": "v0.9.2 grounded account menu exploration",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.2 focused rebuilt unpacked extension): The shared planner now offers a grounded exploration step through a freshly observed, named account/profile/user menu. It retains the original destination and checks newly revealed controls. Opening the menu is a verified intermediate interaction, not task completion. Ambiguous menus, exclusions, missing qualifiers and unknown effects still prevent automatic selection. This uses interface semantics rather than vendor URLs or selectors.",
+      "temporal_scope": "v0.9.2 focused rebuilt unpacked extension",
+      "evidence_files": [
+        "packages/navigation-core/exploration.ts",
+        "tests/unit/navigation/dashboard-navigation.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_2_navigation_v0_9_2_account_settings_scope_and_fallback",
+      "label": "v0.9.2 account settings scope and fallback",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.2 focused rebuilt unpacked extension): Relevant menu exploration can start while embeddings load. A connected backend without the `settings-navigation` capability falls back to local planning for settings requests; the optional backend is not required.",
+      "temporal_scope": "v0.9.2 focused rebuilt unpacked extension",
+      "evidence_files": [
+        "packages/page-discovery/accessibility.ts",
+        "apps/extension/src/platform/backend-client.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_9_2_navigation_v0_9_2_focused_fixture_scope",
+      "label": "v0.9.2 focused fixture scope",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.9.2 focused rebuilt unpacked extension): These browser checks use controlled Cloudflare-like and GitHub-like fixtures. Signed-in Cloudflare and GitHub verification remains pending because the user's live browser tabs were unavailable. Full release suites were not rerun and no replacement release archives were produced. This is a rebuilt unpacked extension, not certification of every dashboard workflow.",
+      "temporal_scope": "v0.9.2 focused rebuilt unpacked extension",
+      "evidence_files": [
+        "tests/browser/extension/core/dashboard-navigation.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_10_0_validation_document",
+      "label": "Tholi 0.10.0 validation — v0.10.0; evaluated2026-10-14",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.10.0; evaluated2026-10-14): Evaluated on 14 October 2026 on Windows, AMD Ryzen 7 5700U, approximately 7.4 GiB RAM, and Node 24.19.0. This is a release candidate with native Chrome and signed-in checks pending.",
+      "temporal_scope": "v0.10.0; evaluated2026-10-14",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_10_0_validation_v0_10_0_presentation_and_mock_isolation",
+      "label": "v0.10.0 presentation and mock isolation",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L35",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.10.0; evaluated2026-10-14): Screenshots cover 300, 380 and 620-pixel sidebars, 200% browser zoom, standard/compact/minimum widgets, and 375, 768 and 1440-pixel websites. They are stored locally under `output/qa/tholi-ui`. Fixtures verify storage isolation, fresh widget registration after reload/Expand, rejected cloned frames, capture exclusion, and real pointer dragging/resizing. Strict TypeScript also passes.",
+      "temporal_scope": "v0.10.0; evaluated2026-10-14",
+      "evidence_files": [
+        "packages/ui/presentation.ts",
+        "apps/extension/src/ui/widget/widget-shell.ts",
+        "apps/web/src/features/account/session.tsx"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_10_0_validation_v0_10_0_local_matched_packaging",
+      "label": "v0.10.0 local matched packaging",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L13",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.10.0; evaluated2026-10-14): The gated packager checked every ZIP member against the evaluated build. The generated website manifest now identifies 0.10.0, and post-packaging website tests verified its download checksum. Original older archives remain in `output/releases`; only the latest eligible ZIP is mirrored into the website. No site has been published.",
+      "temporal_scope": "v0.10.0; evaluated2026-10-14",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/sync-downloads.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_10_0_validation_v0_10_0_scoped_checks_and_rendering_limit",
+      "label": "v0.10.0 scoped checks and rendering limit",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L42",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.10.0; evaluated2026-10-14): - Warm NLP planning p95: 5.4 ms on the evaluated corpus. - The 50,000-node/5,000-control discovery benchmark: initial 183.6 ms, relevant refresh p95 342.6 ms, warm planning p95 123.4 ms. - Warm 1920 × 1080 OCR p95: 494.4 ms. - The UI mutation storm retained one highlight root; JavaScript frame-gap p95 was 266.8 ms. The deliberately dense inline-text fixture still causes rendering stalls. This result does not establish smooth animation on every busy dashboard.",
+      "temporal_scope": "v0.10.0; evaluated2026-10-14",
+      "evidence_files": [
+        "tests/browser/extension/multi-app/dynamic.spec.ts",
+        "tests/browser/extension/ui/route-motion.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks",
+      "label": "v0.10.0 pending native and signed in checks",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L48",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (v0.10.0; evaluated2026-10-14): Native Chrome sidebar activation/closure, real permission dialogs and capture recovery, actual screen-reader speech, keyboard widget handles, and signed-in Amazon, Cloudflare and GitHub workflows require user-assisted checks. Authenticated fixture responses are not live-site passes. Use [the Chrome checklist](../../guides/getting-started.md).",
+      "temporal_scope": "v0.10.0; evaluated2026-10-14",
+      "evidence_files": [
+        "docs/guides/getting-started.md"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_diagnostic_evidence_document",
+      "label": "Historical build evidence, October 2026 — UnversionedOctober2026 diagnosticcheckpoint",
+      "file_type": "document",
+      "source_file": "docs/releases/records/2026-10-diagnostic-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (UnversionedOctober2026 diagnosticcheckpoint): Historical observations only. They do not certify current bytes.",
+      "temporal_scope": "UnversionedOctober2026 diagnosticcheckpoint",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_diagnostic_evidence_october_historical_inspector_provenance",
+      "label": "October historical inspector provenance",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-diagnostic-evidence.md",
+      "source_location": "L9",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (UnversionedOctober2026 diagnosticcheckpoint): The live inspector records observation revisions, candidate feature scores and rejection reasons, reveal ownership, actual observed memory paths/freshness, and bounded waiting/verified/stale/timeout/canceled evidence. Its strict local export omits page text, goals, paths, field values and model output. Three new unit tests cover score replay, report bounds/injection/privacy and memory provenance. Browser tests at both widths cover rendering/export, unchanged navigation when debug toggles, and verification history across a document load. Screenshots `output/qa/live-inspector-desktop.png` and `output/qa/live-inspector-narrow.png` were inspected.",
+      "temporal_scope": "UnversionedOctober2026 diagnosticcheckpoint",
+      "evidence_files": [
+        "packages/live-diagnostics/index.ts",
+        "apps/extension/src/ui/features/advanced/LiveInspector.tsx"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_diagnostic_evidence_october_historical_diagnostics_scope",
+      "label": "October historical diagnostics scope",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-diagnostic-evidence.md",
+      "source_location": "L11",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (UnversionedOctober2026 diagnosticcheckpoint): Audit commands passed: `npm run check` (59 unit tests, TypeScript and builds), `npm run test:e2e` (40 checks), and `npm run test:live:wikipedia` (6 checks). These counts are regression evidence; measured acceptance is tracked in #14/#18. Usage and scoring replay are documented in [live-diagnostics.md](../../guides/troubleshooting.md).",
+      "temporal_scope": "UnversionedOctober2026 diagnosticcheckpoint",
+      "evidence_files": [
+        "tests/unit/safety/live-diagnostics.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_document",
+      "label": "Reliability cleanup — Post-v0.9.1cleanup; October16-17followups",
+      "file_type": "document",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): This pass cleans the uncommitted reliability work after the packaged v0.9.1 candidate. Existing release archives and frozen corpora are preserved. Current source/build bytes differ from that archive; archived accuracy and performance measurements do not certify this build.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_post_v0_9_1_default_paddle_removal",
+      "label": "Post v0.9.1 default Paddle removal",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L10",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): - Removed 21 compiler-reported unused imports, fields, locals and parameters, including an unused BrowserAdapter instance in the live coach. - Removed the unused allowed-frame capture argument and the frame enumeration/permission loop that produced it. All iframe pixels remain masked; authorized frame DOM discovery is preserved. - Replaced five duplicate build-hashing implementations with `scripts/artifact-files.mjs`. Reporters and both packagers now use the same recursively sorted file hashes. The shared and old algorithms were compared against the full current build and agreed. - Removed disabled Paddle/OpenCV chunks and models from normal builds. The experimental source, pinned assets and comparison tests remain explicitly opt-in. The normal build removes leftover experimental assets when switching variants, with output-path checks. - Removed duplicate live route cards, single-option task choosers, repeated headings, a repeated region name and the redundant primary Start action. Guide me is the primary destination action; page exploration remains expandable and authored demo tasks retain Start. - Matched the Guide me button's accessible name to its visible text. The footer reads the actual manifest version. API health responses read package metadata rather than duplicated version strings. - Removed unnecessary model/API build steps from CI; their build hooks already perform those steps. - Scoped the visual-invalidation observer/listeners to active live sessions. Pause, Stop and page teardown disconnect them and clear pending notifications; Resume reattaches with a fresh viewport revision. - Removed an automatic Resume command from authored-route navigation-status handling. Same-document states already publish their observations; the duplicate command could release a login checkpoint or explicit Pause. The narrow checkpoint regression exposed this path and passed after its removal. - Consolidated repeated generated-test-directory ignore patterns.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "scripts/build-extension.mjs",
+        "scripts/artifact-files.mjs",
+        "packages/vision/paddle.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_post_v0_9_1_adapter_and_pause_ownership",
+      "label": "Post v0.9.1 adapter and Pause ownership",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): TypeScript now rejects unused locals and parameters. Working offline NLP, default Tesseract, authentication continuity, review boundaries, storage migrations, public v1/v2 compatibility and the controlled demo route engine remain in place. The demo adapter and live discovery adapter serve different contracts; merging them would erase regression coverage and is outside cleanup scope.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "packages/route-engine/index.ts",
+        "packages/browser-adapter/index.ts",
+        "apps/extension/src/background/journey-service.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_post_v0_9_1_cleanup_evidence_limits",
+      "label": "Post v0.9.1 cleanup evidence limits",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L35",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): - Strict TypeScript checks passed with unused-code checks enabled. - All 159 core tests passed, including field/frame masking, authentication, outcome guards and visual observer teardown. - Demo, default extension and optional API builds succeeded. - The cleaned default extension contains 151 assets and occupies 59,052,883 bytes (56.3 MiB), down from the archived candidate's 76,271,843 bytes (72.7 MiB). No Paddle model directory or OpenCV runtime chunk remains in the default output. - All 26 documentation files were checked for broken local links; none were found. Frozen NLP, multi-app, UI-image and Wikipedia accuracy-matrix hashes are unchanged. Existing extension/backend archives retain their original SHA256 values. - All 86 desktop/narrow browser regressions passed on the final cleaned build, including the corrected authored authentication checkpoint. - All 11 NLP/v1 API tests, 17 multi-app/v2 tests and four vision/API tests passed. Their reports use the shared hashing implementation and match the final extension bytes. The frozen multi-app corpus retains its existing GitHub default-branch miss (96.4% held-out precision/coverage); cleanup did not tune or erase it. - Both reliability browser checks passed: the one-request simulated Prime journey through delayed 2FA/review, and real offline Tesseract on the frozen UI-image corpus. Tesseract achieved 100% accepted-region precision/coverage on its 24 held-out images (15 positive targets), with warm p95 108 ms for those 960×600 fixtures. Paddle is explicitly reported as not bundled, with no accepted score or passing claim. - All three continuity browser checks passed, covering masked offline OCR, a verified browser return and task switching/resumption. - `git diff --check` passed. The full live Wikipedia, acceptance and remaining release suites were not rerun for this cleanup; archived reports cannot certify the new bytes.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "tests/browser/extension/reliability/vision.spec.ts",
+        "scripts/verify-full.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_frame_notice_projection",
+      "label": "October16 frame notice projection",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L45",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): Current frame access now has a separate observation-scoped projection. Its actions remain available before a destination and while planning; stopped, paused, checkpoint, completed and canceled sessions still suppress obsolete prompts. Existing task-owned return, review and visual instructions retain their phase guards. No host-permission, discovery or outcome rule changes.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "apps/extension/src/ui/features/journey/current-task-notices.ts",
+        "tests/browser/extension/multi-app/frames.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_hydration_and_focus_races",
+      "label": "October16 hydration and focus races",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L53",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): The two UI logs exposed three races. Late initial `UI_GET` responses could replace a newly typed destination with the stored empty draft; the test then dispatched a native click without checking whether submission was enabled. The widget test clicked cached coordinates with a hardcoded iframe offset. The cookie test sampled a Base UI focus guard before its queued animation-frame transfer back into the dialog.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "apps/extension/src/ui/app/useGuidanceController.ts",
+        "tests/browser/extension/ui/extension.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_paused_auth_continuation",
+      "label": "October16 paused auth continuation",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L63",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): Running the broader CI test sequence exposed a distinct notice-filter regression: the worker intentionally pauses an unfinished task at an expected cross-origin popup or authentication redirect, but the UI hid its explicit continuation action along with ordinary paused-task notices. The filter now preserves that action only when an expected origin is retained and the request remains active. Explicitly paused, stopped, completed and canceled requests still hide obsolete notices; paused frame-access prompts remain suppressed. The worker's origin, URL and user-approval checks are unchanged.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "apps/extension/src/ui/features/journey/current-task-notices.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_headless_export_harness",
+      "label": "October16 headless export harness",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L65",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): Diagnostics-export failures were isolated to the headless browser download path. Pregranting automatic downloads in the disposable profile resolved a minimal reproduction but did not make both real export sequences reliable. The test adapter now explicitly sets native download behavior for the foreground extension tab's actual CDP browser context and disposable download directory, with download events enabled. Both report paths then passed after the preceding navigation scenarios at desktop and narrow widths (22/22). The original Blob exporter, installed-browser settings and extension permissions are unchanged; experimental exporter changes and probes were removed. Browser coverage focuses the actual export button and uses Enter or pointer input. A test-only adapter retains the actual website-context snapshot while the headless extension tab is foregrounded, including in-flight context reads. Journey commands, native download events and exported-content privacy assertions remain real. Native Chrome sidebar and automatic-download prompts are not validated by this adapter. A focused unit regression also covers the paused handoff and terminal-state exclusions.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "tests/support/chromium-profile.ts",
+        "tests/support/sidebar-tab.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_acceptance_evidence_source",
+      "label": "October16 acceptance evidence source",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L67",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): The live acceptance runner also assumed every final outcome must increment the interaction counter. On real pages, fresh semantic evidence can establish the requested preference or section before that receipt arrives. The runner now recognizes that existing path only for the same request and journey, both completed, with the independent DOM oracle returning true. Focus and menu opening retain the exact one-step receipt requirement. Six focused tests cover false outcomes, wrong identities, inactive states and unsupported completion sources.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "tests/support/acceptance-runner.ts",
+        "tests/unit/tooling/final-step-evidence.test.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_partial_picker_evidence",
+      "label": "October16 partial picker evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L69",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): Earth and Mathematics exposed another edge case: a large active language dialog can fill the bounded 600-control projection and omit its original opener. Automatic replanning then targeted the dialog's search field after a verified reveal. The core now retains the choice handoff only for a partial projection with a missing opener and a visible, ordinary, expanded combobox inside a matching named dialog, bound to the same task and origin. A present closed opener prevents the fallback. A regression fails on the old implementation and covers closed, hidden, occluded, unrelated, foreign-origin and wrong-task observations. Frozen NLP and Wikipedia inputs are unchanged.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "packages/navigation-core/continuity.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october16_stale_install_scroll_and_polling",
+      "label": "October16 stale install scroll and polling",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L71",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): The narrow live run then exposed automatic-plan installation losing a stale-scan rejection: its internal refresh could advance the scan after the caller's revision check, without a structural change to trigger another plan. The planner now reschedules only that explicitly rejected result for the same running task, without replacing newer plans or resuming an ended task. A real `PageCoach` regression advances the scan during installation; it fails on the old implementation and passes with the fix. Acceptance state checks also use the harness's existing snapshot-only mode instead of reopening panel disclosures on each poll. The complete UI suite retains its own interaction and layout checks.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "apps/extension/src/content/plan-lifecycle.ts",
+        "tests/browser/live/language.spec.ts"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october17_full_suite_historical_evidence",
+      "label": "October17 full suite historical evidence",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L81",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): All **12 CI commands** pass locally: `check` (strict TypeScript, **271 core tests**, demo/extension/website builds), `test:nlp` (**11**), `test:multi-app` (**17**), `test:vision` (**4**), `test:e2e` (**90**), `test:nlp:browser` (**12**), `test:multi-app:browser` (**7**), `test:continuity:browser` (**3**), `test:reliability:browser` (**2**), `test:ui` (**29**), `test:live:wikipedia` (**16**) and `test:acceptance` (**14**). API builds also pass. This is **476 unique automated tests**; focused development runs and reruns are not counted twice. The live suite was rerun in full after the two harness fixes, followed by the complete acceptance matrix.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "scripts/verify-full.mjs",
+        "scripts/test.mjs",
+        "scripts/artifact-files.mjs"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_2026_10_maintenance_october17_acceptance_and_pending_boundaries",
+      "label": "October17 acceptance and pending boundaries",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L83",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (Post-v0.9.1cleanup; October16-17followups): The acceptance report covers **116 declared scenarios**: 60 live, 30 controlled fixtures and 26 authored cases. It records 70/70 correct live targets, 70/70 correct live verifications and 60/60 supported live completions, with no false success, navigator-driven website actions or secret leaks. Fixture passes remain separate from real-site passes. Frozen input files, thresholds and release archives are unchanged.",
+      "temporal_scope": "Post-v0.9.1cleanup; October16-17followups",
+      "evidence_files": [
+        "tests/browser/acceptance/matrix.json",
+        "docs/guides/getting-started.md"
+      ],
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_legacy_build_evidence_document",
+      "label": "Archived build evidence index — HistoricalOctober2026 evidenceindex",
+      "file_type": "document",
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (HistoricalOctober2026 evidenceindex): The October 2026 records are grouped by their identified version. Original measurements and pending checks are retained; none authorize current packaging.",
+      "temporal_scope": "HistoricalOctober2026 evidenceindex",
+      "historical_evidence_only": true
+    },
+    {
+      "id": "docs_releases_records_legacy_build_evidence_historical_archive_non_authorization",
+      "label": "Historical archive non authorization",
+      "file_type": "concept",
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Historical source passage (HistoricalOctober2026 evidenceindex): The October 2026 records are grouped by their identified version. Original measurements and pending checks are retained; none authorize current packaging.",
+      "temporal_scope": "HistoricalOctober2026 evidenceindex",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs"
+      ],
+      "historical_evidence_only": true
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_releases_v0_6_5_build_evidence_document",
+      "target": "docs_releases_v0_6_5_build_evidence_v0_6_5_predeclared_acceptance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L7",
+      "evidence": "The predeclared `tests/browser/acceptance/matrix.json` contains five structurally different articles × six goal families × two layouts = **60 supported live attempts**. Final evaluation (2026-10-11T06:27:52.090Z) passed all 14 benchmark tests and all 112 declared attached cases, with no missing or unexpected cases. Windows, Node v24.19.0, Chromium 156.0.8078.4; optional AI disabled. Matrix SHA256: `a9519448312c3d465e2bd4d5cb1282cc6471964a68c67d0f1174f11c147dce29`.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_5_build_evidence_document",
+      "target": "docs_releases_v0_6_5_build_evidence_v0_6_5_intermediate_outcome_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L15",
+      "evidence": "Live unresolved/stopped: 0/60. Generic fixtures include eight intentional unresolved decisions; authored fixtures include eight expected stops. All suites recorded zero false-success claims, Navigator automation, known synthetic secret leakage and model calls in these tested cases. These are sample measurements with actual denominators, not universal website percentages or model accuracy. Language-picker completion means awaiting a choice; focus means the field is focused, not that a search was submitted. Authored state-case conformance is separate from live supported-goal completion.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_5_build_evidence_document",
+      "target": "docs_releases_v0_6_5_build_evidence_v0_6_5_matching_bytes_and_native_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L19",
+      "evidence": "`npm run package:extension` passed after all three complete reports matched the production build. The ZIP was read back and all ten members matched the evaluated bytes. Candidate: `output/releases/internet-navigator-0.6.5.zip`; SHA256 **f54b3c99d146b18f7d98d7dfd67ea5329e60c8bcd81742344ef0ba8f5067fbd3**. Adjacent SHA256/provenance files identify the baseline commit, dirty tree, metrics and pending checks. Packaging refuses overwriting the archive.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_6_build_evidence_document",
+      "target": "docs_releases_v0_6_6_build_evidence_v0_6_6_edit_effect_classification",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L7",
+      "evidence": "The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_6_build_evidence_document",
+      "target": "docs_releases_v0_6_6_build_evidence_v0_6_6_context_and_fingerprints",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L7",
+      "evidence": "The previous classifier rejected Edit navigation links before planning, and inherited committing words from surrounding context/form URLs. The generic classifier now distinguishes navigation/popup entry points, focused fields, native form submission and committing operations. Implicit submit buttons, external form association, method/action overrides and GET operation endpoints are covered. Undeclared Edit effects retain an honest unknown-effect boundary; publishing/committing controls remain review boundaries. Page/section heading context distinguishes an unqualified Edit request from a specified section. Scope/risk reasons invalidate fingerprints and are refreshed in browser-local memory. No Wikipedia product selector or URL route was introduced.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_6_build_evidence_document",
+      "target": "docs_releases_v0_6_6_build_evidence_v0_6_6_revised_historical_acceptance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L21",
+      "evidence": "The v0.6.6 matrix revision adds generic negative cases for an opaque Edit action and an implicit POST submit, making 30 generic cases (18 negative) and 116 total attached cases. The six live goal families remain unchanged. Editing is separate regression coverage: generic fixtures verify page/section entry selection, actual editor navigation and publishing/unknown-effect boundaries; live Wikipedia tests check the article Edit target and actual highlight geometry at both widths. Those live Edit tests do not publish anything or establish a complete editing workflow. The previous matrix did not cover editing, and its passing measurements did not establish general navigation accuracy. The three v0.6.5 reports are retained under their version-prefixed filenames.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_6_build_evidence_document",
+      "target": "docs_releases_v0_6_6_build_evidence_v0_6_6_retained_failed_iterations",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.6/build-evidence.md",
+      "source_location": "L15",
+      "evidence": "Earlier reports and failures remain version/iteration-prefixed in `output/acceptance`; `edit-iteration-notes.json` explains the scope assertion correction, diagnostics-export enable-state race and live fundraising-banner geometry oracle. The banner could put the language control below the fold at document top; the live oracle now checks a direction cue offscreen and halo alignment onscreen rather than requiring a halo unconditionally. These corrections preserve independent website/geometry assertions and all case denominators. The complete final reports bind to identical production build bytes.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_document",
+      "target": "docs_releases_v0_6_7_build_evidence_v0_6_7_superseded_wikipedia_owners",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L28",
+      "evidence": "The prior Wikipedia-specific coach, route packs, sample allowlist, URL policy, scope/continueOnNavigation schema fields, inspection helpers and superseded tests were removed. Shared authored-route functionality remains for controlled demo regression cases. Documentation reflects the new architecture and bounded extension-owned IndexedDB store.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_document",
+      "target": "docs_releases_v0_6_7_build_evidence_v0_6_7_grounded_structural_context",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L38",
+      "evidence": "The collector adds heading ancestry, named regions and transient viewport placement to actual controls. Generic matching incorporates nested context and penalizes extra nearest-section qualifiers, fixing the live Edit Plot versus Plot inspirations ambiguity. Structure changes invalidate signatures/revisions and refresh browser-local memory. Stored metadata omits transient placement. No website selector or URL route was added to product code.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_document",
+      "target": "docs_releases_v0_6_7_build_evidence_v0_6_7_model_contract_is_not_quality_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L40",
+      "evidence": "Optional model input uses goal-ranked bounded retrieval with opener relationships, states, destinations, layout and scan/omission counts rather than the first 180 controls. Each request clones a pristine system session, times out after 30 seconds and destroys its clone. Structured intent is validated against an unambiguous live route, original clear matches, requested context, target scope and declared control operation. Scope constrains targets while preserving openers. Empty/invalid/unsafe AI preserves semantic routes and boundaries. Accepted intent replans using fresh control IDs when a menu replaces its children. Details are in [page-context.md](../../architecture/page-context.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_document",
+      "target": "docs_releases_v0_6_7_build_evidence_v0_6_7_origin_and_coverage_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L22",
+      "evidence": "Live regressions use Ada Lovelace, the James Bond novels/short-stories list and Casino Royale (novel) solely as reproducible test URLs. The first two articles exercise the text-size goal (opening Appearance when necessary), verify Large selection and verify actual References section viewport arrival. The reported Casino Royale regression highlights the live languages button, verifies its detached picker and generates a single Français step despite duplicate suggested/all entries. The test then clicks that link and independently verifies the actual French document. Navigator correctly stops at the new origin and does not claim a completed language goal there; fresh toolbar invocation/Start is required. No article allowlist, site-specific DOM selectors or fixed Wikipedia route supplies these plans.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_document",
+      "target": "docs_releases_v0_6_8_build_evidence_v0_6_8_persistent_destination_journeys",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "evidence": "Persistent task journeys retain the original destination and verified progress through menus, modals, intermediate documents and linked popup tabs. Optional on-device model follow-ups receive the destination and bounded verified history. Weighted observed routing compares fastest/fewest-interaction paths; provisional estimates distinguish observed and predicted upcoming steps. Saved tasks persist in browser-owned IndexedDB and rebind current controls after website changes. Shared navigation schemas replace duplicated contracts; unused full-memory transfer on fresh-page requests is removed. Panel feeds allow one outstanding poll and ignore replies after teardown. See [task-routing.md](../../guides/journeys.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_document",
+      "target": "docs_releases_v0_6_8_build_evidence_v0_6_8_origin_grant_continuity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L22",
+      "evidence": "Live Spanish regressions independently open the correct picker, guide Español, reach the actual Spanish article and retain the same task at its permission boundary. Chrome withholds an ungranted host's tab URL. Navigator offers access to the clicked link's expected origin, then checks the actual URL and originating tab after permission, before observing or advancing. Without that grant it cannot claim task completion. Permitted local fixtures verify continuation/completion; actual Spanish-host permission prompts and denial/retry remain in [chrome-handoff.md](../../guides/getting-started.md). No Wikipedia product selector or fixed article route was added.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_document",
+      "target": "docs_releases_v0_6_8_build_evidence_v0_6_8_bounded_polling_and_unexplained_stalls",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "evidence": "Persistent task journeys retain the original destination and verified progress through menus, modals, intermediate documents and linked popup tabs. Optional on-device model follow-ups receive the destination and bounded verified history. Weighted observed routing compares fastest/fewest-interaction paths; provisional estimates distinguish observed and predicted upcoming steps. Saved tasks persist in browser-owned IndexedDB and rebind current controls after website changes. Shared navigation schemas replace duplicated contracts; unused full-memory transfer on fresh-page requests is removed. Panel feeds allow one outstanding poll and ignore replies after teardown. See [task-routing.md](../../guides/journeys.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_9_build_evidence_document",
+      "target": "docs_releases_v0_6_9_build_evidence_v0_6_9_authentication_intent",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L22",
+      "evidence": "Login/account goals now retain workflow context without requiring a destination value. Generic task wording recognizes login/log in/sign in and create account/register/sign up, with qualifiers preserved. Declared entry links/menus remain distinct from credential submission. Form-local evidence identifies safe fields without borrowing a page heading for unrelated appearance/search forms. Focus advances navigation evidence but never proves authentication success. Stored plain auth journeys upgrade during restoration. Unknown/unusable routes show an unavailable estimate and a reason beside the journey.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_9_build_evidence_document",
+      "target": "docs_releases_v0_6_9_build_evidence_v0_6_9_browser_confirmed_redirect_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L24",
+      "evidence": "Live Wikipedia reproductions revealed that account links redirect from the article origin to a separate authentication origin. The new required **webNavigation** permission associates a recent selected authentication link with a browser-confirmed server redirect in the pinned tab or linked popup. It retains only origins and URL hashes; raw redirect queries are never stored. The actual destination requires its own host grant and exact final URL validation before coach observation. Typed, unrelated and client-script navigation cannot supply this redirect evidence. See [task routing](../../guides/journeys.md), [privacy](../../architecture/privacy.md) and [security](../../architecture/security.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_9_build_evidence_document",
+      "target": "docs_releases_v0_6_9_build_evidence_v0_6_9_real_form_evidence_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L26",
+      "evidence": "Four new live regressions independently follow the actual entry links and inspect the real authentication form at both widths. They verify the same retained journey and a usable Continue button at the ungranted host. A test-only collector validates the live form's username target; this is **not** evidence that the extension has observed that host after a native grant. Browser fixtures verify actual coach continuation across menus, documents, popup tabs and a real HTTP server redirect, then safe-field focus and submission review. No credentials are submitted or accounts created. Native host-permission grant/denial/retry and actual live coach activation beyond the grant remain pending.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_0_validation_document",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_default_hybrid_offline_pipeline",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L3",
+      "evidence": "The default navigation path now uses Compromise, lexical BM25 and a bundled,",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_0_validation_document",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_ordered_explicit_tasks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L10",
+      "evidence": "and exclusions. Grounded clarification does not require retyping. Up to three",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_0_validation_document",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_frozen_nlp_comparison",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L70",
+      "evidence": "| Hybrid interpretation, retrieval and eligibility checks | 62/62 (100%)              | 48/48 (100%)                      |",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_0_validation_document",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_real_inference_versus_model_fakes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L82",
+      "evidence": "embedding activity was 92 embedded texts and 8,043 cache hits in the corpus",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_0_validation_document",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_complete_historical_bytes_and_retained_failures",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.0/validation.md",
+      "source_location": "L30",
+      "evidence": "| ZIP readback against evaluated build | All 125 files match         |",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_document",
+      "target": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_structural_discovery_reservation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L11",
+      "evidence": "The scanner now reserves coverage for interface controls, headings, footer",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_document",
+      "target": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_clipped_section_arrival",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L17",
+      "evidence": "Discovery and overlay geometry now respect ancestor overflow clipping. Section",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_document",
+      "target": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_questions_and_missing_targets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L24",
+      "evidence": "Compromise interpretation now handles generic question openings such as",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_document",
+      "target": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_stale_rejection_and_harness_readiness",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L69",
+      "evidence": "The live zoom gate exposed an explicitly rejected stale scan after responsive",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_workflow_and_guide_ownership",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L3",
+      "evidence": "`packages/navigation-core` owns workflow interpretation and planning.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_incremental_registry_budget",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L14",
+      "evidence": "dialog controls under saturation. A session retains at most 5,000 controls across",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_active_metadata_and_frame_identity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L31",
+      "evidence": "frame, Chrome document identity and control identity; a nonce and browser sender",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_asynchronous_storage_authority",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L47",
+      "evidence": "fresh planning. Durable memory runs in a separate, bounded background queue,",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_private_session_and_durable_semantics",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L79",
+      "evidence": "knowledge survives. Only allowlisted reusable interface semantics are durable on",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_revision_stamped_v2_and_fallback",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L88",
+      "evidence": "`/openapi.json`. v2 plans require `protocolVersion: 2` and `contextRevision`; results",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_requested_result_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L69",
+      "evidence": "Consequential or unknown effects get a distinct review stage. Navigator highlights",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_document",
+      "target": "docs_releases_v0_8_0_validation_v0_8_0_pending_final_gates",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L38",
+      "evidence": "| Live Wikipedia regression suite                              | Final run in progress |",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_document",
+      "target": "docs_releases_v0_8_0_validation_v0_8_0_retained_github_default_branch_miss",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L109",
+      "evidence": "GitHub mismatch is retained in the report: “Change the default branch to dev in",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_document",
+      "target": "docs_releases_v0_8_0_validation_v0_8_0_storage_cache_and_hydration_failures",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L57",
+      "evidence": "sidebar reads waiting behind the same command queue that awaited memory work.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_document",
+      "target": "docs_releases_v0_8_0_validation_v0_8_0_picker_intent_and_fixture_performance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L85",
+      "evidence": "was interpreted as `choose`, while the handoff guard covered only `reveal`.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_capabilities_document",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_six_platform_coverage_boundaries",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L4",
+      "evidence": "fixtures are distinct from real-site verification. No signed-in workflow below",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_capabilities_document",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_first_target_versus_journey_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L24",
+      "evidence": "The 360-case corpus tests interpretation and the **first grounded route target**",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_capabilities_document",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_official_guide_provenance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L34",
+      "evidence": "Other sources and fetched-content SHA-256 values are in",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_capabilities_document",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_ocr_and_inaccessible_interface_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L52",
+      "evidence": "Editable fields and all iframe pixels are masked. Icon-only interfaces and unseen",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_document",
+      "target": "docs_releases_v0_9_0_validation_v0_9_0_continuous_checkpointed_search",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L3",
+      "evidence": "Continuous journeys retain objective, requested values, exclusions and outcome predicates independently of the current document or control. Every 25 verified interactions creates a compact checkpoint; the detailed history remains bounded to 30 events. Heap-based graph search has no twelve-step cutoff, preserves its frontier between bounded planning slices, and revalidates the first live edge. Budget exhaustion does not complete a task.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_document",
+      "target": "docs_releases_v0_9_0_validation_v0_9_0_parked_journeys_and_observed_return",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L5",
+      "evidence": "Five unfinished journeys can be retained in trusted browser-session storage. Resuming requires a fresh observation. The session ledger records only Navigator-observed documents, SPA states and surfaces. Browser Back recommendations name one observed predecessor at a time; forward interactions are never assumed reversible. Site controls and observed dismissal mechanisms remain user-performed. New GitHub repository guidance describes creation-menu, form-entry, input, review and requested-item verification milestones using official documentation, without destination URLs or selectors.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_document",
+      "target": "docs_releases_v0_9_0_validation_v0_9_0_grounded_offline_ocr_and_privacy",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L9",
+      "evidence": "Capture covers the active authorized HTTP/HTTPS viewport. Editable fields and frames without verified access are masked; overlays are hidden during capture. Unknown/redirected frame mappings remain masked. Navigation, viewport changes and interactions cancel stale recognition. Images and recognized private text are temporary. Browser processing is the default; the explicit backend OCR setting permits temporary image transmission to the configured service. The authenticated `/v2/ocr` API validates PNG dimensions, four MB/four megapixel limits and returns stamped regions; its worker has no SQLite access. Existing API protocols remain available. IndexedDB v5 and SQLite migrations preserve original knowledge and require fresh control binding.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_document",
+      "target": "docs_releases_v0_9_0_validation_v0_9_0_held_out_routes_and_creation_receipt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L17",
+      "evidence": "Creation verification requires a fresh, named creation receipt or created-item signal. A matching repository heading alone is insufficient. If a signed-in interface supplies no such evidence, the task remains unverified.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_document",
+      "target": "docs_releases_v0_9_1_validation_v0_9_1_authentication_and_subject_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L8",
+      "evidence": "The default extension retains destinations through credential and one-time-code screens, performs bounded automatic recovery, and verifies menu, document and review transitions. Inputs and editor contents are excluded. A review click never establishes completion; Prime status must explicitly identify Prime and confirm cancellation. Account headings cannot substitute for navigation controls in a result workflow.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_document",
+      "target": "docs_releases_v0_9_1_validation_v0_9_1_all_iframe_pixel_masking",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L12",
+      "evidence": "Viewport OCR masks discovered input, textarea and contenteditable fields, including open shadow roots, and all iframe rectangles. Authorized frames still support frame-local DOM discovery; their pixels remain masked because permission alone does not provide trustworthy field-mask geometry. OCR guidance inside frames is therefore unavailable in this candidate.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_document",
+      "target": "docs_releases_v0_9_1_validation_v0_9_1_failed_paddle_promotion",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L22",
+      "evidence": "Tesseract remains the verified default. PaddleOCR.js 0.4.2 and PP-OCRv6 tiny detector/recognizer assets are bundled with source and model hashes. OpenCV function generation was adapted to static closures without loosening extension CSP; the SDK image adapter uses OffscreenCanvas pixels. The current Paddle pipeline still fails its startup deadline, so it is explicitly experimental and has NOT passed promotion gates. A completed comparison test must never be reported as a successful Paddle gate. The policy file keeps it disabled by default.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_document",
+      "target": "docs_releases_v0_9_1_validation_v0_9_1_frozen_tesseract_fixture_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L20",
+      "evidence": "The frozen, authored 32-image UI corpus contains eight calibration images and 24 held-out images, including canvas text, small labels, dark/light themes, duplicate labels and absent targets. Corpus and image hashes are verified before evaluation. These are simulated UI fixtures, not authenticated screenshots. The extension performs real local model inference offline.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_2_navigation_document",
+      "target": "docs_releases_v0_9_2_navigation_v0_9_2_grounded_account_menu_exploration",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L5",
+      "evidence": "The shared planner now offers a grounded exploration step through a freshly observed, named account/profile/user menu. It retains the original destination and checks newly revealed controls. Opening the menu is a verified intermediate interaction, not task completion. Ambiguous menus, exclusions, missing qualifiers and unknown effects still prevent automatic selection. This uses interface semantics rather than vendor URLs or selectors.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_2_navigation_document",
+      "target": "docs_releases_v0_9_2_navigation_v0_9_2_account_settings_scope_and_fallback",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L9",
+      "evidence": "Relevant menu exploration can start while embeddings load. A connected backend without the `settings-navigation` capability falls back to local planning for settings requests; the optional backend is not required.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_2_navigation_document",
+      "target": "docs_releases_v0_9_2_navigation_v0_9_2_focused_fixture_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L18",
+      "evidence": "These browser checks use controlled Cloudflare-like and GitHub-like fixtures. Signed-in Cloudflare and GitHub verification remains pending because the user's live browser tabs were unavailable. Full release suites were not rerun and no replacement release archives were produced. This is a rebuilt unpacked extension, not certification of every dashboard workflow.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_document",
+      "target": "docs_releases_v0_10_0_validation_v0_10_0_presentation_and_mock_isolation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L35",
+      "evidence": "Screenshots cover 300, 380 and 620-pixel sidebars, 200% browser zoom, standard/compact/minimum widgets, and 375, 768 and 1440-pixel websites. They are stored locally under `output/qa/tholi-ui`. Fixtures verify storage isolation, fresh widget registration after reload/Expand, rejected cloned frames, capture exclusion, and real pointer dragging/resizing. Strict TypeScript also passes.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_document",
+      "target": "docs_releases_v0_10_0_validation_v0_10_0_local_matched_packaging",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L13",
+      "evidence": "The gated packager checked every ZIP member against the evaluated build. The generated website manifest now identifies 0.10.0, and post-packaging website tests verified its download checksum. Original older archives remain in `output/releases`; only the latest eligible ZIP is mirrored into the website. No site has been published.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_document",
+      "target": "docs_releases_v0_10_0_validation_v0_10_0_scoped_checks_and_rendering_limit",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L42",
+      "evidence": "- The UI mutation storm retained one highlight root; JavaScript frame-gap p95 was 266.8 ms. The deliberately dense inline-text fixture still causes rendering stalls. This result does not establish smooth animation on every busy dashboard.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_document",
+      "target": "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L48",
+      "evidence": "Native Chrome sidebar activation/closure, real permission dialogs and capture recovery, actual screen-reader speech, keyboard widget handles, and signed-in Amazon, Cloudflare and GitHub workflows require user-assisted checks. Authenticated fixture responses are not live-site passes. Use [the Chrome checklist](../../guides/getting-started.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_diagnostic_evidence_document",
+      "target": "docs_releases_records_2026_10_diagnostic_evidence_october_historical_inspector_provenance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-diagnostic-evidence.md",
+      "source_location": "L9",
+      "evidence": "The live inspector records observation revisions, candidate feature scores and rejection reasons, reveal ownership, actual observed memory paths/freshness, and bounded waiting/verified/stale/timeout/canceled evidence. Its strict local export omits page text, goals, paths, field values and model output. Three new unit tests cover score replay, report bounds/injection/privacy and memory provenance. Browser tests at both widths cover rendering/export, unchanged navigation when debug toggles, and verification history across a document load. Screenshots `output/qa/live-inspector-desktop.png` and `output/qa/live-inspector-narrow.png` were inspected.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_diagnostic_evidence_document",
+      "target": "docs_releases_records_2026_10_diagnostic_evidence_october_historical_diagnostics_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-diagnostic-evidence.md",
+      "source_location": "L11",
+      "evidence": "Audit commands passed: `npm run check` (59 unit tests, TypeScript and builds), `npm run test:e2e` (40 checks), and `npm run test:live:wikipedia` (6 checks). These counts are regression evidence; measured acceptance is tracked in #14/#18. Usage and scoring replay are documented in [live-diagnostics.md](../../guides/troubleshooting.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_default_paddle_removal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L10",
+      "evidence": "- Removed disabled Paddle/OpenCV chunks and models from normal builds. The experimental source, pinned assets and comparison tests remain explicitly opt-in. The normal build removes leftover experimental assets when switching variants, with output-path checks.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_adapter_and_pause_ownership",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L18",
+      "evidence": "TypeScript now rejects unused locals and parameters. Working offline NLP, default Tesseract, authentication continuity, review boundaries, storage migrations, public v1/v2 compatibility and the controlled demo route engine remain in place. The demo adapter and live discovery adapter serve different contracts; merging them would erase regression coverage and is outside cleanup scope.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_cleanup_evidence_limits",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L35",
+      "evidence": "- `git diff --check` passed. The full live Wikipedia, acceptance and remaining release suites were not rerun for this cleanup; archived reports cannot certify the new bytes.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_frame_notice_projection",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L45",
+      "evidence": "Current frame access now has a separate observation-scoped projection. Its actions remain available before a destination and while planning; stopped, paused, checkpoint, completed and canceled sessions still suppress obsolete prompts. Existing task-owned return, review and visual instructions retain their phase guards. No host-permission, discovery or outcome rule changes.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_hydration_and_focus_races",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L53",
+      "evidence": "The two UI logs exposed three races. Late initial `UI_GET` responses could replace a newly typed destination with the stored empty draft; the test then dispatched a native click without checking whether submission was enabled. The widget test clicked cached coordinates with a hardcoded iframe offset. The cookie test sampled a Base UI focus guard before its queued animation-frame transfer back into the dialog.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_paused_auth_continuation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L63",
+      "evidence": "Running the broader CI test sequence exposed a distinct notice-filter regression: the worker intentionally pauses an unfinished task at an expected cross-origin popup or authentication redirect, but the UI hid its explicit continuation action along with ordinary paused-task notices. The filter now preserves that action only when an expected origin is retained and the request remains active. Explicitly paused, stopped, completed and canceled requests still hide obsolete notices; paused frame-access prompts remain suppressed. The worker's origin, URL and user-approval checks are unchanged.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_headless_export_harness",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L65",
+      "evidence": "Diagnostics-export failures were isolated to the headless browser download path. Pregranting automatic downloads in the disposable profile resolved a minimal reproduction but did not make both real export sequences reliable. The test adapter now explicitly sets native download behavior for the foreground extension tab's actual CDP browser context and disposable download directory, with download events enabled. Both report paths then passed after the preceding navigation scenarios at desktop and narrow widths (22/22). The original Blob exporter, installed-browser settings and extension permissions are unchanged; experimental exporter changes and probes were removed. Browser coverage focuses the actual export button and uses Enter or pointer input. A test-only adapter retains the actual website-context snapshot while the headless extension tab is foregrounded, including in-flight context reads. Journey commands, native download events and exported-content privacy assertions remain real. Native Chrome sidebar and automatic-download prompts are not validated by this adapter. A focused unit regression also covers the paused handoff and terminal-state exclusions.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_acceptance_evidence_source",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L67",
+      "evidence": "The live acceptance runner also assumed every final outcome must increment the interaction counter. On real pages, fresh semantic evidence can establish the requested preference or section before that receipt arrives. The runner now recognizes that existing path only for the same request and journey, both completed, with the independent DOM oracle returning true. Focus and menu opening retain the exact one-step receipt requirement. Six focused tests cover false outcomes, wrong identities, inactive states and unsupported completion sources.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_partial_picker_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L69",
+      "evidence": "Earth and Mathematics exposed another edge case: a large active language dialog can fill the bounded 600-control projection and omit its original opener. Automatic replanning then targeted the dialog's search field after a verified reveal. The core now retains the choice handoff only for a partial projection with a missing opener and a visible, ordinary, expanded combobox inside a matching named dialog, bound to the same task and origin. A present closed opener prevents the fallback. A regression fails on the old implementation and covers closed, hidden, occluded, unrelated, foreign-origin and wrong-task observations. Frozen NLP and Wikipedia inputs are unchanged.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october16_stale_install_scroll_and_polling",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L71",
+      "evidence": "The narrow live run then exposed automatic-plan installation losing a stale-scan rejection: its internal refresh could advance the scan after the caller's revision check, without a structural change to trigger another plan. The planner now reschedules only that explicitly rejected result for the same running task, without replacing newer plans or resuming an ended task. A real `PageCoach` regression advances the scan during installation; it fails on the old implementation and passes with the fix. Acceptance state checks also use the harness's existing snapshot-only mode instead of reopening panel disclosures on each poll. The complete UI suite retains its own interaction and layout checks.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october17_full_suite_historical_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L81",
+      "evidence": "All **12 CI commands** pass locally: `check` (strict TypeScript, **271 core tests**, demo/extension/website builds), `test:nlp` (**11**), `test:multi-app` (**17**), `test:vision` (**4**), `test:e2e` (**90**), `test:nlp:browser` (**12**), `test:multi-app:browser` (**7**), `test:continuity:browser` (**3**), `test:reliability:browser` (**2**), `test:ui` (**29**), `test:live:wikipedia` (**16**) and `test:acceptance` (**14**). API builds also pass. This is **476 unique automated tests**; focused development runs and reruns are not counted twice. The live suite was rerun in full after the two harness fixes, followed by the complete acceptance matrix.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_2026_10_maintenance_document",
+      "target": "docs_releases_records_2026_10_maintenance_october17_acceptance_and_pending_boundaries",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/2026-10-maintenance.md",
+      "source_location": "L83",
+      "evidence": "The acceptance report covers **116 declared scenarios**: 60 live, 30 controlled fixtures and 26 authored cases. It records 70/70 correct live targets, 70/70 correct live verifications and 60/60 supported live completions, with no false success, navigator-driven website actions or secret leaks. Fixture passes remain separate from real-site passes. Frozen input files, thresholds and release archives are unchanged.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_records_legacy_build_evidence_historical_archive_non_authorization",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L3",
+      "evidence": "The October 2026 records are grouped by their identified version. Original measurements and pending checks are retained; none authorize current packaging.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_9_build_evidence_document",
+      "target": "docs_releases_records_2026_10_maintenance_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L8",
+      "evidence": "[README](../../../README.md); current cleanup status is in [maintenance](../records/2026-10-maintenance.md).",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_9_build_evidence_document",
+      "target": "docs_releases_v0_9_1_validation_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.6.9/build-evidence.md",
+      "source_location": "L9",
+      "evidence": "The [v0.9.1 validation](../v0.9.1/validation.md) records pre-cleanup archived bytes.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_architecture_document",
+      "target": "docs_releases_v0_8_0_capabilities_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/architecture.md",
+      "source_location": "L103",
+      "evidence": "[capability matrix](capabilities.md) for the pending signed-in checks.",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_document",
+      "target": "docs_releases_v0_8_0_capabilities_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L168",
+      "evidence": "[capability matrix](capabilities.md). Account variants, actual deployment,",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_document",
+      "target": "docs_releases_records_2026_10_maintenance_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L5",
+      "evidence": "Normal builds now exclude Paddle/OpenCV assets. See [maintenance](../records/2026-10-maintenance.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_v0_6_9_build_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L5",
+      "evidence": "- [0.6.9 build evidence](../v0.6.9/build-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_v0_6_8_build_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L6",
+      "evidence": "- [0.6.8 build evidence](../v0.6.8/build-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_v0_6_7_build_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L7",
+      "evidence": "- [0.6.7 build evidence](../v0.6.7/build-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_v0_6_6_build_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L8",
+      "evidence": "- [0.6.6 build evidence](../v0.6.6/build-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_v0_6_5_build_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L9",
+      "evidence": "- [0.6.5 build evidence](../v0.6.5/build-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_document",
+      "target": "docs_releases_records_2026_10_diagnostic_evidence_document",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L10",
+      "evidence": "- [unversioned build evidence](2026-10-diagnostic-evidence.md)",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_releases_v0_6_5_build_evidence_v0_6_5_predeclared_acceptance",
+      "target": "docs_releases_v0_6_6_build_evidence_v0_6_6_revised_historical_acceptance",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L7",
+      "evidence": "Versioned records explicitly change matrix112to116 by adding generic negative cases; live families unchanged.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_v0_6_7_superseded_wikipedia_owners",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_adapter_and_pause_ownership",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L28",
+      "evidence": "Both deliberately preserve authored demo versus generic discovery contracts while removing obsolete ownership.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_v0_6_7_origin_and_coverage_limits",
+      "target": "docs_releases_v0_6_8_build_evidence_v0_6_8_origin_grant_continuity",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L22",
+      "evidence": "Later journeys preserve the original destination through the same ungranted-origin boundary.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_v0_6_8_persistent_destination_journeys",
+      "target": "docs_releases_v0_9_0_validation_v0_9_0_continuous_checkpointed_search",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "evidence": "Destination continuity develops into checkpointed history and heap-frontier search across bounded slices.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_v0_6_8_origin_grant_continuity",
+      "target": "docs_releases_v0_6_9_build_evidence_v0_6_9_browser_confirmed_redirect_evidence",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L22",
+      "evidence": "Authentication adds browser-confirmed redirect evidence while retaining host-grant and exact URL constraints.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_6_7_build_evidence_v0_6_7_model_contract_is_not_quality_evidence",
+      "target": "docs_releases_v0_7_0_validation_v0_7_0_real_inference_versus_model_fakes",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.6.7/build-evidence.md",
+      "source_location": "L40",
+      "evidence": "Deterministic GeminiNano contracts and real CPU MiniLM inference measure different things; no universal model-quality inference.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_structural_discovery_reservation",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_incremental_registry_budget",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L11",
+      "evidence": "Structural reservation at600 projection evolves into5000control incremental registry and explicit omitted coverage.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_6_8_build_evidence_v0_6_8_bounded_polling_and_unexplained_stalls",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_asynchronous_storage_authority",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.6.8/build-evidence.md",
+      "source_location": "L18",
+      "evidence": "Both remove blocking work from guidance/polling while retaining distinct historical failure causes.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_v0_8_0_storage_cache_and_hydration_failures",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_asynchronous_storage_authority",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L57",
+      "evidence": "Reproduced queue/cache failures explain separate persistence, bounded cache reads, CPU fallback and deletion barriers.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_v0_8_0_retained_github_default_branch_miss",
+      "target": "docs_releases_v0_9_2_navigation_v0_9_2_focused_fixture_scope",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L109",
+      "evidence": "v0.9.2 explicitly says its focused settings change does not fix this default-branch corpus mismatch.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_v0_9_0_grounded_offline_ocr_and_privacy",
+      "target": "docs_releases_v0_9_1_validation_v0_9_1_all_iframe_pixel_masking",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L9",
+      "evidence": "Later masking strengthens unknown/unverified-frame masking to all iframe pixels despite authorized DOM access.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_v0_9_1_failed_paddle_promotion",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_default_paddle_removal",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L22",
+      "evidence": "Timed-out unpromoted bundle is excluded from subsequent normal builds; opt-in source/assets retained.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_v0_9_1_failed_paddle_promotion",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_ocr_and_inaccessible_interface_limits",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L22",
+      "evidence": "Maintained reference still calls Paddle experimental and unpromoted, consistent with historical timeout.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_v0_9_1_frozen_tesseract_fixture_evidence",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_cleanup_evidence_limits",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L20",
+      "evidence": "Both24heldout/15positive corpus results; historical106ms versus cleaned108ms on different built bytes.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_1_validation_v0_9_1_authentication_and_subject_evidence",
+      "target": "docs_releases_v0_8_0_capabilities_maintained_first_target_versus_journey_evidence",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L8",
+      "evidence": "Complete simulated Prime, initial-target corpus and signed-in validation are explicitly separate classes.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_0_validation_v0_9_0_held_out_routes_and_creation_receipt",
+      "target": "docs_releases_v0_8_0_architecture_v0_8_0_requested_result_evidence",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L17",
+      "evidence": "Creation requires requested-item receipt; click or generic heading insufficient.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_9_2_navigation_v0_9_2_grounded_account_menu_exploration",
+      "target": "docs_releases_v0_8_0_validation_v0_8_0_picker_intent_and_fixture_performance",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.9.2/navigation.md",
+      "source_location": "L5",
+      "evidence": "Both preserve requested outcome across an intermediate menu reveal rather than completing on opener/search.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_v0_10_0_presentation_and_mock_isolation",
+      "target": "docs_releases_records_2026_10_maintenance_post_v0_9_1_adapter_and_pause_ownership",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L35",
+      "evidence": "Mock practice and live browser state respect intentional separate demo/discovery contracts.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_8_0_validation_v0_8_0_picker_intent_and_fixture_performance",
+      "target": "docs_releases_records_2026_10_maintenance_october16_partial_picker_evidence",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.8.0/validation.md",
+      "source_location": "L85",
+      "evidence": "Later incomplete-projection/indexing race extends choice-handoff invariants with task/origin/frame guards.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_7_1_navigation_fixes_v0_7_1_stale_rejection_and_harness_readiness",
+      "target": "docs_releases_records_2026_10_maintenance_october16_stale_install_scroll_and_polling",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/v0.7.1/navigation-fixes.md",
+      "source_location": "L69",
+      "evidence": "Explicit stale-scan recovery shares freshness invariant but later fix concerns an installation-time race.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_10_0_validation_v0_10_0_scoped_checks_and_rendering_limit",
+      "target": "docs_releases_records_2026_10_maintenance_october17_full_suite_historical_evidence",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.10.0/validation.md",
+      "source_location": "L42",
+      "evidence": "Later271core/476unique/272assets are different evidence from October14 candidate counts and bytes.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_6_5_build_evidence_v0_6_5_matching_bytes_and_native_limits",
+      "target": "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.6.5/build-evidence.md",
+      "source_location": "L19",
+      "evidence": "Native Chrome/screen-reader verification remains pending through later candidate; automated passes cannot close it.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_records_legacy_build_evidence_historical_archive_non_authorization",
+      "target": "docs_releases_records_2026_10_maintenance_october17_acceptance_and_pending_boundaries",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/releases/records/legacy-build-evidence.md",
+      "source_location": "L3",
+      "evidence": "Later matching-byte local evidence still records no new archive/commit/tag and pending native/signed-in checks.",
+      "weight": 0.85
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "docs_releases_v0_8_0_capabilities_historical_evidence_classes_remain_separate",
+      "label": "Historical evidence classes remain separate",
+      "nodes": [
+        "docs_releases_v0_7_0_validation_v0_7_0_frozen_nlp_comparison",
+        "docs_releases_v0_8_0_capabilities_maintained_first_target_versus_journey_evidence",
+        "docs_releases_v0_9_1_validation_v0_9_1_authentication_and_subject_evidence",
+        "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.8.0/capabilities.md",
+      "source_location": "L1",
+      "evidence": "Frozen model/corpus, simulated journey, public-page and native/signed-in validation explicitly have distinct scopes."
+    },
+    {
+      "id": "docs_releases_v0_9_1_validation_failed_paddle_experimental_lifecycle",
+      "label": "Failed Paddle experimental lifecycle",
+      "nodes": [
+        "docs_releases_v0_9_1_validation_v0_9_1_failed_paddle_promotion",
+        "docs_releases_records_2026_10_maintenance_post_v0_9_1_default_paddle_removal",
+        "docs_releases_v0_10_0_validation_v0_10_0_pending_native_and_signed_in_checks"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.1/validation.md",
+      "source_location": "L1",
+      "evidence": "Startup timeout yields no held-out score/latency; default removal and later validation leave Paddle unpromoted."
+    },
+    {
+      "id": "docs_releases_v0_9_0_validation_fresh_requested_outcome_truth_boundary",
+      "label": "Fresh requested outcome truth boundary",
+      "nodes": [
+        "docs_releases_v0_6_5_build_evidence_v0_6_5_intermediate_outcome_limits",
+        "docs_releases_v0_8_0_architecture_v0_8_0_requested_result_evidence",
+        "docs_releases_v0_9_0_validation_v0_9_0_held_out_routes_and_creation_receipt",
+        "docs_releases_v0_9_2_navigation_v0_9_2_grounded_account_menu_exploration"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.9.0/validation.md",
+      "source_location": "L1",
+      "evidence": "Focus/menu/review are intermediate or handoff evidence; completion requires fresh requested subject/result."
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "extraction_metadata": {
+    "scope": "17 release docs excluding v0.10.1",
+    "evidence_files_note": "Current existing source paths for parent AST bridging; not claims that present source equals historical release bytes."
+  }
+}

@@ -1,0 +1,2971 @@
+{
+  "nodes": [
+    {
+      "id": "docs_guides_getting_started_document",
+      "label": "Chrome setup and native verification",
+      "file_type": "document",
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Chrome setup and native verification",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_backend_document",
+      "label": "Optional Tholi API setup",
+      "file_type": "document",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Optional Tholi API setup",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_appearance_document",
+      "label": "Adaptive extension appearance guide",
+      "file_type": "document",
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Adaptive extension appearance guide",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_journeys_document",
+      "label": "Continuous journeys and return routing guide",
+      "file_type": "document",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Continuous journeys and return routing guide",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_troubleshooting_document",
+      "label": "Dynamic navigation diagnostics guide",
+      "file_type": "document",
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Dynamic navigation diagnostics guide",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_using_tholi_document",
+      "label": "Tholi interface and local website guide",
+      "file_type": "document",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Tholi interface and local website guide",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_development_media_capture_document",
+      "label": "Website product screenshots capture workflow",
+      "file_type": "document",
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Website product screenshots capture workflow",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_development_naming_document",
+      "label": "Tholi naming and repository maintenance",
+      "file_type": "document",
+      "source_file": "docs/development/naming.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Tholi naming and repository maintenance",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_development_testing_readme_document",
+      "label": "Testing and CI ownership",
+      "file_type": "document",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Testing and CI ownership",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_development_testing_acceptance_document",
+      "label": "Declared Wikipedia acceptance benchmark",
+      "file_type": "document",
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Declared Wikipedia acceptance benchmark",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_releases_v0_10_1_coverage_ledger_document",
+      "label": "Version 0.10.1 coverage ownership ledger",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Version 0.10.1 coverage ownership ledger",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_document",
+      "label": "October 17 repository cleanup evidence",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: October 17 repository cleanup evidence",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_releases_v0_10_1_ui_audit_document",
+      "label": "Version 0.10.1 UI audit and redesign record",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Version 0.10.1 UI audit and redesign record",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_document",
+      "label": "Version 0.10.1 website verification record",
+      "file_type": "document",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Version 0.10.1 website verification record",
+      "evidence_files": []
+    },
+    {
+      "id": "_github_actions_setup_action_document",
+      "label": "Shared Windows validation setup action",
+      "file_type": "document",
+      "source_file": ".github/actions/setup/action.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Shared Windows validation setup action",
+      "evidence_files": []
+    },
+    {
+      "id": "_github_workflows_ci_document",
+      "label": "Deterministic PR validation workflow",
+      "file_type": "document",
+      "source_file": ".github/workflows/ci.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Deterministic PR validation workflow",
+      "evidence_files": []
+    },
+    {
+      "id": "_github_workflows_full_validation_document",
+      "label": "Full validation and candidate packaging workflow",
+      "file_type": "document",
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Full validation and candidate packaging workflow",
+      "evidence_files": []
+    },
+    {
+      "id": "apps_demo_saas_index_document",
+      "label": "Northstar test workspace HTML entry",
+      "file_type": "document",
+      "source_file": "apps/demo-saas/index.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Northstar test workspace HTML entry",
+      "evidence_files": []
+    },
+    {
+      "id": "apps_extension_offscreen_document",
+      "label": "Local inference offscreen HTML entry",
+      "file_type": "document",
+      "source_file": "apps/extension/offscreen.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Local inference offscreen HTML entry",
+      "evidence_files": []
+    },
+    {
+      "id": "apps_extension_sidepanel_document",
+      "label": "Native sidepanel HTML entry",
+      "file_type": "document",
+      "source_file": "apps/extension/sidepanel.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Native sidepanel HTML entry",
+      "evidence_files": []
+    },
+    {
+      "id": "apps_extension_widget_document",
+      "label": "Floating widget HTML entry",
+      "file_type": "document",
+      "source_file": "apps/extension/widget.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Floating widget HTML entry",
+      "evidence_files": []
+    },
+    {
+      "id": "apps_web_index_document",
+      "label": "Dark-first consent-aware website HTML entry",
+      "file_type": "document",
+      "source_file": "apps/web/index.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Repository source document or HTML entry: Dark-first consent-aware website HTML entry",
+      "evidence_files": []
+    },
+    {
+      "id": "docs_guides_getting_started_unpacked_extension_setup",
+      "label": "Unpacked extension setup",
+      "file_type": "concept",
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
+      "rationale": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
+      "evidence_files": [
+        "apps/extension/manifest.json",
+        "scripts/build-extension.mjs"
+      ]
+    },
+    {
+      "id": "docs_guides_getting_started_separate_dom_and_capture_access",
+      "label": "DOM access and capture activation are separate",
+      "file_type": "concept",
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "A persistent site grant permits discovery while screenshot access may require renewed toolbar activation. Declining an origin retains the objective and ungranted frame controls remain unscanned.",
+      "rationale": "A persistent site grant permits discovery while screenshot access may require renewed toolbar activation. Declining an origin retains the objective and ungranted frame controls remain unscanned.",
+      "evidence_files": [
+        "apps/extension/src/platform/site-access.ts",
+        "apps/extension/src/background/session-service.ts",
+        "apps/extension/src/background/vision-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_getting_started_pending_native_verification",
+      "label": "Native Chrome and assistive checks remain pending",
+      "file_type": "concept",
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L23",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
+      "rationale": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "tests/support/permission-variant.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_getting_started_consequential_real_site_check_boundary",
+      "label": "User owns consequential real-site actions",
+      "file_type": "concept",
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Signed-in Amazon cancellation, Cloudflare deployment and GitHub journeys remain pending; tests do not authorize cancellation, deployment or publication, and credentials/private traces are not recorded by default.",
+      "rationale": "Signed-in Amazon cancellation, Cloudflare deployment and GitHub journeys remain pending; tests do not authorize cancellation, deployment or publication, and credentials/private traces are not recorded by default.",
+      "evidence_files": [
+        "apps/extension/src/content/outcome-verification.ts",
+        "apps/extension/src/ui/components/ConfirmAction.tsx"
+      ]
+    },
+    {
+      "id": "docs_guides_backend_optional_local_api",
+      "label": "Optional single-owner local API",
+      "file_type": "concept",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "The API is optional; default extension NLP and OCR are local. Setup fetches pinned models/OCR, builds the API, then listens on loopback port 8787.",
+      "rationale": "The API is optional; default extension NLP and OCR are local. Setup fetches pinned models/OCR, builds the API, then listens on loopback port 8787.",
+      "evidence_files": [
+        "apps/api/src/cli.ts",
+        "apps/api/src/server.ts",
+        "scripts/build-api.mjs"
+      ]
+    },
+    {
+      "id": "docs_guides_backend_bearer_origin_allowlist",
+      "label": "Backend bearer and exact extension-origin allowlist",
+      "file_type": "concept",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
+      "rationale": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
+      "evidence_files": [
+        "apps/api/src/server.ts",
+        "apps/extension/src/platform/backend-client.ts",
+        "apps/extension/src/ui/hooks/useBackendSettings.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_backend_revision_stamped_v2",
+      "label": "Revision-stamped v2 backend protocol",
+      "file_type": "concept",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "rationale": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "evidence_files": [
+        "apps/api/src/server.ts",
+        "packages/navigation-core/index.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_backend_opt_in_masked_backend_ocr",
+      "label": "Explicitly opted-in masked backend OCR",
+      "file_type": "concept",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "rationale": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "evidence_files": [
+        "apps/api/src/ocr.ts",
+        "apps/api/src/server.ts",
+        "apps/extension/src/background/vision-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_backend_backend_packaged_runtime",
+      "label": "Packaged backend runtime contract",
+      "file_type": "concept",
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "A backend tgz includes built server and model files; extract package, npm ci --omit=dev, npm start. Working directory or NAVIGATOR_MODELS controls model lookup; reverse-proxy TLS remains owner responsibility.",
+      "rationale": "A backend tgz includes built server and model files; extract package, npm ci --omit=dev, npm start. Working directory or NAVIGATOR_MODELS controls model lookup; reverse-proxy TLS remains owner responsibility.",
+      "evidence_files": [
+        "scripts/package-api.mjs",
+        "apps/api/src/cli.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_appearance_inverse_page_theme",
+      "label": "Inverse page-theme guidance",
+      "file_type": "concept",
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "A dark website gets light guidance and a light website gets dark guidance across sidepanel/widget/highlight. The independent product website starts dark and has its own switch.",
+      "rationale": "A dark website gets light guidance and a light website gets dark guidance across sidepanel/widget/highlight. The independent product website starts dark and has its own switch.",
+      "evidence_files": [
+        "packages/ui/page-theme.ts",
+        "apps/extension/src/ui/theme/theme-agent.ts",
+        "apps/extension/src/ui/theme/theme-worker.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_appearance_style_only_theme_sampling",
+      "label": "Style-only viewport luminance sampling",
+      "file_type": "concept",
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "A 3 by 3 viewport grid composites ancestor backgrounds, uses median luminance, includes open shadow roots and skips Tholi surfaces. It reads computed styling/geometry without text, fields, pixels, OCR or persistence.",
+      "rationale": "A 3 by 3 viewport grid composites ancestor backgrounds, uses median luminance, includes open shadow roots and skips Tholi surfaces. It reads computed styling/geometry without text, fields, pixels, OCR or persistence.",
+      "evidence_files": [
+        "packages/ui/page-theme.ts",
+        "tests/unit/presentation/page-theme.test.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_appearance_bounded_theme_lifecycle",
+      "label": "Bounded appearance observation lifecycle",
+      "file_type": "concept",
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Changes coalesce after 200 ms; visible documents sample every two seconds for CSSOM changes; hidden documents skip sampling and page exit cleans timers/observers. Theme changes do not remount journeys or replay attention.",
+      "rationale": "Changes coalesce after 200 ms; visible documents sample every two seconds for CSSOM changes; hidden documents skip sampling and page exit cleans timers/observers. Theme changes do not remount journeys or replay attention.",
+      "evidence_files": [
+        "apps/extension/src/ui/theme/theme-agent.ts",
+        "apps/extension/src/ui/theme/apply-appearance.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_journeys_objective_independent_of_control",
+      "label": "Objective independent of current control",
+      "file_type": "concept",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Original objective, values, exclusions and completion criteria survive control/document/route changes. Opening a picker or deployment entry is intermediate progress.",
+      "rationale": "Original objective, values, exclusions and completion criteria survive control/document/route changes. Opening a picker or deployment entry is intermediate progress.",
+      "evidence_files": [
+        "apps/extension/src/background/journey-service.ts",
+        "apps/extension/src/content/plan-lifecycle.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_journeys_ordered_task_queue",
+      "label": "Three ordered tasks and five retained journeys",
+      "file_type": "concept",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Interpreter supports up to three ordered tasks; internal milestones do not use queue slots. Pause retains queue, Stop cancels, Skip records skipped. Up to five unfinished journeys can be paused in trusted session storage.",
+      "rationale": "Interpreter supports up to three ordered tasks; internal milestones do not use queue slots. Pause retains queue, Stop cancels, Skip records skipped. Up to five unfinished journeys can be paused in trusted session storage.",
+      "evidence_files": [
+        "apps/extension/src/background/journey-service.ts",
+        "apps/extension/src/background/session-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_journeys_recovery_without_false_expiry",
+      "label": "State-aware recovery and authentication waiting",
+      "file_type": "concept",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "rationale": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "evidence_files": [
+        "apps/extension/src/content/plan-lifecycle.ts",
+        "apps/extension/src/background/journey-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_journeys_bounded_observed_routing",
+      "label": "Bounded observed graph routing",
+      "file_type": "concept",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L15",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Fastest routing uses observed duration plus conservative costs; fewest-clicks minimizes known cost. Forward edges are not assumed reversible; Back/tab actions require relevant ledger relationships and subsequent verification.",
+      "rationale": "Fastest routing uses observed duration plus conservative costs; fewest-clicks minimizes known cost. Forward edges are not assumed reversible; Back/tab actions require relevant ledger relationships and subsequent verification.",
+      "evidence_files": [
+        "apps/extension/src/background/navigation-events.ts",
+        "apps/extension/src/background/journey-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_journeys_parameterized_saved_routes",
+      "label": "Parameterized persistent routes",
+      "file_type": "concept",
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L23",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "rationale": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "evidence_files": [
+        "apps/extension/src/background/memory-service.ts",
+        "packages/navigation-core/index.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_troubleshooting_bounded_local_inspector",
+      "label": "Presentation-only bounded route inspector",
+      "file_type": "concept",
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Advanced controls expose observation revision, fingerprints, partial scans, candidates, scores and verification history; toggling inspector does not change planning/verification and sends no telemetry.",
+      "rationale": "Advanced controls expose observation revision, fingerprints, partial scans, candidates, scores and verification history; toggling inspector does not change planning/verification and sends no telemetry.",
+      "evidence_files": [
+        "apps/extension/src/ui/features/advanced/LiveInspector.tsx",
+        "tests/unit/safety/live-diagnostics.test.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_troubleshooting_privacy_preserving_diagnostics",
+      "label": "Strict sanitized diagnostic export",
+      "file_type": "concept",
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "rationale": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "evidence_files": [
+        "tests/unit/safety/live-diagnostics.test.ts",
+        "tests/browser/extension/core/live-navigation.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_troubleshooting_replayable_candidate_ranking",
+      "label": "Replayable evidence ranking and ambiguity",
+      "file_type": "concept",
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Candidate score derives from weighted/requested, specificity and adjustment with 0.06 hidden-target penalty; eligibility requires ordinary enabled current evidence and >=0.6. Different hashed identities within 0.08 produce ambiguity. Scores are not measured accuracy percentages.",
+      "rationale": "Candidate score derives from weighted/requested, specificity and adjustment with 0.06 hidden-target penalty; eligibility requires ordinary enabled current evidence and >=0.6. Different hashed identities within 0.08 produce ambiguity. Scores are not measured accuracy percentages.",
+      "evidence_files": [
+        "apps/extension/src/ui/features/advanced/LiveInspector.tsx",
+        "tests/unit/safety/live-diagnostics.test.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_shared_guide_conversation",
+      "label": "One journey across Guide and Conversation",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Guide emphasizes current instruction; Conversation uses transcript and local NLP/events. Mode changes retain draft/task; trusted session storage retains latest 80 messages. Unsupported questions do not invent answers.",
+      "rationale": "Guide emphasizes current instruction; Conversation uses transcript and local NLP/events. Mode changes retain draft/task; trusted session storage retains latest 80 messages. Unsupported questions do not invent answers.",
+      "evidence_files": [
+        "apps/extension/src/ui/app/useGuidanceController.ts",
+        "packages/ui/presentation.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_widget_presentation_continuity",
+      "label": "Widget visibility independent of journey continuity",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "X minimizes to a 44-pixel launcher while authorized observation continues and expanded guidance/scrolling are suppressed. Removal hides launcher without clearing session. Restore reacquires observation; toolbar reopens hidden presentation.",
+      "rationale": "X minimizes to a 44-pixel launcher while authorized observation continues and expanded guidance/scrolling are suppressed. Removal hides launcher without clearing session. Restore reacquires observation; toolbar reopens hidden presentation.",
+      "evidence_files": [
+        "apps/extension/src/ui/widget/presentation-state.ts",
+        "apps/extension/src/ui/widget/launcher-controls.ts",
+        "tests/unit/presentation/widget-lifecycle.test.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_widget_dimension_priorities",
+      "label": "Widget width-and-height priority tiers",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "rationale": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "evidence_files": [
+        "tests/unit/presentation/widget-density.test.ts",
+        "apps/extension/src/ui/widget/widget-shell.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_capability_bound_widget",
+      "label": "Capability-bound extension-origin widget",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Iframe commands bind to authorized tab, top document, frame and session and reject stale commands. Backend credentials remain sidebar-only; Tholi surfaces are excluded from observation and masked from OCR.",
+      "rationale": "Iframe commands bind to authorized tab, top document, frame and session and reject stale commands. Backend credentials remain sidebar-only; Tholi surfaces are excluded from observation and masked from OCR.",
+      "evidence_files": [
+        "apps/extension/src/background/ui-transport.ts",
+        "apps/extension/src/content/frame-agent.ts",
+        "apps/extension/src/background/vision-service.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_motion_is_presentation",
+      "label": "Motion indicates state without establishing arrival",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L48",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Wayfinder loops and terminal morph are presentation; only verified arrival checks destination. Polling, geometry or theme updates do not replay transitions; reduced motion keeps static equivalents and interaction never waits.",
+      "rationale": "Wayfinder loops and terminal morph are presentation; only verified arrival checks destination. Polling, geometry or theme updates do not replay transitions; reduced motion keeps static equivalents and interaction never waits.",
+      "evidence_files": [
+        "packages/ui/WayfinderMark.tsx",
+        "tests/unit/presentation/route-progress.test.ts"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_isolated_website_practice",
+      "label": "Website practice uses isolated adapter and controlled state",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Actual shared guidance UI mounts in shadow root around two controlled goals: open account settings and save Spanish language. Sample interactions verify local outcome; adapter does not establish live-site accuracy or own extension state.",
+      "rationale": "Actual shared guidance UI mounts in shadow root around two controlled goals: open account settings and save Spanish language. Sample interactions verify local outcome; adapter does not establish live-site accuracy or own extension state.",
+      "evidence_files": [
+        "apps/web/src/features/demo/usePracticeAdapter.ts",
+        "apps/web/src/features/demo/PracticeWorkspace.tsx",
+        "apps/web/src/features/demo/Demo.tsx"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_website_mock_accounts",
+      "label": "Visibly labeled mock website accounts",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Website sign-in/sign-up are local demonstrations. Session storage holds name/email/onboarding only; passwords remain component-local and are neither sent nor persisted. Extension/download use needs no account.",
+      "rationale": "Website sign-in/sign-up are local demonstrations. Session storage holds name/email/onboarding only; passwords remain component-local and are neither sent nor persisted. Extension/download use needs no account.",
+      "evidence_files": [
+        "apps/web/src/features/account/session.tsx",
+        "apps/web/src/features/account/AuthPage.tsx"
+      ]
+    },
+    {
+      "id": "docs_guides_using_tholi_website_theme_consent",
+      "label": "Consent-gated independent website theme",
+      "file_type": "concept",
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Website starts Dark; necessary tholi_consent retains explicit choices 180 days, optional tholi_theme persists appearance only after preference consent. Withdrawal removes theme cookie; appearance works in memory without storage.",
+      "rationale": "Website starts Dark; necessary tholi_consent retains explicit choices 180 days, optional tholi_theme persists appearance only after preference consent. Withdrawal removes theme cookie; appearance works in memory without storage.",
+      "evidence_files": [
+        "apps/web/src/features/preferences/cookies.ts",
+        "apps/web/src/features/preferences/PreferencesProvider.tsx",
+        "apps/web/index.html"
+      ]
+    },
+    {
+      "id": "docs_development_media_capture_genuine_product_screenshots",
+      "label": "Genuine verified-outcome screenshots",
+      "file_type": "concept",
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Four screenshot assets are captured from the running 0.10.1 extension in a disposable Chromium profile on public Wikipedia. Live grounded Large-control planning, engine completed and UI arrived are required; capture fails rather than inventing an overlay.",
+      "rationale": "Four screenshot assets are captured from the running 0.10.1 extension in a disposable Chromium profile on public Wikipedia. Live grounded Large-control planning, engine completed and UI arrived are required; capture fails rather than inventing an overlay.",
+      "evidence_files": [
+        "scripts/capture-product-screenshots.mjs",
+        "apps/public/media/screenshots/provenance.json"
+      ]
+    },
+    {
+      "id": "docs_development_media_capture_screenshot_provenance",
+      "label": "Screenshot source and byte provenance",
+      "file_type": "concept",
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L7",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Optimized WebP files and provenance record source page, request, extension version, dimensions, SHA-256 and time. Uncompressed PNGs remain ignored under output/qa/product-sources; demonstrated preference success does not certify other workflows/native Chrome.",
+      "rationale": "Optimized WebP files and provenance record source page, request, extension version, dimensions, SHA-256 and time. Uncompressed PNGs remain ignored under output/qa/product-sources; demonstrated preference success does not certify other workflows/native Chrome.",
+      "evidence_files": [
+        "scripts/capture-product-screenshots.mjs",
+        "apps/public/media/screenshots/provenance.json"
+      ]
+    },
+    {
+      "id": "docs_development_naming_component_versions_and_eligible_download",
+      "label": "Source, component and eligible-download versions differ",
+      "file_type": "concept",
+      "source_file": "docs/development/naming.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
+      "rationale": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
+      "evidence_files": [
+        "package.json",
+        "apps/api/package.json",
+        "apps/extension/manifest.json",
+        "scripts/sync-downloads.mjs"
+      ]
+    },
+    {
+      "id": "docs_development_naming_compatibility_identifiers",
+      "label": "Preserved compatibility identifiers",
+      "file_type": "concept",
+      "source_file": "docs/development/naming.md",
+      "source_location": "L19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Keep @internet-navigator package identities, NAVIGATOR environment variables, .navigator-api paths, database/storage keys, route IDs, overlay selectors, message tags and historical evidence until an explicit tested migration.",
+      "rationale": "Keep @internet-navigator package identities, NAVIGATOR environment variables, .navigator-api paths, database/storage keys, route IDs, overlay selectors, message tags and historical evidence until an explicit tested migration.",
+      "evidence_files": [
+        "apps/api/src/storage.ts",
+        "apps/extension/src/ui/widget/widget-styles.ts"
+      ]
+    },
+    {
+      "id": "docs_development_naming_immutable_archive_names",
+      "label": "Immutable legacy and current archive names",
+      "file_type": "concept",
+      "source_file": "docs/development/naming.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
+      "rationale": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs"
+      ]
+    },
+    {
+      "id": "docs_development_naming_checksum_verified_download_mirror",
+      "label": "Newest eligible checksum-verified download mirror",
+      "file_type": "concept",
+      "source_file": "docs/development/naming.md",
+      "source_location": "L19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Download synchronization accepts tholi and internet-navigator records, verifies archive checksum, selects newest eligible semantic version and removes only older generated website mirror archives; original release archives remain immutable.",
+      "rationale": "Download synchronization accepts tholi and internet-navigator records, verifies archive checksum, selects newest eligible semantic version and removes only older generated website mirror archives; original release archives remain immutable.",
+      "evidence_files": [
+        "scripts/sync-downloads.mjs",
+        "tests/unit/tooling/release-downloads.test.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_focused_development_checks",
+      "label": "Focused existing development checks",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
+      "rationale": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
+      "evidence_files": [
+        "scripts/test.mjs",
+        "config/testing/vitest.ts",
+        "config/testing/playwright.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_deterministic_pr_tier",
+      "label": "Deterministic PR validation tier",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "PR/main runs types, units, deterministic extension/integration and focused UI; public network requests are rejected except fulfilled fixtures. Extended model/OCR/live/performance/responsive workloads are deferred to full tier.",
+      "rationale": "PR/main runs types, units, deterministic extension/integration and focused UI; public network requests are rejected except fulfilled fixtures. Extended model/OCR/live/performance/responsive workloads are deferred to full tier.",
+      "evidence_files": [
+        "scripts/test.mjs",
+        "config/testing/playwright.ts",
+        "tests/support/browser-test.ts",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_full_certification_tier",
+      "label": "Full coordinated certification tier",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
+      "rationale": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
+      "evidence_files": [
+        "scripts/test.mjs",
+        "scripts/verify-full.mjs",
+        ".github/workflows/full-validation.yml"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_single_immutable_build",
+      "label": "Build once and verify immutable artifacts",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
+      "rationale": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
+      "evidence_files": [
+        "scripts/build-manifest.mjs",
+        "scripts/test.mjs",
+        "scripts/artifact-files.mjs"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_complete_case_evidence",
+      "label": "Every required case exactly once",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Common evidence utilities reject missing, duplicated, skipped or failed cases. All required collected cases and owner files must be present; fixed historical totals or focused passing subsets cannot certify.",
+      "rationale": "Common evidence utilities reject missing, duplicated, skipped or failed cases. All required collected cases and owner files must be present; fixed historical totals or focused passing subsets cannot certify.",
+      "evidence_files": [
+        "tests/support/evidence.ts",
+        "tests/support/browser-reporter.ts",
+        "tests/support/runtime-reporter.ts",
+        "scripts/verify-full.mjs"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_one_run_exact_bytes",
+      "label": "Release evidence binds one run and exact bytes",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Evidence carries validation tier, selection, runId and buildDigest. Full complete coordinated reports must match recursive artifact hashes and one run; filtered/PR/unrelated focused runs cannot authorize packaging.",
+      "rationale": "Evidence carries validation tier, selection, runId and buildDigest. Full complete coordinated reports must match recursive artifact hashes and one run; filtered/PR/unrelated focused runs cannot authorize packaging.",
+      "evidence_files": [
+        "scripts/evidence.mjs",
+        "scripts/verify-full.mjs",
+        "tests/support/build-provenance.ts",
+        "tests/unit/tooling/acceptance-metrics.test.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_packaging_without_rebuild",
+      "label": "Packagers verify without rebuilding or overwriting",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Packagers require completed full evidence graph, use evaluated bytes unchanged and reject existing archives. All hosted jobs must rerun after failed full attempt; earlier-attempt successes cannot be merged.",
+      "rationale": "Packagers require completed full evidence graph, use evaluated bytes unchanged and reject existing archives. All hosted jobs must rerun after failed full attempt; earlier-attempt successes cannot be merged.",
+      "evidence_files": [
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs",
+        ".github/workflows/full-validation.yml"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_fixture_isolation_and_readiness",
+      "label": "Bounded disposable browser fixture lifecycle",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Fresh profiles isolate state and wait for worker state plus ready panel controls. Permission copies are per worker; automatic-download prompts are pregranted; only two export fixtures use disk-backed blobs. Native grants still need manual checks.",
+      "rationale": "Fresh profiles isolate state and wait for worker state plus ready panel controls. Permission copies are per worker; automatic-download prompts are pregranted; only two export fixtures use disk-backed blobs. Native grants still need manual checks.",
+      "evidence_files": [
+        "tests/support/navigator-extension.ts",
+        "tests/support/chromium-profile.ts",
+        "tests/support/permission-variant.ts",
+        "tests/support/sidebar-tab.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_readme_hosted_runtime_pending",
+      "label": "Hosted warm-cache runtime target remains unverified",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L32",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Ten-minute warm hosted PR target excludes queues; local task timings do not establish hosted critical-path or cache behavior. Timings are recorded under output/qa/timing-*.",
+      "rationale": "Ten-minute warm hosted PR target excludes queues; local task timings do not establish hosted critical-path or cache behavior. Timings are recorded under output/qa/timing-*.",
+      "evidence_files": [
+        "scripts/test.mjs",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "id": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "label": "Frozen declared Wikipedia matrix",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Five articles, six goal families and two viewports define sixty supported live attempts. Thirty generic browser scenarios remain and thirteen authored golden states execute once in unit coverage. Frozen selectors are test-only.",
+      "rationale": "Five articles, six goal families and two viewports define sixty supported live attempts. Thirty generic browser scenarios remain and thirteen authored golden states execute once in unit coverage. Frozen selectors are test-only.",
+      "evidence_files": [
+        "tests/browser/acceptance/matrix.json",
+        "tests/browser/acceptance/wikipedia.spec.ts",
+        "tests/unit/navigation/core.test.ts",
+        "tests/support/accuracy-reporter.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_acceptance_independent_outcome_oracles",
+      "label": "Independent browser outcome oracles",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Actual selected input, field focus, section geometry and site language picker establish declared results independently of planner output. Showing a picker is distinct from selecting a language destination; showing search differs from submitting search.",
+      "rationale": "Actual selected input, field focus, section geometry and site language picker establish declared results independently of planner output. Showing a picker is distinct from selecting a language destination; showing search differs from submitting search.",
+      "evidence_files": [
+        "tests/support/acceptance-runner.ts",
+        "tests/browser/acceptance/wikipedia.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_acceptance_noninflatable_acceptance_metrics",
+      "label": "Noninflatable acceptance metrics and hard safety gates",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Target precision >=98%, verification precision >=95%, supported completion >=90%; refusal/timeouts stay in supported denominator and zero-denominator metrics fail. False success, automation, sentinel leakage and any known failed cases block packaging.",
+      "rationale": "Target precision >=98%, verification precision >=95%, supported completion >=90%; refusal/timeouts stay in supported denominator and zero-denominator metrics fail. False success, automation, sentinel leakage and any known failed cases block packaging.",
+      "evidence_files": [
+        "packages/acceptance-metrics/index.ts",
+        "tests/support/accuracy-reporter.ts",
+        "tests/unit/tooling/acceptance-metrics.test.ts"
+      ]
+    },
+    {
+      "id": "docs_development_testing_acceptance_acceptance_build_provenance",
+      "label": "Acceptance source and build provenance",
+      "file_type": "concept",
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Each attempt records environment, ID, decisions and completion/failure. Reports contain matrix hash, protocol/extension version, source revision, dirty state and exact byte identity. Missing samples or infrastructure errors fail gate.",
+      "rationale": "Each attempt records environment, ID, decisions and completion/failure. Reports contain matrix hash, protocol/extension version, source revision, dirty state and exact byte identity. Missing samples or infrastructure errors fail gate.",
+      "evidence_files": [
+        "tests/support/accuracy-reporter.ts",
+        "tests/support/build-provenance.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_coverage_ledger_coverage_ownership_not_quota",
+      "label": "Coverage ownership rather than case-count quotas",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Ledger records merged owners and preserved distinct assertions: static authored oracles move to unit, public language/reported pages to live, deterministic fragments to multi-app, and repeated feature journeys to one behavioral owner with separate reflow coverage.",
+      "rationale": "Ledger records merged owners and preserved distinct assertions: static authored oracles move to unit, public language/reported pages to live, deterministic fragments to multi-app, and repeated feature journeys to one behavioral owner with separate reflow coverage.",
+      "evidence_files": [
+        "tests/unit/navigation/core.test.ts",
+        "tests/unit/navigation/lifecycle.test.ts",
+        "tests/browser/live/language.spec.ts",
+        "tests/browser/live/reported-page.spec.ts",
+        "tests/browser/extension/multi-app/dynamic.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_coverage_ledger_pr_deferral_not_removal",
+      "label": "Full-tier deferral preserves expensive coverage",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "PR tier defers 50,000-node benchmark, busy-page motion, complete four-width/two-theme reflow and scroll profiling while retaining deterministic safety/privacy/permission/continuity and narrow feature branches.",
+      "rationale": "PR tier defers 50,000-node benchmark, busy-page motion, complete four-width/two-theme reflow and scroll profiling while retaining deterministic safety/privacy/permission/continuity and narrow feature branches.",
+      "evidence_files": [
+        "config/testing/playwright.ts",
+        "tests/browser/extension/ui/extension.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_coverage_ledger_prebuilt_nonshipped_fixtures",
+      "label": "Prebuilt browser fixtures are not product assets",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Component layout and runtime/authentication probes build once into dist/test-fixtures, retaining focus/selection/overlap/runtime contracts without marketing CSS or Vite private /@fs access; application packages exclude them.",
+      "rationale": "Component layout and runtime/authentication probes build once into dist/test-fixtures, retaining focus/selection/overlap/runtime contracts without marketing CSS or Vite private /@fs access; application packages exclude them.",
+      "evidence_files": [
+        "scripts/build-test-fixtures.mjs",
+        "scripts/build-manifest.mjs"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
+      "label": "Latest cleanup validation remains incomplete",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
+      "rationale": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
+      "evidence_files": [
+        "scripts/evidence.mjs",
+        "scripts/verify-full.mjs"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
+      "label": "Live regression causes remain unresolved",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
+      "rationale": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
+      "evidence_files": [
+        "tests/browser/acceptance/wikipedia.spec.ts",
+        "tests/support/acceptance-runner.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_frozen_checkout_integrity",
+      "label": "Frozen byte and Windows checkout integrity",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "All 44 migrated corpus/hash/matrix/image files match baseline. Acceptance matrix was restored to original LF and pinned by .gitattributes; checkout-integrity simulates core.autocrlf=true and verifies matrix/corpus/caption/transcript hashes.",
+      "rationale": "All 44 migrated corpus/hash/matrix/image files match baseline. Acceptance matrix was restored to original LF and pinned by .gitattributes; checkout-integrity simulates core.autocrlf=true and verifies matrix/corpus/caption/transcript hashes.",
+      "evidence_files": [
+        ".gitattributes",
+        "tests/unit/tooling/checkout-integrity.test.ts",
+        "tests/browser/acceptance/matrix.json"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_single_service_owner_refactor",
+      "label": "Refactor preserves one owner per responsibility",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Worker composition is 497 lines after extraction, PageCoach remains facade, one session owner and one UI snapshot subscription are retained. Generated names, manifest privileges, frozen inputs and source/media provenance are preserved.",
+      "rationale": "Worker composition is 497 lines after extraction, PageCoach remains facade, one session owner and one UI snapshot subscription are retained. Generated names, manifest privileges, frozen inputs and source/media provenance are preserved.",
+      "evidence_files": [
+        "apps/extension/src/background/worker-runtime.ts",
+        "apps/extension/src/content/page-coach.ts",
+        "apps/extension/src/ui/hooks/useSessionSnapshot.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit",
+      "label": "Severe busy-page animation remains unresolved",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
+      "rationale": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
+      "evidence_files": [
+        "tests/browser/extension/ui/extension.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_ui_audit_skill_provenance_outside_production",
+      "label": "Local design skill provenance outside production",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L23",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Reviewed project-local skills retain upstream files intact outside production assets. Manifest stores upstream URL, pinned revision, license and per-file SHA-256; accepted React/Base UI/Iconoir/tokens/brand take precedence over generic suggestions.",
+      "rationale": "Reviewed project-local skills retain upstream files intact outside production assets. Manifest stores upstream URL, pinned revision, license and per-file SHA-256; accepted React/Base UI/Iconoir/tokens/brand take precedence over generic suggestions.",
+      "evidence_files": [
+        ".codex/skills-manifest.json",
+        ".codex/README.md"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_ui_audit_historical_ui_evidence_scope",
+      "label": "Historical UI results certify their own bytes",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L58",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Dated UI runs progressed from 15 to 17 to 19 cases with specific hashes; reset/task-details and later changes rebuilt bytes. Earlier success does not certify later builds or replace model/navigation/native gates.",
+      "rationale": "Dated UI runs progressed from 15 to 17 to 19 cases with specific hashes; reset/task-details and later changes rebuilt bytes. Earlier success does not certify later builds or replace model/navigation/native gates.",
+      "evidence_files": [
+        "tests/support/browser-reporter.ts",
+        "scripts/evidence.mjs"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_ui_audit_verified_arrival_boundary",
+      "label": "Verified result is the arrival boundary",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "UI arrival animation and controls derive from verified completion. Focusing input, review clicks, polling, theme changes and presentation changes cannot fabricate task completion.",
+      "rationale": "UI arrival animation and controls derive from verified completion. Focusing input, review clicks, polling, theme changes and presentation changes cannot fabricate task completion.",
+      "evidence_files": [
+        "apps/extension/src/content/outcome-verification.ts",
+        "packages/ui/wayfinder.ts",
+        "packages/ui/route-progress.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_verified_product_video",
+      "label": "Genuine outcome-verified product recording",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Capture starts from a frozen normal extension and public GitHub request, falls back to explicitly labeled Wikipedia text-size workflow when first take is ineligible. Actual worker completion and unchanged extension hashes are required.",
+      "rationale": "Capture starts from a frozen normal extension and public GitHub request, falls back to explicitly labeled Wikipedia text-size workflow when first take is ineligible. Actual worker completion and unchanged extension hashes are required.",
+      "evidence_files": [
+        "scripts/capture-product-video.mjs",
+        "apps/public/media/video/provenance.json"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_local_video_assets",
+      "label": "Local video variants and accessible provenance",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "rationale": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "evidence_files": [
+        "apps/web/src/features/marketing/ProductVideo.tsx",
+        "apps/public/media/video/manifest.json",
+        "tests/unit/tooling/product-video.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_allowlisted_public_docs",
+      "label": "Allowlisted local documentation and safe Markdown",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L99",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Eleven current article slugs are registered; react-markdown 10.1.0 plus remark-gfm 4.0.1 render without raw HTML. Search is local, anchors stable, historical paths map through aliases, and Markdown images become source links.",
+      "rationale": "Eleven current article slugs are registered; react-markdown 10.1.0 plus remark-gfm 4.0.1 render without raw HTML. Search is local, anchors stable, historical paths map through aliases, and Markdown images become source links.",
+      "evidence_files": [
+        "apps/web/src/features/docs/registry.ts",
+        "apps/web/src/features/docs/DocsPage.tsx",
+        "tests/unit/website/website-docs.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_consent_gated_inactive_analytics",
+      "label": "Inactive production analytics behind provider-specific consent",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "No production provider/scripts/endpoint configured. Future transport requires matching provider and disclosure consent, allowlisted page/download/practice events only, and withdrawal cancels queued/in-flight optional work.",
+      "rationale": "No production provider/scripts/endpoint configured. Future transport requires matching provider and disclosure consent, allowlisted page/download/practice events only, and withdrawal cancels queued/in-flight optional work.",
+      "evidence_files": [
+        "apps/web/src/features/preferences/analytics.ts",
+        "tests/unit/website/website-analytics-transport.test.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_launch_review_legal_drafts",
+      "label": "Launch-review legal drafts and unconfigured hosting",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Privacy/terms/cookies are drafts grounded in actual behavior, distinguish mock website storage from extension-local knowledge/backend OCR, and leave public host/domain/provider/final legal review incomplete.",
+      "rationale": "Privacy/terms/cookies are drafts grounded in actual behavior, distinguish mock website storage from extension-local knowledge/backend OCR, and leave public host/domain/provider/final legal review incomplete.",
+      "evidence_files": [
+        "apps/web/src/features/legal/content.tsx",
+        "apps/web/src/features/legal/operator.ts"
+      ]
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_historical_website_gate",
+      "label": "Historical 29-case website UI result",
+      "file_type": "concept",
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L138",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "October 16 record contains 29/29 full UI cases, 96 route-width-theme combinations and exact extension/website hashes, while later playback/theme fixes were focused checks. It does not create full engine certification or replace immutable 0.10.0 download.",
+      "rationale": "October 16 record contains 29/29 full UI cases, 96 route-width-theme combinations and exact extension/website hashes, while later playback/theme fixes were focused checks. It does not create full engine certification or replace immutable 0.10.0 download.",
+      "evidence_files": [
+        "tests/browser/website/website-docs.spec.ts",
+        "tests/support/browser-reporter.ts"
+      ]
+    },
+    {
+      "id": "_github_actions_setup_action_node_and_inference_cache_setup",
+      "label": "Pinned Node and inference-cache setup",
+      "file_type": "concept",
+      "source_file": ".github/actions/setup/action.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Composite setup selects Node 24.19.0 with npm cache, optionally restores assets/models and assets/ocr using OS plus model-lock/OCR-lock hash key, then runs npm ci.",
+      "rationale": "Composite setup selects Node 24.19.0 with npm cache, optionally restores assets/models and assets/ocr using OS plus model-lock/OCR-lock hash key, then runs npm ci.",
+      "evidence_files": [
+        "assets/model-lock.json",
+        "assets/ocr-lock.json"
+      ]
+    },
+    {
+      "id": "_github_workflows_ci_pr_parallel_jobs",
+      "label": "PR workflow builds then runs four groups",
+      "file_type": "concept",
+      "source_file": ".github/workflows/ci.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
+      "rationale": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
+      "evidence_files": [
+        ".github/workflows/ci.yml",
+        "scripts/test.mjs"
+      ]
+    },
+    {
+      "id": "_github_workflows_full_validation_full_scheduled_jobs",
+      "label": "Scheduled full workflow and seven owned groups",
+      "file_type": "concept",
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
+      "rationale": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
+      "evidence_files": [
+        ".github/workflows/full-validation.yml",
+        "scripts/verify-full.mjs"
+      ]
+    },
+    {
+      "id": "_github_workflows_full_validation_conditional_candidate_packaging",
+      "label": "Conditional candidate packaging after certification",
+      "file_type": "concept",
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
+      "rationale": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
+      "evidence_files": [
+        ".github/workflows/full-validation.yml",
+        "scripts/package-extension.mjs",
+        "scripts/package-api.mjs"
+      ]
+    },
+    {
+      "id": "apps_demo_saas_index_demo_mount",
+      "label": "Northstar React test workspace mount",
+      "file_type": "concept",
+      "source_file": "apps/demo-saas/index.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "HTML exposes English document and root mount with /src/main.tsx and title Northstar | Tholi test workspace.",
+      "rationale": "HTML exposes English document and root mount with /src/main.tsx and title Northstar | Tholi test workspace.",
+      "evidence_files": [
+        "apps/demo-saas/src/main.tsx"
+      ]
+    },
+    {
+      "id": "apps_extension_offscreen_offscreen_inference_entry",
+      "label": "Generated offscreen inference entrypoint",
+      "file_type": "concept",
+      "source_file": "apps/extension/offscreen.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Minimal offscreen HTML loads generated offscreen.js as module and identifies itself as Tholi local inference.",
+      "rationale": "Minimal offscreen HTML loads generated offscreen.js as module and identifies itself as Tholi local inference.",
+      "evidence_files": [
+        "apps/extension/src/entries/offscreen.ts",
+        "scripts/build-extension.mjs"
+      ]
+    },
+    {
+      "id": "apps_extension_sidepanel_sidepanel_shared_bundle",
+      "label": "Sidepanel shared guidance bundle",
+      "file_type": "concept",
+      "source_file": "apps/extension/sidepanel.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "English sidepanel document mounts root and loads generated sidepanel.css and sidepanel.js module.",
+      "rationale": "English sidepanel document mounts root and loads generated sidepanel.css and sidepanel.js module.",
+      "evidence_files": [
+        "apps/extension/src/entries/sidepanel.tsx",
+        "scripts/build-extension.mjs"
+      ]
+    },
+    {
+      "id": "apps_extension_widget_widget_shared_bundle",
+      "label": "Widget reuses generated sidepanel bundle",
+      "file_type": "concept",
+      "source_file": "apps/extension/widget.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Widget HTML has tholi-widget-document class and loads same sidepanel.css/sidepanel.js root bundle under separate widget document.",
+      "rationale": "Widget HTML has tholi-widget-document class and loads same sidepanel.css/sidepanel.js root bundle under separate widget document.",
+      "evidence_files": [
+        "apps/extension/src/entries/sidepanel.tsx",
+        "apps/extension/src/ui/widget/widget-shell.ts"
+      ]
+    },
+    {
+      "id": "apps_web_index_consent_aware_prepaint_theme",
+      "label": "Consent-aware dark-first prepaint startup",
+      "file_type": "concept",
+      "source_file": "apps/web/index.html",
+      "source_location": "L1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "description": "Website HTML defaults dark and reads only current explicit cookies before styles. Light requires valid bounded version-1 preference consent; invalid/expired/future/oversized records or cookie errors retain dark without OS lookup or startup writes.",
+      "rationale": "Website HTML defaults dark and reads only current explicit cookies before styles. Light requires valid bounded version-1 preference consent; invalid/expired/future/oversized records or cookie errors retain dark without OS lookup or startup writes.",
+      "evidence_files": [
+        "apps/web/src/features/preferences/cookies.ts",
+        "tests/unit/website/website-preferences.test.ts"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_guides_getting_started_document",
+      "target": "docs_guides_getting_started_unpacked_extension_setup",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L1",
+      "evidence": "Use Node 24.19.x, npm ci, build:extension, load dist/extension through chrome://extensions; after rebuild reload the extension and refresh website tabs.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_getting_started_document",
+      "target": "docs_guides_getting_started_separate_dom_and_capture_access",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L15",
+      "evidence": "A persistent site grant permits discovery while screenshot access may require renewed toolbar activation. Declining an origin retains the objective and ungranted frame controls remain unscanned.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_getting_started_document",
+      "target": "docs_guides_getting_started_pending_native_verification",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L23",
+      "evidence": "Native toolbar activation, permission dialogs, docking, actual screen-reader speech, native zoom, signed-in workflows and restart behavior require separately recorded user-assisted evidence.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_getting_started_document",
+      "target": "docs_guides_getting_started_consequential_real_site_check_boundary",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/getting-started.md",
+      "source_location": "L38",
+      "evidence": "Signed-in Amazon cancellation, Cloudflare deployment and GitHub journeys remain pending; tests do not authorize cancellation, deployment or publication, and credentials/private traces are not recorded by default.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_document",
+      "target": "docs_guides_backend_optional_local_api",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "The API is optional; default extension NLP and OCR are local. Setup fetches pinned models/OCR, builds the API, then listens on loopback port 8787.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_document",
+      "target": "docs_guides_backend_bearer_origin_allowlist",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "First startup writes a random token to .navigator-api/connection.json with no allowed browser origins; add the exact extension origin or NAVIGATOR_EXTENSION_ORIGINS, then grant API-host access from the sidebar.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_document",
+      "target": "docs_guides_backend_revision_stamped_v2",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Negotiate /v2/health; v2 plans require protocolVersion 2 and contextRevision and echo request/document/observation/context revisions. Stale delta bases return 409; incompatible backends fall back locally.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_document",
+      "target": "docs_guides_backend_opt_in_masked_backend_ocr",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Authenticated POST /v2/ocr accepts revision-stamped PNG up to 4 MB decoded and 4 megapixels. Tesseract runs in a worker; temporary images/text are not persisted or payload logged. Failed/older backend falls back locally.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_document",
+      "target": "docs_guides_backend_backend_packaged_runtime",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "A backend tgz includes built server and model files; extract package, npm ci --omit=dev, npm start. Working directory or NAVIGATOR_MODELS controls model lookup; reverse-proxy TLS remains owner responsibility.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_appearance_document",
+      "target": "docs_guides_appearance_inverse_page_theme",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L1",
+      "evidence": "A dark website gets light guidance and a light website gets dark guidance across sidepanel/widget/highlight. The independent product website starts dark and has its own switch.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_appearance_document",
+      "target": "docs_guides_appearance_style_only_theme_sampling",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "evidence": "A 3 by 3 viewport grid composites ancestor backgrounds, uses median luminance, includes open shadow roots and skips Tholi surfaces. It reads computed styling/geometry without text, fields, pixels, OCR or persistence.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_appearance_document",
+      "target": "docs_guides_appearance_bounded_theme_lifecycle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "evidence": "Changes coalesce after 200 ms; visible documents sample every two seconds for CSSOM changes; hidden documents skip sampling and page exit cleans timers/observers. Theme changes do not remount journeys or replay attention.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_document",
+      "target": "docs_guides_journeys_objective_independent_of_control",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L1",
+      "evidence": "Original objective, values, exclusions and completion criteria survive control/document/route changes. Opening a picker or deployment entry is intermediate progress.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_document",
+      "target": "docs_guides_journeys_ordered_task_queue",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L7",
+      "evidence": "Interpreter supports up to three ordered tasks; internal milestones do not use queue slots. Pause retains queue, Stop cancels, Skip records skipped. Up to five unfinished journeys can be paused in trusted session storage.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_document",
+      "target": "docs_guides_journeys_recovery_without_false_expiry",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L7",
+      "evidence": "Authentication and 2FA have no task-expiry deadline; ordinary waits become recoverable at two minutes. Recovery widens grounded retrieval and eligible OCR once per relevant revision while preserving the objective.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_document",
+      "target": "docs_guides_journeys_bounded_observed_routing",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L15",
+      "evidence": "Fastest routing uses observed duration plus conservative costs; fewest-clicks minimizes known cost. Forward edges are not assumed reversible; Back/tab actions require relevant ledger relationships and subsequent verification.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_document",
+      "target": "docs_guides_journeys_parameterized_saved_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L23",
+      "evidence": "IndexedDB v5 preserves original knowledge and parameterized reusable routes; ephemeral bindings/selectors/coordinates and private supplied values are excluded. Reuse rebinds current controls; Forget/Clear have distinct deletion scopes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_troubleshooting_document",
+      "target": "docs_guides_troubleshooting_bounded_local_inspector",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "evidence": "Advanced controls expose observation revision, fingerprints, partial scans, candidates, scores and verification history; toggling inspector does not change planning/verification and sends no telemetry.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_troubleshooting_document",
+      "target": "docs_guides_troubleshooting_privacy_preserving_diagnostics",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "evidence": "navigator-live-debug-v1 contains up to fifty ranked candidates and thirty events with hashed identities, enums, booleans and numerical evidence; excludes labels, goal/URLs/DOM/values/model text and rejects arbitrary fields/text.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_troubleshooting_document",
+      "target": "docs_guides_troubleshooting_replayable_candidate_ranking",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "evidence": "Candidate score derives from weighted/requested, specificity and adjustment with 0.06 hidden-target penalty; eligibility requires ordinary enabled current evidence and >=0.6. Different hashed identities within 0.08 produce ambiguity. Scores are not measured accuracy percentages.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_shared_guide_conversation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L5",
+      "evidence": "Guide emphasizes current instruction; Conversation uses transcript and local NLP/events. Mode changes retain draft/task; trusted session storage retains latest 80 messages. Unsupported questions do not invent answers.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_widget_presentation_continuity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "evidence": "X minimizes to a 44-pixel launcher while authorized observation continues and expanded guidance/scrolling are suppressed. Removal hides launcher without clearing session. Restore reacquires observation; toolbar reopens hidden presentation.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_widget_dimension_priorities",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "evidence": "Expanded requires usable 400x560, Standard 340x360, Compact 280x240, otherwise Minimal. Collapse is immediate and growth needs a 12-pixel buffer; composer stays mounted and secondary actions move into Widget menu.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_capability_bound_widget",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "evidence": "Iframe commands bind to authorized tab, top document, frame and session and reject stale commands. Backend credentials remain sidebar-only; Tholi surfaces are excluded from observation and masked from OCR.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_motion_is_presentation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L48",
+      "evidence": "Wayfinder loops and terminal morph are presentation; only verified arrival checks destination. Polling, geometry or theme updates do not replay transitions; reduced motion keeps static equivalents and interaction never waits.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_isolated_website_practice",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "evidence": "Actual shared guidance UI mounts in shadow root around two controlled goals: open account settings and save Spanish language. Sample interactions verify local outcome; adapter does not establish live-site accuracy or own extension state.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_website_mock_accounts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "evidence": "Website sign-in/sign-up are local demonstrations. Session storage holds name/email/onboarding only; passwords remain component-local and are neither sent nor persisted. Extension/download use needs no account.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_document",
+      "target": "docs_guides_using_tholi_website_theme_consent",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "evidence": "Website starts Dark; necessary tholi_consent retains explicit choices 180 days, optional tholi_theme persists appearance only after preference consent. Withdrawal removes theme cookie; appearance works in memory without storage.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_media_capture_document",
+      "target": "docs_development_media_capture_genuine_product_screenshots",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L1",
+      "evidence": "Four screenshot assets are captured from the running 0.10.1 extension in a disposable Chromium profile on public Wikipedia. Live grounded Large-control planning, engine completed and UI arrived are required; capture fails rather than inventing an overlay.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_media_capture_document",
+      "target": "docs_development_media_capture_screenshot_provenance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L7",
+      "evidence": "Optimized WebP files and provenance record source page, request, extension version, dimensions, SHA-256 and time. Uncompressed PNGs remain ignored under output/qa/product-sources; demonstrated preference success does not certify other workflows/native Chrome.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_document",
+      "target": "docs_development_naming_component_versions_and_eligible_download",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L5",
+      "evidence": "Root/extension source is 0.10.1, API remains 0.10.0 and the eligible immutable download remains 0.10.0. Website download reads gated archive manifest rather than inferring version from current source.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_document",
+      "target": "docs_development_naming_compatibility_identifiers",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L19",
+      "evidence": "Keep @internet-navigator package identities, NAVIGATOR environment variables, .navigator-api paths, database/storage keys, route IDs, overlay selectors, message tags and historical evidence until an explicit tested migration.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_document",
+      "target": "docs_development_naming_immutable_archive_names",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L5",
+      "evidence": "Future archives use tholi-VERSION.zip and tholi-api-VERSION.tgz; existing released archive under either current or legacy name blocks reuse. Renaming does not create a release or transfer validation to new bytes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_document",
+      "target": "docs_development_naming_checksum_verified_download_mirror",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L19",
+      "evidence": "Download synchronization accepts tholi and internet-navigator records, verifies archive checksum, selects newest eligible semantic version and removes only older generated website mirror archives; original release archives remain immutable.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_focused_development_checks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L1",
+      "evidence": "Use npm test for units, check for types/fast tests/build, test:ci for deterministic PR gate and test:full for certification. Existing focused browser aliases require built production and prebuilt fixtures; pure tests default to Node with explicit jsdom owners.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_deterministic_pr_tier",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "evidence": "PR/main runs types, units, deterministic extension/integration and focused UI; public network requests are rejected except fulfilled fixtures. Extended model/OCR/live/performance/responsive workloads are deferred to full tier.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_full_certification_tier",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "evidence": "Full validation retains frozen models/OCR, live/public journeys, acceptance, performance and all responsive scenarios. Complete certification covers required projects and suite owners, exact extension/API/website bytes, pinned assets and one coordinated run.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_single_immutable_build",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Workflow builds extension, website, API, demo and browser fixtures once. Shared output/build-manifest.json also covers pinned models/OCR. Prepared-build mode verifies immutable artifacts before skipping duplicate build.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_complete_case_evidence",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Common evidence utilities reject missing, duplicated, skipped or failed cases. All required collected cases and owner files must be present; fixed historical totals or focused passing subsets cannot certify.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Evidence carries validation tier, selection, runId and buildDigest. Full complete coordinated reports must match recursive artifact hashes and one run; filtered/PR/unrelated focused runs cannot authorize packaging.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_packaging_without_rebuild",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Packagers require completed full evidence graph, use evaluated bytes unchanged and reject existing archives. All hosted jobs must rerun after failed full attempt; earlier-attempt successes cannot be merged.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_fixture_isolation_and_readiness",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "evidence": "Fresh profiles isolate state and wait for worker state plus ready panel controls. Permission copies are per worker; automatic-download prompts are pregranted; only two export fixtures use disk-backed blobs. Native grants still need manual checks.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_document",
+      "target": "docs_development_testing_readme_hosted_runtime_pending",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L32",
+      "evidence": "Ten-minute warm hosted PR target excludes queues; local task timings do not establish hosted critical-path or cache behavior. Timings are recorded under output/qa/timing-*.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_document",
+      "target": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Five articles, six goal families and two viewports define sixty supported live attempts. Thirty generic browser scenarios remain and thirteen authored golden states execute once in unit coverage. Frozen selectors are test-only.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_document",
+      "target": "docs_development_testing_acceptance_independent_outcome_oracles",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Actual selected input, field focus, section geometry and site language picker establish declared results independently of planner output. Showing a picker is distinct from selecting a language destination; showing search differs from submitting search.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_document",
+      "target": "docs_development_testing_acceptance_noninflatable_acceptance_metrics",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Target precision >=98%, verification precision >=95%, supported completion >=90%; refusal/timeouts stay in supported denominator and zero-denominator metrics fail. False success, automation, sentinel leakage and any known failed cases block packaging.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_document",
+      "target": "docs_development_testing_acceptance_acceptance_build_provenance",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Each attempt records environment, ID, decisions and completion/failure. Reports contain matrix hash, protocol/extension version, source revision, dirty state and exact byte identity. Missing samples or infrastructure errors fail gate.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_document",
+      "target": "docs_releases_v0_10_1_coverage_ledger_coverage_ownership_not_quota",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "evidence": "Ledger records merged owners and preserved distinct assertions: static authored oracles move to unit, public language/reported pages to live, deterministic fragments to multi-app, and repeated feature journeys to one behavioral owner with separate reflow coverage.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_document",
+      "target": "docs_releases_v0_10_1_coverage_ledger_pr_deferral_not_removal",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "evidence": "PR tier defers 50,000-node benchmark, busy-page motion, complete four-width/two-theme reflow and scroll profiling while retaining deterministic safety/privacy/permission/continuity and narrow feature branches.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_document",
+      "target": "docs_releases_v0_10_1_coverage_ledger_prebuilt_nonshipped_fixtures",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L22",
+      "evidence": "Component layout and runtime/authentication probes build once into dist/test-fixtures, retaining focus/selection/overlap/runtime contracts without marketing CSS or Vite private /@fs access; application packages exclude them.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_document",
+      "target": "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "evidence": "October 17 record reports passing deterministic/model groups but full public regressions had 8 passes and 6 failures; final PR attempt stopped after browser deadlines under memory pressure and acceptance attempt was incomplete. Earlier passes cannot convert final run into a pass.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_document",
+      "target": "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "evidence": "Public failures include geometry deadlines, picker readiness, planner timeout and unhandled JSON parse of unresolved origin. Memory pressure was observed without proving every cause; final acceptance-harness correction passed types and still requires clean browser rerun.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_document",
+      "target": "docs_releases_v0_10_1_repository_cleanup_frozen_checkout_integrity",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "All 44 migrated corpus/hash/matrix/image files match baseline. Acceptance matrix was restored to original LF and pinned by .gitattributes; checkout-integrity simulates core.autocrlf=true and verifies matrix/corpus/caption/transcript hashes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_document",
+      "target": "docs_releases_v0_10_1_repository_cleanup_single_service_owner_refactor",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "Worker composition is 497 lines after extraction, PageCoach remains facade, one session owner and one UI snapshot subscription are retained. Generated names, manifest privileges, frozen inputs and source/media provenance are preserved.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_document",
+      "target": "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "evidence": "Passing functional contracts and stable highlight root do not imply smooth motion: latest cleanup 50,000-node sample measured frame-interval p95 1150.1 ms. Measurements are workload/hardware-specific and earlier values describe earlier runs.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_ui_audit_document",
+      "target": "docs_releases_v0_10_1_ui_audit_skill_provenance_outside_production",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L23",
+      "evidence": "Reviewed project-local skills retain upstream files intact outside production assets. Manifest stores upstream URL, pinned revision, license and per-file SHA-256; accepted React/Base UI/Iconoir/tokens/brand take precedence over generic suggestions.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_ui_audit_document",
+      "target": "docs_releases_v0_10_1_ui_audit_historical_ui_evidence_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L58",
+      "evidence": "Dated UI runs progressed from 15 to 17 to 19 cases with specific hashes; reset/task-details and later changes rebuilt bytes. Earlier success does not certify later builds or replace model/navigation/native gates.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_ui_audit_document",
+      "target": "docs_releases_v0_10_1_ui_audit_verified_arrival_boundary",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L5",
+      "evidence": "UI arrival animation and controls derive from verified completion. Focusing input, review clicks, polling, theme changes and presentation changes cannot fabricate task completion.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_verified_product_video",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "evidence": "Capture starts from a frozen normal extension and public GitHub request, falls back to explicitly labeled Wikipedia text-size workflow when first take is ineligible. Actual worker completion and unchanged extension hashes are required.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_local_video_assets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "evidence": "Light/dark 1440x960 30 fps VP9 variants, posters, VTT, transcript, manifest and provenance are local. Playback loops while visible with Pause/Resume; reduced-motion/data-saving need explicit resume and manual pause survives scrolling/theme.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_allowlisted_public_docs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L99",
+      "evidence": "Eleven current article slugs are registered; react-markdown 10.1.0 plus remark-gfm 4.0.1 render without raw HTML. Search is local, anchors stable, historical paths map through aliases, and Markdown images become source links.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_consent_gated_inactive_analytics",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107",
+      "evidence": "No production provider/scripts/endpoint configured. Future transport requires matching provider and disclosure consent, allowlisted page/download/practice events only, and withdrawal cancels queued/in-flight optional work.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_launch_review_legal_drafts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107",
+      "evidence": "Privacy/terms/cookies are drafts grounded in actual behavior, distinguish mock website storage from extension-local knowledge/backend OCR, and leave public host/domain/provider/final legal review incomplete.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_document",
+      "target": "docs_releases_v0_10_1_website_historical_website_gate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L138",
+      "evidence": "October 16 record contains 29/29 full UI cases, 96 route-width-theme combinations and exact extension/website hashes, while later playback/theme fixes were focused checks. It does not create full engine certification or replace immutable 0.10.0 download.",
+      "weight": 1
+    },
+    {
+      "source": "_github_actions_setup_action_document",
+      "target": "_github_actions_setup_action_node_and_inference_cache_setup",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/actions/setup/action.yml",
+      "source_location": "L1",
+      "evidence": "Composite setup selects Node 24.19.0 with npm cache, optionally restores assets/models and assets/ocr using OS plus model-lock/OCR-lock hash key, then runs npm ci.",
+      "weight": 1
+    },
+    {
+      "source": "_github_workflows_ci_document",
+      "target": "_github_workflows_ci_pr_parallel_jobs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/ci.yml",
+      "source_location": "L1",
+      "evidence": "pull_request/main push/manual workflow uses Windows, read-only contents, cancellable superseded runs and run_id-run_attempt identity. Build artifact feeds core/ui/integration/unit matrix (max parallel 3) and aggregate validate requires both build and tests success.",
+      "weight": 1
+    },
+    {
+      "source": "_github_workflows_full_validation_document",
+      "target": "_github_workflows_full_validation_full_scheduled_jobs",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "evidence": "Nightly 06:00 UTC, manual and v* tags build once then run acceptance/live/core/models/ui/integration/unit groups. Each job verifies shared immutable artifacts and uploads only owned evidence; certification merges current-attempt reports.",
+      "weight": 1
+    },
+    {
+      "source": "_github_workflows_full_validation_document",
+      "target": "_github_workflows_full_validation_conditional_candidate_packaging",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "evidence": "Full workflow runs verify-full before packaging; package:extension/API execute only on version tags or explicit manual package input. Candidate metadata retains native Chrome handoff and signed-in checks as pending.",
+      "weight": 1
+    },
+    {
+      "source": "apps_demo_saas_index_document",
+      "target": "apps_demo_saas_index_demo_mount",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/demo-saas/index.html",
+      "source_location": "L1",
+      "evidence": "HTML exposes English document and root mount with /src/main.tsx and title Northstar | Tholi test workspace.",
+      "weight": 1
+    },
+    {
+      "source": "apps_extension_offscreen_document",
+      "target": "apps_extension_offscreen_offscreen_inference_entry",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/extension/offscreen.html",
+      "source_location": "L1",
+      "evidence": "Minimal offscreen HTML loads generated offscreen.js as module and identifies itself as Tholi local inference.",
+      "weight": 1
+    },
+    {
+      "source": "apps_extension_sidepanel_document",
+      "target": "apps_extension_sidepanel_sidepanel_shared_bundle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/extension/sidepanel.html",
+      "source_location": "L1",
+      "evidence": "English sidepanel document mounts root and loads generated sidepanel.css and sidepanel.js module.",
+      "weight": 1
+    },
+    {
+      "source": "apps_extension_widget_document",
+      "target": "apps_extension_widget_widget_shared_bundle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/extension/widget.html",
+      "source_location": "L1",
+      "evidence": "Widget HTML has tholi-widget-document class and loads same sidepanel.css/sidepanel.js root bundle under separate widget document.",
+      "weight": 1
+    },
+    {
+      "source": "apps_web_index_document",
+      "target": "apps_web_index_consent_aware_prepaint_theme",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/web/index.html",
+      "source_location": "L1",
+      "evidence": "Website HTML defaults dark and reads only current explicit cookies before styles. Light requires valid bounded version-1 preference consent; invalid/expired/future/oversized records or cookie errors retain dark without OS lookup or startup writes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_single_immutable_build",
+      "target": "docs_development_testing_readme_full_certification_tier",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Full evidence covers exact build bytes and pinned inference assets.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_one_run_exact_bytes",
+      "target": "docs_development_testing_readme_packaging_without_rebuild",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "Packagers never rebuild; packaging accepts only full evidence tied to matching bytes and coordinated run.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_complete_case_evidence",
+      "target": "docs_development_testing_readme_full_certification_tier",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24",
+      "evidence": "All collected required cases must execute once and pass, and required suite owners/projects must be present.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_deterministic_pr_tier",
+      "target": "docs_development_testing_readme_full_certification_tier",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "evidence": "PR tier is feedback; full tier retains public/model/OCR/performance/complete responsive certification.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_focused_development_checks",
+      "target": "docs_development_testing_readme_deterministic_pr_tier",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L1",
+      "evidence": "npm run test:ci is the deterministic PR gate and focused aliases keep independent complete scopes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_fixture_isolation_and_readiness",
+      "target": "docs_guides_getting_started_pending_native_verification",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L16",
+      "evidence": "Disposable fixture-only grants do not establish native Chrome permission behavior.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_hosted_runtime_pending",
+      "target": "_github_workflows_ci_pr_parallel_jobs",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "Revised parallel workflow aims at ten-minute hosted warm-cache PR target; local measurements cannot verify it.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_readme_packaging_without_rebuild",
+      "target": "_github_workflows_full_validation_conditional_candidate_packaging",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "evidence": "Workflow certify job runs verify-full before either package script and conditionally invokes them on v* tags or package input.",
+      "weight": 1
+    },
+    {
+      "source": "_github_actions_setup_action_node_and_inference_cache_setup",
+      "target": "docs_development_testing_readme_single_immutable_build",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L1",
+      "evidence": "Caches retain npm and pinned inference downloads, but never replace asset hash validation.",
+      "weight": 1
+    },
+    {
+      "source": "_github_workflows_full_validation_full_scheduled_jobs",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/full-validation.yml",
+      "source_location": "L1",
+      "evidence": "Full run identity includes GitHub run_id and run_attempt; evidence glob is constrained to current run_attempt.",
+      "weight": 1
+    },
+    {
+      "source": "_github_workflows_ci_pr_parallel_jobs",
+      "target": "docs_development_testing_readme_single_immutable_build",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": ".github/workflows/ci.yml",
+      "source_location": "L1",
+      "evidence": "Build uploads dist/API/pinned assets/build-manifest; every matrix job downloads and verifies that artifact.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "target": "docs_development_testing_acceptance_noninflatable_acceptance_metrics",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Declared attempts and thresholds are frozen; failed supported attempts stay in denominator.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_independent_outcome_oracles",
+      "target": "docs_development_testing_acceptance_noninflatable_acceptance_metrics",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Precision and completion are computed from independent observable-result assertions, not planner targets.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_testing_acceptance_acceptance_build_provenance",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/acceptance.md",
+      "source_location": "L1",
+      "evidence": "Acceptance reports include tier/run/build identity and full certification requires matching final bytes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_coverage_ownership_not_quota",
+      "target": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "evidence": "Golden authored state assertions moved to unit while all live/generic scenario IDs remain in browser matrix.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_pr_deferral_not_removal",
+      "target": "docs_development_testing_readme_deterministic_pr_tier",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "evidence": "PR defers expensive benchmarks and full reflow while focused safety/feature coverage remains.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_prebuilt_nonshipped_fixtures",
+      "target": "docs_development_testing_readme_single_immutable_build",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "Component and runtime probes build once and are included in immutable manifest, outside application packages.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_frozen_checkout_integrity",
+      "target": "docs_development_testing_acceptance_frozen_acceptance_matrix",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "Frozen acceptance matrix is pinned to original LF bytes and SHA-256 in checkout-integrity coverage.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
+      "target": "docs_development_testing_readme_packaging_without_rebuild",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "evidence": "Full validation must be rerun successfully before packaging; mixed/failed/historical evidence is rejected.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
+      "target": "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38",
+      "evidence": "Public failures and incomplete acceptance attempt prevent declaring final coordinated run a pass.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit",
+      "target": "docs_releases_v0_10_1_website_historical_website_gate",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L1",
+      "evidence": "Passing functional UI does not establish smooth behavior under severe 50,000-node workload; final website record reports 716.6 ms p95 for its own workload.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_ui_audit_historical_ui_evidence_scope",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L58",
+      "evidence": "Earlier full gate reports do not certify rebuilt reset-icon/task-details bytes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_historical_website_gate",
+      "target": "docs_development_naming_component_versions_and_eligible_download",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L138",
+      "evidence": "Website UI pass did not recertify full engine or replace eligible 0.10.0 download.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_immutable_archive_names",
+      "target": "docs_development_naming_checksum_verified_download_mirror",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L5",
+      "evidence": "Both legacy/current release records are accepted; generated mirror may be pruned but originals remain immutable.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_naming_compatibility_identifiers",
+      "target": "docs_guides_backend_optional_local_api",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Backend keeps NAVIGATOR variables, .navigator-api and @internet-navigator/api identity for existing installations.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_bearer_origin_allowlist",
+      "target": "docs_guides_backend_optional_local_api",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Optional backend uses private bearer token, exact Chrome extension origin allowlist and explicit API-host grant.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_revision_stamped_v2",
+      "target": "docs_guides_backend_opt_in_masked_backend_ocr",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "v2 OCR accepts revision stamps and advertises its engine through /v2/health.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_backend_optional_local_api",
+      "target": "docs_guides_backend_backend_packaged_runtime",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Separate backend tgz includes models and server, removing need for fetch or compilation during install.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_objective_independent_of_control",
+      "target": "docs_releases_v0_10_1_ui_audit_verified_arrival_boundary",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/guides/journeys.md",
+      "source_location": "L1",
+      "evidence": "Both state that reaching an intermediate control does not complete the original user objective.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_guides_using_tholi_motion_is_presentation",
+      "target": "docs_releases_v0_10_1_ui_audit_verified_arrival_boundary",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L48",
+      "evidence": "Only verified arrival checks destination; polling, animation and geometry do not create arrival.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_widget_presentation_continuity",
+      "target": "docs_guides_using_tholi_capability_bound_widget",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L21",
+      "evidence": "Widget preserves worker journey through view changes while commands remain bound to authorized document/session.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_journeys_parameterized_saved_routes",
+      "target": "docs_guides_troubleshooting_privacy_preserving_diagnostics",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/guides/troubleshooting.md",
+      "source_location": "L1",
+      "evidence": "Both constrain persistence/export to sanitized reusable or numerical evidence rather than raw private page text.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_guides_appearance_inverse_page_theme",
+      "target": "docs_guides_using_tholi_website_theme_consent",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L1",
+      "evidence": "Guide explicitly separates website Light/Dark preference from installed extension's inverse website-theme adaptation.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_appearance_style_only_theme_sampling",
+      "target": "docs_guides_getting_started_separate_dom_and_capture_access",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "evidence": "Appearance reads CSS through existing page grants and needs no screenshot access, OCR or new permission.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_appearance_bounded_theme_lifecycle",
+      "target": "docs_guides_using_tholi_motion_is_presentation",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/appearance.md",
+      "source_location": "L5",
+      "evidence": "Theme updates change presentation without changing journey identity or replaying attention animations.",
+      "weight": 1
+    },
+    {
+      "source": "docs_development_media_capture_genuine_product_screenshots",
+      "target": "docs_releases_v0_10_1_website_verified_product_video",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L1",
+      "evidence": "Both capture actual loaded extension on public pages and require independent live verified completion with provenance.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_development_media_capture_screenshot_provenance",
+      "target": "docs_development_testing_readme_one_run_exact_bytes",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/development/media-capture.md",
+      "source_location": "L7",
+      "evidence": "Media hashes and release evidence both bind claims to bytes, but media preference-change evidence cannot certify release.",
+      "weight": 0.85
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_verified_product_video",
+      "target": "docs_guides_getting_started_pending_native_verification",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "evidence": "Disposable GitHub pregrant does not validate native Chrome permission activation and Wikipedia fallback does not validate GitHub reliability.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_local_video_assets",
+      "target": "docs_releases_v0_10_1_website_verified_product_video",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L62",
+      "evidence": "Manifest/provenance store request, attempted workflows, observed outcome, extension build hash and media asset hashes.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_isolated_website_practice",
+      "target": "docs_guides_using_tholi_website_mock_accounts",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "evidence": "Both are visibly local controlled website experiences, separate from extension use and real accounts.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_isolated_website_practice",
+      "target": "docs_releases_v0_10_1_ui_audit_verified_arrival_boundary",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/guides/using-tholi.md",
+      "source_location": "L60",
+      "evidence": "Practice sample checks actual workspace state; its result cannot establish live-site routing accuracy.",
+      "weight": 1
+    },
+    {
+      "source": "apps_web_index_consent_aware_prepaint_theme",
+      "target": "docs_guides_using_tholi_website_theme_consent",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/web/index.html",
+      "source_location": "L1",
+      "evidence": "HTML applies stored Light only with current explicit preferences consent and otherwise retains Dark.",
+      "weight": 1
+    },
+    {
+      "source": "docs_guides_using_tholi_website_theme_consent",
+      "target": "docs_releases_v0_10_1_website_consent_gated_inactive_analytics",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L1",
+      "evidence": "Shared consent record gates optional storage and distinct provider-specific analytics consent; production analytics stays inactive.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_launch_review_legal_drafts",
+      "target": "docs_guides_using_tholi_website_mock_accounts",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107",
+      "evidence": "Legal drafts distinguish mock website accounts/storage from extension-local data and optional backend.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_website_allowlisted_public_docs",
+      "target": "docs_development_naming_compatibility_identifiers",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/development/naming.md",
+      "source_location": "L1",
+      "evidence": "Naming maintenance preserves legacy public documentation mappings while moving owners.",
+      "weight": 0.85
+    },
+    {
+      "source": "apps_extension_sidepanel_sidepanel_shared_bundle",
+      "target": "apps_extension_widget_widget_shared_bundle",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "apps/extension/widget.html",
+      "source_location": "L1",
+      "evidence": "Both HTML entries mount the same generated sidepanel.js and sidepanel.css bundle; widget has its own document class.",
+      "weight": 1
+    },
+    {
+      "source": "apps_extension_offscreen_offscreen_inference_entry",
+      "target": "docs_guides_backend_optional_local_api",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/guides/backend.md",
+      "source_location": "L1",
+      "evidence": "Offscreen inference supports default local processing, helping explain why optional backend availability is not required.",
+      "weight": 0.85
+    },
+    {
+      "source": "apps_demo_saas_index_demo_mount",
+      "target": "docs_releases_v0_10_1_coverage_ledger_prebuilt_nonshipped_fixtures",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L1",
+      "evidence": "Demo production artifacts and separate component/runtime fixture artifacts both participate in immutable browser build snapshot.",
+      "weight": 1
+    },
+    {
+      "source": "docs_releases_v0_10_1_coverage_ledger_coverage_ownership_not_quota",
+      "target": "docs_development_testing_readme_complete_case_evidence",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/releases/v0.10.1/coverage-ledger.md",
+      "source_location": "L1",
+      "evidence": "Coverage identity and required suite ownership protect unique behavior while removing repeated executions.",
+      "weight": 0.95
+    },
+    {
+      "source": "docs_releases_v0_10_1_ui_audit_skill_provenance_outside_production",
+      "target": "docs_development_testing_readme_single_immutable_build",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/releases/v0.10.1/ui-audit.md",
+      "source_location": "L23",
+      "evidence": "Skill corpus provenance and application artifact provenance are distinct evidence systems with different shipment boundaries.",
+      "weight": 0.75
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "docs_development_testing_readme_full_certification_flow",
+      "label": "One immutable build, one coordinated full run, complete cases, gated packaging",
+      "nodes": [
+        "docs_development_testing_readme_single_immutable_build",
+        "docs_development_testing_readme_one_run_exact_bytes",
+        "docs_development_testing_readme_complete_case_evidence",
+        "docs_development_testing_readme_full_certification_tier",
+        "docs_development_testing_readme_packaging_without_rebuild"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/development/testing/README.md",
+      "source_location": "L24"
+    },
+    {
+      "id": "docs_releases_v0_10_1_website_local_product_boundaries",
+      "label": "Website-local practice, mock accounts, consent and launch drafts",
+      "nodes": [
+        "docs_guides_using_tholi_isolated_website_practice",
+        "docs_guides_using_tholi_website_mock_accounts",
+        "docs_guides_using_tholi_website_theme_consent",
+        "docs_releases_v0_10_1_website_consent_gated_inactive_analytics",
+        "docs_releases_v0_10_1_website_launch_review_legal_drafts"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/website.md",
+      "source_location": "L107"
+    },
+    {
+      "id": "docs_releases_v0_10_1_repository_cleanup_incomplete_release_evidence",
+      "label": "Latest cleanup evidence leaves release certification and native verification incomplete",
+      "nodes": [
+        "docs_releases_v0_10_1_repository_cleanup_latest_cleanup_validation_incomplete",
+        "docs_releases_v0_10_1_repository_cleanup_unresolved_live_failures",
+        "docs_development_testing_readme_hosted_runtime_pending",
+        "docs_guides_getting_started_pending_native_verification",
+        "docs_releases_v0_10_1_repository_cleanup_severe_load_motion_limit"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/releases/v0.10.1/repository-cleanup.md",
+      "source_location": "L38"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

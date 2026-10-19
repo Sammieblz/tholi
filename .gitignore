@@ -19,3 +19,6 @@ output/reliability/
 apps/public/downloads/
 
 output/build-manifest.json
+
+# Local Graphify graph and Obsidian vault (regenerate with scripts/graphify-repo.py).
+graphify-out/

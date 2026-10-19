@@ -1,0 +1,3647 @@
+{
+  "nodes": [
+    {
+      "id": "readme_document",
+      "label": "Tholi repository overview",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "README.md:1",
+      "description": "Product purpose, local CPU inference, build entrypoints, preview limitations, and high-level ownership."
+    },
+    {
+      "id": "agents_document",
+      "label": "Repository working instructions",
+      "file_type": "document",
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:1",
+      "description": "Binding contributor boundaries: preserve ownership, public identifiers, safety predicates, frozen corpora, focused validation, and release authorization."
+    },
+    {
+      "id": "contributing_document",
+      "label": "Contribution and release procedure",
+      "file_type": "document",
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:1",
+      "description": "Development requirements, component ownership, focused checks, immutable certification evidence, and release packaging constraints."
+    },
+    {
+      "id": "third_party_notices_document",
+      "label": "Third-party attribution",
+      "file_type": "document",
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:1",
+      "description": "Licenses, model revision, adapted discovery provenance, locally bundled fonts, and experimental OCR attribution."
+    },
+    {
+      "id": "docs_readme_document",
+      "label": "Documentation navigation",
+      "file_type": "document",
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:1",
+      "description": "Current references, historical evidence separation, frontend records, and controlled fixture documentation."
+    },
+    {
+      "id": "docs_architecture_readme_document",
+      "label": "Architecture index",
+      "file_type": "document",
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:1",
+      "description": "Entry points for navigation, language, lifecycle, authored routes, privacy, security, and frontend ownership."
+    },
+    {
+      "id": "docs_architecture_navigation_document",
+      "label": "Live navigation architecture",
+      "file_type": "document",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:1",
+      "description": "Discovery-to-planning-to-binding-to-verification flow, evidence boundaries, OCR fallback, memory, and optional API compatibility."
+    },
+    {
+      "id": "docs_architecture_sessions_document",
+      "label": "Session lifecycle verification",
+      "file_type": "document",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:1",
+      "description": "Pinned identity, MV3 worker restoration, visibility independence, cross-tab rejection, and lifecycle test evidence."
+    },
+    {
+      "id": "docs_architecture_authored_routes_document",
+      "label": "Authored regression routes",
+      "file_type": "document",
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:1",
+      "description": "Versioned controlled fixture packs, terminal safety boundaries, live-mode separation, and validated session contracts."
+    },
+    {
+      "id": "docs_architecture_page_context_document",
+      "label": "Page context and grounded intent",
+      "file_type": "document",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:1",
+      "description": "Generic structural context, bounded current-control model retrieval, independent intent validation, and experimental-model limitations."
+    },
+    {
+      "id": "docs_architecture_natural_language_document",
+      "label": "Natural language pipeline",
+      "file_type": "document",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:1",
+      "description": "English request interpretation, lexical/embedding retrieval, worker scheduling, queue verification, and private persistence policy."
+    },
+    {
+      "id": "docs_architecture_privacy_document",
+      "label": "Local observation and memory",
+      "file_type": "document",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:1",
+      "description": "Observation activation, private session retention, reusable knowledge limits, OCR masking, presentation storage, mock accounts, consent, and inactive analytics."
+    },
+    {
+      "id": "docs_architecture_security_document",
+      "label": "Trust and lifecycle boundaries",
+      "file_type": "document",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:1",
+      "description": "Untrusted evidence, host access, pinned sender/document identities, fresh binding, consequential review, outcome proof, and API protection."
+    },
+    {
+      "id": "docs_architecture_frontend_readme_document",
+      "label": "Frontend ownership map",
+      "file_type": "document",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:1",
+      "description": "Application, feature, transport, presentation, widget, overlay, website practice, routing, and draft restoration responsibilities."
+    },
+    {
+      "id": "docs_architecture_frontend_extension_document",
+      "label": "Extension implementation ownership",
+      "file_type": "document",
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:1",
+      "description": "Stable entrypoints, single mutable worker session, serialized service composition, content facade, inference transport, hooks, and settings owners."
+    },
+    {
+      "id": "docs_architecture_frontend_guidance_document",
+      "label": "Passive guidance and accessible feedback",
+      "file_type": "document",
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:1",
+      "description": "Noninteractive overlay geometry, polite panel announcements, focus management, user-controlled actions, and automated versus native accessibility evidence."
+    },
+    {
+      "id": "docs_architecture_frontend_shared_ui_document",
+      "label": "Shared presentation boundary",
+      "file_type": "document",
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:1",
+      "description": "Shared guidance presentation and callbacks with no browser privileges, credentials, completion authority, or app-specific storytelling."
+    },
+    {
+      "id": "docs_architecture_frontend_website_document",
+      "label": "Website implementation ownership",
+      "file_type": "document",
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:1",
+      "description": "Feature-local website state, controlled practice, canonical legal ownership, stable documentation aliases, mocked accounts, and consent boundaries."
+    },
+    {
+      "id": "docs_architecture_navigation_incremental_discovery",
+      "label": "Incremental live discovery",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:22",
+      "description": "Cooperatively scans semantic/custom controls, open shadow roots, and authorized frames; retains up to 5,000 session controls while projecting at most 600 for planning.",
+      "evidence_files": [
+        "packages/page-discovery/incremental.ts",
+        "packages/page-discovery/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_validated_observation",
+      "label": "Validated live observation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:24",
+      "description": "Bounded current control metadata includes structural context while geometry, state, eligibility, and risk remain independent of semantic identity.",
+      "evidence_files": [
+        "packages/page-model/index.ts",
+        "packages/page-discovery/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_fresh_binding",
+      "label": "Fresh eligible element binding",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:26",
+      "description": "Document control IDs bind actual elements; changed meaning or recycled nodes invalidate signatures and binding. Only current eligible targets may be highlighted or scrolled.",
+      "evidence_files": [
+        "packages/page-discovery/index.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_navigation_core",
+      "label": "Shared NavigationCore",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:30",
+      "description": "Coordinates request interpretation, retrieval, grounded planning, queues, contextual workflows, visual fallback, and bounded return routing outside browser lifecycle/transport.",
+      "evidence_files": [
+        "packages/navigation-core/index.ts",
+        "packages/navigation-core/contracts.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_journey_objective",
+      "label": "Persistent journey objective",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "description": "Retains the destination independently of current controls, using verified transitions and documented milestones; future steps require live rebinding.",
+      "evidence_files": [
+        "packages/goal-planner/task-journey.ts",
+        "packages/goal-planner/route-graph.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_return_routing",
+      "label": "Evidence-based return routing",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "description": "Uses observed dismissal controls, relevant task predecessors, or associated tabs without assuming forward operations are reversible.",
+      "evidence_files": [
+        "packages/navigation-core/continuity.ts",
+        "packages/navigation-core/navigation-actions.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_bounded_recovery",
+      "label": "Bounded recovery",
+      "file_type": "rationale",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "description": "Missing or insufficient evidence leaves the journey incomplete and triggers bounded recovery rather than an invented website route.",
+      "rationale": "Unobserved and omitted controls do not prove route absence; an unsupported prediction cannot become an action.",
+      "evidence_files": [
+        "packages/goal-planner/task-journey.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_outcome_verification",
+      "label": "Task-specific outcome verification",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "description": "The extension verifies actual selected values, destinations, created items, deployment or membership states; wrong outcomes and unrelated toasts do not advance a task queue.",
+      "evidence_files": [
+        "apps/extension/src/content/page-coach.ts",
+        "apps/extension/src/content/outcome-verification.ts",
+        "packages/page-discovery/outcomes.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_viewport_ocr",
+      "label": "Low-evidence viewport OCR",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "description": "Default Tesseract runs in a separate local worker only when discovery evidence is insufficient; DOM bindings take precedence and OCR cannot prove completion.",
+      "evidence_files": [
+        "apps/extension/src/background/vision-service.ts",
+        "apps/extension/src/inference/ocr-worker.ts",
+        "packages/vision/fusion.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_experimental_paddle",
+      "label": "Experimental Paddle OCR",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "description": "Included only by an explicit experimental build; startup/promotion gates have not passed and normal builds exclude it.",
+      "evidence_files": [
+        "packages/vision/paddle.ts",
+        "assets/paddle-lock.json"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_indexeddb_knowledge",
+      "label": "Reusable IndexedDB knowledge",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:46",
+      "description": "IndexedDB v5 stores reusable site knowledge and parameterized saved routes separately from private active-session context; incompatible derived indexes rebuild.",
+      "evidence_files": [
+        "packages/site-memory/index.ts",
+        "packages/site-memory/migration.ts",
+        "packages/site-memory/derived.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_navigation_optional_api",
+      "label": "Optional Fastify/SQLite mirror",
+      "file_type": "concept",
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "description": "Explicitly connected single-owner service mirrors reusable knowledge with v1 compatibility and v2 workflow/visual negotiation; browser authority and local fallback remain.",
+      "evidence_files": [
+        "apps/api/src/server.ts",
+        "apps/api/src/storage.ts",
+        "apps/api/src/inference.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_sessions_pinned_session",
+      "label": "Pinned session identity",
+      "file_type": "concept",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:3",
+      "description": "Session token, browser tab, document, protocol, and origin are pinned; back/forward and same-document history trigger fresh binding scans.",
+      "evidence_files": [
+        "packages/route-registry/session.ts",
+        "apps/extension/src/background/session-service.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_sessions_worker_restore",
+      "label": "MV3 session restoration",
+      "file_type": "concept",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "description": "Worker restores trusted session storage while the content coach continues through suspension; restoration validates current session, tab, document, and origin.",
+      "evidence_files": [
+        "apps/extension/src/background/worker-runtime.ts",
+        "packages/route-registry/session.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_sessions_surface_visibility",
+      "label": "Session-scoped presentation visibility",
+      "file_type": "concept",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:13",
+      "description": "Expanded, minimized, and hidden presentation are separate trusted state; suppressing overlays need not stop authorized observation or verification.",
+      "evidence_files": [
+        "apps/extension/src/background/ui-transport.ts",
+        "packages/overlay-ui/presentation-gate.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_sessions_cross_tab_rejection",
+      "label": "Pinned-tab command rejection",
+      "file_type": "concept",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:15",
+      "description": "Guide/Get Page/Resume from another active tab are rejected; closing the pinned tab clears the active session while Stop/Pause can clear it from the panel.",
+      "evidence_files": [
+        "apps/extension/src/background/message-router.ts",
+        "apps/extension/src/background/navigation-events.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_sessions_lifecycle_evidence",
+      "label": "MV3 lifecycle evidence",
+      "file_type": "concept",
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "description": "Chromium tests stop the real worker in running/waiting/paused states and use a changed test-only epoch rather than wrapper-close events to prove restart.",
+      "evidence_files": [
+        "tests/browser/extension/core/lifecycle.spec.ts",
+        "tests/unit/navigation/lifecycle.test.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_authored_routes_authored_routes",
+      "label": "Authored Northstar regression routes",
+      "file_type": "concept",
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:13",
+      "description": "Two controlled versioned fixture packs use semantic landmarks, expected state transitions, exact origins, and explicit boundaries; they are separate from product live discovery.",
+      "evidence_files": [
+        "packages/route-registry/index.ts",
+        "packages/route-schema/index.ts",
+        "routes/demo/cancellation.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_authored_routes_terminal_boundary",
+      "label": "Terminal irreversible-action boundary",
+      "file_type": "concept",
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:5",
+      "description": "Final irreversible authored actions have no outgoing transitions; login checkpoints and declared visible success evidence are distinct states.",
+      "evidence_files": [
+        "packages/route-schema/index.ts",
+        "packages/route-engine/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_authored_routes_live_mode",
+      "label": "Dynamic navigator.live mode",
+      "file_type": "concept",
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:15",
+      "description": "The worker exposes navigator.live version 1.0.0 for HTTP/HTTPS; it uses observations and goal plans rather than pretending to be an authored route graph.",
+      "evidence_files": [
+        "packages/page-model/index.ts",
+        "packages/route-registry/session.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_authored_routes_mode_contracts",
+      "label": "Live/authored payload isolation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:17",
+      "description": "Live views require valid unique current visible/enabled control IDs; authored views reject generic page/control/goal payloads and both modes reject route/version substitution.",
+      "evidence_files": [
+        "packages/route-registry/session.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_structural_context",
+      "label": "Structural heading and region context",
+      "file_type": "concept",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:3",
+      "description": "Generic HTML/ARIA heading ancestry, named regions, enclosing sections, and document/shadow-root ownership distinguish repeated controls without site-specific selectors.",
+      "evidence_files": [
+        "packages/page-discovery/structure.ts",
+        "packages/page-discovery/form-context.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_specificity_rule",
+      "label": "Generic context specificity",
+      "file_type": "rationale",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:5",
+      "description": "Extra qualifiers in a nearest section reduce rank; unknown scope remains unknown, structural changes invalidate signatures/revisions, and geometry is not model input.",
+      "rationale": "Repeated control labels require semantic context without encoding website names or routes.",
+      "evidence_files": [
+        "packages/goal-planner/index.ts",
+        "packages/page-discovery/structure.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_chrome_prompt_model",
+      "label": "Experimental Chrome Prompt API interpretation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "description": "Opt-in local model proposes structured intent and current IDs from bounded sanitized evidence; it has no selector, action, or completion authority.",
+      "evidence_files": [
+        "apps/extension/src/inference/browser-language-model.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_retrieved_model_view",
+      "label": "Retrieved current-control model view",
+      "file_type": "concept",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:7",
+      "description": "Ranks requested purpose and terms, keeps discovered openers, and bounds model input to 96 controls and about 24,000 characters; cannot recover undiscovered controls.",
+      "evidence_files": [
+        "packages/goal-planner/model-context.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_pristine_model_session",
+      "label": "Pristine cancellable model request",
+      "file_type": "concept",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:9",
+      "description": "Each request clones and destroys a pristine Prompt API session with cancellation and a 30-second timeout; current task context includes up to eight verified interactions.",
+      "evidence_files": [
+        "apps/extension/src/inference/browser-language-model.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_page_context_independent_intent_validation",
+      "label": "Independent model-intent grounding",
+      "file_type": "concept",
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "description": "Planner requires one eligible live route, matching current IDs and operation/control kind, user-sourced qualifiers, and retained consequential/unknown-effect boundaries.",
+      "evidence_files": [
+        "packages/goal-planner/index.ts",
+        "apps/extension/src/inference/browser-language-model.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_english_request",
+      "label": "Bounded English task interpretation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:5",
+      "description": "Compromise parses the entire validated English request with order, negation, corrections, and desired values; maximum 1,000 characters and three explicit tasks.",
+      "evidence_files": [
+        "packages/nlp/interpret.ts",
+        "packages/navigation-core/contracts.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_hybrid_retrieval",
+      "label": "Compromise/BM25/MiniLM pipeline",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:8",
+      "description": "Sanitized semantic metadata feeds BM25 and normalized mean-pooled MiniLM vectors alongside semantic/observed-route planning; current state is validated separately.",
+      "evidence_files": [
+        "packages/nlp/retrieval.ts",
+        "packages/nlp/model.ts",
+        "packages/nlp/canonical.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_embedding_cache",
+      "label": "Versioned derived embedding cache",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:12",
+      "description": "SHA-256 plus pinned model revision keys a global 10,000-entry derived cache that can rebuild independently of original knowledge.",
+      "evidence_files": [
+        "packages/nlp/retrieval.ts",
+        "packages/nlp/canonical.ts",
+        "packages/site-memory/derived.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_offscreen_inference",
+      "label": "Packaged CPU offscreen inference",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:17",
+      "description": "Chrome offscreen document owns worker-based packaged q8 ONNX MiniLM with one CPU thread and packaged WASM; no remote model is required.",
+      "evidence_files": [
+        "apps/extension/src/inference/offscreen-runtime.ts",
+        "apps/extension/src/inference/nlp-worker.ts",
+        "packages/nlp/model.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_inference_lifecycle",
+      "label": "Inference cancellation and unloading",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:20",
+      "description": "Foreground planning preempts suggestions between model calls; Stop aborts pending work and closes offscreen resources, and idle resources unload after two minutes.",
+      "evidence_files": [
+        "apps/extension/src/inference/offscreen-client.ts",
+        "apps/extension/src/inference/nlp-worker.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_task_queue",
+      "label": "Verified multi-task queue",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:27",
+      "description": "Queue advances on requested observed results; search focus is intermediate, review blocks, Skip records skipped, Pause retains, and Stop cancels.",
+      "evidence_files": [
+        "packages/navigation-core/queue.ts",
+        "apps/extension/src/content/outcome-verification.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_natural_language_revision_guard",
+      "label": "Request/document/scan revision guards",
+      "file_type": "concept",
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:24",
+      "description": "Plans carry identifiers tying asynchronous work to current request, document, and observation revision; changed scans replan from the original sentence.",
+      "evidence_files": [
+        "packages/navigation-core/contracts.ts",
+        "apps/extension/src/content/plan-lifecycle.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_explicit_activation",
+      "label": "Explicit observation activation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:5",
+      "description": "Discovery starts on Guide me or explicit page exploration; panel opening alone does not observe. Pause/Stop remove discovery/invalidation observers and Resume rescans.",
+      "evidence_files": [
+        "apps/extension/src/content/runtime.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_bounded_private_observation",
+      "label": "Bounded value-free observation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:7",
+      "description": "Reads bounded labels, authored descriptions, roles, headings, form metadata, relationships, and interaction state; excludes editable values, passwords, OTPs, and raw HTML.",
+      "evidence_files": [
+        "packages/page-discovery/index.ts",
+        "packages/page-discovery/accessibility.ts",
+        "packages/privacy-redaction/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_authentication_continuity",
+      "label": "Authentication continuity without credential handling",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:9",
+      "description": "Field metadata and bounded form context detect authentication; the objective survives credential/two-factor waiting without an expiry deadline, while the user authenticates.",
+      "evidence_files": [
+        "packages/goal-planner/authentication.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_private_session_context",
+      "label": "Trusted private session context",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:13",
+      "description": "chrome.storage.session retains active requests, supplied values, entities, unfinished journeys, and the task ledger; private names, statuses, and vectors do not enter reusable knowledge.",
+      "evidence_files": [
+        "apps/extension/src/background/worker-runtime.ts",
+        "packages/navigation-core/privacy.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_knowledge_retention",
+      "label": "Bounded reusable memory retention",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "description": "Limits reusable memory to 50 sites, per-site 100 pages/120 states/30 templates/400 transitions, 100 saved routes, and 90-day access-time expiry; derived cache has 10,000 entries.",
+      "evidence_files": [
+        "packages/site-memory/index.ts",
+        "packages/site-memory/derived.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_knowledge_deletion",
+      "label": "Forget/Clear knowledge controls",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "description": "Observation stops before deletion; Forget removes a website and traversing routes, Clear removes knowledge/routes/indexes, uninstall removes extension-owned data, and failed mirror deletion is reported.",
+      "evidence_files": [
+        "apps/extension/src/background/memory-service.ts",
+        "packages/site-memory/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_ocr_masking",
+      "label": "Editable-field and iframe OCR masks",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:23",
+      "description": "Capture hides Tholi overlays and masks discovered editable fields including open-shadow fields plus every iframe rectangle, even when frame DOM guidance is authorized.",
+      "evidence_files": [
+        "apps/extension/src/content/visual-guidance.ts",
+        "apps/extension/src/background/vision-service.ts",
+        "packages/vision/processing.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_presentation_storage",
+      "label": "Trusted draft and conversation storage",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:33",
+      "description": "Preferences/bounds are local; draft and at most 80 messages stay in trusted extension-session storage, separate from website and cloud. Widget commands are session/document bound.",
+      "evidence_files": [
+        "apps/extension/src/background/ui-transport.ts",
+        "apps/extension/src/ui/hooks/usePresentationSession.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_mock_accounts",
+      "label": "Session-only mock website accounts",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:37",
+      "description": "Website accounts are explicitly fake; name/email/onboarding live in browser-session storage, passwords are neither persisted nor transmitted, and sign-out clears the mock account.",
+      "evidence_files": [
+        "apps/web/src/features/account/session.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_consent_theme",
+      "label": "Consent-gated website appearance storage",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:39",
+      "description": "Host-only SameSite=Lax consent lasts 180 days; optional theme cookie requires appearance consent, withdrawal deletes it, and blocked cookies preserve in-memory usability.",
+      "evidence_files": [
+        "apps/web/src/features/preferences/cookies.ts",
+        "apps/web/src/features/preferences/PreferencesProvider.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_inactive_analytics",
+      "label": "Inactive allowlisted analytics boundary",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:41",
+      "description": "No production provider is configured. Future consent-bound events may include only public page categories, downloads, and two fixed practice task IDs; arbitrary private/user text is excluded.",
+      "evidence_files": [
+        "apps/web/src/features/preferences/analytics.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_privacy_safe_diagnostics",
+      "label": "Bounded redacted local diagnostics",
+      "file_type": "concept",
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:29",
+      "description": "Diagnostic exports omit labels, goals, paths, raw DOM, and field values; authenticated screenshots/traces are not captured by default.",
+      "evidence_files": [
+        "packages/live-diagnostics/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_untrusted_evidence",
+      "label": "All observed/model evidence is untrusted",
+      "file_type": "rationale",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:3",
+      "description": "Page text, observations, stored knowledge, documented predictions, and model outputs never independently authorize action or completion; fresh eligibility and signatures are required.",
+      "rationale": "Website evidence and model suggestions may be stale, malicious, or mistaken; authority remains in validated runtime contracts and observed results.",
+      "evidence_files": [
+        "packages/safety-policy/index.ts",
+        "packages/goal-planner/index.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_host_permissions",
+      "label": "Explicit per-origin host access",
+      "file_type": "concept",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:5",
+      "description": "Default hosts are English Wikipedia and local development; other HTTP/HTTPS sites require specific grants. DOM and screenshot permissions are distinct.",
+      "evidence_files": [
+        "apps/extension/manifest.json",
+        "apps/extension/src/platform/site-access.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_sender_validation",
+      "label": "Trusted sender and document validation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:9",
+      "description": "Extension commands require extension-owned sender identity; content messages require assigned tab/frame/document and validated contracts; stale results cannot replace current documents/tasks.",
+      "evidence_files": [
+        "apps/extension/src/background/message-router.ts",
+        "apps/extension/src/background/session-service.ts",
+        "packages/route-registry/session.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_consequential_review",
+      "label": "Consequential and unknown-effect review",
+      "file_type": "concept",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:11",
+      "description": "Users execute clicks/input/submissions; review explains consequential or unknown effects and starts verification after a user click. Heuristic risk cannot prove arbitrary server behavior.",
+      "evidence_files": [
+        "packages/safety-policy/index.ts",
+        "packages/page-discovery/interaction-risk.ts",
+        "apps/extension/src/content/page-coach.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_api_security",
+      "label": "Single-owner API protection",
+      "file_type": "concept",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:17",
+      "description": "Loopback default, bearer token, explicit extension-origin CORS, and HTTPS for remote hosting guard an optional service whose credentials remain trusted and whose private payloads are unpersisted.",
+      "evidence_files": [
+        "apps/api/src/server.ts",
+        "apps/api/src/cli.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_security_pending_native_acceptance",
+      "label": "Pending native and signed-in acceptance",
+      "file_type": "concept",
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:19",
+      "description": "Synthetic Chromium and public Wikipedia evidence do not certify arbitrary sites; native Chrome access/accessibility, actual screen-reader speech, real Gemini Nano quality, and signed-in workflows remain separate acceptance.",
+      "evidence_files": [
+        "docs/guides/getting-started.md"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_extension_worker_owner",
+      "label": "Single worker-owned session and journey",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:5",
+      "description": "worker-runtime composes memory, vision, journey, attachment, routing, frames, and navigation services around live access to one mutable pinned session and one serialized queue.",
+      "rationale": "Service extraction cannot introduce parallel session caches or competing journey owners.",
+      "evidence_files": [
+        "apps/extension/src/background/worker-runtime.ts",
+        "apps/extension/src/background/journey-service.ts",
+        "apps/extension/src/background/session-service.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_extension_stable_entrypoints",
+      "label": "Stable generated browser entrypoints",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:3",
+      "description": "Build preserves worker.js, content.js, frame-agent.js, offscreen.js, inference.js, ocr-worker.js, sidepanel.js, and theme-page.js.",
+      "evidence_files": [
+        "apps/extension/manifest.json"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_extension_content_owner",
+      "label": "Content runtime and PageCoach facade",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:7",
+      "description": "Top runtime and PageCoach orchestrate observation, binding, plan lifecycle, outcome verification, frame agents, and visual guidance.",
+      "evidence_files": [
+        "apps/extension/src/content/runtime.ts",
+        "apps/extension/src/content/page-coach.ts",
+        "apps/extension/src/content/outcome-verification.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_extension_session_snapshot_hook",
+      "label": "Single session snapshot subscription",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:11",
+      "description": "useSessionSnapshot owns one snapshot subscription and bounded fallback; controllers and features receive typed state/actions without duplicate inference or polling.",
+      "evidence_files": [
+        "apps/extension/src/ui/hooks/useSessionSnapshot.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "label": "Privilege-free shared presentation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:3",
+      "description": "packages/ui owns Guide/Conversation, attention, composer, route nodes, Wayfinder, and responsive priority; accepts state/callbacks and cannot access Chrome, credentials, permissions, or outcome authority.",
+      "evidence_files": [
+        "packages/ui/guidance.tsx",
+        "packages/ui/presentation.ts",
+        "packages/ui/guidance/GuidanceApp.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_extension_controller",
+      "label": "Extension guidance composition",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:72",
+      "description": "Controller composes feature actions and dedicated hooks while sidebar-only privileged settings remain outside embedded shared presentation.",
+      "evidence_files": [
+        "apps/extension/src/ui/app/useGuidanceController.ts",
+        "apps/extension/src/ui/app/GuidanceController.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_draft_revision_protection",
+      "label": "Revision-protected draft restoration",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:73",
+      "description": "Local edit revisions and matching UI_SAVE acknowledgement protect typing from stale reads and replies; surface handoff can restore a clean draft without changing the journey.",
+      "evidence_files": [
+        "apps/extension/src/ui/hooks/usePresentationSession.ts",
+        "apps/extension/src/background/ui-transport.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_widget_shell",
+      "label": "Session-bound isolated widget shell",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:75",
+      "description": "Closed-shadow shell owns clamped geometry/pointer capture and trusted typed layout actions; extension-origin iframe owns guidance and its Widget menu, with keyboard alternatives.",
+      "evidence_files": [
+        "apps/extension/src/ui/widget/widget-shell.ts",
+        "apps/extension/src/ui/widget/launcher-controls.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_widget_density",
+      "label": "State-preserving widget density",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:76",
+      "description": "Density depends on usable width/height with immediate reduction and buffered expansion; shared components stay mounted and draft, selection, and focus survive tier changes.",
+      "evidence_files": [
+        "packages/ui/widget-density.ts",
+        "packages/ui/guidance/useWidgetDensity.ts",
+        "packages/ui/styles/widget.css"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_isolated_practice",
+      "label": "Isolated website practice adapter",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:80",
+      "description": "Shadow-root embedded GuidanceApp consumes controlled sample outcomes and callbacks; the practice has no Chrome permissions or production journey ownership.",
+      "evidence_files": [
+        "apps/web/src/features/demo/usePracticeAdapter.ts",
+        "apps/web/src/features/demo/PracticeWorkspace.tsx",
+        "apps/web/src/features/demo/practice.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_marketing_evidence",
+      "label": "Recorded product media versus brand motion",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:70",
+      "description": "Marketing consumes a genuine recording manifest; capture requires a real worker-verified public-page result and immutable hashes, while brand motion emits no journey/completion evidence.",
+      "evidence_files": [
+        "apps/public/media/video/provenance.json",
+        "apps/public/media/video/manifest.json"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_safe_docs_registry",
+      "label": "Allowlisted safe website documentation",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:69",
+      "description": "Lazy docs registry permits selected Markdown, local search and explicit reference aliases; raw HTML is disabled, images become source links, and initial Home avoids repository Markdown.",
+      "evidence_files": [
+        "apps/web/src/features/docs/registry.ts",
+        "apps/web/src/features/docs/DocsPage.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_readme_website_router",
+      "label": "Website history and heading-aware routing",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:84",
+      "description": "App router separates pathname/query/fragment, preserves modified clicks/Back/scroll, waits for lazy headings/fragments, and bounds/cancels observers and animation frames.",
+      "evidence_files": [
+        "apps/web/src/app/App.tsx",
+        "apps/web/src/app/router.tsx"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_guidance_passive_overlay",
+      "label": "Passive geometry-bound guidance overlay",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:3",
+      "description": "Closed-shadow overlay ignores pointer input and accessibility tree; one frame loop tracks the fresh target rectangle without decorative interpolation, clears hidden targets, and cancels on Pause/Stop.",
+      "evidence_files": [
+        "packages/overlay-ui/guidance-overlay.ts",
+        "packages/overlay-ui/overlay-styles.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_guidance_accessible_feedback",
+      "label": "Meaningful polite status and focus management",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:3",
+      "description": "Panel supplies equivalent instruction/progress in one polite atomic region; polling/geometry do not repeat announcements, and Guide/Pause/Stop manage focus predictably.",
+      "evidence_files": [
+        "packages/ui/guidance/GuidanceApp.tsx",
+        "apps/extension/src/ui/app/useGuidanceController.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_guidance_geometry_accessibility_evidence",
+      "label": "Independent geometry and keyboard evidence",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:9",
+      "description": "Browser tests independently inspect overlay geometry via CDP across movement/zoom/edges/reduced motion and check keyboard focus/status behavior; this does not prove native screen-reader speech.",
+      "evidence_files": [
+        "tests/browser/extension/core/geometry.spec.ts",
+        "tests/browser/extension/core/accessibility.spec.ts",
+        "tests/browser/live/geometry.spec.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_website_website_feature_owners",
+      "label": "Feature-local website ownership",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:3",
+      "description": "App owns routing/history, SiteLayout navigation/footer, practice sample state, legal its canonical content/operator details, and docs stable public article aliases.",
+      "evidence_files": [
+        "apps/web/src/app/App.tsx",
+        "apps/web/src/components/SiteLayout.tsx",
+        "apps/web/src/features/legal/operator.ts"
+      ]
+    },
+    {
+      "id": "docs_architecture_frontend_website_stable_article_aliases",
+      "label": "Stable public documentation aliases",
+      "file_type": "concept",
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:9",
+      "description": "Public article slugs survive repository moves through explicit legacy-reference aliases; historical evidence remains a repository link.",
+      "evidence_files": [
+        "apps/web/src/features/docs/registry.ts"
+      ]
+    },
+    {
+      "id": "readme_local_default",
+      "label": "Offline local default",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "README.md:27",
+      "description": "Packaged English MiniLM and Tesseract run locally on CPU with no cloud model/backend or user account required; optional Chrome/backend integrations remain separate opt-ins.",
+      "evidence_files": [
+        "packages/nlp/model.ts",
+        "apps/extension/src/inference/ocr-worker.ts"
+      ]
+    },
+    {
+      "id": "agents_deterministic_gate",
+      "label": "Deterministic PR validation gate",
+      "file_type": "concept",
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:19",
+      "description": "npm run test:ci builds once and validates deterministic PR behavior; focused existing checks guide implementation and prepared builds require immutable verified artifacts.",
+      "evidence_files": [
+        "package.json"
+      ]
+    },
+    {
+      "id": "contributing_release_certification",
+      "label": "Same-run exact-byte release certification",
+      "file_type": "rationale",
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:39",
+      "description": "Full-tier evidence must cover the final build before packaging. Do not rebuild afterward, overwrite existing archives, or aggregate focused historical reports as certification.",
+      "rationale": "Independent or historical test evidence cannot certify different artifact bytes.",
+      "evidence_files": [
+        "scripts/artifact-files.mjs",
+        "package.json"
+      ]
+    },
+    {
+      "id": "contributing_frozen_corpora",
+      "label": "Frozen evaluation corpora",
+      "file_type": "concept",
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:41",
+      "description": "Original fixture bytes, splits, hashes, and thresholds are preserved; calibration needs explicit versioning/independent review and predictions cannot regenerate expectations.",
+      "evidence_files": [
+        "tests/browser/acceptance/matrix.json",
+        ".gitattributes"
+      ]
+    },
+    {
+      "id": "contributing_legacy_identifiers",
+      "label": "Stable legacy compatibility identifiers",
+      "file_type": "concept",
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:7",
+      "description": "Product copy uses Tholi while scoped packages, storage keys, environment variables, and protocol identifiers retain legacy names for compatibility.",
+      "evidence_files": [
+        "package.json",
+        "packages/route-registry/session.ts"
+      ]
+    },
+    {
+      "id": "third_party_notices_third_party_provenance",
+      "label": "Pinned third-party model and discovery provenance",
+      "file_type": "concept",
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:3",
+      "description": "Bundled license texts and generated third-party.json describe pinned dependencies; MiniLM revision, adapted Playwright hashes, OCR assets, and experimental Paddle/OpenCV adaptations have explicit provenance.",
+      "evidence_files": [
+        "assets/discovery-lock.json",
+        "assets/paddle-lock.json",
+        "assets/opencv-adaptation.json"
+      ]
+    },
+    {
+      "id": "docs_readme_historical_evidence_boundary",
+      "label": "Historical evidence versus current behavior",
+      "file_type": "rationale",
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:3",
+      "description": "Versioned records describe specific tested bytes and are neither current installation instructions nor broad current reliability guarantees.",
+      "rationale": "Evidence must remain attached to the tested version/build, with current behavior and pending acceptance stated separately."
+    }
+  ],
+  "edges": [
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_incremental_discovery",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:22",
+      "weight": 1.0,
+      "evidence": "`packages/page-discovery` maintains an incremental control index"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_validated_observation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:24",
+      "weight": 1.0,
+      "evidence": "Geometry, visibility, occlusion, availability and risk are checked independently"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:26",
+      "weight": 1.0,
+      "evidence": "A document control ID binds to an actual element."
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:30",
+      "weight": 1.0,
+      "evidence": "`packages/navigation-core` coordinates Compromise interpretation"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Journeys preserve an objective independently of current controls."
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_return_routing",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Return actions use observed dismissal controls"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_bounded_recovery",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Missing evidence enters bounded recovery rather than inventing a route."
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "Task-specific results, such as the requested selected value"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_viewport_ocr",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "weight": 1.0,
+      "evidence": "Tesseract viewport OCR runs in a separate local worker"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_experimental_paddle",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "weight": 1.0,
+      "evidence": "Paddle is available only in an explicit experimental build"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_indexeddb_knowledge",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:46",
+      "weight": 1.0,
+      "evidence": "IndexedDB v5 preserves site knowledge and parameterized saved routes."
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_navigation_optional_api",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "The optional Fastify/SQLite service mirrors explicitly connected reusable knowledge"
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_sessions_pinned_session",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:3",
+      "weight": 1.0,
+      "evidence": "Live sessions pin the session token"
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_sessions_worker_restore",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "weight": 1.0,
+      "evidence": "The MV3 worker restores its pinned state from `chrome.storage.session`."
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_sessions_surface_visibility",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:13",
+      "weight": 1.0,
+      "evidence": "Presentation visibility is a separate trusted session record."
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_sessions_cross_tab_rejection",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:15",
+      "weight": 1.0,
+      "evidence": "Guide/Get Page/Resume commands from another active tab are rejected"
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_sessions_lifecycle_evidence",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "weight": 1.0,
+      "evidence": "A changed test-only global epoch in the worker proves"
+    },
+    {
+      "source": "docs_architecture_authored_routes_document",
+      "target": "docs_architecture_authored_routes_authored_routes",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:13",
+      "weight": 1.0,
+      "evidence": "The bundled registry contains the two controlled Northstar regression routes."
+    },
+    {
+      "source": "docs_architecture_authored_routes_document",
+      "target": "docs_architecture_authored_routes_terminal_boundary",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:5",
+      "weight": 1.0,
+      "evidence": "Final irreversible-action states are terminal boundaries with no outgoing transitions."
+    },
+    {
+      "source": "docs_architecture_authored_routes_document",
+      "target": "docs_architecture_authored_routes_live_mode",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:15",
+      "weight": 1.0,
+      "evidence": "The worker also exposes navigator.live version 1.0.0 dynamically"
+    },
+    {
+      "source": "docs_architecture_authored_routes_document",
+      "target": "docs_architecture_authored_routes_mode_contracts",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:17",
+      "weight": 1.0,
+      "evidence": "Authored views reject generic page/control/goal payloads."
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_structural_context",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:3",
+      "weight": 1.0,
+      "evidence": "The collector now attaches a structural context to each actual control"
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_specificity_rule",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:5",
+      "weight": 1.0,
+      "evidence": "This is a generic specificity rule."
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_chrome_prompt_model",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "weight": 1.0,
+      "evidence": "Structured model output contains current control IDs"
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_retrieved_model_view",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:7",
+      "weight": 1.0,
+      "evidence": "bounds input to 96 controls and approximately 24,000 characters"
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_pristine_model_session",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:9",
+      "weight": 1.0,
+      "evidence": "Each request clones a pristine Chrome Prompt API session"
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_page_context_independent_intent_validation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "weight": 1.0,
+      "evidence": "The planner independently finds an unambiguous eligible live route"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_english_request",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:5",
+      "weight": 1.0,
+      "evidence": "The maximum is 1,000 characters and"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_hybrid_retrieval",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:8",
+      "weight": 1.0,
+      "evidence": "The shared core combines BM25, normalized mean-pooled MiniLM vectors"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_embedding_cache",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:12",
+      "weight": 1.0,
+      "evidence": "SHA-256 plus the pinned model revision"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_offscreen_inference",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:17",
+      "weight": 1.0,
+      "evidence": "The extension runs packaged q8 ONNX weights in a worker owned by a Chrome"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_inference_lifecycle",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:20",
+      "weight": 1.0,
+      "evidence": "Stop aborts pending work and closes the offscreen document."
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_task_queue",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:27",
+      "weight": 1.0,
+      "evidence": "A search textbox focus is"
+    },
+    {
+      "source": "docs_architecture_natural_language_document",
+      "target": "docs_architecture_natural_language_revision_guard",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:24",
+      "weight": 1.0,
+      "evidence": "Plans carry request, document and scan revision identifiers."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_explicit_activation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:5",
+      "weight": 1.0,
+      "evidence": "Discovery begins when you submit a destination with Guide me"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_bounded_private_observation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:7",
+      "weight": 1.0,
+      "evidence": "It never reads input/textarea values, passwords, OTPs, editable contents or full page HTML."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_authentication_continuity",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:9",
+      "weight": 1.0,
+      "evidence": "Credentials and two-factor waiting retain the objective without an expiry deadline."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:13",
+      "weight": 1.0,
+      "evidence": "Trusted `chrome.storage.session` holds active requests"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_knowledge_retention",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "weight": 1.0,
+      "evidence": "Knowledge is bounded to 50 sites"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_knowledge_deletion",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "weight": 1.0,
+      "evidence": "Forget removes the website and routes traversing it;"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_ocr_masking",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:23",
+      "weight": 1.0,
+      "evidence": "Tholi hides its overlays and masks discovered editable fields"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_presentation_storage",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:33",
+      "weight": 1.0,
+      "evidence": "Composer drafts and at most 80 conversation messages"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_mock_accounts",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:37",
+      "weight": 1.0,
+      "evidence": "The local Tholi website has explicitly mocked accounts."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_consent_theme",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:39",
+      "weight": 1.0,
+      "evidence": "Website cookie choices use the first-party `tholi_consent` cookie for 180 days."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_inactive_analytics",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:41",
+      "weight": 1.0,
+      "evidence": "Production analytics is inactive with no configured provider."
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_privacy_safe_diagnostics",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:29",
+      "weight": 1.0,
+      "evidence": "Diagnostic exports omit labels, goals, paths, raw DOM and field values."
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_untrusted_evidence",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:3",
+      "weight": 1.0,
+      "evidence": "Page text, observations, stored knowledge, documented predictions and model output are untrusted evidence."
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_host_permissions",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:5",
+      "weight": 1.0,
+      "evidence": "DOM permissions and viewport-capture permissions are tracked separately;"
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_sender_validation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:9",
+      "weight": 1.0,
+      "evidence": "Commands require the extension identity and appropriate extension-owned sender."
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_consequential_review",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:11",
+      "weight": 1.0,
+      "evidence": "Review targets explain the consequential or unknown effect;"
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_api_security",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:17",
+      "weight": 1.0,
+      "evidence": "The optional API binds loopback by default"
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_security_pending_native_acceptance",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:19",
+      "weight": 1.0,
+      "evidence": "Native Chrome access recovery and signed-in workflow verification remain separate pending checks."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_document",
+      "target": "docs_architecture_frontend_extension_worker_owner",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:5",
+      "weight": 1.0,
+      "evidence": "`background/worker-runtime.ts` initializes storage, one pinned session and service composition."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_document",
+      "target": "docs_architecture_frontend_extension_stable_entrypoints",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:3",
+      "weight": 1.0,
+      "evidence": "The build preserves `worker.js`"
+    },
+    {
+      "source": "docs_architecture_frontend_extension_document",
+      "target": "docs_architecture_frontend_extension_content_owner",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:7",
+      "weight": 1.0,
+      "evidence": "`PageCoach` remains the orchestration facade:"
+    },
+    {
+      "source": "docs_architecture_frontend_extension_document",
+      "target": "docs_architecture_frontend_extension_session_snapshot_hook",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:11",
+      "weight": 1.0,
+      "evidence": "`ui/hooks/useSessionSnapshot.ts` owns the single snapshot subscription"
+    },
+    {
+      "source": "docs_architecture_frontend_shared_ui_document",
+      "target": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:3",
+      "weight": 1.0,
+      "evidence": "`packages/ui` owns presentation contracts"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_extension_controller",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:72",
+      "weight": 1.0,
+      "evidence": "The controller composes feature actions and dedicated session hooks."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_draft_revision_protection",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:73",
+      "weight": 1.0,
+      "evidence": "Draft restoration checks local edit revisions"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_widget_shell",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:75",
+      "weight": 1.0,
+      "evidence": "Widget shell code owns geometry and pointer capture."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_widget_density",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:76",
+      "weight": 1.0,
+      "evidence": "Widget density depends on both usable dimensions"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_isolated_practice",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:80",
+      "weight": 1.0,
+      "evidence": "The website practice adapter mounts `GuidanceApp`"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_marketing_evidence",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:70",
+      "weight": 1.0,
+      "evidence": "Capture tooling accepts only a real worker-verified public-page result"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_safe_docs_registry",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:69",
+      "weight": 1.0,
+      "evidence": "`docs` owns an explicit Markdown registry"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_readme_website_router",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:84",
+      "weight": 1.0,
+      "evidence": "The router separates pathname from query/fragment"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_document",
+      "target": "docs_architecture_frontend_guidance_passive_overlay",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:3",
+      "weight": 1.0,
+      "evidence": "The guidance overlay is isolated in a closed shadow root"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_document",
+      "target": "docs_architecture_frontend_guidance_accessible_feedback",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:3",
+      "weight": 1.0,
+      "evidence": "The panel provides equivalent instruction text and verified progress"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_document",
+      "target": "docs_architecture_frontend_guidance_geometry_accessibility_evidence",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:9",
+      "weight": 1.0,
+      "evidence": "`tests/browser/extension/core/geometry.spec.ts` independently measures"
+    },
+    {
+      "source": "docs_architecture_frontend_website_document",
+      "target": "docs_architecture_frontend_website_website_feature_owners",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:3",
+      "weight": 1.0,
+      "evidence": "The website keeps feature-local components, styles and state."
+    },
+    {
+      "source": "docs_architecture_frontend_website_document",
+      "target": "docs_architecture_frontend_website_stable_article_aliases",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:9",
+      "weight": 1.0,
+      "evidence": "Public article slugs are stable across repository moves;"
+    },
+    {
+      "source": "readme_document",
+      "target": "readme_local_default",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:27",
+      "weight": 1.0,
+      "evidence": "The packaged English language model and Tesseract OCR run on your CPU."
+    },
+    {
+      "source": "agents_document",
+      "target": "agents_deterministic_gate",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:19",
+      "weight": 1.0,
+      "evidence": "`npm run test:ci` is the deterministic PR gate."
+    },
+    {
+      "source": "contributing_document",
+      "target": "contributing_release_certification",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:39",
+      "weight": 1.0,
+      "evidence": "Package with `npm run package:extension` and `npm run package:api` only after"
+    },
+    {
+      "source": "contributing_document",
+      "target": "contributing_frozen_corpora",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:41",
+      "weight": 1.0,
+      "evidence": "Frozen inputs live under `tests/fixtures`"
+    },
+    {
+      "source": "contributing_document",
+      "target": "contributing_legacy_identifiers",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:7",
+      "weight": 1.0,
+      "evidence": "Existing scoped packages, storage keys, environment variables and protocol identifiers retain their legacy names"
+    },
+    {
+      "source": "third_party_notices_document",
+      "target": "third_party_notices_third_party_provenance",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:3",
+      "weight": 1.0,
+      "evidence": "the build-generated `third-party.json` with pinned versions."
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_readme_historical_evidence_boundary",
+      "relation": "describes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:3",
+      "weight": 1.0,
+      "evidence": "Versioned validation files are historical snapshots of specific tested bytes;"
+    },
+    {
+      "source": "docs_architecture_navigation_incremental_discovery",
+      "target": "docs_architecture_navigation_validated_observation",
+      "relation": "produces",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:6",
+      "weight": 1.0,
+      "evidence": "Discovery --> Observation[Validated observation]"
+    },
+    {
+      "source": "docs_architecture_navigation_validated_observation",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "supplies_evidence_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:7",
+      "weight": 1.0,
+      "evidence": "Observation --> Core[Navigation core]"
+    },
+    {
+      "source": "docs_architecture_natural_language_hybrid_retrieval",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "supports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:8",
+      "weight": 1.0,
+      "evidence": "NLP[Compromise / BM25 / MiniLM] --> Core"
+    },
+    {
+      "source": "docs_architecture_navigation_indexeddb_knowledge",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "supplies_evidence_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:10",
+      "weight": 1.0,
+      "evidence": "Memory[(Browser knowledge)] --> Core"
+    },
+    {
+      "source": "docs_architecture_navigation_navigation_core",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "plans_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:11",
+      "weight": 1.0,
+      "evidence": "Core --> Binding[Fresh binding and highlight]"
+    },
+    {
+      "source": "docs_architecture_navigation_navigation_core",
+      "target": "docs_architecture_navigation_viewport_ocr",
+      "relation": "requests_fallback",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:12",
+      "weight": 1.0,
+      "evidence": "Core --> OCR[Low-evidence viewport OCR]"
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "supplies_evidence_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:13",
+      "weight": 1.0,
+      "evidence": "OCR --> Core"
+    },
+    {
+      "source": "docs_architecture_navigation_outcome_verification",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "supplies_evidence_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:16",
+      "weight": 1.0,
+      "evidence": "Verification --> Core"
+    },
+    {
+      "source": "docs_architecture_navigation_outcome_verification",
+      "target": "docs_architecture_navigation_indexeddb_knowledge",
+      "relation": "contributes_verified_transitions_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:17",
+      "weight": 1.0,
+      "evidence": "Verification --> Memory"
+    },
+    {
+      "source": "docs_architecture_navigation_journey_objective",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Future steps are predictions requiring live binding."
+    },
+    {
+      "source": "docs_architecture_navigation_navigation_core",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "plans",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Journeys preserve an objective independently of current controls."
+    },
+    {
+      "source": "docs_architecture_navigation_journey_objective",
+      "target": "docs_architecture_navigation_return_routing",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Return actions use observed dismissal controls"
+    },
+    {
+      "source": "docs_architecture_navigation_journey_objective",
+      "target": "docs_architecture_navigation_bounded_recovery",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:32",
+      "weight": 1.0,
+      "evidence": "Missing evidence enters bounded recovery"
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "docs_architecture_privacy_ocr_masking",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "weight": 1.0,
+      "evidence": "Editable fields and all iframe pixels are masked."
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "defers_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:40",
+      "weight": 1.0,
+      "evidence": "Fresh DOM bindings take precedence."
+    },
+    {
+      "source": "docs_architecture_natural_language_task_queue",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:42",
+      "weight": 1.0,
+      "evidence": "Wrong outcomes and unrelated toasts cannot advance the task queue."
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "docs_architecture_navigation_indexeddb_knowledge",
+      "relation": "mirrors",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "The optional Fastify/SQLite service mirrors explicitly connected reusable knowledge"
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "docs_architecture_navigation_navigation_core",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:34",
+      "weight": 1.0,
+      "evidence": "The optional HTTP adapter uses the same core;"
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "readme_local_default",
+      "relation": "falls_back_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "An unavailable or older backend falls back locally."
+    },
+    {
+      "source": "docs_architecture_sessions_worker_restore",
+      "target": "docs_architecture_sessions_pinned_session",
+      "relation": "validates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:13",
+      "weight": 1.0,
+      "evidence": "Worker restoration validates the current session, tab, document and origin"
+    },
+    {
+      "source": "docs_architecture_sessions_worker_restore",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "restores",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "weight": 1.0,
+      "evidence": "The MV3 worker restores its pinned state from `chrome.storage.session`."
+    },
+    {
+      "source": "docs_architecture_sessions_surface_visibility",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "preserves_authorized",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:13",
+      "weight": 1.0,
+      "evidence": "Minimized and hidden states suppress overlays without interrupting authorized verification."
+    },
+    {
+      "source": "docs_architecture_sessions_cross_tab_rejection",
+      "target": "docs_architecture_sessions_pinned_session",
+      "relation": "enforces",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:15",
+      "weight": 1.0,
+      "evidence": "Guide/Get Page/Resume commands from another active tab are rejected"
+    },
+    {
+      "source": "docs_architecture_sessions_lifecycle_evidence",
+      "target": "docs_architecture_sessions_worker_restore",
+      "relation": "verifies",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:11",
+      "weight": 1.0,
+      "evidence": "Tests force `ServiceWorker.stopWorker` during running, waiting and paused sessions."
+    },
+    {
+      "source": "docs_architecture_authored_routes_authored_routes",
+      "target": "docs_architecture_authored_routes_terminal_boundary",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:5",
+      "weight": 1.0,
+      "evidence": "Final irreversible-action states are terminal boundaries"
+    },
+    {
+      "source": "docs_architecture_authored_routes_authored_routes",
+      "target": "docs_architecture_security_host_permissions",
+      "relation": "does_not_grant",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:19",
+      "weight": 1.0,
+      "evidence": "Site permission is independent of the task registry; adding a route does not grant access."
+    },
+    {
+      "source": "docs_architecture_authored_routes_live_mode",
+      "target": "docs_architecture_authored_routes_authored_routes",
+      "relation": "is_separate_from",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:15",
+      "weight": 1.0,
+      "evidence": "This is a live navigation mode, not a fabricated authored route graph."
+    },
+    {
+      "source": "docs_architecture_authored_routes_mode_contracts",
+      "target": "docs_architecture_authored_routes_live_mode",
+      "relation": "validates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:17",
+      "weight": 1.0,
+      "evidence": "Generic views must contain valid, unique control IDs;"
+    },
+    {
+      "source": "docs_architecture_authored_routes_mode_contracts",
+      "target": "docs_architecture_authored_routes_authored_routes",
+      "relation": "validates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:17",
+      "weight": 1.0,
+      "evidence": "Authored views reject generic page/control/goal payloads."
+    },
+    {
+      "source": "docs_architecture_page_context_structural_context",
+      "target": "docs_architecture_natural_language_hybrid_retrieval",
+      "relation": "enriches",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:5",
+      "weight": 1.0,
+      "evidence": "Semantic matching uses the full heading/region context"
+    },
+    {
+      "source": "docs_architecture_page_context_specificity_rule",
+      "target": "docs_architecture_page_context_structural_context",
+      "relation": "ranks",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:5",
+      "weight": 1.0,
+      "evidence": "Extra qualifiers in the nearest section reduce its rank:"
+    },
+    {
+      "source": "docs_architecture_page_context_structural_context",
+      "target": "docs_architecture_natural_language_revision_guard",
+      "relation": "invalidates_on_change",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:5",
+      "weight": 1.0,
+      "evidence": "Structure changes alter signatures and revision numbers,"
+    },
+    {
+      "source": "docs_architecture_page_context_chrome_prompt_model",
+      "target": "docs_architecture_page_context_retrieved_model_view",
+      "relation": "consumes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:7",
+      "weight": 1.0,
+      "evidence": "The optional model receives a retrieved view of the current observation"
+    },
+    {
+      "source": "docs_architecture_page_context_retrieved_model_view",
+      "target": "docs_architecture_navigation_incremental_discovery",
+      "relation": "depends_on",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:7",
+      "weight": 1.0,
+      "evidence": "A control omitted by the collector's 600-control cap remains unavailable;"
+    },
+    {
+      "source": "docs_architecture_page_context_chrome_prompt_model",
+      "target": "docs_architecture_page_context_pristine_model_session",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:9",
+      "weight": 1.0,
+      "evidence": "Each request clones a pristine Chrome Prompt API session"
+    },
+    {
+      "source": "docs_architecture_page_context_chrome_prompt_model",
+      "target": "docs_architecture_page_context_independent_intent_validation",
+      "relation": "is_constrained_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "weight": 1.0,
+      "evidence": "The planner independently finds an unambiguous eligible live route"
+    },
+    {
+      "source": "docs_architecture_page_context_independent_intent_validation",
+      "target": "docs_architecture_security_consequential_review",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:11",
+      "weight": 1.0,
+      "evidence": "Consequential and unknown-effect boundaries survive reinterpretation."
+    },
+    {
+      "source": "docs_architecture_page_context_chrome_prompt_model",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "cannot_replace",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:13",
+      "weight": 1.0,
+      "evidence": "Observed results, not model text, determine verification."
+    },
+    {
+      "source": "docs_architecture_navigation_navigation_core",
+      "target": "docs_architecture_natural_language_english_request",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:3",
+      "weight": 1.0,
+      "evidence": "Compromise\nparses the entire validated request before retrieval"
+    },
+    {
+      "source": "docs_architecture_natural_language_hybrid_retrieval",
+      "target": "docs_architecture_natural_language_embedding_cache",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:13",
+      "weight": 1.0,
+      "evidence": "keys the global 10,000-entry derived cache."
+    },
+    {
+      "source": "docs_architecture_natural_language_offscreen_inference",
+      "target": "docs_architecture_natural_language_hybrid_retrieval",
+      "relation": "runs",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:17",
+      "weight": 1.0,
+      "evidence": "The extension runs packaged q8 ONNX weights in a worker"
+    },
+    {
+      "source": "docs_architecture_natural_language_offscreen_inference",
+      "target": "docs_architecture_natural_language_inference_lifecycle",
+      "relation": "is_managed_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:20",
+      "weight": 1.0,
+      "evidence": "Stop aborts pending work and closes the offscreen document."
+    },
+    {
+      "source": "docs_architecture_natural_language_task_queue",
+      "target": "docs_architecture_security_consequential_review",
+      "relation": "is_blocked_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:29",
+      "weight": 1.0,
+      "evidence": "Review boundaries block the queue;"
+    },
+    {
+      "source": "docs_architecture_natural_language_task_queue",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "retains_on_pause",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:30",
+      "weight": 1.0,
+      "evidence": "Pause retains the queue and Stop cancels it."
+    },
+    {
+      "source": "docs_architecture_navigation_navigation_core",
+      "target": "docs_architecture_natural_language_revision_guard",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:24",
+      "weight": 1.0,
+      "evidence": "Plans carry request, document and scan revision identifiers."
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "docs_architecture_security_api_security",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/natural-language.md",
+      "source_location": "docs/architecture/natural-language.md:41",
+      "weight": 1.0,
+      "evidence": "A bearer token and an explicit extension-origin allowlist protect"
+    },
+    {
+      "source": "docs_architecture_navigation_incremental_discovery",
+      "target": "docs_architecture_privacy_explicit_activation",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:5",
+      "weight": 1.0,
+      "evidence": "Opening the panel alone does not start discovery."
+    },
+    {
+      "source": "docs_architecture_navigation_incremental_discovery",
+      "target": "docs_architecture_privacy_bounded_private_observation",
+      "relation": "is_constrained_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:7",
+      "weight": 1.0,
+      "evidence": "It never reads input/textarea values, passwords, OTPs, editable contents or full page HTML."
+    },
+    {
+      "source": "docs_architecture_privacy_authentication_continuity",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "retains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:9",
+      "weight": 1.0,
+      "evidence": "Credentials and two-factor waiting retain the objective without an expiry deadline."
+    },
+    {
+      "source": "docs_architecture_privacy_private_session_context",
+      "target": "docs_architecture_navigation_indexeddb_knowledge",
+      "relation": "is_separate_from",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:13",
+      "weight": 1.0,
+      "evidence": "Browser-session private context is separate from extension IndexedDB knowledge."
+    },
+    {
+      "source": "docs_architecture_navigation_indexeddb_knowledge",
+      "target": "docs_architecture_privacy_knowledge_retention",
+      "relation": "is_bounded_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "weight": 1.0,
+      "evidence": "Knowledge is bounded to 50 sites"
+    },
+    {
+      "source": "docs_architecture_navigation_indexeddb_knowledge",
+      "target": "docs_architecture_privacy_knowledge_deletion",
+      "relation": "is_removed_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:19",
+      "weight": 1.0,
+      "evidence": "Forget removes the website and routes traversing it;"
+    },
+    {
+      "source": "docs_architecture_navigation_indexeddb_knowledge",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "excludes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:15",
+      "weight": 1.0,
+      "evidence": "Private entity names, supplied values, authenticated statuses and their vectors remain session-only."
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "docs_architecture_security_host_permissions",
+      "relation": "requires_capture_access",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:23",
+      "weight": 1.0,
+      "evidence": "Viewport capture requires an active authorized HTTP/HTTPS tab and Chrome screenshot access."
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "does_not_persist",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:27",
+      "weight": 1.0,
+      "evidence": "It does not persist OCR payloads or private session context."
+    },
+    {
+      "source": "docs_architecture_sessions_surface_visibility",
+      "target": "docs_architecture_privacy_presentation_storage",
+      "relation": "is_separate_from_task_reset",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:35",
+      "weight": 1.0,
+      "evidence": "Reset current session clears unfinished tasks, draft and conversation."
+    },
+    {
+      "source": "docs_architecture_privacy_mock_accounts",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "is_not_synchronized_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:33",
+      "weight": 1.0,
+      "evidence": "Composer drafts and at most 80 conversation messages use trusted extension-session storage and are not synchronized to the website or cloud."
+    },
+    {
+      "source": "docs_architecture_privacy_consent_theme",
+      "target": "docs_architecture_privacy_inactive_analytics",
+      "relation": "requires_fresh_matching_consent_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:41",
+      "weight": 1.0,
+      "evidence": "Any future provider needs a specific disclosure and fresh matching consent;"
+    },
+    {
+      "source": "docs_architecture_navigation_fresh_binding",
+      "target": "docs_architecture_security_untrusted_evidence",
+      "relation": "guards_against",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:3",
+      "weight": 1.0,
+      "evidence": "Every highlighted control requires a fresh document/element binding"
+    },
+    {
+      "source": "docs_architecture_sessions_pinned_session",
+      "target": "docs_architecture_security_sender_validation",
+      "relation": "is_enforced_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:9",
+      "weight": 1.0,
+      "evidence": "Content updates require assigned tab/frame/document identity and validated contracts."
+    },
+    {
+      "source": "docs_architecture_security_sender_validation",
+      "target": "docs_architecture_natural_language_revision_guard",
+      "relation": "rejects_stale_results_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:9",
+      "weight": 1.0,
+      "evidence": "stale asynchronous results cannot restore an older document or complete a newer task."
+    },
+    {
+      "source": "docs_architecture_security_consequential_review",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "requires_after_user_action",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:11",
+      "weight": 1.0,
+      "evidence": "a click only starts verification."
+    },
+    {
+      "source": "docs_architecture_navigation_outcome_verification",
+      "target": "docs_architecture_security_untrusted_evidence",
+      "relation": "does_not_accept_alone",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:13",
+      "weight": 1.0,
+      "evidence": "OCR text, a changed image, unrelated success toast or user confirmation cannot independently prove completion."
+    },
+    {
+      "source": "docs_architecture_navigation_viewport_ocr",
+      "target": "docs_architecture_security_consequential_review",
+      "relation": "retains_unknown_effects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:15",
+      "weight": 1.0,
+      "evidence": "visual-only targets retain unknown effects and manual review."
+    },
+    {
+      "source": "docs_architecture_navigation_optional_api",
+      "target": "docs_architecture_security_api_security",
+      "relation": "is_protected_by",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:17",
+      "weight": 1.0,
+      "evidence": "The optional API binds loopback by default"
+    },
+    {
+      "source": "docs_architecture_frontend_extension_worker_owner",
+      "target": "docs_architecture_sessions_pinned_session",
+      "relation": "owns",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:5",
+      "weight": 1.0,
+      "evidence": "`background/worker-runtime.ts` initializes storage, one pinned session and service composition."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_worker_owner",
+      "target": "docs_architecture_navigation_journey_objective",
+      "relation": "owns",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:3",
+      "weight": 1.0,
+      "evidence": "The worker owns journeys."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_content_owner",
+      "target": "docs_architecture_navigation_incremental_discovery",
+      "relation": "orchestrates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:7",
+      "weight": 1.0,
+      "evidence": "observation composition, outcome verification and plan lifecycle live alongside it."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_content_owner",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "orchestrates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:7",
+      "weight": 1.0,
+      "evidence": "observation composition, outcome verification and plan lifecycle live alongside it."
+    },
+    {
+      "source": "docs_architecture_frontend_extension_content_owner",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "enforces",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:7",
+      "weight": 1.0,
+      "evidence": "Only freshly observed, authorized controls may be bound;"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_extension_controller",
+      "target": "docs_architecture_frontend_extension_session_snapshot_hook",
+      "relation": "composes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/extension.md",
+      "source_location": "docs/architecture/frontend/extension.md:11",
+      "weight": 1.0,
+      "evidence": "the controller composes them."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_extension_controller",
+      "target": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "relation": "supplies_state_and_callbacks_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:74",
+      "weight": 1.0,
+      "evidence": "Both surfaces receive the same presentation and callbacks."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_draft_revision_protection",
+      "target": "docs_architecture_privacy_presentation_storage",
+      "relation": "protects",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:73",
+      "weight": 1.0,
+      "evidence": "Local edits stay protected from restoration until the matching `UI_SAVE` acknowledgement;"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_widget_shell",
+      "target": "docs_architecture_security_sender_validation",
+      "relation": "requires",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:75",
+      "weight": 1.0,
+      "evidence": "Typed layout requests pass through trusted UI transport"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_widget_density",
+      "target": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "relation": "preserves_mounted_state_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:76",
+      "weight": 1.0,
+      "evidence": "Shared components remain mounted across tiers;"
+    },
+    {
+      "source": "docs_architecture_sessions_surface_visibility",
+      "target": "docs_architecture_frontend_guidance_passive_overlay",
+      "relation": "gates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:79",
+      "weight": 1.0,
+      "evidence": "Both gate frame-local overlays/scrolling while authorized observation continues."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_isolated_practice",
+      "target": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "relation": "embeds",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:80",
+      "weight": 1.0,
+      "evidence": "The website practice adapter mounts `GuidanceApp`"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_isolated_practice",
+      "target": "docs_architecture_frontend_extension_worker_owner",
+      "relation": "cannot_own_state_of",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:80",
+      "weight": 1.0,
+      "evidence": "It owns sample outcomes, never Chrome permissions or production journey state."
+    },
+    {
+      "source": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "target": "docs_architecture_navigation_outcome_verification",
+      "relation": "cannot_assert",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:3",
+      "weight": 1.0,
+      "evidence": "It cannot call Chrome, grant permissions, read credentials or assert completion."
+    },
+    {
+      "source": "docs_architecture_frontend_shared_ui_shared_presentation",
+      "target": "docs_architecture_security_host_permissions",
+      "relation": "cannot_grant",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:3",
+      "weight": 1.0,
+      "evidence": "It cannot call Chrome, grant permissions, read credentials or assert completion."
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_passive_overlay",
+      "target": "docs_architecture_navigation_fresh_binding",
+      "relation": "tracks_geometry_of",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:5",
+      "weight": 1.0,
+      "evidence": "one animation-frame loop reads the freshly bound target's rendered rectangle."
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_passive_overlay",
+      "target": "docs_architecture_frontend_guidance_accessible_feedback",
+      "relation": "has_equivalent_text_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:3",
+      "weight": 1.0,
+      "evidence": "The panel provides equivalent instruction text and verified progress"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_geometry_accessibility_evidence",
+      "target": "docs_architecture_frontend_guidance_passive_overlay",
+      "relation": "verifies",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:9",
+      "weight": 1.0,
+      "evidence": "`tests/browser/extension/core/geometry.spec.ts` independently measures"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_geometry_accessibility_evidence",
+      "target": "docs_architecture_frontend_guidance_accessible_feedback",
+      "relation": "verifies",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:11",
+      "weight": 1.0,
+      "evidence": "`tests/browser/extension/core/accessibility.spec.ts` uses keyboard activation"
+    },
+    {
+      "source": "docs_architecture_frontend_guidance_geometry_accessibility_evidence",
+      "target": "docs_architecture_security_pending_native_acceptance",
+      "relation": "does_not_replace",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/guidance.md",
+      "source_location": "docs/architecture/frontend/guidance.md:11",
+      "weight": 1.0,
+      "evidence": "actual native Chrome side-panel behavior and screen-reader speech remain the hands-on checks"
+    },
+    {
+      "source": "docs_architecture_frontend_website_website_feature_owners",
+      "target": "docs_architecture_frontend_readme_isolated_practice",
+      "relation": "includes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:5",
+      "weight": 1.0,
+      "evidence": "The practice has three explicit responsibilities:"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_safe_docs_registry",
+      "target": "docs_architecture_frontend_website_stable_article_aliases",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:9",
+      "weight": 1.0,
+      "evidence": "legacy source references resolve through explicit aliases."
+    },
+    {
+      "source": "docs_architecture_frontend_website_website_feature_owners",
+      "target": "docs_architecture_privacy_mock_accounts",
+      "relation": "includes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:11",
+      "weight": 1.0,
+      "evidence": "Accounts remain visibly mocked,"
+    },
+    {
+      "source": "docs_architecture_frontend_website_website_feature_owners",
+      "target": "docs_architecture_privacy_consent_theme",
+      "relation": "includes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/website.md",
+      "source_location": "docs/architecture/frontend/website.md:11",
+      "weight": 1.0,
+      "evidence": "opt-in storage governed by actual cookie consent."
+    },
+    {
+      "source": "readme_local_default",
+      "target": "docs_architecture_natural_language_offscreen_inference",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:27",
+      "weight": 1.0,
+      "evidence": "The packaged English language model and Tesseract OCR run on your CPU."
+    },
+    {
+      "source": "readme_local_default",
+      "target": "docs_architecture_navigation_viewport_ocr",
+      "relation": "uses",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:27",
+      "weight": 1.0,
+      "evidence": "The packaged English language model and Tesseract OCR run on your CPU."
+    },
+    {
+      "source": "contributing_release_certification",
+      "target": "agents_deterministic_gate",
+      "relation": "requires_additional_full_tier",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:19",
+      "weight": 1.0,
+      "evidence": "`npm run test:full` is full certification, required before packaging."
+    },
+    {
+      "source": "contributing_release_certification",
+      "target": "contributing_frozen_corpora",
+      "relation": "preserves",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:41",
+      "weight": 1.0,
+      "evidence": "Preserve original bytes, splits, hashes and thresholds."
+    },
+    {
+      "source": "third_party_notices_third_party_provenance",
+      "target": "docs_architecture_natural_language_hybrid_retrieval",
+      "relation": "attributes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:21",
+      "weight": 1.0,
+      "evidence": "The model is used for semantic similarity, with no hosted inference service."
+    },
+    {
+      "source": "third_party_notices_third_party_provenance",
+      "target": "docs_architecture_navigation_incremental_discovery",
+      "relation": "attributes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:27",
+      "weight": 1.0,
+      "evidence": "Playwright discovery algorithms, Copyright Microsoft Corporation, Apache-2.0;"
+    },
+    {
+      "source": "third_party_notices_third_party_provenance",
+      "target": "docs_architecture_navigation_experimental_paddle",
+      "relation": "attributes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "THIRD_PARTY_NOTICES.md",
+      "source_location": "THIRD_PARTY_NOTICES.md:29",
+      "weight": 1.0,
+      "evidence": "Paddle is experimental and not the default recognition engine."
+    },
+    {
+      "source": "docs_readme_historical_evidence_boundary",
+      "target": "contributing_release_certification",
+      "relation": "cannot_authorize_current",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:19",
+      "weight": 1.0,
+      "evidence": "PR or independently collected evidence cannot authorize a release."
+    },
+    {
+      "source": "docs_architecture_frontend_readme_draft_revision_protection",
+      "target": "docs_architecture_natural_language_revision_guard",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:73",
+      "weight": 1.0,
+      "evidence": "UI draft hydration and engine plan publication independently use revision identity to reject stale asynchronous results; they protect different state owners."
+    },
+    {
+      "source": "docs_architecture_sessions_surface_visibility",
+      "target": "docs_architecture_privacy_private_session_context",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:35",
+      "weight": 1.0,
+      "evidence": "A launcher that conceals the retained destination separates private task continuity from what remains visible on the page."
+    },
+    {
+      "source": "docs_architecture_authored_routes_mode_contracts",
+      "target": "docs_architecture_frontend_readme_isolated_practice",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:17",
+      "weight": 1.0,
+      "evidence": "Both isolate controlled/sample flows from live product authority, using distinct contracts and state owners rather than shared fixture assumptions."
+    },
+    {
+      "source": "docs_readme_historical_evidence_boundary",
+      "target": "docs_architecture_frontend_readme_marketing_evidence",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:70",
+      "weight": 1.0,
+      "evidence": "Both keep claims attached to the specific observed artifact rather than letting presentation or historical output certify current behavior."
+    },
+    {
+      "source": "readme_document",
+      "target": "contributing_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:78",
+      "weight": 1.0,
+      "evidence": "[contribution guide](CONTRIBUTING.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:80",
+      "weight": 1.0,
+      "evidence": "[architecture](docs/architecture/README.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:82",
+      "weight": 1.0,
+      "evidence": "[frontend ownership](docs/architecture/frontend/README.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:82",
+      "weight": 1.0,
+      "evidence": "[navigation architecture](docs/architecture/navigation.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_natural_language_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:82",
+      "weight": 1.0,
+      "evidence": "[NLP](docs/architecture/natural-language.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:82",
+      "weight": 1.0,
+      "evidence": "[the documentation index](docs/README.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:84",
+      "weight": 1.0,
+      "evidence": "[Privacy](docs/architecture/privacy.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "docs_architecture_security_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:84",
+      "weight": 1.0,
+      "evidence": "[security](docs/architecture/security.md)"
+    },
+    {
+      "source": "readme_document",
+      "target": "third_party_notices_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "README.md:92",
+      "weight": 1.0,
+      "evidence": "[Third-party notices](THIRD_PARTY_NOTICES.md)"
+    },
+    {
+      "source": "agents_document",
+      "target": "docs_architecture_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "AGENTS.md:21",
+      "weight": 1.0,
+      "evidence": "[architecture](docs/architecture/README.md)"
+    },
+    {
+      "source": "contributing_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:11",
+      "weight": 1.0,
+      "evidence": "[frontend architecture](docs/architecture/frontend/README.md)"
+    },
+    {
+      "source": "contributing_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:13",
+      "weight": 1.0,
+      "evidence": "[architecture](docs/architecture/navigation.md)"
+    },
+    {
+      "source": "contributing_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:43",
+      "weight": 1.0,
+      "evidence": "[privacy](docs/architecture/privacy.md)"
+    },
+    {
+      "source": "contributing_document",
+      "target": "docs_architecture_security_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONTRIBUTING.md",
+      "source_location": "CONTRIBUTING.md:43",
+      "weight": 1.0,
+      "evidence": "[security](docs/architecture/security.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:3",
+      "weight": 1.0,
+      "evidence": "[the project README](../README.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_sessions_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:10",
+      "weight": 1.0,
+      "evidence": "[Session lifecycle](architecture/sessions.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:12",
+      "weight": 1.0,
+      "evidence": "[Privacy](architecture/privacy.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_security_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:12",
+      "weight": 1.0,
+      "evidence": "[security](architecture/security.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "contributing_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:20",
+      "weight": 1.0,
+      "evidence": "[Contribution and release procedure](../CONTRIBUTING.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:21",
+      "weight": 1.0,
+      "evidence": "[Frontend structure and ownership](architecture/frontend/README.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:22",
+      "weight": 1.0,
+      "evidence": "[Shared discovery, planning and verification architecture](architecture/navigation.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_natural_language_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:23",
+      "weight": 1.0,
+      "evidence": "[NLP and indexing](architecture/natural-language.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_page_context_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:24",
+      "weight": 1.0,
+      "evidence": "[Page context and experimental Chrome model](architecture/page-context.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_frontend_guidance_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:25",
+      "weight": 1.0,
+      "evidence": "[Guidance and accessibility](architecture/frontend/guidance.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_authored_routes_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:45",
+      "weight": 1.0,
+      "evidence": "[authored routes and registry](architecture/authored-routes.md)"
+    },
+    {
+      "source": "docs_readme_document",
+      "target": "docs_architecture_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/README.md",
+      "source_location": "docs/README.md:51",
+      "weight": 1.0,
+      "evidence": "[Architecture index](architecture/README.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:3",
+      "weight": 1.0,
+      "evidence": "[Navigation, discovery, grounding and verification](navigation.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_page_context_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:4",
+      "weight": 1.0,
+      "evidence": "[Page context and experimental browser language model](page-context.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_natural_language_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:5",
+      "weight": 1.0,
+      "evidence": "[Bundled NLP and indexing](natural-language.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_sessions_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:6",
+      "weight": 1.0,
+      "evidence": "[Session, document and worker continuity](sessions.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_authored_routes_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:7",
+      "weight": 1.0,
+      "evidence": "[Authored fixture routes and registry contracts](authored-routes.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:8",
+      "weight": 1.0,
+      "evidence": "[Developer privacy](privacy.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_security_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:8",
+      "weight": 1.0,
+      "evidence": "[security boundaries](security.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:9",
+      "weight": 1.0,
+      "evidence": "[Frontend ownership](frontend/README.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_frontend_extension_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:9",
+      "weight": 1.0,
+      "evidence": "[extension](frontend/extension.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_frontend_website_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:9",
+      "weight": 1.0,
+      "evidence": "[website](frontend/website.md)"
+    },
+    {
+      "source": "docs_architecture_readme_document",
+      "target": "docs_architecture_frontend_shared_ui_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/README.md",
+      "source_location": "docs/architecture/README.md:9",
+      "weight": 1.0,
+      "evidence": "[shared UI](frontend/shared-ui.md)"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_natural_language_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "[NLP](natural-language.md)"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "[privacy](privacy.md)"
+    },
+    {
+      "source": "docs_architecture_navigation_document",
+      "target": "docs_architecture_sessions_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:48",
+      "weight": 1.0,
+      "evidence": "[lifecycle](sessions.md)"
+    },
+    {
+      "source": "docs_architecture_sessions_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/sessions.md",
+      "source_location": "docs/architecture/sessions.md:13",
+      "weight": 1.0,
+      "evidence": "[frontend ownership](frontend/README.md)"
+    },
+    {
+      "source": "docs_architecture_authored_routes_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/authored-routes.md",
+      "source_location": "docs/architecture/authored-routes.md:9",
+      "weight": 1.0,
+      "evidence": "[live-navigation.md](navigation.md)"
+    },
+    {
+      "source": "docs_architecture_page_context_document",
+      "target": "docs_architecture_navigation_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/page-context.md",
+      "source_location": "docs/architecture/page-context.md:15",
+      "weight": 1.0,
+      "evidence": "[current architecture](navigation.md)"
+    },
+    {
+      "source": "docs_architecture_privacy_document",
+      "target": "docs_architecture_security_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:29",
+      "weight": 1.0,
+      "evidence": "[security](security.md)"
+    },
+    {
+      "source": "docs_architecture_security_document",
+      "target": "docs_architecture_privacy_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/security.md",
+      "source_location": "docs/architecture/security.md:17",
+      "weight": 1.0,
+      "evidence": "[privacy](privacy.md)"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "contributing_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:97",
+      "weight": 1.0,
+      "evidence": "[release requirements](../../../CONTRIBUTING.md)"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_extension_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:99",
+      "weight": 1.0,
+      "evidence": "[extension](extension.md)"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_website_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:99",
+      "weight": 1.0,
+      "evidence": "[website](website.md)"
+    },
+    {
+      "source": "docs_architecture_frontend_readme_document",
+      "target": "docs_architecture_frontend_shared_ui_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:99",
+      "weight": 1.0,
+      "evidence": "[shared UI](shared-ui.md)"
+    },
+    {
+      "source": "docs_architecture_frontend_shared_ui_document",
+      "target": "docs_architecture_frontend_readme_document",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/shared-ui.md",
+      "source_location": "docs/architecture/frontend/shared-ui.md:7",
+      "weight": 1.0,
+      "evidence": "[frontend architecture](README.md)"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "docs_architecture_navigation_live_evidence_cycle",
+      "label": "Live evidence and guidance cycle",
+      "nodes": [
+        "docs_architecture_navigation_incremental_discovery",
+        "docs_architecture_navigation_validated_observation",
+        "docs_architecture_navigation_navigation_core",
+        "docs_architecture_navigation_fresh_binding",
+        "docs_architecture_navigation_outcome_verification",
+        "docs_architecture_navigation_indexeddb_knowledge"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/navigation.md",
+      "source_location": "docs/architecture/navigation.md:3",
+      "evidence": "The architecture flowchart connects live DOM discovery, validated observation, core planning, binding, task-specific checks, and browser knowledge."
+    },
+    {
+      "id": "docs_architecture_frontend_readme_shared_guidance_owners",
+      "label": "Shared presentation with separate runtime authorities",
+      "nodes": [
+        "docs_architecture_frontend_extension_worker_owner",
+        "docs_architecture_frontend_extension_content_owner",
+        "docs_architecture_frontend_readme_extension_controller",
+        "docs_architecture_frontend_shared_ui_shared_presentation",
+        "docs_architecture_frontend_readme_isolated_practice"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/frontend/README.md",
+      "source_location": "docs/architecture/frontend/README.md:3",
+      "evidence": "Frontend ownership assigns journeys to the worker, observation/verification to content, callbacks to presentation, and sample outcomes to the isolated practice adapter."
+    },
+    {
+      "id": "docs_architecture_privacy_persistence_partition",
+      "label": "Private session versus reusable structural knowledge",
+      "nodes": [
+        "docs_architecture_privacy_private_session_context",
+        "docs_architecture_navigation_indexeddb_knowledge",
+        "docs_architecture_natural_language_embedding_cache",
+        "docs_architecture_privacy_ocr_masking",
+        "docs_architecture_navigation_optional_api"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/architecture/privacy.md",
+      "source_location": "docs/architecture/privacy.md:11",
+      "evidence": "Persistence and vision/backend sections explicitly separate temporary private task/OCR context from reusable sanitized knowledge and derived indexes, applying the same policy to optional mirroring."
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

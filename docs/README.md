@@ -49,6 +49,7 @@ The authored demo route engine remains separate because it supplies deterministi
 ## Repository development
 
 - [Architecture index](architecture/README.md)
+- [Local Graphify and Obsidian knowledge graph](development/knowledge-graph.md)
 - [Testing, projects, CI and release evidence](development/testing/README.md)
 - [Coverage ownership and removed duplication](releases/v0.10.1/coverage-ledger.md)
 - [Cleanup measurements](releases/v0.10.1/repository-cleanup.md)
