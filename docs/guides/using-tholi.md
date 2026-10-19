@@ -1,6 +1,6 @@
 # Tholi interface and local website
 
-The current source is **0.10.1**. See the [audit and implementation record](../releases/v0.10.1/ui-audit.md), [frontend ownership](../architecture/frontend/README.md), and [project-local skills](../../.codex/README.md). The gated website download remains **0.10.0**, labeled separately from source.
+The current source is **0.11.0 (unreleased)**. See [release notes](../releases/v0.11.0/README.md). See the [audit and implementation record](../releases/v0.10.1/ui-audit.md), [frontend ownership](../architecture/frontend/README.md), and [project-local skills](../../.codex/README.md). Downloads list an independently verified packaged version only when an eligible archive exists; otherwise use source setup.
 
 ## Build and use
 
@@ -10,13 +10,20 @@ npm run build:extension
 npm run dev:web
 ```
 
-Load `dist/extension` using **Load unpacked** in `chrome://extensions`. After rebuilding, reload Tholi and refresh the website tab. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
+Load `dist/extension` using **Load unpacked** in your Chromium browser's extension manager. In Firefox 153+, use `about:debugging` → **This Firefox** → **Load Temporary Add-on** and select `dist/extension-firefox/manifest.json`. Temporary Firefox installs end when the browser restarts. After rebuilding, reload Tholi and refresh the website tab. See [installation](getting-started.md) for browser status and requirements. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
 
 Guide/sidebar with Advanced off remains the default. Enter a destination and select **Guide me**. The 56-pixel journey summary expands into verified progress and route details. Required decisions temporarily replace the sidebar's route summary, progress and transcript with one scrollable decision area. Review and authentication instructions stay beside their required controls; generic clarification text is replaced by the actual question. The composer and Pause/Stop remain below this area. Answering restores the retained journey and conversation. Verified arrival offers **New destination**, without Pause or remaining-click estimates.
 
 Long clarification choices wrap into full-width buttons. On short sidebars, smaller spacing and a shorter composer reserve room for the decision; mode tabs are temporarily hidden while that decision is required. Scrollable content cannot paint over the anchored controls. Keyboard focus scrolls the question area, not the entire sidebar.
 
 Conversation centers the transcript rather than repeating the Guide card. It uses existing local NLP and actual navigation events. Enter sends; Shift+Enter adds a line. Navigation commands, compatible corrections/references, grounded clarification replies, copying guidance, and **Why this step?** are supported. Unsupported questions do not produce invented answers. Switching modes retains the draft and task. The latest 80 messages remain in trusted browser-session storage.
+
+Pause and Stop remain available while planning. Both cancel local inference and
+stop observation without waiting for the website to acknowledge. Automatic
+recovery is bounded: if a page keeps invalidating its scans, Tholi pauses checking
+and retains the destination. Resume after the page settles. Idle OCR workers are
+released after 10 seconds and planning workers after 30 seconds; resuming after
+release may require a cold model start.
 
 ## Widget and continuity
 
@@ -37,11 +44,11 @@ Required questions and access notices take the message area. **Review details** 
 
 The shell's **X minimizes to a 44-pixel launcher**. Objective, queue, milestones, draft, and conversation remain in the current browser session. Authorized observation and verification continue; expanded highlights, coach bubbles, reminders, and automatic guidance scrolling are suppressed. The launcher indicates attention or arrival without displaying the destination. Restore reacquires fresh observation before guidance. Session updates and supported document transitions do not reopen the minimized widget.
 
-**Double-click the floating widget launcher** to reveal **Remove**. Right-click or focus it and press **Shift+F10** also opens its controls; Escape dismisses them. Remove hides the launcher entirely and retains the task, draft and conversation. This hidden state survives reloads and worker restart. Click Tholi's Chrome toolbar icon to reopen it. Single-click widget restoration waits 400 ms to distinguish it from a double-click; keyboard activation remains immediate. A native sidebar launcher opens immediately to preserve Chrome's required user gesture, with removal available through right-click or Shift+F10.
+**Double-click the floating widget launcher** to reveal **Remove**. Right-click or focus it and press **Shift+F10** also opens its controls; Escape dismisses them. Remove hides the launcher entirely and retains the task, draft and conversation. This hidden state survives reloads and worker restart. Click Tholi's browser toolbar icon to reopen it. Single-click widget restoration waits 400 ms to distinguish it from a double-click; keyboard activation remains immediate. A native sidebar launcher opens immediately to preserve the browser's required user gesture, with removal available through right-click or Shift+F10.
 
-Dragging within 24 pixels of the right viewport edge shows a docking preview. Release requests the native sidebar immediately; the widget disappears only after Chrome accepts. Chrome uses the browser's configured panel side. Rejected activation retains the widget and an explicit **Dock to sidebar** action. Native lifecycle events are feature-detected; a disconnected UI port is not treated as dismissal.
+Dragging within 24 pixels of the right viewport edge shows a docking preview. Release requests the native sidebar immediately; the widget disappears only after native opening succeeds. Chromium uses the browser's configured panel side. Firefox embedded widgets cannot call the privileged sidebar API: use the Tholi toolbar action after Dock requests it; the widget remains usable until opening succeeds. Rejected activation retains the widget and an explicit **Dock to sidebar** action. Native lifecycle events are feature-detected; a disconnected UI port is not treated as dismissal.
 
-**Stop** cancels navigation while keeping visible history. **Reset current session** clears unfinished journeys, draft, and conversation after confirmation. Learned website knowledge and saved routes have separate trash actions. Closing Chrome ends private session continuity.
+**Stop** cancels navigation while keeping visible history. **Reset current session** clears unfinished journeys, draft, and conversation after confirmation. Learned website knowledge and saved routes have separate trash actions. Closing the browser ends private session continuity.
 
 The extension-origin iframe is capability-bound to the authorized tab, top document, frame, and session. Stale commands are rejected. Backend credentials remain sidebar-only. Tholi surfaces stay excluded from discovery/outcome evidence and hidden during OCR capture; existing field/frame masking remains.
 
@@ -71,8 +78,18 @@ Home uses distinct theme-aware chapters with a real extension recording, followe
 
 The About Wayfinder stage has a transparent background and an automatically looping sequence of labeled states, with no controls. It suspends offscreen and remains static with reduced motion. It is clearly identified as a brand-motion demonstration, not live task progress. Home's decorative desktop point follows the outer gutter without intercepting input; narrow and reduced-motion layouts keep a static equivalent. Product headings, selected explanations and the closing action use purpose-specific entrances rather than identical section fades. See [the website implementation and verification record](../releases/v0.10.1/website.md).
 
+## Optional assisted navigation
+
+Open **Settings** and enable **Assisted navigation** to let Tholi open eligible
+menus/disclosures and select explicitly requested view options. This is off by
+default. It does not follow links, fill fields, sign in, upload files, submit
+forms or perform final actions. Pause or turn the setting off to take over.
+Minimizing or dismissing Tholi suppresses assistance. Sites that require a trusted
+click may still need you to open a menu manually. Outcome checks remain independent
+of whether you or Tholi interacted.
+
 ## Verification
 
 Run `npm run typecheck`, `npm test`, builds, and `npm run test:ui`. The UI suite owns its preview server; set `THOLI_UI_PORT=5188` when an existing 5174 preview must remain running. Its report binds to recursive extension asset hashes. Rebuilding invalidates earlier reports.
 
-See the [audit record](../releases/v0.10.1/ui-audit.md) for measured evidence and pending checks. Native Chrome permissions/docking, screen readers, and signed-in workflows remain separate from fixtures. This redesign does not establish universal website routing accuracy.
+See the [audit record](../releases/v0.10.1/ui-audit.md) for measured evidence and pending checks. Native browser permissions/docking, screen readers, and signed-in workflows remain separate from fixtures. This redesign does not establish universal website routing accuracy.

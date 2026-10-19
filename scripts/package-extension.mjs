@@ -5,7 +5,7 @@ import { readFile, stat, mkdir, writeFile } from "node:fs/promises";
 import { artifactFiles } from "./artifact-files.mjs";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { archiveExtension } from "./archive-extension.mjs";
 import { multiAppEvidence } from "./verify-multi-app-release.mjs";
 import { reliabilityEvidence } from "./verify-reliability-release.mjs";
 
@@ -90,102 +90,104 @@ for (const scope of ["e2e", "live"]) {
     evaluatedAt: r.evaluatedAt,
   };
 }
+const requested =
+  process.argv.find((arg) => arg.startsWith("--target="))?.split("=")[1] ||
+  "all";
+if (!["all", "chromium", "firefox"].includes(requested))
+  throw Error("Unknown extension target");
+const targets = requested === "all" ? ["chromium", "firefox"] : [requested];
 const release = resolve("output/releases");
 await mkdir(release, { recursive: true });
-const name = `tholi-${manifest.version}`;
-const archive = join(release, name + ".zip");
+// Check every candidate name before creating any archive. Existing releases are immutable.
+for (const target of targets)
+  for (const suffix of [".zip", ".sha256", ".json"]) {
+    const name = `tholi${target === "firefox" ? "-firefox" : ""}-${manifest.version}`;
+    if (await stat(join(release, name + suffix)).catch(() => undefined))
+      throw Error(
+        "Release artifact already exists; preserve it and bump the version.",
+      );
+  }
 if (
-  (await stat(archive).catch(() => undefined)) ||
+  targets.includes("chromium") &&
   (await stat(
     join(release, `internet-navigator-${manifest.version}.zip`),
   ).catch(() => undefined))
 )
-  throw new Error(
-    "Release archive already exists; preserve it and bump the version for changes",
+  throw Error("Preserve the existing legacy archive and bump the version.");
+for (const target of targets) {
+  const directory =
+    target === "firefox" ? resolve("dist/extension-firefox") : extension;
+  const evaluated =
+    target === "firefox"
+      ? JSON.parse(
+          await readFile("output/acceptance/results-firefox.json", "utf8"),
+        )
+      : report;
+  const evaluatedFiles = await artifactFiles(directory);
+  requireFullEvidence(evaluated, evaluatedFiles, fullIdentity, target);
+  const name = `tholi${target === "firefox" ? "-firefox" : ""}-${manifest.version}`;
+  const archive = join(release, name + ".zip");
+  await archiveExtension(directory, archive, evaluatedFiles);
+  const archiveSha256 = sha(await readFile(archive));
+  await writeFile(
+    join(release, name + ".sha256"),
+    archiveSha256 + "  " + name + ".zip\n",
+    { flag: "wx" },
   );
-const quote = (s) => "'" + s.replaceAll("'", "''") + "'";
-execFileSync("powershell.exe", [
-  "-NoProfile",
-  "-Command",
-  "$ErrorActionPreference='Stop'\nAdd-Type -AssemblyName System.IO.Compression.FileSystem\n" +
-    "[System.IO.Compression.ZipFile]::CreateFromDirectory(" +
-    quote(extension) +
-    "," +
-    quote(archive) +
-    ",[System.IO.Compression.CompressionLevel]::Optimal,$false)",
-]);
-// Read every zipped member back and compare its bytes with the evaluated build.
-const zipped = JSON.parse(
-  execFileSync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-Command",
-      "$ErrorActionPreference='Stop'\nAdd-Type -AssemblyName System.IO.Compression.FileSystem\n" +
-        "$taskZip=[System.IO.Compression.ZipFile]::OpenRead(" +
-        quote(archive) +
-        ")\n" +
-        "try { @($taskZip.Entries | ForEach-Object { $taskStream=$_.Open(); try { $taskHash=[System.Security.Cryptography.SHA256]::Create(); [pscustomobject]@{name=$_.FullName;sha256=([BitConverter]::ToString($taskHash.ComputeHash($taskStream))).Replace('-','').ToLowerInvariant()} } finally { $taskStream.Dispose();$taskHash.Dispose() } }) | ConvertTo-Json -Compress } finally {$taskZip.Dispose()}",
-    ],
-    { encoding: "utf8" },
-  ),
-);
-if (
-  zipped.length !== Object.keys(files).length ||
-  zipped.some((f) => files[f.name.replaceAll("\\", "/")] !== f.sha256)
-)
-  throw new Error("Archive verification failed");
-const archiveSha256 = sha(await readFile(archive));
-await writeFile(
-  join(release, name + ".sha256"),
-  archiveSha256 + "  " + name + ".zip\n",
-);
-await writeFile(
-  join(release, name + ".json"),
-  JSON.stringify(
-    {
-      status: "candidate: native Chrome handoff pending",
-      extensionVersion: manifest.version,
-      archiveSha256,
-      files,
-      sourceRevision: report.sourceRevision,
-      workingTreeDirty: report.workingTreeDirty,
-      evaluatedAt: report.evaluatedAt,
-      packagedAt: new Date().toISOString(),
-      matrixSha256: report.matrixSha256,
-      metrics: report.summaries,
-      regressions,
-      ui: {
-        cases: ui.cases.length,
-        evaluatedAt: ui.evaluatedAt,
-        motion: ui.cases.find((c) => c.motion)?.motion,
-        nativeChrome: "pending user-assisted verification",
+  await writeFile(
+    join(release, name + ".json"),
+    JSON.stringify(
+      {
+        status:
+          "candidate: native installation and handoff require browser-specific verification",
+        target,
+        minimumBrowserVersion: target === "firefox" ? "153" : "140",
+        installationKind: target === "firefox" ? "temporary" : "unpacked",
+        extensionVersion: manifest.version,
+        archiveSha256,
+        files: evaluatedFiles,
+        validation: evaluated.validation,
+        buildTargets: evaluated.buildTargets,
+        sourceRevision: evaluated.sourceRevision,
+        workingTreeDirty: evaluated.workingTreeDirty,
+        evaluatedAt: evaluated.evaluatedAt,
+        packagedAt: new Date().toISOString(),
+        matrixSha256: evaluated.matrixSha256,
+        metrics: evaluated.summaries,
+        regressions,
+        ui: {
+          cases: ui.cases.length,
+          evaluatedAt: ui.evaluatedAt,
+          native: "pending browser-specific native verification",
+          motion: ui.cases.find((c) => c.motion)?.motion,
+        },
+        multiApp,
+        vision,
+        reliability,
+        optionalAI:
+          "Capability-gated experiment; the shared baseline uses bundled single-thread CPU MiniLM",
+        nlp: {
+          precision: nlp.precision,
+          coverage: nlp.coverage,
+          warmP95Ms: nlp.warmP95Ms,
+          hardware: nlp.hardware,
+          llmCalls: nlp.llmCalls,
+          embeddingActivity: nlp.embeddingActivity,
+        },
+        checklist: "docs/guides/getting-started.md",
+        pending: [
+          "signed-in workflow variants",
+          "native keyboard and screen reader",
+          "browser-specific native permission denial and handoff",
+        ],
       },
-      multiApp,
-      vision,
-      reliability,
-      optionalAI:
-        "Experimental LLM disabled; real CPU MiniLM evaluated separately",
-      nlp: {
-        precision: nlp.precision,
-        coverage: nlp.coverage,
-        warmP95Ms: nlp.warmP95Ms,
-        hardware: nlp.hardware,
-        llmCalls: nlp.llmCalls,
-        embeddingActivity: nlp.embeddingActivity,
-      },
-      checklist: "docs/guides/getting-started.md",
-      pending: [
-        "signed-in Amazon Prime cancellation and account variants",
-        "six-platform signed-in workflow verification",
-        "native side-panel reload/activation",
-        "native keyboard and screen reader",
-        "per-site permission denial/recovery",
-      ],
-    },
-    null,
-    2,
-  ) + "\n",
-);
-console.log(`Verified candidate: ${archive}\nSHA256: ${archiveSha256}`);
+      null,
+      2,
+    ) + "\n",
+    { flag: "wx" },
+  );
+  console.log(
+    `Verified ${target} candidate: ${archive}\nSHA256: ${archiveSha256}`,
+  );
+}
 await (await import("./sync-downloads.mjs")).syncDownloads();

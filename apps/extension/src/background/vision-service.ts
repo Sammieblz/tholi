@@ -1,3 +1,5 @@
+import { cancelInferenceHost } from "../platform/inference-host";
+import { api, type Tabs } from "../platform/api";
 import type { PinnedSession } from "../../../../packages/route-registry/session";
 import {
   planInputSchema,
@@ -13,7 +15,7 @@ import {
 } from "../../../../packages/vision/contracts";
 import { needsVision } from "../../../../packages/vision/fusion";
 import { recognizeWithFallback } from "../../../../packages/vision/processing";
-import { browserOcr, localNlp } from "../inference/offscreen-client";
+import { browserOcr, localNlp } from "../inference/client";
 import { backendOcr } from "../platform/backend-client";
 import { presentationVisible } from "./ui-transport";
 
@@ -22,7 +24,7 @@ interface Context {
   lastVisionKey: string;
   session: PinnedSession | undefined;
   goalGeneration: number;
-  activeTab: () => Promise<chrome.tabs.Tab>;
+  activeTab: () => Promise<Tabs.Tab>;
   originOf: (url?: string) => string | undefined;
   lastCapture: number;
   knownSites: Map<string, SiteMemory | undefined>;
@@ -35,9 +37,7 @@ export function createVisionService(context: Context) {
     context.visionJob?.abort();
     context.visionJob = undefined;
     context.lastVisionKey = "";
-    void chrome.runtime
-      .sendMessage({ target: "offscreen", type: "CANCEL_OCR" })
-      .catch(() => {});
+    void cancelInferenceHost("CANCEL_OCR");
   }
 
   async function attemptVision(sessionId: string, requestId: string) {
@@ -77,7 +77,7 @@ export function createVisionService(context: Context) {
         context.originOf(tab.url) !== captured.origin
       )
         return;
-      const metadata = await chrome.tabs.sendMessage(captured.tabId, {
+      const metadata = await api.tabs.sendMessage(captured.tabId, {
         type: "PREPARE_CAPTURE",
         sessionId,
       });
@@ -98,7 +98,7 @@ export function createVisionService(context: Context) {
       }
       context.lastCapture = Date.now();
       context.lastVisionKey = key;
-      const image = await chrome.tabs.captureVisibleTab(tab.windowId, {
+      const image = await api.tabs.captureVisibleTab(tab.windowId, {
         format: "png",
       });
       controller.signal.throwIfAborted();
@@ -113,7 +113,7 @@ export function createVisionService(context: Context) {
         viewportRevision: metadata.viewportRevision,
         captureId: crypto.randomUUID(),
       };
-      const settings = (await chrome.storage.local.get("vision")).vision;
+      const settings = (await api.storage.local.get("vision")).vision;
       const value = await recognizeWithFallback(
         { image, metadata, stamp },
         { browser: browserOcr, backend: backendOcr },
@@ -128,11 +128,11 @@ export function createVisionService(context: Context) {
         )
       )
         return;
-      const viewport = await chrome.tabs.sendMessage(captured.tabId, {
+      const viewport = await api.tabs.sendMessage(captured.tabId, {
         type: "CHECK_VIEWPORT",
         sessionId,
       });
-      const fresh = await chrome.tabs.sendMessage(captured.tabId, {
+      const fresh = await api.tabs.sendMessage(captured.tabId, {
         type: "GET_PAGE",
         sessionId,
       });
@@ -169,7 +169,7 @@ export function createVisionService(context: Context) {
         await localNlp(visualInput, context.knownSites.get(captured.origin!)),
       );
       controller.signal.throwIfAborted();
-      const currentViewport = await chrome.tabs.sendMessage(captured.tabId, {
+      const currentViewport = await api.tabs.sendMessage(captured.tabId, {
         type: "CHECK_VIEWPORT",
         sessionId,
       });
@@ -194,10 +194,9 @@ export function createVisionService(context: Context) {
         const active = await context.activeTab();
         if (active?.id !== captured.tabId || active.url !== tab.url) return;
         context.lastCapture = Date.now();
-        const currentImage = await chrome.tabs.captureVisibleTab(
-          active.windowId,
-          { format: "png" },
-        );
+        const currentImage = await api.tabs.captureVisibleTab(active.windowId, {
+          format: "png",
+        });
         const checked = await browserOcr({
           image: currentImage,
           referenceImage: image,
@@ -210,7 +209,7 @@ export function createVisionService(context: Context) {
           context.lastVisionKey = "";
           return;
         }
-        const shown = await chrome.tabs.sendMessage(captured.tabId, {
+        const shown = await api.tabs.sendMessage(captured.tabId, {
           type: "SHOW_VISUAL",
           sessionId,
           action: plan.action,
@@ -220,7 +219,7 @@ export function createVisionService(context: Context) {
         if (!shown.shown) return;
       }
       const result = interpreted;
-      const reply = await chrome.tabs.sendMessage(captured.tabId, {
+      const reply = await api.tabs.sendMessage(captured.tabId, {
         type: "INSTALL_REQUEST",
         sessionId,
         result,
@@ -243,12 +242,12 @@ export function createVisionService(context: Context) {
           /activeTab|permission|capture|Cannot access/i.test(
             error instanceof Error ? error.message : "",
           )
-            ? "Chrome needs renewed capture access. Click the extension icon on this website; your destination is retained."
+            ? "Your browser needs renewed capture access. Click the extension icon on this website; your destination is retained."
             : "Visual recognition is unavailable right now. Your destination is retained; use live controls or retry visual assistance.";
         await context.save();
       }
     } finally {
-      await chrome.tabs
+      await api.tabs
         .sendMessage(captured.tabId, { type: "RESTORE_CAPTURE", sessionId })
         .catch(() => {});
       if (context.visionJob === controller) context.visionJob = undefined;

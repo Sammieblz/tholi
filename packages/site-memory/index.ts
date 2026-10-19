@@ -6,6 +6,7 @@ import {
   hash,
   savedTaskSchema,
   type SavedTask,
+  routeFeedbackSchema,
 } from "../page-model";
 import {
   structuralObservation,
@@ -15,6 +16,25 @@ import {
 import { upgradePrivateMemory, upgradeRouteActions } from "./migration";
 import { boundedTransaction } from "./transaction";
 const MAX_AGE = 90 * 86400000;
+/** Timeouts reduce confidence in an existing verified edge; never create one. */
+export function applyRouteFeedback(site: SiteMemory, raw: unknown) {
+  const parsed = routeFeedbackSchema.safeParse(raw);
+  if (!parsed.success) return site;
+  const feedback = parsed.data;
+  for (const edge of site.transitions) {
+    if (
+      edge.evidence !== "observed" ||
+      edge.from !== feedback.from ||
+      edge.signature !== feedback.signature ||
+      edge.feedbackIds?.includes(feedback.id)
+    )
+      continue;
+    edge.failures = Math.min(32, (edge.failures || 0) + 1);
+    edge.feedbackIds = [...(edge.feedbackIds || []), feedback.id].slice(-32);
+    site.version++;
+  }
+  return site;
+}
 export function mergeObservation(
   previous: SiteMemory | undefined,
   page: PageSnapshot,
@@ -126,6 +146,8 @@ export function mergeObservation(
         const samples = existing.samples || 0,
           mean = existing.meanMs;
         Object.assign(existing, edge);
+        if (edge.evidence === "observed" && existing.failures)
+          existing.failures = Math.max(0, existing.failures - 1);
         if (edge.evidence === "observed" && edge.meanMs !== undefined) {
           existing.samples = samples + 1;
           existing.meanMs =
@@ -266,7 +288,11 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
       },
     );
   }
-  async observe(page: PageSnapshot, transition?: ObservedTransition) {
+  async observe(
+    page: PageSnapshot,
+    transition?: ObservedTransition,
+    feedback?: unknown,
+  ) {
     transition = structuralTransition(
       page.origin,
       transition,
@@ -285,6 +311,7 @@ export class IndexedDBSiteMemory implements SiteMemoryStore {
         const request = store.get(page.origin);
         request.onsuccess = () => {
           const site = mergeObservation(request.result, page, transition);
+          applyRouteFeedback(site, feedback);
           store.put(site);
           result(site);
         };

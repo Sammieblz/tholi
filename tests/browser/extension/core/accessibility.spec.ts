@@ -20,6 +20,13 @@ test("panel exposes distinct status announcements, stable polling and usable key
       .getByRole("button", { name: "Guide me", exact: true })
       .press("Enter");
     await expect.poll(async () => (await app.view())?.status).toBe("running");
+    // A native sidebar shares the website's active tab. Our separate test tab
+    // needs real foreground focus while retaining that already observed context.
+    await app.page.bringToFront();
+    await app.panel.evaluate(() =>
+      (globalThis as any).__tholiSidebarTab.hold(),
+    );
+    await app.panel.bringToFront();
     const status = app.panel.getByRole("status", { name: "Navigation status" });
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await expect(status).toContainText("Your next step.");
@@ -67,13 +74,13 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await app.panel
       .getByRole("button", { name: "Pause navigation", exact: true })
       .focus();
-    await app.page.bringToFront();
+    await app.panel.bringToFront();
     await app.panel.keyboard.press("Enter");
     await expect(status).toContainText("Paused.");
     await expect(
       app.panel.getByRole("button", { name: "Resume navigation", exact: true }),
     ).toBeFocused();
-    await app.page.bringToFront();
+    await app.panel.bringToFront();
     await app.panel.keyboard.press("Enter");
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await app.panel.getByRole("button", { name: "Stop", exact: true }).focus();
@@ -96,23 +103,10 @@ test("panel exposes distinct status announcements, stable polling and usable key
         GET_CONTEXT: { calls: 0, active: 0, max: 0 },
         GET_TASKS: { calls: 0, active: 0, max: 0 },
       };
-      const original = chrome.runtime.sendMessage.bind(chrome.runtime);
-      win.__restorePolling = () => (chrome.runtime.sendMessage = original);
-      chrome.runtime.sendMessage = ((...args: any[]) => {
-        const counter = win.__polling[args[0]?.type];
-        if (!counter) return (original as any)(...args);
-        counter.calls++;
-        counter.active++;
-        counter.max = Math.max(counter.max, counter.active);
-        return (original as any)(...args)
-          .then(async (reply: any) => {
-            await new Promise((resolve) =>
-              setTimeout(resolve, args[0].type === "GET_CONTEXT" ? 1500 : 3000),
-            );
-            return reply;
-          })
-          .finally(() => counter.active--);
-      }) as typeof chrome.runtime.sendMessage;
+      win.__slowReads = true;
+      win.__restorePolling = () => {
+        win.__slowReads = false;
+      };
     });
     await expect
       .poll(

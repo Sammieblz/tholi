@@ -1,6 +1,6 @@
 # Contributing to Tholi
 
-Use Node **24.19.x** and its npm. Run `npm ci`, then `npm run check`. Builds fetch and verify the pinned default model assets automatically. Load `dist/extension` unpacked in Chrome and refresh website tabs after rebuilding.
+Use Node **24.19.x** and its npm. Run `npm ci`, then `npm run check`. Builds fetch and verify the pinned default model assets automatically. Load `dist/extension` in Chromium or temporarily install `dist/extension-firefox/manifest.json` through Firefox about:debugging. Refresh website tabs after rebuilding. See [browser setup](docs/guides/getting-started.md).
 
 ## Names and metadata
 
@@ -8,7 +8,7 @@ Use **Tholi** in product copy, documentation, demo labels and generated report f
 
 ## Component boundaries
 
-Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/architecture/frontend/README.md). Keep feature CSS colocated and shared presentation free of Chrome APIs. Follow the [motion contract](docs/releases/v0.10.1/ui-audit.md) for stable steps, reduced motion, and keyboard interactions.
+Frontend features, styles, routing, and controller ownership are described in [frontend architecture](docs/architecture/frontend/README.md). Keep feature CSS colocated and shared presentation free of browser APIs. Follow the [motion contract](docs/releases/v0.10.1/ui-audit.md) for stable steps, reduced motion, and keyboard interactions.
 
 The shared navigation core owns validated requests, retrieval/planning orchestration, queues and workflows. NLP owns interpretation and CPU embeddings. The extension owns discovery, binding, permissions, lifecycle and outcome verification. The optional API uses the same core with inference outside its event loop. See [architecture](docs/architecture/navigation.md).
 
@@ -30,9 +30,11 @@ TypeScript rejects unused locals and parameters. Build hashing is shared by test
 | Return routing, restart and browser OCR          | `npm run test:continuity:browser`  |
 | Prime continuity and offline UI-image OCR        | `npm run test:reliability:browser` |
 
-Install browser binaries once with `npx playwright install chromium`. Run browser/model suites sequentially on memory-constrained machines. `npm run build:extension:experimental:paddle` includes Paddle/OpenCV for evaluation; the normal build removes their inactive assets. A failed experiment must never be counted as a passing default-engine gate.
+Install browser binaries once with `npx playwright install chromium firefox`. Run browser/model suites sequentially on memory-constrained machines. `npm run build:extension:experimental:paddle` includes Paddle/OpenCV for evaluation; the normal build removes their inactive assets. A failed experiment must never be counted as a passing default-engine gate.
 
 ## CI and releases
+
+Follow [versioning and releases](docs/development/releasing.md). Create version-specific notes under `docs/releases/vVERSION`, then run `npm run release:version -- VERSION`. `npm run check:version` rejects drift between product, API, workspace and extension metadata or a mismatched CI tag. Keep historical evidence and capture versions unchanged.
 
 Use `npm run test:ci` for deterministic PR checks and `npm run test:full` before certification. The full command runs all retained coverage against one build, then verifies evidence. PR/main workflows preserve the required `validate` aggregate; nightly/manual/tag runs perform full validation. See [testing and CI](docs/development/testing/README.md) and [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md).
 
@@ -42,7 +44,7 @@ Frozen inputs live under `tests/fixtures`, with the acceptance declaration in `t
 
 Store no authenticated screenshots/traces by default. Private values remain session-only. Original knowledge and reusable routes survive migrations; derived indexes can rebuild. See [privacy](docs/architecture/privacy.md) and [security](docs/architecture/security.md).
 
-New archives use `tholi-VERSION.zip` and `tholi-api-VERSION.tgz`. Legacy archives remain immutable with truthful checksums; both packagers reject already released versions under either naming convention.
+New archives use `tholi-VERSION.zip`, `tholi-firefox-VERSION.zip` and `tholi-api-VERSION.tgz`. Legacy archives remain immutable with truthful checksums; both packagers reject already released versions under either naming convention.
 
 ## Avoiding duplication
 

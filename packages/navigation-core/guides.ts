@@ -93,7 +93,7 @@ const guide = (
       id === "amazon.prime.cancel"
         ? "2.0.0"
         : id === "cloudflare.pages.deploy"
-          ? "1.1.0"
+          ? "1.2.0"
           : "1.0.0",
     sources: source.map((key) => ({
       url: sources[key][0],
@@ -199,10 +199,11 @@ export const workflowGuides: WorkflowGuide[] = [
     ],
     ["git", "upload"],
     [
+      step("workspace-menu", "Open the Compute menu", ["Compute"], "reveal"),
       step(
         "workspace",
         "Open the application's deployment area",
-        ["Workers & Pages", "Workers and Pages", "Compute"],
+        ["Workers & Pages", "Workers and Pages"],
         "navigate",
       ),
       step(

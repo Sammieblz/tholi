@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { it, expect, vi, afterEach } from "vitest";
 import { PageDiscovery } from "../../../packages/page-discovery/index";
+import { IncrementalControlIndex } from "../../../packages/page-discovery/incremental";
 import { planGoal } from "../../../packages/goal-planner/index";
 import { mergeObservation } from "../../../packages/site-memory/index";
 import {
@@ -39,6 +40,57 @@ function fixture(html: string) {
   );
 }
 afterEach(() => vi.restoreAllMocks());
+it("ignores Tholi's own roots and unrelated text churn without missing website controls or receipts", async () => {
+  vi.useFakeTimers();
+  fixture(
+    '<main><h1>Prime membership</h1><p id="receipt">Membership active</p><button aria-describedby="description">Manage membership</button><span id="description">Your benefits</span><span id="ticker">1</span></main>',
+  );
+  const notify = vi.fn(),
+    index = new IncrementalControlIndex();
+  index.start(notify);
+  try {
+    await vi.advanceTimersByTimeAsync(1000);
+    notify.mockClear();
+    const widget = document.createElement("div");
+    widget.dataset.tholiUi = "";
+    const shadow = widget.attachShadow({ mode: "open" });
+    shadow.innerHTML = "<button>Pause</button>";
+    document.body.append(widget);
+    for (let i = 0; i < 8; i++) {
+      document.getElementById("ticker")!.textContent = String(i);
+      await vi.advanceTimersByTimeAsync(150);
+    }
+    expect(index.roots.has(shadow)).toBe(false);
+    expect(notify).not.toHaveBeenCalled();
+    expect(
+      new PageDiscovery()
+        .snapshot()
+        .controls.some((control) => control.label === "Pause"),
+    ).toBe(false);
+    document.getElementById("description")!.textContent =
+      "Choose membership options";
+    await vi.advanceTimersByTimeAsync(300);
+    expect(notify).toHaveBeenCalledOnce();
+    expect(
+      [...index.dirty].some(
+        (control) => control.textContent === "Manage membership",
+      ),
+    ).toBe(true);
+    document.getElementById("receipt")!.textContent =
+      "Your membership will end on your renewal date.";
+    await vi.advanceTimersByTimeAsync(300);
+    expect(notify).toHaveBeenCalledTimes(2);
+    const button = document.createElement("button");
+    button.textContent = "End membership";
+    document.querySelector("main")!.append(button);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(index.elements.has(button)).toBe(true);
+    expect(notify.mock.calls.length).toBeGreaterThan(1);
+  } finally {
+    index.stop();
+    vi.useRealTimers();
+  }
+});
 it("preserves real headings and ARIA footer links under dense navigation", () => {
   fixture(
     `<main><h1>Catalogue</h1><nav>${Array.from({ length: 900 }, (_, i) => `<a href="/related/${i}">Related item ${i}</a>`).join("")}</nav><h2 id="references">References</h2></main><div role="contentinfo"><a href="/privacy">Privacy policy</a></div>`,

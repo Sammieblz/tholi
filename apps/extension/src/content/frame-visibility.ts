@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import { clippedRect } from "../../../../packages/browser-adapter/geometry";
 import { visible } from "../../../../packages/browser-adapter/index";
 const frames = new Map<
@@ -75,7 +76,7 @@ export function frameVisibilityBridge(
       const key = JSON.stringify(state);
       if (key === f.last) continue;
       f.last = key;
-      void chrome.runtime
+      void api.runtime
         .sendMessage({
           type: "FRAME_VISIBILITY",
           sessionId: current.sessionId,

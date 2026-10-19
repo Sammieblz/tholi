@@ -57,9 +57,9 @@ export function OnboardingPage() {
               <div>
                 <h2>A place beside the website.</h2>
                 <p>
-                  The extension opens in Chrome’s sidebar. A movable widget is
-                  available when you would rather keep the guide closer to the
-                  page.
+                  The extension opens in your browser’s sidebar. A movable
+                  widget is available when you would rather keep the guide
+                  closer to the page.
                 </p>
                 <DownloadButton download={download} />
                 <SiteLink to="/download" className="web-text-link">
@@ -78,8 +78,8 @@ export function OnboardingPage() {
             <div className="web-note">
               <ShieldCheck aria-hidden="true" />
               <p>
-                You approve Chrome’s website access when required. Tholi does
-                not enter passwords or perform website actions for you.
+                You approve your browser’s website access when required. Tholi
+                does not enter passwords or perform website actions for you.
               </p>
             </div>
             <button className="primary" onClick={() => setStep(1)}>

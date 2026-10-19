@@ -358,6 +358,8 @@ export interface MemoryPage {
   language?: string;
 }
 export interface MemoryTransition {
+  failures?: number;
+  feedbackIds?: string[];
   action?: { kind: "control"; signature: string };
   requiresFreshBinding?: boolean;
   from: string;
@@ -370,6 +372,15 @@ export interface MemoryTransition {
   samples?: number;
   meanMs?: number;
 }
+export const routeFeedbackSchema = z
+  .object({
+    id: z.string().uuid(),
+    from: z.string().max(100),
+    signature: z.string().max(100),
+    outcome: z.literal("timeout"),
+  })
+  .strict();
+export type RouteFeedback = z.infer<typeof routeFeedbackSchema>;
 export interface SiteMemory {
   schemaVersion: 1;
   origin: string;
@@ -426,7 +437,7 @@ export function livePreview(origin: string) {
     description:
       "Discover the current page, describe your goal, or choose any available control.",
     safetyNote:
-      "You make every click. Tholi verifies changes and stops before consequential actions.",
+      "You control the website. Tholi verifies changes and stops before consequential actions.",
     version: LIVE_VERSION,
     lastVerified: "Live page observations",
     milestones: ["Discover page", "Choose a goal", "Verify the result"],

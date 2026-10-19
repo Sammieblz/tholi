@@ -1,0 +1,267 @@
+{
+  "status": "blocked",
+  "releaseCertified": false,
+  "runId": "browser-support-20261017-final-4",
+  "buildTargets": {
+    "firefox": "f875a94db65e0335d425dd189a5166812fb151b3762384e228a6ce8914e88799",
+    "chromium": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+  },
+  "reports": [
+    {
+      "path": "output/qa/unit.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 289
+    },
+    {
+      "path": "output/qa/ui-build.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 42
+    },
+    {
+      "path": "output/qa/firefox-build.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "f875a94db65e0335d425dd189a5166812fb151b3762384e228a6ce8914e88799"
+      },
+      "target": "firefox",
+      "cases": 2
+    },
+    {
+      "path": "output/qa/branded-build.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 3
+    },
+    {
+      "path": "output/qa/browser-performance.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 1
+    },
+    {
+      "path": "output/acceptance/e2e-regressions.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 47
+    },
+    {
+      "path": "output/acceptance/live-regressions.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 14
+    },
+    {
+      "path": "output/acceptance/results-firefox.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "f875a94db65e0335d425dd189a5166812fb151b3762384e228a6ce8914e88799"
+      },
+      "target": "firefox",
+      "cases": 90
+    },
+    {
+      "path": "output/nlp/results.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 11
+    },
+    {
+      "path": "output/nlp/browser-build.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 8
+    },
+    {
+      "path": "output/multi-app/model.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium"
+    },
+    {
+      "path": "output/multi-app/runtime.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 17
+    },
+    {
+      "path": "output/multi-app/browser.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 8
+    },
+    {
+      "path": "output/multi-app/performance.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium"
+    },
+    {
+      "path": "output/vision/runtime.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 4
+    },
+    {
+      "path": "output/vision/routes.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium"
+    },
+    {
+      "path": "output/vision/browser.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 3
+    },
+    {
+      "path": "output/vision/performance.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium"
+    },
+    {
+      "path": "output/reliability/browser.json",
+      "passed": true,
+      "validation": {
+        "selection": "complete",
+        "tier": "full",
+        "runId": "browser-support-20261017-final-4",
+        "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+      },
+      "target": "chromium",
+      "cases": 2
+    }
+  ],
+  "blockers": [
+    {
+      "target": "chromium",
+      "owner": "acceptance-chromium",
+      "status": "incomplete",
+      "details": "No complete clean Chromium acceptance run. Intermittent persistence assertion failures; native IndexedDB transactions aborted at the existing 5000 ms deadline. Severe host memory pressure observed, underlying cause unresolved. Earlier focus-oracle failures and timeouts remain without complete revalidation."
+    }
+  ],
+  "diagnostic": {
+    "temporaryInstrumentationRemoved": true,
+    "transactionAborts": 7,
+    "observedAbortAgeMs": {
+      "minimum": 5008,
+      "maximum": 5020
+    },
+    "pendingRequestError": "AbortError",
+    "focusedBatch": {
+      "cases": 4,
+      "passed": 3,
+      "failed": 1
+    },
+    "sourceLog": "output/browser-support-memory-batch.log",
+    "certifyingEvidence": false
+  },
+  "manualPending": [
+    "Native permission dialogs",
+    "Screen-reader speech",
+    "Signed-in workflows",
+    "Hosted CI runtime"
+  ],
+  "websitePreview": "http://127.0.0.1:5174/download?browser=firefox",
+  "archiveCreated": false
+}

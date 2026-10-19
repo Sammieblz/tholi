@@ -4,17 +4,17 @@
 
 ## Names and sources of truth
 
-| Surface                           | Current source                                  | Rule                                                                                                                                |
-| --------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Root npm project                  | `package.json`                                  | Private project name `tholi`, source version 0.10.1, company attribution and canonical repository URL.                              |
-| Chrome extension                  | `apps/extension/manifest.json`                  | Display name **Tholi**, toolbar title **Open Tholi**, source version 0.10.1 and generated Tholi icons.                              |
-| Website source links              | `apps/web/src/config/project.ts`                | Derive from the root package repository metadata, including documentation source paths.                                             |
-| Company/contact information       | `apps/web/src/features/legal/operator.ts`       | Shared with the footer; public origin remains configurable.                                                                         |
-| Optional API                      | `apps/api/package.json`                         | OpenAPI and health metadata read the API's own version, currently 0.10.0. The displayed name is **Tholi single-owner API**.         |
-| Future extension/backend archives | Existing gated packagers                        | `tholi-VERSION.zip` and `tholi-api-VERSION.tgz`. Existing archives under either naming convention block reusing a released version. |
-| Website download                  | Generated `apps/public/downloads/manifest.json` | Read the version, filename and checksum of the eligible archive. Source and download versions can differ.                           |
+| Surface                           | Current source                                  | Rule                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Root npm project                  | `package.json`                                  | Private project name `tholi`, source version from the root package, company attribution and canonical repository URL.                         |
+| Chrome extension                  | `apps/extension/manifest.json`                  | Display name **Tholi**, toolbar title **Open Tholi**, source version from the root package and generated Tholi icons.                         |
+| Website source links              | `apps/web/src/config/project.ts`                | Derive from the root package repository metadata, including documentation source paths.                                                       |
+| Company/contact information       | `apps/web/src/features/legal/operator.ts`       | Shared with the footer; public origin remains configurable.                                                                                   |
+| Optional API                      | `apps/api/package.json`                         | OpenAPI and health metadata read the API's own version, synchronized with the root package. The displayed name is **Tholi single-owner API**. |
+| Future extension/backend archives | Existing gated packagers                        | `tholi-VERSION.zip` and `tholi-api-VERSION.tgz`. Existing archives under either naming convention block reusing a released version.           |
+| Website download                  | Generated `apps/public/downloads/manifest.json` | Read the version, filename and checksum of the eligible archive. Source and download versions can differ.                                     |
 
-Workspace versions are component versions; they do not all advance when presentation changes. The current eligible download is the original 0.10.0 archive. A filename change does not create a new release or make old validation apply to new bytes.
+Product, extension, API and bundled workspace versions now advance together. Use [the versioning procedure](releasing.md) and `npm run release:version -- VERSION` to keep manifests, internal dependency pins and the lockfile synchronized. Download availability comes from eligible checksum-verified archives; without one, the website offers source setup. A filename change does not create a new release or make old validation apply to new bytes.
 
 ## Compatibility identifiers
 

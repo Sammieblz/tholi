@@ -234,8 +234,8 @@ describe("shared guidance keeps controls reachable and outcomes honest", () => {
     ).toBe("true");
     expect(document.querySelector('[aria-current="step"]')).toBeNull();
   });
-  it("keeps Stop available while a route query is pending", async () => {
-    const props = { ...base(), pending: true };
+  it("keeps Pause and Stop available while a route query is pending or the active tab changes", async () => {
+    const props = { ...base(), pending: true, disabled: true };
     await render(props);
     const stop = Array.from(document.querySelectorAll("button")).find(
       (b) => b.textContent?.trim() === "Stop",
@@ -243,6 +243,12 @@ describe("shared guidance keeps controls reachable and outcomes honest", () => {
     expect(stop.disabled).toBe(false);
     await act(async () => stop.click());
     expect(props.onCommand).toHaveBeenCalledWith("STOP");
+    const pause = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pause navigation"]',
+    )!;
+    expect(pause.disabled).toBe(false);
+    await act(async () => pause.click());
+    expect(props.onCommand).toHaveBeenCalledWith("PAUSE");
   });
   it("settles idle breathing while a destination is being composed", async () => {
     const props = base();

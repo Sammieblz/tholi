@@ -1,7 +1,12 @@
 import { test, expect, type Locator } from "../../support/browser-test";
 import matrix from "./matrix.json" with { type: "json" };
 import { openNavigatorExtension } from "../../support/navigator-extension";
-import { sample, attachCase, runGoal } from "../../support/acceptance-runner";
+import {
+  sample,
+  attachCase,
+  runGoal,
+  settlePageTop,
+} from "../../support/acceptance-runner";
 for (const article of matrix.articles)
   test("declared Wikipedia goals: " + article, async ({}, info) => {
     const app = await openNavigatorExtension(
@@ -25,7 +30,8 @@ for (const article of matrix.articles)
           "live",
         );
         try {
-          await app.page.evaluate(() => window.scrollTo(0, 0));
+          await app.page.bringToFront();
+          await app.page.evaluate(settlePageTop);
           const appearance = app.page
             .getByRole("button", { name: /Appearance/ })
             .filter({ visible: true })
@@ -108,11 +114,24 @@ for (const article of matrix.articles)
               // The former generic live owner checked persistence immediately
               // after References, before any language-picker transition.
               await app.page.bringToFront();
-              const stored = await app.panel.evaluate(() =>
-                chrome.runtime.sendMessage({ type: "GET_MEMORY" }),
-              );
-              expect(stored.error).toBeUndefined();
-              expect(stored.memory.pages).toHaveLength(1);
+              await expect
+                .poll(
+                  async () => {
+                    const stored = await app.panel.evaluate(async () => {
+                      const reply = await chrome.runtime.sendMessage({
+                        type: "GET_MEMORY",
+                      });
+                      return {
+                        error: reply.error,
+                        pages: reply.memory?.pages.length,
+                      };
+                    });
+                    expect(stored.error).toBeUndefined();
+                    return stored.pages;
+                  },
+                  { timeout: 10000 },
+                )
+                .toBe(1);
             }
           } else if (contract.id === "search") {
             target = app.page
@@ -128,8 +147,23 @@ for (const article of matrix.articles)
               revealLabel: /^Search$/,
               selectedLabel: /search wikipedia/i,
               kind: "focus",
-              outcome: () =>
-                target!.evaluate((e) => e === document.activeElement),
+              outcome: async () => {
+                const state = await target!.evaluate((element) => ({
+                  focused: element === document.activeElement,
+                  targetId: element.id,
+                  activeId: document.activeElement?.id,
+                  activeTag: document.activeElement?.tagName,
+                  pageFocused: document.hasFocus(),
+                  connected: element.isConnected,
+                  scrollY,
+                }));
+                if (!state.focused)
+                  await info.attach("focus-outcome-failure", {
+                    body: Buffer.from(JSON.stringify(state)),
+                    contentType: "application/json",
+                  });
+                return state.focused;
+              },
             });
           } else {
             target = app.page

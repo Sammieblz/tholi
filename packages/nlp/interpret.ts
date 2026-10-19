@@ -4,6 +4,10 @@ import type {
   TaskIntent,
 } from "../navigation-core/contracts";
 import { sanitizeGoal } from "../privacy-redaction";
+import {
+  normalizeIntentText,
+  authenticationIntent,
+} from "../goal-planner/task-intent";
 const clean = (s: string) =>
   s
     .trim()
@@ -18,7 +22,7 @@ export function interpretRequest(
 ): NavigationRequest {
   const original = sanitizeGoal(text);
   if (!original) throw new Error("Describe what you would like to do.");
-  const doc = nlp(original);
+  const doc = nlp(normalizeIntentText(original));
   // Compromise identifies sentence boundaries and normalizes contractions/POS. Split
   // only explicit conjunctions followed by an action, preserving noun conjunctions.
   doc.contractions().expand();
@@ -141,9 +145,11 @@ function interpretClause(original: string, reference?: string): TaskIntent {
     operation = "choose";
     target = clean(change[1]);
     desiredValue = clean(change[2]);
-    const scoped = desiredValue.match(
-      /^(.*?)\s+(?:in|for|on)\s+(?:(?:the|my)\s+)?(?:repository|repo|project|space|account)\s+.+$/i,
-    );
+    const scoped =
+      !/^["'“‘`]/.test(change[2].trim()) &&
+      desiredValue.match(
+        /^(.*?)\s+(?:in|for|on)\s+(?:(?:(?:the|my)\s+)?(?:repository|repo|project|space|account)\s+.+|(?:that|this|same)\s+(?:repository|repo|project|space|workspace|account|profile|issue|ticket))$/i,
+      );
     if (scoped) desiredValue = clean(scoped[1]);
   } else {
     if (/^(?:open|go|navigate|visit|read|view)\b/i.test(text))
@@ -187,6 +193,7 @@ function interpretClause(original: string, reference?: string): TaskIntent {
     .filter(
       (v) =>
         !/^(?:able|possible|sure)$/i.test(v) &&
+        !(authenticationIntent(target) === "register" && /^new$/i.test(v)) &&
         !desiredValue?.toLowerCase().includes(v.toLowerCase()),
     )
     .map(sanitizeGoal);

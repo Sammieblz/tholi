@@ -19,9 +19,8 @@ const core = new NavigationCore(
 const state: any = { PageDiscovery, core };
 (globalThis as any).fixtureEngine = state;
 state.start = (origin: string) => {
-  // Isolated transport for dynamic DOM fixtures. Production Chrome transport is
-  // tested separately; only the logical platform origin is supplied by the fixture.
-  (globalThis as any).chrome = { runtime: { sendMessage: async () => ({}) } };
+  // The fixture build aliases only its WebExtensions import to transport.ts.
+  // Real extension projects exercise the privileged transport independently.
   const coach: PageCoach = new PageCoach(
     (view) => (state.view = structuredClone(view)),
     0,

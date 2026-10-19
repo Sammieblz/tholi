@@ -25,11 +25,16 @@ export const recognitionInputSchema = visualStampSchema
     height: z.number().int().positive(),
     cssWidth: z.number().finite().positive(),
     cssHeight: z.number().finite().positive(),
+    focusRegions: z.array(boxSchema).max(1).optional(),
   })
   .strict()
+  .refine((v) => v.width * v.height <= 4000000, "Image exceeds four megapixels")
   .refine(
-    (v) => v.width * v.height <= 4000000,
-    "Image exceeds four megapixels",
+    (v) =>
+      !v.focusRegions?.some(
+        (r) => r.x + r.width > v.cssWidth || r.y + r.height > v.cssHeight,
+      ),
+    "OCR region exceeds the viewport",
   );
 export const visualObservationSchema = visualStampSchema
   .extend({

@@ -47,7 +47,15 @@ export class PaddleEngine {
         textRecScoreThresh: 0.5,
       });
       signal?.throwIfAborted();
-      const { image: _, width, height, cssWidth, cssHeight, ...stamp } = input;
+      const {
+        image: _,
+        width,
+        height,
+        cssWidth,
+        cssHeight,
+        focusRegions,
+        ...stamp
+      } = input;
       return visualObservationSchema.parse({
         ...stamp,
         engine: "paddle-0.4.2-v6-tiny",

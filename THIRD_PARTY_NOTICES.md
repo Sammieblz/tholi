@@ -8,6 +8,7 @@ their own licenses. The extension includes the complete license texts under
   Xenova ONNX conversion pinned to revision
   `751bff37182d3f1213fa05d7196b954e230abad9`.
 - ONNX Runtime / onnxruntime-common: MIT, Microsoft.
+- Mozilla webextension-polyfill 0.12.0: MPL-2.0, Mozilla contributors. Used as the shared WebExtensions API boundary; its license is included in each extension target.
 - React, React DOM, Zod: MIT, their respective contributors.
 - Iconoir React: MIT, Iconoir contributors.
 - Base UI and Base UI utilities: MIT, MUI contributors.

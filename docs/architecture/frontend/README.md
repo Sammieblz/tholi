@@ -1,6 +1,6 @@
 # Frontend architecture
 
-Tholi 0.10.1 separates application setup, feature interfaces, transport, and reusable presentation. The worker owns journeys. Switching interfaces never creates a second journey.
+Tholi separates application setup, feature interfaces, transport, and reusable presentation. The worker owns journeys. Switching interfaces never creates a second journey.
 
 ```text
 apps/web/src/

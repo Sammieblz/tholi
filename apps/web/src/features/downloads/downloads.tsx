@@ -2,26 +2,33 @@ import { useEffect, useState } from "react";
 import { Download, Refresh } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { usePreferences } from "../preferences";
+import { selectedBrowser, type ExtensionTarget } from "./browsers";
 export interface DownloadManifest {
   version: string;
   url: string;
   sha256: string;
   bytes: number;
   status: string;
+  target?: ExtensionTarget;
+  minimumBrowserVersion?: string;
+  installationKind?: "unpacked" | "temporary";
 }
 export type DownloadState = {
   status: "loading" | "available" | "unavailable" | "error";
   release?: DownloadManifest;
   retry: () => void;
 };
-export function useDownload(): DownloadState {
+export function useDownload(
+  target: ExtensionTarget = selectedBrowser().target as ExtensionTarget,
+): DownloadState {
   const [attempt, setAttempt] = useState(0);
-  const [result, setResult] = useState<Omit<DownloadState, "retry">>({
-    status: "loading",
-  });
+  const [result, setResult] = useState<{
+    target: ExtensionTarget;
+    value: Omit<DownloadState, "retry">;
+  }>({ target, value: { status: "loading" } });
   useEffect(() => {
     const controller = new AbortController();
-    setResult({ status: "loading" });
+    setResult({ target, value: { status: "loading" } });
     void fetch("/downloads/manifest.json", { signal: controller.signal })
       .then(async (response) => {
         if (response.status === 404) return { status: "unavailable" as const };
@@ -31,8 +38,26 @@ export function useDownload(): DownloadState {
         const value: unknown = await response.json();
         if (!value || typeof value !== "object")
           throw new Error("Invalid download information");
-        const release = value as DownloadManifest;
+        const manifest = value as {
+          schemaVersion?: number;
+          targets?: Partial<Record<ExtensionTarget, DownloadManifest>>;
+        };
+        const release =
+          manifest.schemaVersion === 2
+            ? manifest.targets?.[target]
+            : target === "chromium"
+              ? (value as DownloadManifest)
+              : undefined;
+        if (!release) return { status: "unavailable" as const };
         if (
+          (manifest.schemaVersion === 2 &&
+            (release.target !== target ||
+              release.installationKind !==
+                (target === "firefox" ? "temporary" : "unpacked") ||
+              typeof release.minimumBrowserVersion !== "string")) ||
+          (manifest.schemaVersion !== 2 &&
+            release.target !== undefined &&
+            release.target !== "chromium") ||
           typeof release.url !== "string" ||
           !/^\/downloads\/[\w.-]+\.zip$/.test(release.url) ||
           typeof release.sha256 !== "string" ||
@@ -47,14 +72,20 @@ export function useDownload(): DownloadState {
         return { status: "available" as const, release };
       })
       .then((next) => {
-        if (!controller.signal.aborted) setResult(next);
+        if (!controller.signal.aborted) setResult({ target, value: next });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setResult({ status: "error" });
+        if (!controller.signal.aborted)
+          setResult({ target, value: { status: "error" } });
       });
     return () => controller.abort();
-  }, [attempt]);
-  return { ...result, retry: () => setAttempt((value) => value + 1) };
+  }, [attempt, target]);
+  return {
+    ...(result.target === target
+      ? result.value
+      : { status: "loading" as const }),
+    retry: () => setAttempt((value) => value + 1),
+  };
 }
 export function DownloadButton({ download }: { download: DownloadState }) {
   const { trackEvent } = usePreferences();
@@ -67,7 +98,9 @@ export function DownloadButton({ download }: { download: DownloadState }) {
         onClick={() => trackEvent({ name: "download_click" })}
       >
         <Download width={19} aria-hidden="true" />
-        Download extension preview
+        {download.release.target === "firefox"
+          ? "Download Firefox developer preview"
+          : "Download Chromium preview"}
       </a>
     );
   if (download.status === "loading")

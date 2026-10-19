@@ -623,7 +623,29 @@ test("goal form uses semantic fallback, model proposals are checked, and consequ
         }),
       current.page.revision,
     );
-    expect(stale.error).toContain("page changed");
+    expect(stale.error).toBeUndefined();
+    expect(stale.view.request.original).toBe("Help");
+    const [valid, wrongDocument] = await app.panel.evaluate(async () => {
+      const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
+      return Promise.all([
+        chrome.runtime.sendMessage({
+          type: "SET_GOAL",
+          goal: "Search library",
+          revision: current.page.revision,
+          sessionId: current.sessionId,
+          documentId: current.documentId,
+        }),
+        chrome.runtime.sendMessage({
+          type: "SET_GOAL",
+          goal: "Help",
+          revision: 0,
+          documentId: "previous-document",
+        }),
+      ]);
+    });
+    expect(wrongDocument.error).toContain("previous page");
+    expect(valid.error).toBeUndefined();
+    expect(valid.view.request.original).toBe("Search library");
   } finally {
     await app.close();
   }

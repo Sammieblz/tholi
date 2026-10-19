@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        group: [core, ui, integration, unit]
+        group: [core, ui, integration, firefox, unit]
     env:
       THOLI_BUILD_PREPARED: "1"
     steps:
@@ -52,7 +52,15 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
       - run: node scripts/build-manifest.mjs --verify
       - run: npx playwright install chromium
-        if: matrix.group != 'unit'
+        if: contains(fromJSON('["core", "integration", "live", "acceptance"]'), matrix.group)
+      - run: npx playwright install chromium firefox
+        if: matrix.group == 'ui'
+      - uses: actions/cache@v4
+        if: contains(fromJSON('["firefox", "brands", "browser-performance", "acceptance"]'), matrix.group)
+        with:
+          path: ~/.cache/selenium
+          key: ${{ runner.os }}-selenium-${{ hashFiles('config/testing/browser-tools.json', 'package-lock.json') }}-${{ matrix.group }}
+          restore-keys: ${{ runner.os }}-selenium-${{ hashFiles('config/testing/browser-tools.json', 'package-lock.json') }}-
       - run: npm run test:ci -- --group ${{ matrix.group }}
       - uses: actions/upload-artifact@v4
         if: always()

@@ -19,8 +19,12 @@ const full =
   (process.env.THOLI_TEST_TIER === "full" ||
     [
       "full",
+      "brands",
+      "browser-performance",
       "live",
       "acceptance",
+      "acceptance-chromium",
+      "acceptance-firefox",
       "models",
       "ui",
       "reliability",
@@ -83,9 +87,22 @@ function vitest(scope) {
 const browserGroups = {
   core: ["core-desktop", "narrow"],
   integration: ["nlp", "multi-app", "continuity", "reliability"],
-  ui: ["ui-extension", "ui-website"],
+  ui: ["ui-extension", "ui-website", "ui-website-firefox"],
+  firefox: ["firefox-extension"],
+  brands: ["branded-browsers"],
+  "browser-performance": ["browser-performance"],
   live: ["live-desktop", "live-narrow"],
-  acceptance: ["acceptance-desktop", "acceptance-narrow"],
+  acceptance: [
+    "acceptance-desktop",
+    "acceptance-narrow",
+    "acceptance-firefox-desktop",
+    "acceptance-firefox-narrow",
+  ],
+  "acceptance-chromium": ["acceptance-desktop", "acceptance-narrow"],
+  "acceptance-firefox": [
+    "acceptance-firefox-desktop",
+    "acceptance-firefox-narrow",
+  ],
   "nlp-browser": ["nlp"],
   "multi-app-browser": ["multi-app"],
   continuity: ["continuity"],
@@ -93,7 +110,12 @@ const browserGroups = {
 };
 function browser(scope) {
   env.THOLI_BROWSER_GROUP = scope;
-  env.THOLI_BROWSER_NETWORK = ["live", "acceptance"].includes(scope)
+  env.THOLI_BROWSER_NETWORK = [
+    "live",
+    "acceptance",
+    "acceptance-chromium",
+    "acceptance-firefox",
+  ].includes(scope)
     ? "public"
     : "fixtures";
   run(scope, "node_modules/playwright/cli.js", [
@@ -118,8 +140,20 @@ if (["ci", "full"].includes(task)) {
   const scopes = group
     ? [group]
     : task === "full"
-      ? ["unit", "models", "core", "integration", "ui", "live", "acceptance"]
-      : ["unit", "core", "integration", "ui"];
+      ? [
+          "unit",
+          "models",
+          "core",
+          "integration",
+          "firefox",
+          "ui",
+          "brands",
+          "browser-performance",
+          "live",
+          "acceptance-chromium",
+          "acceptance-firefox",
+        ]
+      : ["unit", "core", "integration", "firefox", "ui"];
   for (const scope of scopes) {
     if (scope === "unit") vitest("unit");
     else if (scope === "models")

@@ -11,11 +11,85 @@ import type {
   PlanResult,
 } from "../../../packages/navigation-core/index";
 import type { PageSnapshot } from "../../../packages/page-model/index";
+import { assistanceKind } from "../../../packages/safety-policy/assistance";
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
+});
+it("assistance opens a fresh reversible menu once and leaves forms and final actions to the user", async () => {
+  document.body.innerHTML =
+    '<button aria-expanded="false" aria-controls="account-menu">Account menu</button><nav id="account-menu" hidden><a href="/settings">Settings</a></nav>';
+  const rect = {
+    x: 10,
+    y: 10,
+    top: 10,
+    left: 10,
+    right: 210,
+    bottom: 50,
+    width: 200,
+    height: 40,
+    toJSON: () => ({}),
+  };
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
+    rect,
+  ] as any);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+    rect,
+  );
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const button = document.querySelector("button")!;
+  const clicks = vi.fn(() => {
+    button.setAttribute("aria-expanded", "true");
+    document.querySelector("nav")!.hidden = false;
+  });
+  button.addEventListener("click", clicks);
+  const coach = new PageCoach(vi.fn());
+  coach.start();
+  try {
+    const page = coach.getPage()!,
+      request = interpretRequest("Show account menu");
+    coach.goal("Account menu", page.revision);
+    coach.view.request = request;
+    const target = coach.view.controls!.find(
+      (c) => c.label === "Account menu",
+    )!;
+    expect(
+      coach.assistStep(target.id, coach.view.page!.revision - 1, request.id)
+        .assisted,
+    ).toBe(false);
+    expect(clicks).not.toHaveBeenCalled();
+    const result = coach.assistStep(
+      target.id,
+      coach.view.page!.revision,
+      request.id,
+    );
+    expect(result.assisted).toBe(true);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(clicks).toHaveBeenCalledOnce();
+    expect(
+      coach.assistStep(target.id, coach.view.page!.revision, request.id)
+        .assisted,
+    ).toBe(false);
+    for (const label of [
+      "Deploy website",
+      "Delete account",
+      "Create application",
+      "Sign in",
+      "Approve access",
+    ])
+      expect(
+        assistanceKind({ ...target, label }, request.tasks[0]),
+      ).toBeUndefined();
+    const revision = coach.view.page!.revision;
+    coach.pause();
+    expect(coach.assistStep(target.id, revision, request.id).assisted).toBe(
+      false,
+    );
+  } finally {
+    coach.stop();
+  }
 });
 it("replans from fresh evidence when the scan changes during automatic plan installation", async () => {
   const page = { ...fixture(), controls: [] },
@@ -72,6 +146,82 @@ it("replans from fresh evidence when the scan changes during automatic plan inst
     expect(coach.view.goalPlan?.reason).toBe(`Scan ${initialRevision + 1}`);
     expect(coach.view.request?.id).toBe(request.id);
     expect(coach.view.verifiedSteps).toBe(0);
+    const retained = coach.installRequest({
+      requestId: request.id,
+      documentId: "doc",
+      revision: initialRevision,
+      status: "pending-indexing",
+      request,
+      reason: "Checking the changing page",
+      activity: {
+        embedded: 0,
+        cacheHits: 0,
+        llmCalls: 0,
+        modelRevision: "test",
+      },
+    });
+    expect(retained).not.toHaveProperty("error");
+    expect(coach.view.request?.id).toBe(request.id);
+    expect(coach.view.selectedControlId).toBeUndefined();
+    expect(coach.view.goalPlan?.recoveryStage).toBe("retrieval");
+    expect(coach.view.verifiedSteps).toBe(0);
+  } finally {
+    coach.stop();
+  }
+});
+it("coalesces scan churn and bounds recovery across changing fingerprints without losing the destination", async () => {
+  vi.useFakeTimers();
+  let page = { ...fixture(), controls: [] };
+  const snapshot = vi
+    .spyOn(PageDiscovery.prototype, "snapshot")
+    .mockImplementation(() => page);
+  const request = interpretRequest("Cancel my Prime membership");
+  const coach = new PageCoach(vi.fn());
+  coach.view.request = request;
+  let release: (() => void) | undefined;
+  const planner = vi.fn(
+    async (_request: NavigationRequest, observation: PageSnapshot) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return {
+        requestId: request.id,
+        documentId: "doc",
+        revision: observation.revision,
+        status: "pending-indexing",
+        request,
+        reason: "Checking the changing page",
+        activity: {
+          embedded: 0,
+          cacheHits: 0,
+          llmCalls: 0,
+          modelRevision: "test",
+        },
+      } satisfies PlanResult;
+    },
+  );
+  Object.assign(coach, { requestPlanner: planner });
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      for (let mutation = 0; mutation < 10; mutation++) {
+        page = {
+          ...page,
+          revision: page.revision + 1,
+          fingerprint: `${attempt}:${mutation}`,
+        };
+        coach.recheckJourney();
+      }
+      expect(planner).toHaveBeenCalledTimes(attempt + 1);
+      release!();
+      await vi.advanceTimersByTimeAsync(1100);
+    }
+    expect(coach.view.status).toBe("paused");
+    expect(coach.view.request?.original).toBe(request.original);
+    expect(coach.view.verifiedSteps).toBe(0);
+    expect(coach.view.instruction).toContain("avoid slowing");
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(planner).toHaveBeenCalledTimes(4);
+    expect(snapshot).toHaveBeenCalled();
   } finally {
     coach.stop();
   }

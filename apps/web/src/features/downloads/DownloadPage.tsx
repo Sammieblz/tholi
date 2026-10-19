@@ -1,3 +1,5 @@
+import { useRouter } from "../../app/router";
+import { browsers, selectedBrowser, type ExtensionTarget } from "./browsers";
 import {
   ArrowRight,
   Check,
@@ -10,14 +12,14 @@ import { repositoryUrl } from "../../config/project";
 import { DownloadButton, useDownload } from "./downloads";
 import "./downloads.css";
 
-const steps = [
+const chromiumSteps = [
   {
     title: "Download and unzip",
-    text: "Save the ZIP, then extract it to a folder you will keep. Chrome loads the folder, so leave it in place after setup.",
+    text: "Save the ZIP, then extract it to a folder you will keep. Your browser loads the folder, so leave it in place after setup.",
   },
   {
     title: "Open extensions",
-    text: "In desktop Chrome, open chrome://extensions. Turn on Developer mode in the upper-right corner.",
+    text: "Open the extension manager shown above and turn on Developer mode.",
   },
   {
     title: "Load unpacked",
@@ -25,10 +27,16 @@ const steps = [
   },
   {
     title: "Choose a destination",
-    text: "Open a website and click the Tholi toolbar icon. Allow website access if Chrome asks, then tell your guide what you want to do.",
+    text: "Open a website and click the Tholi toolbar icon. Allow website access if your browser asks, then tell your guide what you want to do.",
   },
 ];
-function InstallIllustration({ step }: { step: number }) {
+function InstallIllustration({
+  step,
+  firefox = false,
+}: {
+  step: number;
+  firefox?: boolean;
+}) {
   return (
     <div
       className={`install-illustration install-illustration-${step}`}
@@ -52,16 +60,20 @@ function InstallIllustration({ step }: { step: number }) {
       ) : step === 1 ? (
         <div className="install-chrome-panel">
           <div>
-            <strong>Extensions</strong>
-            <span className="install-toggle" aria-hidden="true">
-              <i />
-            </span>
+            <strong>{firefox ? "about:debugging" : "Extensions"}</strong>
+            {!firefox && (
+              <span className="install-toggle" aria-hidden="true">
+                <i />
+              </span>
+            )}
           </div>
-          <span>Developer mode</span>
+          <span>{firefox ? "This Firefox" : "Developer mode"}</span>
         </div>
       ) : step === 2 ? (
         <div className="install-chrome-panel">
-          <span className="install-load">Load unpacked</span>
+          <span className="install-load">
+            {firefox ? "Load Temporary Add-on" : "Load unpacked"}
+          </span>
           <div className="install-tholi">
             <img
               src="/media/tholi_brand_logo.png"
@@ -86,8 +98,31 @@ function InstallIllustration({ step }: { step: number }) {
   );
 }
 export function DownloadPage() {
-  const download = useDownload(),
+  const { go, search } = useRouter();
+  const browser = selectedBrowser(search);
+  const firefox = browser.target === "firefox";
+  const download = useDownload(browser.target as ExtensionTarget),
     release = download.release;
+  const steps = firefox
+    ? [
+        {
+          title: "Download and unzip",
+          text: "Extract the Firefox developer preview ZIP to a folder. It is an unsigned development build, not a permanent installation.",
+        },
+        {
+          title: "Open This Firefox",
+          text: "Open about:debugging, then select This Firefox.",
+        },
+        {
+          title: "Load Temporary Add-on",
+          text: "Choose Load Temporary Add-on and select manifest.json in dist/extension-firefox or the extracted Firefox preview folder.",
+        },
+        {
+          title: "Choose a destination",
+          text: "Click the Tholi toolbar icon on a website. Approve its website access when asked, then enter your destination. Temporary installation is removed when Firefox restarts.",
+        },
+      ]
+    : chromiumSteps;
   return (
     <section className="download-page">
       <div className="download-heading">
@@ -96,7 +131,7 @@ export function DownloadPage() {
           <h1>
             A little direction.
             <br />
-            Right in Chrome.
+            Right in your browser.
           </h1>
           <p className="web-intro">
             Install the Tholi preview, open a website, and start with the thing
@@ -104,18 +139,51 @@ export function DownloadPage() {
           </p>
         </div>
         <div className="download-card">
-          <span className="download-platform">THOLI FOR DESKTOP CHROME</span>
+          <span className="download-platform">DESKTOP BROWSER PREVIEW</span>
+          <div className="browser-choice">
+            <label htmlFor="tholi-download-browser">Your browser</label>
+            <select
+              id="tholi-download-browser"
+              value={browser.id}
+              onChange={(event) => {
+                const next = browsers.find(
+                  (item) => item.id === event.target.value,
+                )!;
+                go("/download?browser=" + next.id);
+              }}
+            >
+              {browsers.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p>
+            {firefox
+              ? "Firefox developer preview"
+              : "Chromium developer preview"}{" "}
+            · {browser.minimum} or newer
+          </p>
+          <p className="small">
+            {browser.verification === "capability-dependent"
+              ? "Compatibility depends on the required browser capabilities."
+              : "Native installation certification is pending for this browser."}
+          </p>
+          <p>
+            Extension manager: <code>{browser.manager}</code>
+          </p>
           <DownloadButton download={download} />
           {release && (
             <>
               <strong>Preview {release.version}</strong>
               <span>
-                {(release.bytes / 1048576).toFixed(1)} MB ZIP · Unpacked
-                installation
+                {(release.bytes / 1048576).toFixed(1)} MB ZIP ·{" "}
+                {firefox ? "Temporary installation" : "Unpacked installation"}
               </span>
             </>
           )}
-          <p>Local processing. You make every website click.</p>
+          <p>Local processing. Your browser, your control.</p>
         </div>
       </div>
       {release && (
@@ -138,15 +206,16 @@ export function DownloadPage() {
         <p className="eyebrow">A FEW MINUTES TO SET UP</p>
         <h2>Give your guide a place to start.</h2>
         <p>
-          Preview installation uses Chrome’s unpacked extension tools. The setup
-          illustrations below explain the process; the final image is captured
-          from the real extension.
+          Previews are available for Chrome, Edge, Brave and Firefox. Other
+          current Chromium browsers depend on the required extension
+          capabilities. The selected instructions match your browser; the
+          product image shows the genuine Chrome capture.
         </p>
       </div>
       <ol className="install-grid">
         {steps.map((step, index) => (
           <li key={step.title}>
-            <InstallIllustration step={index} />
+            <InstallIllustration step={index} firefox={firefox} />
             <span className="install-number">0{index + 1}</span>
             <h3>{step.title}</h3>
             <p>{step.text}</p>
@@ -156,9 +225,11 @@ export function DownloadPage() {
       <div className="web-note">
         <ShieldCheck aria-hidden="true" />
         <p>
-          Chrome Web Store installation is not available in this preview.
-          Chrome-required permissions need your approval. Sign-in and website
-          changes remain on the website.
+          Store installation is not available in this preview. Native
+          installation and sidebar verification are recorded separately for each
+          browser; unverified browsers are not certified by an engine test. Your
+          browser’s permissions need your approval. Sign-in and website changes
+          remain on the website.
         </p>
       </div>
       <details className="source-instructions">
@@ -166,8 +237,15 @@ export function DownloadPage() {
         <p>From the repository, using Node 24.19.x:</p>
         <pre>npm ci{"\n"}npm run build:extension</pre>
         <p>
-          Load the generated <code>dist/extension</code> folder. After
-          rebuilding, reload Tholi in Chrome and refresh your website tab.
+          Load{" "}
+          <code>
+            {firefox
+              ? "dist/extension-firefox/manifest.json"
+              : "dist/extension"}
+          </code>{" "}
+          using the selected instructions. After rebuilding, reload Tholi and
+          refresh the website tab. Browser installations keep separate local
+          knowledge.
         </p>
         <a className="web-text-link" href={repositoryUrl}>
           View source repository

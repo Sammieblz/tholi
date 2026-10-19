@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import { BrowserAdapter } from "../../../../packages/browser-adapter/index";
 import { requestSchema } from "../../../../packages/navigation-core/contracts";
 import { navigationActionSchema } from "../../../../packages/navigation-core/navigation-actions";
@@ -56,7 +57,7 @@ if (!host[marker]) {
         visualNotification = undefined;
         if (coach?.view.goalPlan?.action?.kind === "visual")
           coach.recheckJourney();
-        void chrome.runtime
+        void api.runtime
           .sendMessage({ type: "VISION_INVALIDATED", sessionId })
           .catch(() => {});
       }, 50);
@@ -77,7 +78,7 @@ if (!host[marker]) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const publish = () => {
     if (!engine || !sessionId) return;
-    chrome.runtime
+    api.runtime
       .sendMessage({ type: "SESSION_UPDATE", sessionId, view: engine.view })
       .catch(() => {});
   };
@@ -167,8 +168,8 @@ if (!host[marker]) {
     cleanup = adapter.observe(update);
     document.addEventListener("click", clicked, true);
   };
-  chrome.runtime.onMessage.addListener((raw, sender, respond) => {
-    if (sender.id !== chrome.runtime.id) return;
+  api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (sender.id !== api.runtime.id) return;
     if (raw.sessionId === sessionId && raw.type === "MOUNT_WIDGET") {
       void mountWidgetShell(
         raw.url,
@@ -299,7 +300,7 @@ if (!host[marker]) {
       if (dynamic) {
         coach = new PageCoach(
           (view, observed, navigation) => {
-            chrome.runtime
+            api.runtime
               .sendMessage({
                 type: "SESSION_UPDATE",
                 sessionId,
@@ -319,7 +320,7 @@ if (!host[marker]) {
           message.navigationEvidence,
           message.request,
           async (request, page, verifiedDestination) => {
-            return chrome.runtime.sendMessage({
+            return api.runtime.sendMessage({
               type: "NLP_REPLAN",
               sessionId,
               request,
@@ -430,6 +431,16 @@ if (!host[marker]) {
                 message,
               )
             : { error: "Start live navigation first." },
+        );
+        return;
+      }
+      if (message.type === "ASSIST_STEP") {
+        respond(
+          coach?.assistStep(
+            message.controlId,
+            message.revision,
+            message.requestId,
+          ) || { assisted: false },
         );
         return;
       }

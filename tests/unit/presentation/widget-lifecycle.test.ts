@@ -1,8 +1,10 @@
+import type { Runtime } from "../../../apps/extension/src/platform/api";
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import type { PinnedSession } from "../../../packages/route-registry/session";
 import { dockIntent } from "../../../apps/extension/src/ui/widget/presentation-state";
 import { contentMessageSchema } from "../../../packages/route-schema/index";
+import { fixture } from "../../integration/nlp/fixtures";
 
 const id = "6692779e-ad63-4da7-82cd-a878c1ae23e1";
 function environment(seed: Record<string, unknown> = {}) {
@@ -33,7 +35,13 @@ function environment(seed: Record<string, unknown> = {}) {
     },
     storage: { local: storage(local), session: storage(stored) },
     tabs: {
-      sendMessage: vi.fn(async () => ({ ok: true })),
+      sendMessage: vi.fn(
+        async (
+          _tabId: number,
+          _message: any,
+          _options?: unknown,
+        ): Promise<any> => ({ ok: true }),
+      ),
       get: vi.fn(async () => ({ windowId: 4 })),
     },
     webNavigation: {
@@ -67,7 +75,7 @@ function environment(seed: Record<string, unknown> = {}) {
     tab: { id: 7, windowId: 4 },
     frameId: 0,
     documentId: "document-a",
-  } as chrome.runtime.MessageSender;
+  } as Runtime.MessageSender;
   vi.stubGlobal("chrome", api);
   return { api, session, sender, stored, closed };
 }
@@ -79,6 +87,191 @@ afterEach(() => {
   document
     .querySelectorAll("[data-tholi-ui]")
     .forEach((element) => element.remove());
+});
+
+it("Pause and Stop bypass a blocked routine queue and unresponsive page without accepting stale controls", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const local = await import("../../../apps/extension/src/inference/client");
+  const cancel = vi.spyOn(local, "cancelNlp").mockResolvedValue();
+  api.tabs.sendMessage.mockImplementation(() => new Promise(() => {}));
+  const save = vi.fn(async () => {});
+  const context = {
+    session,
+    goalGeneration: 0,
+    ready: Promise.resolve(),
+    save,
+    enqueue: vi.fn(() => new Promise(() => {})),
+    cancelVision: vi.fn(),
+    navigationStarts: new Map(),
+  };
+  const { createSessionService } =
+    await import("../../../apps/extension/src/background/session-service");
+  const service = createSessionService(context as any);
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  registerMessages({
+    ...context,
+    interruptSession: service.interruptSession,
+  } as any);
+  const handle = listen.mock.calls[0][0];
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  for (const type of ["PAUSE", "STOP"]) {
+    session.view!.status = "running";
+    session.view!.request = { id, status: "active" } as any;
+    const respond = vi.fn();
+    handle({ type, sessionId: id, documentId: "document-a" }, panel, respond);
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledOnce());
+    expect(context.enqueue).not.toHaveBeenCalled();
+    expect(session.view!.status).toBe(type === "PAUSE" ? "paused" : "stopped");
+    expect(session.view!.request!.status).toBe(
+      type === "PAUSE" ? "paused" : "canceled",
+    );
+    expect(session.view!.page).toBeUndefined();
+  }
+  expect(cancel).toHaveBeenCalledTimes(2);
+  const stale = vi.fn();
+  handle({ type: "STOP", sessionId: id, documentId: "older" }, panel, stale);
+  expect(stale.mock.calls[0][0].error).toBeTruthy();
+  expect(cancel).toHaveBeenCalledTimes(2);
+});
+
+it("scan churn retains submitted intent but suggestions cannot install a task", async () => {
+  const { api, session, sender } = environment();
+  const page = { ...fixture(), revision: 1 };
+  const local = await import("../../../apps/extension/src/inference/client");
+  const backend =
+    await import("../../../apps/extension/src/platform/backend-client");
+  vi.spyOn(backend, "backendNlp").mockResolvedValue(undefined);
+  const planning = vi
+    .spyOn(local, "localNlp")
+    .mockImplementation(async (input) => {
+      page.revision++;
+      return {
+        requestId: input.requestId,
+        documentId: input.documentId,
+        revision: input.revision,
+      };
+    });
+  api.tabs.sendMessage.mockImplementation(
+    async (_tab: number, message: any) => {
+      if (message.type === "GET_PAGE")
+        return { page: structuredClone(page), view: session.view };
+      if (message.type === "INSTALL_REQUEST")
+        return {
+          view: { ...session.view, page, request: message.result.request },
+        };
+      return { ok: true };
+    },
+  );
+  const context = {
+    goalGeneration: 0,
+    session,
+    enqueue: async <T>(operation: () => Promise<T>) => operation(),
+    live: () => true,
+    inScope: () => true,
+    knownSites: new Map(),
+    knownTasks: new Map(),
+    suspended: [],
+    attemptVision: vi.fn(),
+    acceptView: async (view: any) => {
+      session.view = view;
+    },
+    save: vi.fn(),
+    remember: vi.fn(),
+  };
+  const { createJourneyService } =
+    await import("../../../apps/extension/src/background/journey-service");
+  const service = createJourneyService(context);
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  const suggestion = await service.handleNlp(
+    { type: "NLP_SUGGEST", text: "Open Help", requestId: id },
+    panel,
+  );
+  expect(suggestion).toMatchObject({ suggestions: [] });
+  expect(session.view!.request).toBeUndefined();
+  expect(
+    api.tabs.sendMessage.mock.calls.some(
+      (call: any) => call[1]?.type === "INSTALL_REQUEST",
+    ),
+  ).toBe(false);
+  planning.mockClear();
+  const reply = await service.handleNlp(
+    {
+      type: "SET_GOAL",
+      goal: "Open Help",
+      revision: 0,
+      sessionId: id,
+      documentId: "document-a",
+    },
+    panel,
+  );
+  expect(planning).toHaveBeenCalledTimes(2);
+  expect(reply).not.toHaveProperty("error");
+  expect(session.view!.request?.original).toBe("Open Help");
+  expect(session.view!.verifiedSteps).toBe(3);
+});
+
+it("assistance requires opt-in, the current document and a visible active surface", async () => {
+  const { api, session, sender } = environment();
+  Object.assign(api.tabs, {
+    query: vi.fn(async () => [{ id: session.tabId }]),
+  });
+  Object.assign(session.view!, {
+    request: { id, status: "active" },
+    page: { revision: 3 },
+    selectedControlId: "w0000000000000000-0",
+  });
+  const ui =
+    await import("../../../apps/extension/src/background/ui-transport");
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  const command = {
+    type: "UI_ASSIST_STEP",
+    sessionId: id,
+    documentId: "document-a",
+    requestId: id,
+    revision: 3,
+    controlId: "w0000000000000000-0",
+  };
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
+  await api.storage.local.set({
+    tholiPreferences: {
+      mode: "guide",
+      surface: "widget",
+      advanced: false,
+      assisted: true,
+    },
+  });
+  await expect(
+    ui.uiMessage({ ...command, documentId: "stale" }, panel, session),
+  ).rejects.toThrow("Stale assistance");
+  expect(
+    await ui.uiMessage({ ...command, revision: 2 }, panel, session),
+  ).toEqual({ assisted: false });
+  await ui.uiMessage({ type: "UI_MINIMIZE", sessionId: id }, sender, session);
+  api.tabs.sendMessage.mockClear();
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
+  await ui.uiMessage({ type: "UI_RESTORE", sessionId: id }, sender, session);
+  api.tabs.sendMessage.mockClear();
+  await ui.uiMessage(command, panel, session);
+  expect(api.tabs.sendMessage).toHaveBeenCalledWith(
+    session.tabId,
+    { ...command, type: "ASSIST_STEP" },
+    { frameId: 0 },
+  );
+  session.view!.status = "paused";
+  api.tabs.sendMessage.mockClear();
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
 });
 
 it("dismisses the launcher without erasing the task and stays hidden after worker restart", async () => {
@@ -242,7 +435,12 @@ it("restores a minimized presentation after worker module restart", async () => 
   });
   const ui =
     await import("../../../apps/extension/src/background/ui-transport");
-  await ui.mountWidget(session, true);
+  await Promise.all([
+    ui.mountWidget(session, true),
+    ui.mountWidget(session),
+    ui.mountWidget(session),
+  ]);
+  expect(api.tabs.sendMessage).toHaveBeenCalledTimes(1);
   expect(api.tabs.sendMessage).toHaveBeenCalledWith(
     7,
     expect.objectContaining({ type: "MOUNT_WIDGET", visibility: "launcher" }),
@@ -323,6 +521,10 @@ it("starts native docking immediately and leaves the widget intact if Chrome rej
     visibility: "expanded",
   });
   expect(session).toEqual(before);
+  expect((await api.storage.local.get()).tholiPreferences).toMatchObject({
+    surface: "sidebar",
+    mode: "conversation",
+  });
 });
 
 it("minimizes only a matching window's native sidebar dismissal", async () => {
@@ -410,4 +612,57 @@ it("suppresses DOM and visual highlights while preserving the ability to restore
   setGuidanceVisible(true);
   overlay.clear();
   target.remove();
+});
+
+it("Firefox requests the displayed origin in the click turn and rejects a changed active site", async () => {
+  const order: string[] = [];
+  let active = { id: 1, url: "https://expected.example:9443/" };
+  const request = vi.fn(() => {
+    order.push("request");
+    return Promise.resolve(true);
+  });
+  vi.stubGlobal("browser", {
+    runtime: { getURL: () => "moz-extension://test/" },
+    permissions: { request },
+    tabs: {
+      query: async () => {
+        order.push("query");
+        return [active];
+      },
+    },
+  });
+  const { requestCurrentSiteAccess } =
+    await import("../../../apps/extension/src/platform/site-access");
+  const result = requestCurrentSiteAccess("https://expected.example:8443", 1);
+  expect(order).toEqual(["request"]);
+  await expect(result).rejects.toThrow("active website changed");
+  expect(request).toHaveBeenCalledWith({
+    origins: ["https://expected.example/*"],
+  });
+  expect(order).toEqual(["request", "query"]);
+  active = { id: 2, url: "https://expected.example:8443/" };
+  await expect(
+    requestCurrentSiteAccess("https://expected.example:8443", 1),
+  ).rejects.toThrow("active website changed");
+});
+it("Firefox sidebar handoff retains the widget when the browser rejects its user activation", async () => {
+  const { api, session, sender } = environment();
+  const open = vi.fn(async () => {
+    throw Error("User action required");
+  });
+  vi.stubGlobal("browser", {
+    ...api,
+    runtime: {
+      ...api.runtime,
+      getURL: (path: string) => "moz-extension://tholi-test/" + path,
+    },
+    sidebarAction: { open, isOpen: async () => false },
+  });
+  const ui =
+    await import("../../../apps/extension/src/background/ui-transport");
+  await expect(ui.dockSidebar(sender, session)).rejects.toThrow(
+    "User action required",
+  );
+  expect((await ui.getSurfacePresentation(session))?.surface).toBe("widget");
+  expect(session.documentId).toBe("document-a");
 });

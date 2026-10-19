@@ -79,7 +79,9 @@ export function DestinationComposer(
       <p id={hintId} className="tholi-reassurance">
         {conversation
           ? "Enter to send · Shift + Enter for a new line"
-          : "You make the clicks. Tholi checks your progress."}
+          : props.preferences.assisted
+            ? "Assisted navigation is on. You control final actions."
+            : "You make the clicks. Tholi checks your progress."}
       </p>
     </section>
   );

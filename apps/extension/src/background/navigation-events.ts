@@ -1,3 +1,4 @@
+import { api } from "../platform/api";
 import { continuesDestination } from "../../../../packages/navigation-core/queue";
 import { hash, supportsLiveUrl } from "../../../../packages/page-model/index";
 import { returnFromHandoff } from "../../../../packages/route-registry/handoff";
@@ -27,11 +28,11 @@ interface Context {
 }
 
 export function registerNavigationEvents(context: Context) {
-  chrome.tabs.onRemoved.addListener((tabId) => {
+  api.tabs.onRemoved.addListener((tabId) => {
     void context.enqueue(async () => {
       if (context.session?.tabId === tabId) {
         if (context.session.handoffReturn) {
-          const previous = await chrome.tabs
+          const previous = await api.tabs
             .get(context.session.handoffReturn.tabId)
             .catch(() => undefined);
           const returned =
@@ -49,7 +50,7 @@ export function registerNavigationEvents(context: Context) {
     });
   });
 
-  chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+  api.webNavigation.onHistoryStateUpdated.addListener((details) => {
     if (
       details.frameId !== 0 ||
       details.tabId !== context.session?.tabId ||
@@ -58,7 +59,7 @@ export function registerNavigationEvents(context: Context) {
     )
       return;
     context.ledgerNavigationEvent = true;
-    void chrome.tabs
+    void api.tabs
       .sendMessage(details.tabId, {
         type: "SPA_CHANGED",
         sessionId: context.session.sessionId,
@@ -66,7 +67,7 @@ export function registerNavigationEvents(context: Context) {
       .catch(() => {});
   });
 
-  chrome.webNavigation.onCompleted.addListener((details) => {
+  api.webNavigation.onCompleted.addListener((details) => {
     if (
       details.frameId === 0 ||
       details.tabId !== context.session?.tabId ||
@@ -78,7 +79,7 @@ export function registerNavigationEvents(context: Context) {
       void context.startFrames(context.session).catch(() => {});
   });
 
-  chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  api.webNavigation.onBeforeNavigate.addListener((details) => {
     if (details.frameId !== 0) return;
     void context.enqueue(async () => {
       if (
@@ -92,7 +93,7 @@ export function registerNavigationEvents(context: Context) {
       )
         return;
       if (details.tabId !== context.session.tabId) {
-        const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
+        const tab = await api.tabs.get(details.tabId).catch(() => undefined);
         if (tab?.openerTabId !== context.session.tabId) return;
       }
       if (!supportsLiveUrl(details.url)) return;
@@ -135,7 +136,7 @@ export function registerNavigationEvents(context: Context) {
     });
   });
 
-  chrome.webNavigation.onCommitted.addListener((details) => {
+  api.webNavigation.onCommitted.addListener((details) => {
     if (details.frameId !== 0) return;
     void context.enqueue(async () => {
       const start = context.navigationStarts.get(details.tabId);
@@ -163,7 +164,7 @@ export function registerNavigationEvents(context: Context) {
       )
         return;
       if (details.tabId !== context.session.tabId) {
-        const tab = await chrome.tabs.get(details.tabId).catch(() => undefined);
+        const tab = await api.tabs.get(details.tabId).catch(() => undefined);
         if (tab?.openerTabId !== context.session.tabId) return;
       }
       const url = new URL(details.url);
@@ -194,7 +195,7 @@ export function registerNavigationEvents(context: Context) {
     });
   });
 
-  chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  api.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (change.status !== "loading" && change.status !== "complete") return;
     void context.enqueue(async () => {
       if (
@@ -218,7 +219,7 @@ export function registerNavigationEvents(context: Context) {
               hash(url.origin + url.pathname + url.search) ===
                 nav.navigationKey))
         ) {
-          await chrome.tabs
+          await api.tabs
             .sendMessage(context.session.tabId, {
               type: "CONTROL_SESSION",
               sessionId: context.session.sessionId,
@@ -254,7 +255,7 @@ export function registerNavigationEvents(context: Context) {
         }
         if (!context.session.navigationPending) return;
         try {
-          const documents = await chrome.scripting.executeScript({
+          const documents = await api.scripting.executeScript({
             target: { tabId },
             func: () => location.origin,
           });
@@ -344,7 +345,7 @@ export function registerNavigationEvents(context: Context) {
     });
   });
 
-  chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  api.webNavigation.onBeforeNavigate.addListener((details) => {
     if (details.tabId === context.session?.tabId && context.visionJob)
       context.cancelVision();
   });

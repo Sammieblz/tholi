@@ -354,7 +354,11 @@ export class PageDiscovery {
   observe(callback: () => void) {
     this.incremental ||= new IncrementalControlIndex();
     this.incremental.start(callback);
-    return () => this.incremental?.stop();
+    return () => {
+      this.incremental?.stop();
+      this.semanticCache.clear();
+      this.bindings.clear();
+    };
   }
   setQuery(query: string) {
     if (query !== this.query) {
@@ -390,7 +394,11 @@ export class PageDiscovery {
         ),
       );
       for (const node of root.querySelectorAll("*"))
-        if (node.shadowRoot) scan(node.shadowRoot);
+        if (
+          node.shadowRoot &&
+          !node.closest("#internet-navigator-overlay,[data-tholi-ui]")
+        )
+          scan(node.shadowRoot);
     };
     if (this.incremental) {
       elements.push(...this.incremental.elements);
@@ -502,7 +510,9 @@ export class PageDiscovery {
         break;
       }
       if (
-        e.closest("#internet-navigator-overlay,[data-tholi-ui],[data-sensitive=true]") ||
+        e.closest(
+          "#internet-navigator-overlay,[data-tholi-ui],[data-sensitive=true]",
+        ) ||
         isSensitiveElement(e)
       )
         continue;

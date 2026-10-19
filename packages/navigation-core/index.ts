@@ -22,6 +22,7 @@ import { shortestRoute } from "../goal-planner/route-graph";
 import { hasCommitLanguage } from "../safety-policy/action-language";
 import { authenticationIntent } from "../goal-planner/task-intent";
 import { planWorkflow } from "./workflows";
+import { sameControlDestination, surfacePriority } from "./screen-context";
 import {
   compatibleSettingsScope,
   groundedSettingsTarget,
@@ -425,7 +426,9 @@ export class NavigationCore {
     eligible.sort(
       (a, b) =>
         Number(groundedSettingsTarget(task, b.control)) -
-          Number(groundedSettingsTarget(task, a.control)) || b.score - a.score,
+          Number(groundedSettingsTarget(task, a.control)) ||
+        b.score - a.score ||
+        surfacePriority(b.control) - surfacePriority(a.control),
     );
     const best = eligible[0],
       second = eligible[1];
@@ -440,11 +443,32 @@ export class NavigationCore {
       groundedSettingsTarget(task, best.control) ===
         groundedSettingsTarget(task, second.control) &&
       best.score - second.score < 0.07 &&
-      best.control.signature !== second.control.signature &&
-      !(
-        best.control.destination &&
-        best.control.destination.key === second.control.destination?.key
+      !sameControlDestination(best.control, second.control) &&
+      surfacePriority(best.control) === surfacePriority(second.control);
+    if (
+      plan.issue === "ambiguous" &&
+      strong &&
+      !ambiguous &&
+      !task.desiredValue &&
+      best.control.risk === "ordinary"
+    ) {
+      const competing = eligible.filter(
+        (candidate) => candidate.score >= best.score - 0.07,
       );
+      const reduced = {
+        ...input.observation,
+        controls: input.observation.controls.filter(
+          (control) =>
+            !competing.some(
+              (candidate) => candidate.control.id === control.id,
+            ) ||
+            sameControlDestination(control, best.control) ||
+            surfacePriority(control) >= surfacePriority(best.control),
+        ),
+      };
+      const resolved = planTask(reduced, journey, memory);
+      if (resolved.status === "guiding") plan = resolved;
+    }
     if (
       (plan.issue === "ambiguous" ||
         (plan.status === "unresolved" &&
@@ -456,8 +480,8 @@ export class NavigationCore {
         .filter((c) => c.score >= (best?.score || 0) - 0.12)
         .filter(
           (c, i, all) =>
-            all.findIndex(
-              (v) => v.control.signature === c.control.signature,
+            all.findIndex((v) =>
+              sameControlDestination(v.control, c.control),
             ) === i,
         )
         .slice(0, 3);

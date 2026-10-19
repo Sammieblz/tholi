@@ -1,3 +1,4 @@
+import { api, type Storage } from "../../platform/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   defaultPreferences,
@@ -32,7 +33,7 @@ export function usePresentationSession(widget: boolean, onReset: () => void) {
       const read = ++sequence;
       const draftRevision = goalRevision.current;
       const draftClean = draftRevision === savedGoalRevision.current;
-      void chrome.runtime
+      void api.runtime
         .sendMessage({ type: "UI_GET" })
         .then((r) => {
           if (!current || read < applied || r.error) return;
@@ -57,7 +58,7 @@ export function usePresentationSession(widget: boolean, onReset: () => void) {
     };
     refresh();
     const listener = (
-      changes: Record<string, chrome.storage.StorageChange>,
+      changes: Record<string, Storage.StorageChange>,
       area: string,
     ) => {
       if (area === "session" && changes.tholiSessionReset) {
@@ -75,10 +76,10 @@ export function usePresentationSession(widget: boolean, onReset: () => void) {
       )
         refresh();
     };
-    chrome.storage.onChanged.addListener(listener);
+    api.storage.onChanged.addListener(listener);
     return () => {
       current = false;
-      chrome.storage.onChanged.removeListener(listener);
+      api.storage.onChanged.removeListener(listener);
     };
   }, []);
   useEffect(() => {
@@ -86,7 +87,7 @@ export function usePresentationSession(widget: boolean, onReset: () => void) {
     const revision = goalRevision.current;
     const id = setTimeout(
       () =>
-        void chrome.runtime
+        void api.runtime
           .sendMessage({ type: "UI_SAVE", draft: goal })
           .then((reply) => {
             if (!reply?.error && goalRevision.current === revision)

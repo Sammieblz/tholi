@@ -229,10 +229,14 @@ test("guides are versioned documented milestones, never selector or URL scripts"
 });
 test("Cloudflare clarification retains the sentence and binds the selected method to live controls", async () => {
   const c = core(),
-    p = page("https://dash.cloudflare.com", ["Workers & Pages"]),
+    p = page("https://dash.cloudflare.com", [
+      "Connect to Git",
+      "Direct Upload",
+    ]),
     first = await c.plan(input("Help me deploy a website with Pages", p));
   expect(first.status).toBe("clarification");
   expect(first.request?.original).toBe("Help me deploy a website with Pages");
+  p.controls[0].context = "Connect a Git provider";
   const result = await c.plan(
     input(first.request!.original, p, {
       request: first.request,
@@ -245,7 +249,7 @@ test("Cloudflare clarification retains the sentence and binds the selected metho
     value: "git",
     source: "clarification",
   });
-  expect(result.plan?.steps[0].label).toBe("Workers & Pages");
+  expect(result.plan?.steps[0].label).toBe("Connect to Git");
   expect(result.request?.status).toBe("active");
 });
 test("an observed menu transition retains the objective and moves to the next milestone", async () => {
@@ -262,6 +266,45 @@ test("an observed menu transition retains the objective and moves to the next mi
   expect(b.workflow?.objective).toBe(a.workflow?.objective);
   expect(b.plan?.steps[0].label).toBe("Create application");
   expect(b.workflow?.verified).toHaveLength(1);
+  const workspace = page(
+    p.origin,
+    ["Compute", "Workers & Pages", "Workers & Pages", "Create application"],
+    3,
+  );
+  workspace.path = "/account/workers-and-pages";
+  workspace.controls[0].kind = "expand";
+  workspace.controls[0].expanded = true;
+  for (const link of workspace.controls.slice(1, 3)) {
+    link.selected = true;
+    link.destination = {
+      origin: workspace.origin,
+      path: workspace.path,
+      key: "workspace",
+    };
+    link.navigationKey = "workspace";
+    link.structure = {
+      headings: [],
+      regions: [{ role: "navigation", name: "Build" }],
+    };
+  }
+  workspace.controls[3].kind = "expand";
+  workspace.controls[3].structure = {
+    headings: [{ level: 1, label: "Workers & Pages" }],
+    regions: [{ role: "main", name: "" }],
+  };
+  const alreadyThere = await c.plan(
+    input("I want to deploy a website from GitHub", workspace),
+  );
+  expect(alreadyThere.clarification).toBeUndefined();
+  expect(alreadyThere.plan?.steps[0].label).toBe("Create application");
+  expect(alreadyThere.plan?.status).toBe("guiding");
+  expect(alreadyThere.workflow?.verified).toHaveLength(0);
+  expect(alreadyThere.plan?.status).not.toBe("completed");
+  const application = await c.plan(
+    input("I want to deploy my app from GitHub", workspace),
+  );
+  expect(application.workflow?.guideId).toBe("cloudflare.pages.deploy");
+  expect(application.plan?.steps[0].label).toBe("Create application");
 });
 test("opening an entity picker does not verify selection of a requested repository", async () => {
   const c = core(),

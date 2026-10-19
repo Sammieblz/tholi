@@ -37,7 +37,10 @@ export default class RuntimeReporter implements Reporter {
           ? "output/nlp/results.json"
           : `output/${scope}/runtime.json`;
     const previous =
-      scope === "nlp" ? JSON.parse(await readFile(path, "utf8")) : {};
+      scope === "nlp" &&
+      modules.some((module) => module.moduleId.endsWith("real-model.test.ts"))
+        ? JSON.parse(await readFile(path, "utf8").catch(() => "{}"))
+        : {};
     await writeEvidence(path, {
       ...previous,
       ...end,

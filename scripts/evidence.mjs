@@ -11,9 +11,15 @@ export function validationIdentity() {
     runId: process.env.THOLI_VALIDATION_RUN || "uncoordinated",
   };
 }
-export function requireFullEvidence(report, files, identity) {
+export function requireFullEvidence(
+  report,
+  files,
+  identity,
+  target = "chromium",
+) {
   if (
     !report?.passed ||
+    report.target !== target ||
     report.validation?.tier !== "full" ||
     report.validation?.selection !== "complete" ||
     !report.validation.runId ||
