@@ -14,7 +14,12 @@ export function useSessionSnapshot(widget: boolean) {
     routes: RoutePreview[];
     reason?: string;
     sessionRoute?: RoutePreview;
-    session?: { tabId: number; view?: SessionView };
+    session?: {
+      tabId: number;
+      sessionId?: string;
+      documentId?: string;
+      view?: SessionView;
+    };
   }>();
   useEffect(() => {
     let current = true;

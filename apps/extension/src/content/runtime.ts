@@ -434,6 +434,16 @@ if (!host[marker]) {
         );
         return;
       }
+      if (message.type === "ASSIST_STEP") {
+        respond(
+          coach?.assistStep(
+            message.controlId,
+            message.revision,
+            message.requestId,
+          ) || { assisted: false },
+        );
+        return;
+      }
       if (message.type === "INSTALL_REQUEST") {
         respond(
           coach?.installRequest(

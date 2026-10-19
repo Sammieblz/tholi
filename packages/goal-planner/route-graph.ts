@@ -16,8 +16,10 @@ export function edgeCost(
     Math.min(5000, (Math.max(0, now - edge.lastVerified) / 86400000) * 100) +
     ((edge.samples || 1) < 2 ? 1000 : 0);
   return strategy === "fewest-clicks"
-    ? 1
-    : Math.max(500, edge.meanMs || 5000) + uncertainty;
+    ? 1 + Math.min(8, edge.failures || 0)
+    : Math.max(500, edge.meanMs || 5000) +
+        uncertainty +
+        Math.min(30000, (edge.failures || 0) * 5000);
 }
 type SearchNode = {
   state: string;

@@ -11,3 +11,9 @@
 `ui/hooks/useSessionSnapshot.ts` owns the single snapshot subscription and bounded fallback. `usePresentationSession.ts` owns trusted draft/history hydration and revision protection. `useBackendSettings.ts` reads sidebar-only advanced settings. Conversation and optional model actions are feature-owned; the controller composes them. Appearance remains owned by `ui/theme`. No extraction adds a second polling loop or task owner.
 
 See [browser platforms](../browser-platforms.md) for target manifests, private settings and inference hosting.
+
+`ui/hooks/useAssistance.ts` consumes the existing session snapshot and preference
+hydration; it adds neither a session owner nor a polling loop. Its debounced
+intent is validated by `background/ui-transport.ts` and the content facade's
+fresh binding before any interaction. The shared assistance policy contains no
+browser privileges. See [navigation](../navigation.md) for its opt-in limits.

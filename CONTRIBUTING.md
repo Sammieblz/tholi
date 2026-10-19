@@ -34,6 +34,8 @@ Install browser binaries once with `npx playwright install chromium firefox`. Ru
 
 ## CI and releases
 
+Follow [versioning and releases](docs/development/releasing.md). Create version-specific notes under `docs/releases/vVERSION`, then run `npm run release:version -- VERSION`. `npm run check:version` rejects drift between product, API, workspace and extension metadata or a mismatched CI tag. Keep historical evidence and capture versions unchanged.
+
 Use `npm run test:ci` for deterministic PR checks and `npm run test:full` before certification. The full command runs all retained coverage against one build, then verifies evidence. PR/main workflows preserve the required `validate` aggregate; nightly/manual/tag runs perform full validation. See [testing and CI](docs/development/testing/README.md) and [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md).
 
 Package with `npm run package:extension` and `npm run package:api` only after complete full-tier evidence from the same run and final bytes. Do not rebuild afterward or overwrite existing archives. Focused runs do not collectively certify a release. Native Chrome and signed-in checks remain separately recorded in [the handoff checklist](docs/guides/getting-started.md).

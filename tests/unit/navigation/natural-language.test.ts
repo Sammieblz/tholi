@@ -15,7 +15,33 @@ import {
   sanitizeGoal,
   sanitizeText,
 } from "../../../packages/privacy-redaction/index";
+import {
+  normalizeIntentText,
+  authenticationIntent,
+} from "../../../packages/goal-planner/task-intent";
+import { words } from "../../../packages/nlp/retrieval";
 test("question framing preserves the target and requested reading operation", () => {
+  for (const wording of [
+    "sign up",
+    "sign-up",
+    "sign‑up",
+    "sign—up",
+    "signup",
+  ]) {
+    const sentence = `I want to ${wording}`;
+    const parsed = interpretRequest(sentence);
+    expect(parsed.original).toBe(sanitizeGoal(sentence));
+    expect(parsed.tasks[0].target).toBe("create account");
+    expect(authenticationIntent(sentence)).toBe("register");
+    expect(words(sentence)).toEqual(words("create account"));
+  }
+  for (const wording of ["sign-in", "sign–in", "log in", "log-in", "log on"])
+    expect(authenticationIntent(wording)).toBe("login");
+  expect(
+    normalizeIntentText(
+      'Deploy project "sign-in" at https://example.com/sign-in',
+    ),
+  ).toBe('Deploy project "sign-in" at https://example.com/sign-in');
   expect(
     interpretRequest("Where can I read the privacy policy?").tasks[0],
   ).toMatchObject({ target: "privacy policy", operation: "navigate" });
@@ -54,6 +80,14 @@ test("full requests preserve values, exclusions, corrections, and ordered compat
   expect(interpretRequest("Change it to Spanish").tasks[0].needsReference).toBe(
     true,
   );
+  expect(
+    interpretRequest("Change the default branch to dev in that repository")
+      .tasks[0].desiredValue,
+  ).toBe("dev");
+  expect(
+    interpretRequest('Change the default branch to "dev in that repository"')
+      .tasks[0].desiredValue,
+  ).toBe("dev in that repository");
 });
 test("1000-character goal validation does not expand control text limits or silently truncate exclusions", () => {
   const request = "Find " + "readable ".repeat(70) + "references but not tools";

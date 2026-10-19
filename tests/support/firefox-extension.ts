@@ -3,7 +3,7 @@ import {
   registerFirefoxDriver,
   closeFirefoxDriver,
 } from "./native-browser-lifecycle";
-import { attachWebDriverExtension } from "./webdriver-extension";
+import { attachWebDriverExtension, seleniumBidi } from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
@@ -100,7 +100,27 @@ export async function openFirefoxExtension(
         height: viewport.height + inset.y,
       });
     await driver.manage().setTimeouts({ script: 35000, pageLoad: 30000 });
-    await driver.installAddon(resolve("dist/extension-firefox"), true);
+    // BiDi installs the local unpacked directory. The deprecated classic API
+    // ZIPs/base64-encodes every model asset in memory before sending it again.
+    const installed = await (
+      await seleniumBidi(driver)
+    ).send({
+      method: "webExtension.install",
+      params: {
+        extensionData: {
+          type: "path",
+          path: resolve("dist/extension-firefox"),
+        },
+      },
+    });
+    if (
+      installed.error ||
+      installed.result?.extension !== "tholi@ilunonsen.com"
+    )
+      throw Error(
+        installed.message ||
+          "Firefox did not install the expected local extension.",
+      );
     await driver.get(url);
     const website = await driver.getWindowHandle();
     await driver.setContext(firefox.Context.CHROME);

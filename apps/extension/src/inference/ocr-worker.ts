@@ -92,6 +92,7 @@ async function prepare(message: any): Promise<RecognitionInput> {
     height,
     cssWidth: message.metadata.width,
     cssHeight: message.metadata.height,
+    focusRegions: message.metadata.focusRegions,
   };
 }
 const jobs = new OcrQueue<any, unknown>(async (message, signal) => {

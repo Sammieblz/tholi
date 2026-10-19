@@ -52,7 +52,6 @@ export async function openNavigatorExtension(
     if (!options.nativeViewport)
       await panel.setViewportSize({ width: 380, height: 1000 });
   };
-  await initialize();
   const openDetails = async () => {
     await panel
       .locator('.tholi-journey-summary[aria-expanded="false"]')
@@ -181,7 +180,7 @@ export async function openNavigatorExtension(
   };
   const close = () =>
     dispose(async () => {
-      await context.close();
+      await context?.close();
       const target = resolve(directory);
       if (
         !target.startsWith(resolve(tmpdir()) + sep) ||
@@ -194,6 +193,21 @@ export async function openNavigatorExtension(
     await dispose(() => context.close());
     await initialize();
   };
+  try {
+    await initialize();
+  } catch (error) {
+    // Callers cannot run their finally block until this factory returns. Close
+    // a partly initialized profile here too, so failed startup cannot strand it.
+    try {
+      await close();
+    } catch (cleanup) {
+      throw new AggregateError(
+        [error, cleanup],
+        "Extension startup and cleanup failed",
+      );
+    }
+    throw error;
+  }
   return {
     get context() {
       return context;

@@ -19,10 +19,15 @@ export class OcrEngine {
       cacheMethod: "none",
       legacyCore: false,
       legacyLang: false,
-    }).then(async (w) => {
-      await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      return w;
-    }));
+    })
+      .then(async (w) => {
+        await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+        return w;
+      })
+      .catch((error) => {
+        this.worker = undefined;
+        throw error;
+      }));
   }
   async recognize(
     raw: RecognitionInput,
@@ -44,14 +49,37 @@ export class OcrEngine {
     try {
       const worker = await Promise.race([this.open(), canceled]);
       signal?.throwIfAborted();
-      const result = await Promise.race([
+      const focus = input.focusRegions?.[0];
+      const rectangle = focus
+        ? {
+            left: Math.floor((focus.x * input.width) / input.cssWidth),
+            top: Math.floor((focus.y * input.height) / input.cssHeight),
+            width: Math.max(
+              1,
+              Math.floor((focus.width * input.width) / input.cssWidth),
+            ),
+            height: Math.max(
+              1,
+              Math.floor((focus.height * input.height) / input.cssHeight),
+            ),
+          }
+        : undefined;
+      const recognize = (crop?: typeof rectangle) =>
         worker.recognize(
           "data:image/png;base64," + input.image,
-          {},
+          crop ? { rectangle: crop } : {},
           { blocks: true },
-        ),
-        canceled,
-      ]);
+        );
+      let result = await Promise.race([recognize(rectangle), canceled]);
+      if (
+        rectangle &&
+        !(result.data.blocks || []).some((b) =>
+          b.paragraphs.some((p) =>
+            p.lines.some((line) => line.confidence >= 85 && line.text.trim()),
+          ),
+        )
+      )
+        result = await Promise.race([recognize(undefined), canceled]);
       signal?.throwIfAborted();
       const regions: VisualObservation["regions"] = [];
       for (const block of result.data.blocks || [])
@@ -71,7 +99,15 @@ export class OcrEngine {
                 },
               });
           }
-      const { image, width, height, cssWidth, cssHeight, ...stamp } = input;
+      const {
+        image,
+        width,
+        height,
+        cssWidth,
+        cssHeight,
+        focusRegions,
+        ...stamp
+      } = input;
       return visualObservationSchema.parse({
         ...stamp,
         regions: regions.slice(0, 300),

@@ -131,25 +131,15 @@ export async function attachWebDriverExtension(
     },
     async goal(goal: string) {
       await driver.switchTo().window(website);
-      // The same bounded responsive-reflow retry as the Chromium acceptance adapter.
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const current = await message({ type: "GET_PAGE" });
-        if (current.error) throw Error(current.error);
-        const result = await message({
-          type: "SET_GOAL",
-          goal,
-          revision: current.page.revision,
-        });
-        if (
-          result.error ===
-            "The page changed before this request. Use the current scan." &&
-          attempt < 2
-        )
-          continue;
-        if (result.error) throw Error(result.error);
-        return result;
-      }
-      throw Error("Fresh observation could not be obtained");
+      const current = await message({ type: "GET_PAGE" });
+      if (current.error) throw Error(current.error);
+      const result = await message({
+        type: "SET_GOAL",
+        goal,
+        revision: current.page.revision,
+      });
+      if (result.error) throw Error(result.error);
+      return result;
     },
     async view() {
       return (await message({ type: "GET_SESSION" })).view;

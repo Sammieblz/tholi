@@ -106,6 +106,10 @@ export function installRequest(
   savedRouteId?: string,
 ) {
   context.refresh();
+  // Pending indexing carries intent only, never a target binding. Retain it on
+  // the latest scan of this authorized document even while the layout changes.
+  if (result.status === "pending-indexing" && !result.plan && context.view.page)
+    result = { ...result, revision: context.view.page.revision };
   if (
     result.request &&
     context.view.request &&
@@ -168,6 +172,10 @@ export function installRequest(
         context.view.instruction =
           "The website has not confirmed the result. Keep waiting, retry, or replan; the task remains incomplete.";
         context.publish(context.view);
+        if (!w.pendingAction.final) {
+          context.planningRevision = "";
+          context.requestReplan();
+        }
       },
       Math.max(
         0,
@@ -298,11 +306,34 @@ export function installRequest(
       status: "unresolved",
       confidence: 0,
       issue: result.status === "clarification" ? "ambiguous" : "no-match",
+      recoveryStage:
+        result.status === "pending-indexing" ? "retrieval" : undefined,
       steps: [],
       reason: result.reason,
     };
     context.view.instruction = result.reason;
     context.publish(context.view);
+    if (result.status === "pending-indexing") {
+      const key =
+        result.requestId + ":pending:" + context.view.page.fingerprint;
+      if (context.recoveryKey !== key) {
+        context.recoveryKey = key;
+        context.recoveryStep = 0;
+      }
+      if (context.recoveryStep < 3) {
+        const delay = 250 * 2 ** context.recoveryStep++;
+        clearTimeout(context.recoveryTimer);
+        context.recoveryTimer = setTimeout(() => {
+          if (
+            context.view.request?.id !== result.requestId ||
+            context.view.status !== "running"
+          )
+            return;
+          context.planningRevision = "";
+          context.requestReplan();
+        }, delay);
+      }
+    }
   }
   return { view: context.view };
 }
@@ -343,7 +374,10 @@ export function requestReplan(context: Context) {
         !["active", "clarification"].includes(context.view.request.status)
       )
         return;
-      if (context.view.page?.revision !== result.revision) {
+      if (
+        context.view.page?.revision !== result.revision &&
+        result.status !== "pending-indexing"
+      ) {
         context.planningRevision = "";
         context.requestReplan();
         return;

@@ -14,6 +14,7 @@ import {
   savedTaskSchema,
   strategySchema,
   pendingNavigationSchema,
+  routeFeedbackSchema,
 } from "../page-model";
 const risk = z.enum([
   "navigation",
@@ -78,7 +79,7 @@ export const routeSchema = z
     description: z.string().default(""),
     safetyNote: z
       .string()
-      .default("You make every click. Tholi never submits for you."),
+      .default("You control website changes. Tholi never submits for you."),
     completionInstruction: z
       .string()
       .default(
@@ -227,6 +228,8 @@ export const messageSchema = z.discriminatedUnion("type", [
       type: z.literal("SET_GOAL"),
       goal: z.string().min(1).max(1000),
       revision: z.number().int().nonnegative(),
+      sessionId: z.string().uuid().optional(),
+      documentId: z.string().min(1).max(200).optional(),
       proposal: modelProposalSchema.optional(),
       strategy: strategySchema.optional(),
       journeyId: z.string().uuid().optional(),
@@ -256,6 +259,16 @@ export const messageSchema = z.discriminatedUnion("type", [
 ]);
 
 export const contentMessageSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("ASSIST_STEP"),
+      sessionId: z.string().uuid(),
+      documentId: z.string().min(1).max(200),
+      requestId: z.string().uuid(),
+      controlId: z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/),
+      revision: z.number().int().nonnegative(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("FRAME_ACCESS"),
@@ -358,6 +371,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("SET_GOAL"),
       sessionId: z.string().uuid(),
+      documentId: z.string().min(1).max(200).optional(),
       goal: z.string().min(1).max(1000),
       revision: z.number().int().nonnegative(),
       proposal: modelProposalSchema.optional(),
@@ -509,6 +523,7 @@ export const sessionViewSchema = z
       .strict()
       .optional(),
     memoryError: z.string().max(300).optional(),
+    routeFeedback: routeFeedbackSchema.optional(),
     selectedControlId: z
       .string()
       .regex(/^w[0-9a-f]{16}-[0-9]+$/)

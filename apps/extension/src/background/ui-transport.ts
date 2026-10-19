@@ -21,6 +21,7 @@ const prefsSchema = z
     mode: z.enum(["guide", "conversation"]),
     surface: z.enum(["sidebar", "widget"]),
     advanced: z.boolean(),
+    assisted: z.boolean().optional(),
   })
   .strict();
 const defaultPrefs = { mode: "guide", surface: "sidebar", advanced: false };
@@ -455,6 +456,52 @@ export async function uiMessage(
   }
   if (!trustedUi(sender, session) && !shell)
     throw Error("Trusted Tholi interface required.");
+  if (raw.type === "UI_ASSIST_STEP") {
+    const intent = z
+      .object({
+        type: z.literal("UI_ASSIST_STEP"),
+        sessionId: z.string().uuid(),
+        documentId: z.string().min(1).max(200),
+        requestId: z.string().uuid(),
+        controlId: z.string().max(100),
+        revision: z.number().int().nonnegative(),
+      })
+      .strict()
+      .parse(raw);
+    if (
+      !trustedUi(sender, session) ||
+      !session ||
+      session.sessionId !== intent.sessionId ||
+      session.documentId !== intent.documentId
+    )
+      throw Error("Stale assistance request.");
+    const [{ tholiPreferences }, [tab], frame, surfaceState] =
+      await Promise.all([
+        api.storage.local.get("tholiPreferences"),
+        api.tabs.query({ active: true, lastFocusedWindow: true }),
+        api.webNavigation.getFrame({ tabId: session.tabId, frameId: 0 }),
+        getSurfacePresentation(session),
+      ]);
+    if (
+      !currentSession(session) ||
+      !tholiPreferences?.assisted ||
+      tab?.id !== session.tabId ||
+      frame?.documentId !== intent.documentId ||
+      session.documentId !== intent.documentId ||
+      surfaceState?.visibility !== "expanded" ||
+      session.view?.status !== "running" ||
+      session.view.request?.id !== intent.requestId ||
+      session.view.request.status !== "active" ||
+      session.view.page?.revision !== intent.revision ||
+      session.view.selectedControlId !== intent.controlId
+    )
+      return { assisted: false };
+    return api.tabs.sendMessage(
+      session.tabId,
+      { ...intent, type: "ASSIST_STEP" },
+      { frameId: 0 },
+    );
+  }
   if (raw.type === "UI_MINIMIZE") {
     if (!session) throw Error("No current journey.");
     return { ok: true, presentation: await minimizeSurface(session) };

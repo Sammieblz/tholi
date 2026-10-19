@@ -43,6 +43,40 @@ test("Firefox uses native document identity, local planning and independently ve
         () => (document.querySelector("#large") as HTMLInputElement).checked,
       ),
     ).toBe(true);
+    await app.site(() => {
+      document.querySelector("details")!.open = false;
+    });
+    await app.extension(async () => {
+      const api = (globalThis as any).browser;
+      const { tholiPreferences } =
+        await api.storage.local.get("tholiPreferences");
+      const reply = await api.runtime.sendMessage({
+        type: "UI_SAVE",
+        preferences: {
+          mode: "guide",
+          surface: "sidebar",
+          advanced: false,
+          ...tholiPreferences,
+          assisted: true,
+        },
+      });
+      if (reply?.error) throw Error(reply.error);
+    });
+    await app.goal("Show appearance");
+    await app.waitFor(
+      () => current.site(() => document.querySelector("details")!.open),
+      (open) => open === true,
+      "Opt-in assistance opens a real Firefox disclosure",
+    );
+    await app.extension(async () => {
+      const api = (globalThis as any).browser;
+      const { tholiPreferences } =
+        await api.storage.local.get("tholiPreferences");
+      await api.runtime.sendMessage({
+        type: "UI_SAVE",
+        preferences: { ...tholiPreferences, assisted: false },
+      });
+    });
     await app.goal("Delete account");
     const boundary = await app.view();
     expect(boundary.goalPlan.status).not.toBe("completed");

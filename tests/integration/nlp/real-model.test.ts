@@ -39,6 +39,19 @@ afterAll(async () => {
   await model.dispose();
 });
 test("reported request paraphrases use actual targets and abstain when references are absent", async () => {
+  for (const [text, target] of [
+    ["I want to sign-up", "Create account"],
+    ["Can you help me sign—up?", "Create account"],
+    ["I would like to create a new account", "Create account"],
+    ["I want to sign-in", "Log in"],
+    ["Please log–in", "Log in"],
+  ]) {
+    const result = await core.plan(input(text));
+    expect(result.plan?.status, text).toBe("guiding");
+    expect(result.plan?.steps[0]?.label, text).toBe(target);
+    expect(result.request?.original).toBe(text);
+    expect(result.activity.llmCalls).toBe(0);
+  }
   const page = fixture();
   page.controls = page.controls.filter((c) =>
     ["References", "View history"].includes(c.label),

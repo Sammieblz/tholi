@@ -1,7 +1,7 @@
 {
   "name": "@internet-navigator/vision",
   "description": "Tholi's local OCR, masked visual observations and backend fallback.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "private": true,
   "license": "MIT",

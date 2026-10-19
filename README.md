@@ -51,6 +51,11 @@ For **Firefox 153+**, open `about:debugging`, select **This Firefox → Load Tem
 
 After rebuilding, reload the matching target in its extension manager and refresh the website tab. [Browser setup and permission recovery](docs/guides/getting-started.md) covers the details.
 
+Guide mode leaves clicks with you by default. **Settings → Assisted navigation**
+can open eligible menus and select explicitly requested view options. It stays off
+until enabled; credentials, forms and final actions remain yours. See the
+[controls and limits](docs/guides/using-tholi.md#optional-assisted-navigation).
+
 ### Explore the local website
 
 ```sh
@@ -59,7 +64,7 @@ npm run dev:web
 
 Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs, installation help and downloads. Sign-up and sign-in are explicitly mocked. Dark is the default; optional preference cookies can remember Light/Dark. Production analytics is disabled.
 
-**Source version: 0.10.1.** The website offers a packaged preview only when an eligible, verified archive is available; otherwise it shows source setup. Download version and checksum come from that archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/releases/v0.10.1/website.md).
+**Source version: 0.11.0 (unreleased).** [Release notes](docs/releases/v0.11.0/README.md) · [Changelog](CHANGELOG.md). The website offers a packaged preview only when an eligible, verified archive is available; otherwise it shows source setup. Download version and checksum come from that archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/releases/v0.10.1/website.md).
 
 ## Preview boundaries
 
@@ -77,7 +82,7 @@ The default local pipeline combines Compromise, lexical retrieval and MiniLM. Op
 | Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md)        |
 | Deterministic PR validation         | `npm run test:ci`                         | Local validation                           |
 
-Install the test browsers once with `npx playwright install chromium firefox`. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
+Install the test browsers once with `npx playwright install chromium firefox`. The [release procedure](docs/development/releasing.md) covers versioning and certification. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
 
 `npm run test:ci` runs deterministic PR checks. `npm run test:full` runs complete certification before gated packaging. Existing focused aliases remain available. See [testing and CI](docs/development/testing/README.md), [coverage ledger](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Public-site tests, frozen model/OCR budgets and the complete responsive matrix run nightly, manually and before releases.
 

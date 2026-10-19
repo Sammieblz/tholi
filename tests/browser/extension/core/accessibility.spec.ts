@@ -20,6 +20,13 @@ test("panel exposes distinct status announcements, stable polling and usable key
       .getByRole("button", { name: "Guide me", exact: true })
       .press("Enter");
     await expect.poll(async () => (await app.view())?.status).toBe("running");
+    // A native sidebar shares the website's active tab. Our separate test tab
+    // needs real foreground focus while retaining that already observed context.
+    await app.page.bringToFront();
+    await app.panel.evaluate(() =>
+      (globalThis as any).__tholiSidebarTab.hold(),
+    );
+    await app.panel.bringToFront();
     const status = app.panel.getByRole("status", { name: "Navigation status" });
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await expect(status).toContainText("Your next step.");
@@ -67,13 +74,13 @@ test("panel exposes distinct status announcements, stable polling and usable key
     await app.panel
       .getByRole("button", { name: "Pause navigation", exact: true })
       .focus();
-    await app.page.bringToFront();
+    await app.panel.bringToFront();
     await app.panel.keyboard.press("Enter");
     await expect(status).toContainText("Paused.");
     await expect(
       app.panel.getByRole("button", { name: "Resume navigation", exact: true }),
     ).toBeFocused();
-    await app.page.bringToFront();
+    await app.panel.bringToFront();
     await app.panel.keyboard.press("Enter");
     await expect(app.panel.getByLabel("Navigation goal")).toBeFocused();
     await app.panel.getByRole("button", { name: "Stop", exact: true }).focus();

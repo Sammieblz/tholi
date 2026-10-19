@@ -26,8 +26,14 @@ The local website at **http://127.0.0.1:5174/docs** publishes selected current r
 - [Product naming, metadata and compatibility](development/naming.md)
 - [Project-local design skills and provenance](../.codex/README.md)
 
+## Releases
+
+- [0.11.0 release notes and compatibility](releases/v0.11.0/README.md) · [validation status](releases/v0.11.0/validation.md)
+- [Changelog](../CHANGELOG.md) and [versioning/release procedure](development/releasing.md)
+
 ## Design and implementation records
 
+- [Navigation recovery, context, assisted mode and validation](releases/v0.11.0/navigation-reliability.md)
 - [Current UI audit, implementation, skills, and validation](releases/v0.10.1/ui-audit.md)
 - [Real website screenshot sources and regeneration](development/media-capture.md)
 - [Website redesign, genuine video, public docs, cookie controls and launch drafts](releases/v0.10.1/website.md)

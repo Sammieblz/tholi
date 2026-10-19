@@ -183,7 +183,7 @@ export function DownloadPage() {
               </span>
             </>
           )}
-          <p>Local processing. You make every website click.</p>
+          <p>Local processing. Your browser, your control.</p>
         </div>
       </div>
       {release && (

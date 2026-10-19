@@ -56,6 +56,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       verifiedSteps={displayedView?.verifiedSteps}
       progress={presentRouteProgress(displayedView, presentation)}
       preferences={preferences}
+      assistanceAvailable
       onPreferences={(next) => void changePreferences(next)}
       draft={goal}
       onDraft={setGoal}

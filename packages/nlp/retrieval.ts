@@ -5,6 +5,7 @@ import type { Embedder } from "./model";
 import { MODEL_REVISION, DIMENSIONS } from "./constants";
 import { goalScore } from "../goal-planner";
 import { languageCode } from "../goal-planner/task-journey";
+import { taskWords } from "../goal-planner/task-intent";
 import {
   privatePlatform,
   structuralObservation,
@@ -55,12 +56,13 @@ export class MemoryDerivedStore implements DerivedStore {
   }
 }
 const stop = new Set(
-  "a an the to of on in this that my me please i want can you for how could would like help do is be it where show find go open change set switch".split(
+  "a an the to of on in this that my me please i want can you for how could would like do is be it where show find go open change set switch".split(
     " ",
   ),
 );
 export const words = (s: string) =>
-  s
+  taskWords(s)
+    .replace(/\bhelp\s+me\b/gi, "")
     .toLowerCase()
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")

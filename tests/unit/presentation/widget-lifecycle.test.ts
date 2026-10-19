@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { PinnedSession } from "../../../packages/route-registry/session";
 import { dockIntent } from "../../../apps/extension/src/ui/widget/presentation-state";
 import { contentMessageSchema } from "../../../packages/route-schema/index";
+import { fixture } from "../../integration/nlp/fixtures";
 
 const id = "6692779e-ad63-4da7-82cd-a878c1ae23e1";
 function environment(seed: Record<string, unknown> = {}) {
@@ -34,7 +35,13 @@ function environment(seed: Record<string, unknown> = {}) {
     },
     storage: { local: storage(local), session: storage(stored) },
     tabs: {
-      sendMessage: vi.fn(async () => ({ ok: true })),
+      sendMessage: vi.fn(
+        async (
+          _tabId: number,
+          _message: any,
+          _options?: unknown,
+        ): Promise<any> => ({ ok: true }),
+      ),
       get: vi.fn(async () => ({ windowId: 4 })),
     },
     webNavigation: {
@@ -80,6 +87,143 @@ afterEach(() => {
   document
     .querySelectorAll("[data-tholi-ui]")
     .forEach((element) => element.remove());
+});
+
+it("scan churn retains submitted intent but suggestions cannot install a task", async () => {
+  const { api, session, sender } = environment();
+  const page = { ...fixture(), revision: 1 };
+  const local = await import("../../../apps/extension/src/inference/client");
+  const backend =
+    await import("../../../apps/extension/src/platform/backend-client");
+  vi.spyOn(backend, "backendNlp").mockResolvedValue(undefined);
+  const planning = vi
+    .spyOn(local, "localNlp")
+    .mockImplementation(async (input) => {
+      page.revision++;
+      return {
+        requestId: input.requestId,
+        documentId: input.documentId,
+        revision: input.revision,
+      };
+    });
+  api.tabs.sendMessage.mockImplementation(
+    async (_tab: number, message: any) => {
+      if (message.type === "GET_PAGE")
+        return { page: structuredClone(page), view: session.view };
+      if (message.type === "INSTALL_REQUEST")
+        return {
+          view: { ...session.view, page, request: message.result.request },
+        };
+      return { ok: true };
+    },
+  );
+  const context = {
+    goalGeneration: 0,
+    session,
+    enqueue: async <T>(operation: () => Promise<T>) => operation(),
+    live: () => true,
+    inScope: () => true,
+    knownSites: new Map(),
+    knownTasks: new Map(),
+    suspended: [],
+    attemptVision: vi.fn(),
+    acceptView: async (view: any) => {
+      session.view = view;
+    },
+    save: vi.fn(),
+    remember: vi.fn(),
+  };
+  const { createJourneyService } =
+    await import("../../../apps/extension/src/background/journey-service");
+  const service = createJourneyService(context);
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  const suggestion = await service.handleNlp(
+    { type: "NLP_SUGGEST", text: "Open Help", requestId: id },
+    panel,
+  );
+  expect(suggestion).toMatchObject({ suggestions: [] });
+  expect(session.view!.request).toBeUndefined();
+  expect(
+    api.tabs.sendMessage.mock.calls.some(
+      (call: any) => call[1]?.type === "INSTALL_REQUEST",
+    ),
+  ).toBe(false);
+  planning.mockClear();
+  const reply = await service.handleNlp(
+    {
+      type: "SET_GOAL",
+      goal: "Open Help",
+      revision: 0,
+      sessionId: id,
+      documentId: "document-a",
+    },
+    panel,
+  );
+  expect(planning).toHaveBeenCalledTimes(4);
+  expect(reply).not.toHaveProperty("error");
+  expect(session.view!.request?.original).toBe("Open Help");
+  expect(session.view!.verifiedSteps).toBe(3);
+});
+
+it("assistance requires opt-in, the current document and a visible active surface", async () => {
+  const { api, session, sender } = environment();
+  Object.assign(api.tabs, {
+    query: vi.fn(async () => [{ id: session.tabId }]),
+  });
+  Object.assign(session.view!, {
+    request: { id, status: "active" },
+    page: { revision: 3 },
+    selectedControlId: "w0000000000000000-0",
+  });
+  const ui =
+    await import("../../../apps/extension/src/background/ui-transport");
+  const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+  const command = {
+    type: "UI_ASSIST_STEP",
+    sessionId: id,
+    documentId: "document-a",
+    requestId: id,
+    revision: 3,
+    controlId: "w0000000000000000-0",
+  };
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
+  await api.storage.local.set({
+    tholiPreferences: {
+      mode: "guide",
+      surface: "widget",
+      advanced: false,
+      assisted: true,
+    },
+  });
+  await expect(
+    ui.uiMessage({ ...command, documentId: "stale" }, panel, session),
+  ).rejects.toThrow("Stale assistance");
+  expect(
+    await ui.uiMessage({ ...command, revision: 2 }, panel, session),
+  ).toEqual({ assisted: false });
+  await ui.uiMessage({ type: "UI_MINIMIZE", sessionId: id }, sender, session);
+  api.tabs.sendMessage.mockClear();
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
+  await ui.uiMessage({ type: "UI_RESTORE", sessionId: id }, sender, session);
+  api.tabs.sendMessage.mockClear();
+  await ui.uiMessage(command, panel, session);
+  expect(api.tabs.sendMessage).toHaveBeenCalledWith(
+    session.tabId,
+    { ...command, type: "ASSIST_STEP" },
+    { frameId: 0 },
+  );
+  session.view!.status = "paused";
+  api.tabs.sendMessage.mockClear();
+  expect(await ui.uiMessage(command, panel, session)).toEqual({
+    assisted: false,
+  });
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
 });
 
 it("dismisses the launcher without erasing the task and stays hidden after worker restart", async () => {

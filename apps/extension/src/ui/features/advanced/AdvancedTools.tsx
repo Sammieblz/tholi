@@ -371,7 +371,7 @@ export function AdvancedTools({
           )}
           <p className="small">
             Open menus to reveal more controls. The list refreshes as you
-            browse. You make every click.
+            browse. You control the website.
           </p>
         </details>
       )}

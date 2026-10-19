@@ -112,6 +112,18 @@ export const workflowContextSchema = z
     choice: z.string().max(100).optional(),
     reason: z.string().max(500),
     waitExpired: z.boolean().optional(),
+    attempts: z
+      .array(
+        z
+          .object({
+            key: z.string().max(100),
+            count: z.number().int().min(1).max(3),
+            failed: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(32)
+      .optional(),
   })
   .strict();
 export const workflowGuideSchema = z

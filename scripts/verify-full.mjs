@@ -4,8 +4,17 @@ import { artifactFiles } from "./artifact-files.mjs";
 import { readdir, readFile } from "node:fs/promises";
 import { requireFullEvidence, digest } from "./evidence.mjs";
 import assert from "node:assert/strict";
+import { syncVersion } from "./version.mjs";
 export async function verifyFull() {
+  await syncVersion("--check");
   await verifyBuildManifest();
+  const { version } = JSON.parse(await readFile("package.json", "utf8"));
+  for (const directory of ["dist/extension", "dist/extension-firefox"])
+    assert.equal(
+      JSON.parse(await readFile(`${directory}/manifest.json`, "utf8")).version,
+      version,
+      `${directory} must be rebuilt for the current release version`,
+    );
   const sources = async (directory, suffix) =>
     (
       await Promise.all(

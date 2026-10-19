@@ -260,6 +260,20 @@ export function registerMessages(context: Context) {
         .catch(() => respond({ error: "Frame unavailable" }));
       return true;
     }
+    // Reject stale UI intent before it can cancel work for the current document.
+    // Queued handlers recheck identity after asynchronous observation as well.
+    if (
+      raw?.type === "SET_GOAL" &&
+      trustedUi(sender, context.session) &&
+      ((raw.sessionId && raw.sessionId !== context.session?.sessionId) ||
+        (raw.documentId && raw.documentId !== context.session?.documentId))
+    ) {
+      respond({
+        error:
+          "This destination belongs to a previous page. Send it on the current page.",
+      });
+      return;
+    }
     if (
       sender.id === api.runtime.id &&
       trustedUi(sender, context.session) &&
@@ -710,6 +724,17 @@ export function registerMessages(context: Context) {
           return command.type === "STOP"
             ? {}
             : { error: "Start navigation first." };
+        if (
+          command.type === "SET_GOAL" &&
+          ((command.sessionId &&
+            command.sessionId !== context.session.sessionId) ||
+            (command.documentId &&
+              command.documentId !== context.session.documentId))
+        )
+          return {
+            error:
+              "This destination belongs to a previous page. Send it on the current page.",
+          };
         if (command.type === "STOP") {
           await context.stopSession();
           return structuredClone(context.session);

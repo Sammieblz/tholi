@@ -25,6 +25,7 @@ import { createConversationActions } from "../features/conversation/actions";
 import { useBackendSettings } from "../hooks/useBackendSettings";
 import { usePresentationSession } from "../hooks/usePresentationSession";
 import { useSessionSnapshot } from "../hooks/useSessionSnapshot";
+import { useAssistance } from "../hooks/useAssistance";
 import { unresolvedTitle } from "./presentationLabels";
 export function useGuidanceController(widget = false) {
   const { view, setView, context } = useSessionSnapshot(widget);
@@ -53,6 +54,14 @@ export function useGuidanceController(widget = false) {
     tone?: "info" | "success";
   }>();
   const [busy, setBusy] = useState(false);
+  useAssistance(
+    !!preferences.assisted &&
+      hydrated &&
+      !busy &&
+      context?.tabId === context?.session?.tabId,
+    view,
+    context?.session,
+  );
   const focusIntent = useRef<"composer" | "resume" | undefined>(undefined);
   useEffect(() => {
     if (busy || !focusIntent.current) return;
@@ -328,6 +337,8 @@ export function useGuidanceController(widget = false) {
         type: "SET_GOAL",
         goal: safeGoal,
         revision: page.revision,
+        sessionId: pageContext.sessionId,
+        documentId: pageContext.documentId,
         strategy: saved?.strategy || strategy,
         ...(saved ? { savedRouteId: saved.id } : {}),
         ...(proposal ? { proposal } : {}),

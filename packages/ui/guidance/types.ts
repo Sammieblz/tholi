@@ -9,6 +9,7 @@ export interface UIPreferences {
   mode: "guide" | "conversation";
   surface: "sidebar" | "widget";
   advanced: boolean;
+  assisted?: boolean;
 }
 export const defaultPreferences: UIPreferences = {
   mode: "guide",
@@ -46,6 +47,7 @@ export type GuidanceProps = {
   /** Render inside an isolated product demonstration without a second main landmark. */
   embedded?: boolean;
   hideSettings?: boolean;
+  assistanceAvailable?: boolean;
   showHeader?: boolean;
   /** Blocking decisions stay in the attention region, outside secondary scrolling. */
   attention?: ReactNode;

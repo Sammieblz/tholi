@@ -16,6 +16,8 @@ Keep React, Base UI, Iconoir and the existing tokens. For visual UI work, read a
 
 ## Validation
 
+Use [the release procedure](docs/development/releasing.md) for version changes. Keep the root, bundled workspaces, API, extension and lockfile synchronized with `release:version`; add `docs/releases/vVERSION` notes and validation status. Do not relabel historical reports, media or downloads as evidence for a new version.
+
 Run focused existing checks during implementation. `npm run test:ci` is the deterministic PR gate. `npm run test:full` is full certification, required before packaging. Both build once; use the documented prepared-build option only with immutable, verified build artifacts. PR or independently collected evidence cannot authorize a release. Native browser permission, screen-reader and signed-in checks stay pending until performed.
 
 See [testing and CI](docs/development/testing/README.md), [coverage ownership](docs/releases/v0.10.1/coverage-ledger.md) and [architecture](docs/architecture/README.md). Keep documentation links and website article aliases updated when moving an owner. Do not publish, deploy or overwrite an existing archive without explicit authorization.

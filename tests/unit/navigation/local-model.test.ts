@@ -4,6 +4,10 @@ import {
   modelAvailability,
 } from "../../../apps/extension/src/inference/browser-language-model";
 import type { PageSnapshot } from "../../../packages/page-model/index";
+import {
+  InferenceQueue,
+  inferencePriority,
+} from "../../../packages/nlp/work-queue";
 const page: PageSnapshot = {
   origin: "https://example.org",
   path: "/",
@@ -36,6 +40,48 @@ const page: PageSnapshot = {
   ],
 };
 afterEach(() => vi.unstubAllGlobals());
+it("coalesces obsolete planning, prioritizes foreground work and cancels without stale delivery", async () => {
+  const started: string[] = [],
+    release = new Map<string, () => void>();
+  const queue = new InferenceQueue<string, string>(async (value) => {
+    started.push(value);
+    await new Promise<void>((resolve) => release.set(value, resolve));
+    return value;
+  }, 2);
+  const background = queue
+    .submit("suggest", "document", 1, "suggest")
+    .catch((e) => e.message);
+  const replaced = queue
+    .submit("old", "document", 0, "old")
+    .catch((e) => e.message);
+  const latest = queue
+    .submit("new", "document", 0, "new")
+    .catch((e) => e.message);
+  const deferred = queue
+    .submit("another-suggestion", "document", 1, "unused")
+    .catch((e) => e.message);
+  expect(await background).toContain("canceled");
+  expect(await replaced).toContain("canceled");
+  expect(await deferred).toContain("deferred");
+  const automatic = queue
+    .submit(
+      "old-continuation",
+      "document",
+      inferencePriority({ request: {} }, false),
+      "unused",
+    )
+    .catch((e) => e.message);
+  expect(await automatic).toContain("deferred");
+  expect(inferencePriority({ request: {}, choice: "decision" }, false)).toBe(0);
+  expect(inferencePriority({}, true)).toBe(2);
+  release.get("suggest")!();
+  await vi.waitFor(() => expect(started).toEqual(["suggest", "new"]));
+  queue.cancel();
+  expect(await latest).toContain("canceled");
+  release.get("new")!();
+  await Promise.resolve();
+  expect(started).not.toContain("old");
+});
 it("reports unavailable API and never creates a remote inference dependency", async () => {
   vi.stubGlobal("LanguageModel", undefined);
   expect(await modelAvailability()).toBe("unavailable");

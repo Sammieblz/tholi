@@ -41,24 +41,12 @@ export function sample(
 export async function setGoal(app: NavigatorApp, goal: string) {
   await app.page.bringToFront();
   return app.panel.evaluate(async (goal) => {
-    let reply;
-    // Responsive reflow may legitimately invalidate a scan between these two
-    // messages. Repeat only the explicitly rejected request with fresh evidence;
-    // preserve all other errors and the caller's target/outcome assertions.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
-      reply = await chrome.runtime.sendMessage({
-        type: "SET_GOAL",
-        goal,
-        revision: current.page.revision,
-      });
-      if (
-        reply.error !==
-        "The page changed before this request. Use the current scan."
-      )
-        return reply;
-    }
-    return reply;
+    const current = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
+    return chrome.runtime.sendMessage({
+      type: "SET_GOAL",
+      goal,
+      revision: current.page.revision,
+    });
   }, goal);
 }
 export async function resetClicks(app: NavigatorApp) {

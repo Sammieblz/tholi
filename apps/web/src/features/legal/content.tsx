@@ -81,11 +81,14 @@ export function privacySections(): LegalSection[] {
             every private label.
           </p>
           <p>
-            You enter credentials and make website changes yourself. A
-            task-scoped navigation ledger supports continuity and return routes
-            while Tholi is active. It is not a general browsing-history
-            collection service. Restricted browser pages and unpermitted origins
-            cannot be inspected.
+            Guide mode leaves website interaction with you. Optional assisted
+            navigation can open eligible menus and select explicitly requested
+            view options; it does not enter credentials, submit forms or perform
+            final actions. You can disable it or pause guidance. A task-scoped
+            navigation ledger supports continuity and return routes while Tholi
+            is active. It is not a general browsing-history collection service.
+            Restricted browser pages and unpermitted origins cannot be
+            inspected.
           </p>
         </>
       ),

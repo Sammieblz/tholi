@@ -3,6 +3,7 @@ import {
   type PageSnapshot,
   type GoalPlan,
   type SiteMemory,
+  hash,
 } from "../page-model";
 import { beginJourney, planTask } from "../goal-planner/task-journey";
 import type {
@@ -20,6 +21,11 @@ import { workflowGuides, platformFor } from "./guides";
 import { words, type SemanticIndex } from "../nlp/retrieval";
 import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
 import { signalIdentity } from "./evidence";
+import {
+  atDestination,
+  sameControlDestination,
+  surfacePriority,
+} from "./screen-context";
 
 const norm = (s: string) =>
   s
@@ -28,6 +34,12 @@ const norm = (s: string) =>
     .replace(/[^\p{L}\p{N}.]+/gu, " ")
     .trim();
 const exact = (a: string, b: string) => norm(a) === norm(b);
+const attemptKey = (
+  milestone: string,
+  signature: string,
+  fingerprint: string,
+  documentId = "",
+) => hash([milestone, signature, fingerprint, documentId].join("|"));
 const matches = (text: string, query: string) =>
   words(query).length > 0 && words(query).every((w) => words(text).includes(w));
 const entityValue = (w: WorkflowContext, type?: string) =>
@@ -150,12 +162,26 @@ export async function selectGuide(
   const candidates = workflowGuides.filter((g) => g.platform === platform);
   if (!candidates.length || task.operation === "search" || task.negatedOnly)
     return;
-  const sentence = positiveText(
+  let sentence = positiveText(
     (task.clause ||
       task.original.split(/\b(?:actually|rather),?\s+/i).at(-1)!) +
       " " +
       task.target,
   ).toLowerCase();
+  if (
+    platform === "cloudflare" &&
+    /\b(?:apps?|applications?)\b/.test(sentence) &&
+    input.observation.controls.some(
+      (c) =>
+        c.visible &&
+        ((c.selected && /workers.{0,5}pages/i.test(c.label)) ||
+          (surfacePriority(c) >= 2 &&
+            c.structure?.headings.some((h) =>
+              /workers.{0,5}pages/i.test(h.label),
+            ))),
+    )
+  )
+    sentence = sentence.replace(/\b(?:apps?|applications?)\b/g, "website");
   if (
     platform === "cloudflare" &&
     /\bworkers?\b/.test(sentence) &&
@@ -434,6 +460,19 @@ export function recordWorkflowAction(
   if (!w.pendingAction || w.pendingAction.signature !== control.signature)
     return w;
   const next = structuredClone(w);
+  if (!w.pendingAction.acted) {
+    const key = attemptKey(
+      w.pendingAction.milestone,
+      control.signature,
+      w.pendingAction.beforeFingerprint,
+      w.pendingAction.beforeDocumentId,
+    );
+    const prior = next.attempts?.find((a) => a.key === key);
+    next.attempts = [
+      ...(next.attempts || []).filter((a) => a.key !== key),
+      { key, count: Math.min(3, (prior?.count || 0) + 1), failed: false },
+    ].slice(-32);
+  }
   next.pendingAction!.acted = true;
   next.pendingAction!.startedAt = Date.now();
   next.waitExpired = false;
@@ -954,7 +993,26 @@ export async function planWorkflow(
       ],
     });
   }
-  if (guide.platform === "cloudflare" && !entityValue(w, "method")) {
+  if (
+    guide.platform === "cloudflare" &&
+    !entityValue(w, "method") &&
+    (input.observation.controls.some(
+      (c) =>
+        allowed(w, c) &&
+        /^(?:Connect to Git|Import a repository|Direct Upload|Upload assets|Upload files)$/i.test(
+          c.label,
+        ),
+    ) ||
+      !input.observation.controls.some(
+        (c) =>
+          allowed(w, c) &&
+          ((c.kind === "expand" &&
+            c.expanded === true &&
+            exact(c.label, "Compute")) ||
+            (surfacePriority(c) >= 2 &&
+              /^(?:Create application|Get started|Pages)$/i.test(c.label))),
+      ))
+  ) {
     w.status = "clarification";
     request.status = "clarification";
     return emit(
@@ -1076,6 +1134,80 @@ export async function planWorkflow(
     }
   }
   const method = entityValue(w, "method");
+  // Reconcile navigation with the current screen before choosing another link.
+  // This advances guidance only; final outcomes still require independent evidence.
+  while (w.activeMilestone < guide.milestones.length - 1) {
+    const current = guide.milestones[w.activeMilestone];
+    if (
+      !["reveal", "navigate"].includes(current.kind) ||
+      current.entity ||
+      current.branch
+    )
+      break;
+    const targets = input.observation.controls.filter(
+      (c) => allowed(w, c) && current.targets.some((t) => exact(c.label, t)),
+    );
+    const next = guide.milestones[w.activeMilestone + 1];
+    const following = input.observation.controls.filter(
+      (c) =>
+        allowed(w, c) &&
+        inMilestoneContext(c, next) &&
+        next.targets.some((t) => exact(c.label, t)),
+    );
+    const open =
+      current.kind === "reveal" &&
+      following.length > 0 &&
+      (targets.some((c) => c.expanded) ||
+        !targets.length ||
+        following.some((c) =>
+          c.structure?.headings.some((h) =>
+            current.targets.some((t) => exact(h.label, t)),
+          ),
+        ));
+    const arrived =
+      current.kind === "navigate" &&
+      following.length > 0 &&
+      (targets.some((c) => atDestination(c, input.observation)) ||
+        following.some(
+          (c) =>
+            surfacePriority(c) >= 2 &&
+            c.structure?.headings.some((h) =>
+              current.targets.some((t) => exact(h.label, t)),
+            ),
+        ));
+    if (!open && !arrived) break;
+    w.activeMilestone++;
+    w.pendingAction = undefined;
+    w.status = "active";
+    w.revision++;
+  }
+  if (
+    w.pendingAction?.acted &&
+    !w.pendingAction.final &&
+    !["input", "review"].includes(
+      guide.milestones[w.activeMilestone]?.kind || "",
+    )
+  ) {
+    if (!w.waitExpired || input.observation.busy)
+      return emit({
+        ...base,
+        reason: input.observation.busy
+          ? "The website is updating. I’m checking the next screen."
+          : "Checking the result of that step before choosing another control.",
+      });
+    const key = attemptKey(
+      w.pendingAction.milestone,
+      w.pendingAction.signature,
+      w.pendingAction.beforeFingerprint,
+      w.pendingAction.beforeDocumentId,
+    );
+    const attempt = w.attempts?.find((a) => a.key === key);
+    if (attempt) attempt.failed = true;
+    w.pendingAction = undefined;
+    w.status = "active";
+    w.waitExpired = false;
+    w.revision++;
+  }
   if (
     w.activeMilestone >= guide.milestones.length &&
     w.verified.length &&
@@ -1133,6 +1265,18 @@ export async function planWorkflow(
       : milestone.targets;
   const usable = (c: PageControl) =>
     allowed(w, c) &&
+    !w.attempts?.some(
+      (a) =>
+        a.failed &&
+        a.key ===
+          attemptKey(
+            milestone.id,
+            c.signature,
+            input.observation.fingerprint,
+            c.reference?.documentId || input.documentId,
+          ),
+    ) &&
+    !(milestone.kind === "reveal" && c.expanded === true) &&
     (milestone.kind !== "navigate" ||
       w.outcome !== "result" ||
       c.kind !== "section") &&
@@ -1161,6 +1305,7 @@ export async function planWorkflow(
     .sort(
       (a, b) =>
         b.score - a.score ||
+        surfacePriority(b.control) - surfacePriority(a.control) ||
         Number(b.control.inViewport) - Number(a.control.inViewport),
     );
   if (!candidates.length) {
@@ -1201,7 +1346,8 @@ export async function planWorkflow(
         known.status === "guiding" &&
         control &&
         allowed(w, control) &&
-        control.risk === "ordinary"
+        control.risk === "ordinary" &&
+        usable(control)
       ) {
         w.pendingAction = {
           milestone: "route:" + milestone.id,
@@ -1261,7 +1407,19 @@ export async function planWorkflow(
         c.kind === "expand" &&
         !c.expanded &&
         /menu|navigation|create|applications|projects|account/i.test(c.label) &&
-        !w.verified.some((v) => v.milestone === "route:explore:" + c.signature),
+        !w.verified.some(
+          (v) => v.milestone === "route:explore:" + c.signature,
+        ) &&
+        !w.attempts?.some(
+          (a) =>
+            a.key ===
+            attemptKey(
+              "route:explore:" + c.signature,
+              c.signature,
+              input.observation.fingerprint,
+              c.reference?.documentId || input.documentId,
+            ),
+        ),
     );
     if (exploration) {
       w.pendingAction = {
@@ -1303,16 +1461,23 @@ export async function planWorkflow(
   }
   const distinct = candidates.filter(
     (c, i, all) =>
-      all.findIndex((x) => x.control.signature === c.control.signature) === i,
+      all.findIndex((x) => sameControlDestination(x.control, c.control)) === i,
   );
-  if (distinct[1] && first.score === distinct[1].score && !input.choice) {
+  if (
+    distinct[1] &&
+    first.score === distinct[1].score &&
+    surfacePriority(first.control) === surfacePriority(distinct[1].control) &&
+    !input.choice
+  ) {
     w.status = "clarification";
     request.status = "clarification";
     return emit(
       { ...base, reason: "Several live controls fit this milestone." },
       "clarification",
       {
-        question: "Which control belongs to your task?",
+        question: milestone.entity
+          ? `Which ${milestone.entity} do you want to use?`
+          : "Which destination do you mean?",
         choices: distinct.slice(0, 3).map(({ control: c }) => ({
           id: c.signature,
           signature: c.signature,

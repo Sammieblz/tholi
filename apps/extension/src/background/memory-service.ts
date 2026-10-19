@@ -68,7 +68,9 @@ export function createMemoryService(context: Context) {
           context.session.view.journey.status
         : "") +
       ":" +
-      hash(JSON.stringify(context.session.view.goalPlan) || "");
+      hash(JSON.stringify(context.session.view.goalPlan) || "") +
+      ":" +
+      (context.session.view.routeFeedback?.id || "");
     if (context.lastObservation === key && !evidence.success) return;
     context.lastObservation = key;
     const pinned = context.session;
@@ -78,6 +80,7 @@ export function createMemoryService(context: Context) {
       plan: context.session.view.goalPlan,
       documentId: context.session.documentId,
       evidence: evidence.success ? evidence.data : undefined,
+      feedback: context.session.view.routeFeedback,
     });
     // Ordinary updates replace queued snapshots; verified edges have their own key.
     const jobKey =
@@ -86,12 +89,15 @@ export function createMemoryService(context: Context) {
       page.pageKey +
       (snapshot.evidence
         ? ":edge:" + hash(JSON.stringify(snapshot.evidence))
-        : "");
+        : snapshot.feedback
+          ? ":feedback:" + snapshot.feedback.id
+          : "");
     context.memoryJobs.schedule(jobKey, async () => {
       try {
         const site = await context.memory.observe(
           snapshot.page,
           snapshot.evidence,
+          snapshot.feedback,
         );
         const journey = snapshot.journey;
         const tasks = await context.memory.tasks(page.origin);

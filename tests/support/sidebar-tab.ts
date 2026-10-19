@@ -37,8 +37,13 @@ export async function installSidebarTabHarness(
             await new Promise((resolve) =>
               setTimeout(resolve, message.type === "GET_CONTEXT" ? 1500 : 3000),
             );
-          return message?.type === "GET_CONTEXT"
-            ? website || atRead || reply
+          const held = website || atRead;
+          return message?.type === "GET_CONTEXT" && held
+            ? {
+                ...held,
+                session: reply.session,
+                sessionRoute: reply.sessionRoute,
+              }
             : reply;
         })
         .finally(() => {

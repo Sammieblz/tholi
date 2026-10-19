@@ -137,6 +137,53 @@ test("browser workflow retains captions context across portalled menus and verif
     )
     .toBe("completed");
 });
+test("an open layered deployment workspace advances beyond its repeated sidebar destinations", async ({
+  page,
+}) => {
+  await load(
+    page,
+    '<nav aria-label="Build"><button aria-expanded="true" aria-controls="compute">Compute</button><div id="compute"><a href="/workers-and-pages" aria-current="page">Workers &amp; Pages</a></div></nav><nav aria-label="Recents"><a href="/workers-and-pages">Workers &amp; Pages</a></nav><main><h1>Workers &amp; Pages</h1><button aria-haspopup="dialog" aria-expanded="false" id="create">Create application</button></main>',
+  );
+  await page.evaluate(async () => {
+    history.replaceState({}, "", "/workers-and-pages");
+    const button = document.querySelector("#create")!;
+    button.addEventListener("click", () => {
+      button.setAttribute("aria-expanded", "true");
+      const dialog = document.createElement("div");
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-label", "Create application");
+      dialog.innerHTML = '<h2>Pages</h2><a href="/pages/new">Get started</a>';
+      document.body.append(dialog);
+    });
+    const engine = (window as any).fixtureEngine;
+    engine.start("https://dash.cloudflare.com");
+    await engine.goal("I want to deploy my app from GitHub");
+  });
+  const state = () =>
+    page.evaluate(() => {
+      const view = (window as any).fixtureEngine.view;
+      return {
+        label: view.page.controls.find(
+          (c: any) => c.id === view.selectedControlId,
+        )?.label,
+        status: view.goalPlan?.status,
+        clarification: view.clarification,
+        verified: view.verifiedSteps,
+      };
+    });
+  await expect
+    .poll(async () => (await state()).label)
+    .toBe("Create application");
+  expect(await state()).toMatchObject({ status: "guiding", verified: 0 });
+  expect((await state()).clarification).toBeUndefined();
+  await page
+    .getByRole("button", { name: "Create application", exact: true })
+    .click();
+  await expect.poll(async () => (await state()).label).toBe("Get started");
+  expect((await state()).status).not.toBe("completed");
+  expect((await state()).label).not.toMatch(/Compute|Workers/);
+});
+
 test("50,000-node and 5,000-control mutation benchmark keeps priority guidance and projections bounded", async ({
   page,
 }) => {

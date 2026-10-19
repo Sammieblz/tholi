@@ -61,15 +61,21 @@ export function createJourneyService(context: Context) {
           !context.inScope(sender.url || ""))
       )
         throw new Error("Stale document.");
+      if (
+        !fromContent &&
+        ((raw.sessionId && raw.sessionId !== context.session.sessionId) ||
+          (raw.documentId && raw.documentId !== context.session.documentId))
+      )
+        throw new Error(
+          "This destination belongs to a previous page. Send it on the current page.",
+        );
       let reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "GET_PAGE",
         sessionId: context.session.sessionId,
       });
       if (!reply.page) throw new Error("Fresh page observation required.");
-      if (raw.type === "SET_GOAL" && raw.revision !== reply.page.revision)
-        throw new Error(
-          "The page changed before this request. Use the current scan.",
-        );
+      // A destination is an intent, not a binding to a control. Plan on the
+      // fresh scan; native document/session identity remains mandatory below.
       if (raw.text || raw.goal || raw.request?.original)
         reply = await api.tabs.sendMessage(context.session.tabId, {
           type: "GET_PAGE",
@@ -170,6 +176,10 @@ export function createJourneyService(context: Context) {
           context.session.navigationPending
         )
           throw new Error("Planning canceled by navigation or Stop.");
+        if (context.session.documentId !== captured.documentId)
+          throw new Error(
+            "The website moved to another page. Send this destination on the current page.",
+          );
         const fresh = await api.tabs.sendMessage(context.session.tabId, {
           type: "GET_PAGE",
           sessionId: context.session.sessionId,
@@ -281,17 +291,27 @@ export function createJourneyService(context: Context) {
       });
       if (applied) return applied;
     }
+    // Suggestions cannot install or replace a task, including during scan churn.
+    if (raw.type === "NLP_SUGGEST")
+      return {
+        requestId: input.requestId,
+        documentId: captured.documentId,
+        revision: input.revision,
+        contextRevision: input.contextRevision,
+        suggestions: [],
+      };
     // Retain a first request too, rather than claiming retention while leaving the
     // previous task in the panel after a mutation storm exhausted stale retries.
     const request =
       input.request ||
       interpretRequest(input.text, input.context, { clauses: true });
     request.id = input.requestId;
-    await context.enqueue(async () => {
+    const retained = await context.enqueue(async () => {
       if (
         startedGeneration !== context.goalGeneration ||
         !context.session ||
         context.session.sessionId !== captured.sessionId ||
+        context.session.documentId !== captured.documentId ||
         context.session.view?.status !== "running" ||
         context.session.navigationPending
       )
@@ -301,36 +321,37 @@ export function createJourneyService(context: Context) {
         sessionId: context.session.sessionId,
       });
       if (!fresh.page) return;
+      const pending = {
+        requestId: request.id,
+        documentId: captured.documentId,
+        revision: fresh.page.revision,
+        protocolVersion: 2,
+        contextRevision: fresh.view?.journey?.workflow?.revision || 0,
+        status: "pending-indexing",
+        request,
+        reason:
+          "The page is still updating. I’m checking its controls; your destination is retained.",
+        activity: {
+          embedded: 0,
+          cacheHits: 0,
+          llmCalls: 0,
+          modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+        },
+      };
+      if (fromContent) return pending;
       const reply = await api.tabs.sendMessage(context.session.tabId, {
         type: "INSTALL_REQUEST",
         sessionId: context.session.sessionId,
-        result: {
-          requestId: request.id,
-          documentId: context.session.documentId!,
-          revision: fresh.page.revision,
-          protocolVersion: 2,
-          contextRevision: input.contextRevision || 0,
-          status: "pending-indexing",
-          request,
-          reason:
-            "The page is changing. Your request is retained; recalculate on the current page.",
-          activity: {
-            embedded: 0,
-            cacheHits: 0,
-            llmCalls: 0,
-            modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
-          },
-        },
+        result: pending,
       });
       if (reply.view) {
         await context.acceptView(reply.view);
         await context.save();
+        return structuredClone(context.session);
       }
     });
-    return {
-      status: "pending-indexing",
-      error: "The page is changing. Recalculate using the current scan.",
-    };
+    if (retained) return retained;
+    throw new Error("Planning was replaced or canceled.");
   }
   return { handleNlp };
 }

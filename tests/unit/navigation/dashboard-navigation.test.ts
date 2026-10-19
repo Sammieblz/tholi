@@ -94,6 +94,12 @@ test("an account destination can explore a named user menu without substituting 
   expect(first.plan?.steps[0]?.controlId).toBe(menu.id);
   expect(first.plan?.exploration).toBe(true);
   expect(first.canonicalGoal).toBe("Account settings");
+  const registration = await core().plan(
+    input([control("Account menu")], "I want to sign-up"),
+  );
+  expect(registration.plan?.steps[0]?.label).toBe("Account menu");
+  expect(registration.plan?.exploration).toBe(true);
+  expect(registration.plan?.status).not.toBe("completed");
 });
 
 test("Settings inside a user menu resolves the account scope and retains it after rebinding", async () => {
@@ -116,6 +122,40 @@ test("Settings inside a user menu resolves the account scope and retains it afte
     request: result.request,
   });
   expect(changed.plan?.steps).toHaveLength(0);
+  const layered = await c.plan(
+    input(
+      [
+        {
+          ...control("Help", "navigation", 3),
+          structure: {
+            headings: [],
+            regions: [{ role: "navigation", name: "Global" }],
+          },
+          destination: {
+            origin: p.observation.origin,
+            path: "/global-help",
+            key: "global-help",
+          },
+        },
+        {
+          ...control("Help", "navigation", 4),
+          structure: {
+            headings: [],
+            regions: [{ role: "main", name: "Workspace" }],
+          },
+          destination: {
+            origin: p.observation.origin,
+            path: "/workspace-help",
+            key: "workspace-help",
+          },
+        },
+      ],
+      "Open Help",
+    ),
+  );
+  expect(layered.status).not.toBe("clarification");
+  expect(layered.plan?.steps[0]?.controlId).toBe("w0000000000000000-4");
+  expect(layered.plan?.status).not.toBe("completed");
 });
 
 test("grounded menu exploration does not wait for embeddings to become available", async () => {

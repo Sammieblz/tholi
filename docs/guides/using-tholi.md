@@ -1,6 +1,6 @@
 # Tholi interface and local website
 
-The current source is **0.10.1**. See the [audit and implementation record](../releases/v0.10.1/ui-audit.md), [frontend ownership](../architecture/frontend/README.md), and [project-local skills](../../.codex/README.md). The gated website download remains **0.10.0**, labeled separately from source.
+The current source is **0.11.0 (unreleased)**. See [release notes](../releases/v0.11.0/README.md). See the [audit and implementation record](../releases/v0.10.1/ui-audit.md), [frontend ownership](../architecture/frontend/README.md), and [project-local skills](../../.codex/README.md). Downloads list an independently verified packaged version only when an eligible archive exists; otherwise use source setup.
 
 ## Build and use
 
@@ -10,7 +10,7 @@ npm run build:extension
 npm run dev:web
 ```
 
-Load `dist/extension` using **Load unpacked** in `chrome://extensions`. After rebuilding, reload Tholi and refresh the website tab. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
+Load `dist/extension` using **Load unpacked** in your Chromium browser's extension manager. In Firefox 153+, use `about:debugging` → **This Firefox** → **Load Temporary Add-on** and select `dist/extension-firefox/manifest.json`. Temporary Firefox installs end when the browser restarts. After rebuilding, reload Tholi and refresh the website tab. See [installation](getting-started.md) for browser status and requirements. The local website runs at **http://127.0.0.1:5174**; `npm run build:web` produces `dist/web`. No backend or account is required.
 
 Guide/sidebar with Advanced off remains the default. Enter a destination and select **Guide me**. The 56-pixel journey summary expands into verified progress and route details. Required decisions temporarily replace the sidebar's route summary, progress and transcript with one scrollable decision area. Review and authentication instructions stay beside their required controls; generic clarification text is replaced by the actual question. The composer and Pause/Stop remain below this area. Answering restores the retained journey and conversation. Verified arrival offers **New destination**, without Pause or remaining-click estimates.
 
@@ -70,6 +70,16 @@ Genuine extension screenshots include provenance and enlargement controls. Insta
 Home uses distinct theme-aware chapters with a real extension recording, followed by the shared practice and genuine screenshots. The three-step explanation uses a dark sage surface in Dark mode and warm ivory in Light mode, inheriting the matching text, accent and divider colors. Capture tooling first attempts public GitHub Pull requests and uses the explicitly labeled Wikipedia text-size workflow when that request cannot be verified. Media acceptance requires both a real worker outcome and unchanged extension build bytes; it is not a claim of reliable GitHub or signed-in navigation. Light/dark VP9 WebM variants, posters, captions, transcript and provenance are served locally. Visible recordings loop muted on desktop and mobile, with one Pause/Resume control. Manual pause persists across scrolling and appearance changes. Reduced-motion and data-saving views require explicit Resume. Captions are not displayed; the transcript remains available.
 
 The About Wayfinder stage has a transparent background and an automatically looping sequence of labeled states, with no controls. It suspends offscreen and remains static with reduced motion. It is clearly identified as a brand-motion demonstration, not live task progress. Home's decorative desktop point follows the outer gutter without intercepting input; narrow and reduced-motion layouts keep a static equivalent. Product headings, selected explanations and the closing action use purpose-specific entrances rather than identical section fades. See [the website implementation and verification record](../releases/v0.10.1/website.md).
+
+## Optional assisted navigation
+
+Open **Settings** and enable **Assisted navigation** to let Tholi open eligible
+menus/disclosures and select explicitly requested view options. This is off by
+default. It does not follow links, fill fields, sign in, upload files, submit
+forms or perform final actions. Pause or turn the setting off to take over.
+Minimizing or dismissing Tholi suppresses assistance. Sites that require a trusted
+click may still need you to open a menu manually. Outcome checks remain independent
+of whether you or Tholi interacted.
 
 ## Verification
 
