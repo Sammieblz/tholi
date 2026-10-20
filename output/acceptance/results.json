@@ -1,6 +1,6 @@
 {
   "format": "navigator-acceptance-v2",
-  "evaluatedAt": "2026-10-20T01:38:54.900Z",
+  "evaluatedAt": "2026-10-20T01:53:45.811Z",
   "artifactFiles": {
     "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
     "THIRD_PARTY_NOTICES.md": "3ec97b8a467f3d68a45d531e9b0df2ef420f48f3e1d415846d24da5aa728fd70",
@@ -279,7 +279,7 @@
   "validation": {
     "selection": "complete",
     "tier": "full",
-    "runId": "1ab3c660-9864-484e-9a86-56339b12d2fe",
+    "runId": "43376f90-e8bc-4e4b-baa2-4b2eb84249a0",
     "buildDigest": "c53f9ad28c0f6c8b59c18a0c10cea10c94036095691667558e4dda34ffc01357"
   },
   "target": "chromium",
@@ -295,7 +295,7 @@
   "matrixSha256": "bb66d75a1671c3f34abfb16430c87c26fe932cf293f36efdbefd2d161e97f7ae",
   "extensionVersion": "0.11.0",
   "protocolVersion": "1.0.0",
-  "sourceRevision": "b741c0cb1ef8a99c75a504a6a6e55c2a27d0e4ec",
+  "sourceRevision": "bb78d4ba775e25ed5da717cc0f3bda8b5c399fa9",
   "workingTreeDirty": true,
   "environment": {
     "platform": "win32",
@@ -325,19 +325,19 @@
     "live": {
       "attempts": 60,
       "targetPrecision": {
-        "correct": 69,
-        "total": 69,
+        "correct": 70,
+        "total": 70,
         "rate": 1
       },
       "verificationPrecision": {
-        "correct": 69,
-        "total": 69,
+        "correct": 70,
+        "total": 70,
         "rate": 1
       },
       "supportedCompletion": {
-        "correct": 59,
+        "correct": 60,
         "total": 60,
-        "rate": 0.9833333333333333
+        "rate": 1
       },
       "unresolved": 0,
       "stopped": 0,
@@ -396,10 +396,8 @@
     }
   },
   "missing": [],
-  "failures": [
-    " / acceptance-narrow / tests\\browser\\acceptance\\wikipedia.spec.ts / declared Wikipedia goals: Mathematics"
-  ],
-  "passed": false,
+  "failures": [],
+  "passed": true,
   "cases": [
     {
       "id": "desktop/fixture/text-size",
@@ -1941,11 +1939,15 @@
       "id": "narrow/Mathematics/section",
       "suite": "live",
       "supported": true,
-      "completed": false,
+      "completed": true,
       "unresolved": false,
       "stopped": false,
-      "targets": [],
-      "verifications": [],
+      "targets": [
+        true
+      ],
+      "verifications": [
+        true
+      ],
       "falseSuccess": 0,
       "automation": 0,
       "secretLeaks": 0,

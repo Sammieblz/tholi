@@ -1,6 +1,7 @@
 # Tholi 0.11.0
 
-Prepared October 18, 2026. **Unreleased; full release certification pending.**
+Prepared October 18, 2026; automated certification completed October 19.
+**Release candidate: both browser packages passed full automated certification.**
 
 This minor release adds optional assisted navigation and improves the shared
 local navigation engine for Chromium and Firefox. The product, extension,
@@ -74,7 +75,8 @@ they are not evidence for this release.
 
 The earlier navigation checks ran before the version bump on `0.10.1` bytes.
 They remain historical evidence in the implementation record and cannot certify
-`0.11.0`. New-version validation and remaining release gates are recorded in
+`0.11.0`. The final coordinated full run passed on the exact packaged bytes.
+Validation and remaining manual checks are recorded in
 [validation.md](validation.md).
 
 Known limits include incomplete signed-in Cloudflare/GitHub/Amazon verification,
@@ -82,7 +84,9 @@ long frames on the busy-page stress scene, and a frozen GitHub held-out target
 mismatch within the existing quality threshold. No universal website accuracy,
 identical browser timing or smooth busy-page rendering is claimed.
 
-After full certification, existing packagers may create `tholi-0.11.0.zip`,
-`tholi-firefox-0.11.0.zip` and `tholi-api-0.11.0.tgz` from the exact tested bytes.
-Do not overwrite older archives. Signing, store submission, deployment, Git tags
-and publication have not been performed. See [release procedure](../../development/releasing.md).
+The gated packager created `tholi-0.11.0.zip` and `tholi-firefox-0.11.0.zip` from
+the exact tested bytes, with checksums and target-specific evidence. These are
+unsigned store-submission candidates. Firefox signing, browser-store submission
+and deployment remain pending. GitHub release assets record publication status.
+See [store submission](../../development/store-submission.md) and the
+[release procedure](../../development/releasing.md).

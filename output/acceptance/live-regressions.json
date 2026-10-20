@@ -283,12 +283,12 @@
   "validation": {
     "selection": "complete",
     "tier": "full",
-    "runId": "882b2113-468b-414e-af1b-743c1eabf04f",
+    "runId": "43376f90-e8bc-4e4b-baa2-4b2eb84249a0",
     "buildDigest": "c53f9ad28c0f6c8b59c18a0c10cea10c94036095691667558e4dda34ffc01357"
   },
   "browsers": [],
   "scope": "live",
-  "evaluatedAt": "2026-10-20T01:17:21.150Z",
+  "evaluatedAt": "2026-10-20T02:20:55.360Z",
   "passed": true,
   "files": [
     "tests/browser/live/authentication.spec.ts",
@@ -308,99 +308,99 @@
       "id": "70f6afe7e350c931056e-7557d055867933e97b21",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 8743,
-      "disposalMs": 759.9640999999992
+      "elapsedMs": 8618,
+      "disposalMs": 717.0733999999993
     },
     {
       "id": "70f6afe7e350c931056e-39dfd278c7dfc4c99486",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 9063,
-      "disposalMs": 698.9300999999978
+      "elapsedMs": 8195,
+      "disposalMs": 787.8904000000002
     },
     {
       "id": "9ed70afab1bbfad1daab-734b32180cba89f70f11",
       "name": " / live-desktop / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
       "status": "passed",
-      "elapsedMs": 12575,
-      "disposalMs": 996.1065999999992
+      "elapsedMs": 12011,
+      "disposalMs": 1051.494999999999
     },
     {
       "id": "7a6b7f055de881ba5856-ad4d9c9304397444eca1",
       "name": " / live-desktop / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
       "status": "passed",
-      "elapsedMs": 20487,
-      "disposalMs": 1827.3562999999995
+      "elapsedMs": 19560,
+      "disposalMs": 1605.097299999994
     },
     {
       "id": "49def915946a04ed21ee-45e36e9b474cdacd13be",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
       "status": "passed",
-      "elapsedMs": 10392,
-      "disposalMs": 949.898199999996
+      "elapsedMs": 10119,
+      "disposalMs": 894.9111000000048
     },
     {
       "id": "49def915946a04ed21ee-5453017254bcb6f06e39",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
       "status": "passed",
-      "elapsedMs": 24117,
-      "disposalMs": 956.2884999999951
+      "elapsedMs": 24015,
+      "disposalMs": 991.6817999999912
     },
     {
       "id": "ad78825e3796ab356f51-d2ed8d38ec30f8d30837",
       "name": " / live-desktop / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
       "status": "passed",
-      "elapsedMs": 28411,
-      "disposalMs": 1058.3516999999993
+      "elapsedMs": 26687,
+      "disposalMs": 934.4088999999949
     },
     {
       "id": "70f6afe7e350c931056e-aa97a084a2637475fe22",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 8989,
-      "disposalMs": 926.5303000000004
+      "elapsedMs": 8436,
+      "disposalMs": 864.0248999999994
     },
     {
       "id": "70f6afe7e350c931056e-850d0a7b6c9e50af7ffd",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 8571,
-      "disposalMs": 923.6886000000013
+      "elapsedMs": 8210,
+      "disposalMs": 830.9670000000006
     },
     {
       "id": "9ed70afab1bbfad1daab-65a17190a0f75dde6d28",
       "name": " / live-narrow / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
       "status": "passed",
-      "elapsedMs": 14201,
-      "disposalMs": 2075.406899999998
+      "elapsedMs": 13061,
+      "disposalMs": 1835.6074999999983
     },
     {
       "id": "7a6b7f055de881ba5856-6d134c5c0d3dee279752",
       "name": " / live-narrow / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
       "status": "passed",
-      "elapsedMs": 21206,
-      "disposalMs": 2418.9755000000005
+      "elapsedMs": 20473,
+      "disposalMs": 2305.9268999999986
     },
     {
       "id": "49def915946a04ed21ee-ea1cfd200293b6352c6e",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
       "status": "passed",
-      "elapsedMs": 11239,
-      "disposalMs": 1376.8656000000046
+      "elapsedMs": 10594,
+      "disposalMs": 1218.7683000000034
     },
     {
       "id": "49def915946a04ed21ee-93a15e68c7ee3673f4ec",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
       "status": "passed",
-      "elapsedMs": 25619,
-      "disposalMs": 1381.6310999999987
+      "elapsedMs": 24391,
+      "disposalMs": 1288.5084999999963
     },
     {
       "id": "ad78825e3796ab356f51-392b863573ed61745407",
       "name": " / live-narrow / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
       "status": "passed",
-      "elapsedMs": 28274,
-      "disposalMs": 1439.335300000006
+      "elapsedMs": 26948,
+      "disposalMs": 1246.462599999999
     }
   ]
 }

@@ -1,8 +1,53 @@
 # Tholi 0.11.0 validation
 
-Prepared October 18, 2026. **Not certified for packaging.**
+Prepared October 18, 2026; final automated certification completed October 19.
+**Both extension candidates are certified against one complete automated run.**
+Native permission-prompt, screen-reader and signed-in checks remain pending.
 
-## This version
+## Final automated certificate
+
+The complete cohort `43376f90-e8bc-4e4b-baa2-4b2eb84249a0` passed against the
+frozen production build. All eleven documented full groups ran once under that
+identity using `npm run test:full -- --group GROUP` and the prepared-build option;
+the build manifest was verified before every group. Acceptance ran first for
+feedback, followed by every remaining group. `node scripts/verify-full.mjs`
+accepted the completed evidence. No earlier or focused reports were combined.
+
+Tested source: `bb78d4ba775e25ed5da717cc0f3bda8b5c399fa9`. The subsequent
+certificate documentation changes do not alter build inputs.
+
+| Coverage                                                  | Result                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------ |
+| Unit contracts, including consent and foreground recovery | 310 passed, 36 files                                   |
+| NLP, multi-app and vision/OCR integration                 | 32 passed                                              |
+| Core, integration and native Firefox browser checks       | 47 + 22 + 2 passed                                     |
+| Extension and website UI                                  | 42 passed                                              |
+| Native Chrome, Edge and Brave smoke checks                | 3 passed                                               |
+| Paired Chromium/Firefox performance                       | Passed existing planning, OCR and Stop budgets         |
+| Live-site regressions at both widths                      | 14 passed                                              |
+| Chromium and Firefox acceptance                           | 12 groups and 90 frozen cases per target passed        |
+| Firefox reviewer source reproduction                      | All 273 build files match, including maps              |
+| Mozilla validator                                         | 0 errors, 12 bundled-code warnings with reviewer notes |
+
+Final build digests (not ZIP checksums):
+
+- Chromium: `c53f9ad28c0f6c8b59c18a0c10cea10c94036095691667558e4dda34ffc01357`.
+- Firefox: `7cbe24d141ea71becbd15f8f20b83c747242200e73aa1386d6037828ed8d357f`.
+
+`npm run package:extension` verified every member of both new archives against
+the evaluated build, without rebuilding or replacing an existing archive:
+
+| Candidate                  |      Bytes | SHA256                                                             |
+| -------------------------- | ---------: | ------------------------------------------------------------------ |
+| `tholi-0.11.0.zip`         | 29,016,851 | `8890438fbdade29ed1de81c577279b0729fd46520fa8516c9a6a6b0f731d26ce` |
+| `tholi-firefox-0.11.0.zip` | 29,016,970 | `dc4c90e5a99b9c9561b365090937d5935ce47d058100f86f9cd38c38c16e317a` |
+
+The GitHub prerelease carries the final assets and publication state. Store review,
+Firefox signing, manual permission-denial/handoff, screen-reader speech and
+signed-in workflows are separate pending checks. The documented busy-page limits
+and frozen GitHub held-out mismatch remain; no universal website accuracy is claimed.
+
+## Earlier version preparation
 
 Local checks on October 18, 2026 used `0.11.0` metadata and freshly rebuilt
 artifacts. Run identity: `version-0.11.0-2026-10-18`. The unit report is explicitly
@@ -42,15 +87,16 @@ Earlier measurements remain historical rather than relabeled passes.
 ### Remaining release gates
 
 - [x] Types, version consistency and application builds pass on final source.
-- [ ] Complete `npm run test:full` passes in one coordinated run against a frozen
+- [x] Complete `npm run test:full` passes in one coordinated run against a frozen
       build, including unit, model, extension, UI, live-site and both browser acceptance
       groups, branded browser checks and paired performance budgets.
-- [ ] `node scripts/verify-full.mjs` accepts all final target-specific evidence.
+- [x] `node scripts/verify-full.mjs` accepts all final target-specific evidence.
 - [ ] Native installation, permissions and surfaces are recorded for Chrome,
       Edge, Brave and Firefox; accessibility and signed-in checks are reported honestly.
-- [ ] Gated packagers create candidates without replacing existing archives.
-- [ ] Candidate version, checksums, sizes and installation instructions are reviewed.
-- [ ] Release commit/tag and public publication are deliberately performed.
+- [x] Gated packagers create candidates without replacing existing archives.
+- [x] Candidate version, checksums, sizes and installation instructions are reviewed.
+- [ ] Complete browser-store review and Firefox signing. GitHub release assets
+      record the separate prerelease publication state.
 
 No unchecked item is a pass. See [release notes](README.md) and
 [the release procedure](../../development/releasing.md).
