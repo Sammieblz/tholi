@@ -1,0 +1,181 @@
+{
+  "purpose": "Chrome Web Store listing image exports",
+  "createdAt": "2026-10-20T03:53:31.796Z",
+  "guidance": {
+    "skill": ".codex/skills/baseline-ui/SKILL.md",
+    "applied": [
+      "Reuse existing theme colors and branding",
+      "No added gradients, glow or decorative effects"
+    ],
+    "validation": "Every export is an exact-size 8-bit RGB PNG with three channels and no alpha. Source capture hashes were verified."
+  },
+  "assets": [
+    {
+      "file": "screenshot-01-live-guidance-1280x800.png",
+      "width": 1280,
+      "height": 800,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "6b951ced6d571ea1f3f82dfa7f0f12d41ab204384332b66c5573a8227c729cce",
+      "source": "apps/public/media/screenshots/live-guidance.webp",
+      "sourceSha256": "665f3be3457bd4662b2ee8ba96d359bb8971b9a463019f4713dde4cc436fd293",
+      "capturedAt": "2026-10-15T23:25:05.545Z",
+      "extensionVersion": "0.10.1",
+      "transformation": "Crop only the bottom 60 pixels, then scale proportionally from 1440x900 to 1280x800. Interface text and state are not edited."
+    },
+    {
+      "file": "screenshot-02-verified-arrival-1280x800.png",
+      "width": 1280,
+      "height": 800,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "8124c90411b078f0cd35d9d8457f741e4353b03261d2cd71ebf5ba09c64861dc",
+      "source": "apps/public/media/screenshots/verified-arrival.webp",
+      "sourceSha256": "37c133ea0ffad33ce91e3ab79c5ad4d52d2d6909974e38641bc52258d5f1b92c",
+      "capturedAt": "2026-10-15T23:25:05.545Z",
+      "extensionVersion": "0.10.1",
+      "transformation": "Crop only the bottom 60 pixels, then scale proportionally from 1440x900 to 1280x800. Interface text and state are not edited."
+    },
+    {
+      "file": "small-promo-440x280-ivory.png",
+      "width": 440,
+      "height": 280,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "b843f8ab8ad9a1aedafef0b5ab11f0766998dd6d220e67b15caedf346b3877df",
+      "source": "apps/public/media/tholi_brand_logo.png",
+      "sourceSha256": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
+      "background": "#faf7f0",
+      "backgroundToken": "packages/ui/styles/tokens.css: light-mode --surface",
+      "transformation": "Existing Tholi wordmark resized proportionally and centered on an opaque warm-ivory canvas. Original logo colors and shape preserved."
+    },
+    {
+      "file": "marquee-promo-1400x560-ivory.png",
+      "width": 1400,
+      "height": 560,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "3a4630bc0f99323963436ff2330ccb8b8cb7cf1d3e532c7e625fc7fab50f3796",
+      "source": "apps/public/media/tholi_brand_logo.png",
+      "sourceSha256": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
+      "background": "#faf7f0",
+      "backgroundToken": "packages/ui/styles/tokens.css: light-mode --surface",
+      "transformation": "Existing Tholi wordmark resized proportionally and centered on an opaque warm-ivory canvas. Original logo colors and shape preserved."
+    },
+    {
+      "file": "screenshot-03-github-sidebar-1280x800.png",
+      "width": 1280,
+      "height": 800,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "4400c170d208736dd0bd0e0a8b93f8a686623d972c9ab7b8ec3a36a20a050726",
+      "source": "output/store-assets/chrome/sources/github-sidebar-original.png",
+      "sourceOriginalFilename": "Screenshot 2026-10-20 000023.png",
+      "sourceSha256": "2ca4e69fcfa27fc99913f341c0584cd7adfd160beb5626f8f7fa035c8c7cea64",
+      "sourceWidth": 1585,
+      "sourceHeight": 903,
+      "sourceLastModified": "2026-10-20T04:00:23.534Z",
+      "providedBy": "user",
+      "extensionVersion": "Not established from screenshot",
+      "description": "User-provided GitHub New repository menu with Tholi sidebar guidance.",
+      "crop": {
+        "left": 145,
+        "top": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "transformation": "Crop excess page area from the left and a few pixels from the bottom; scale proportionally to 1280x800. No padding, stretch, UI reconstruction or text changes."
+    },
+    {
+      "file": "screenshot-04-github-widget-1280x800.png",
+      "width": 1280,
+      "height": 800,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "d9c2144f17bf17ecf0be02d5b9779db5efac1b2c6810f469ef30516eec7f5d69",
+      "source": "output/store-assets/chrome/sources/github-widget-original.png",
+      "sourceOriginalFilename": "Screenshot 2026-10-20 000205.png",
+      "sourceSha256": "8bb016dd9cf72694b4bcd1a5c91a22de73074d565fd3977fa8706e681480ba7b",
+      "sourceWidth": 1421,
+      "sourceHeight": 774,
+      "sourceLastModified": "2026-10-20T04:02:05.796Z",
+      "providedBy": "user",
+      "extensionVersion": "Not established from screenshot",
+      "description": "User-provided GitHub repository-name field with floating Tholi widget and task details.",
+      "crop": {
+        "left": 160,
+        "top": 0,
+        "width": 1232,
+        "height": 770
+      },
+      "transformation": "Crop excess page area from the left and a few pixels from the bottom; scale proportionally to 1280x800. No padding, stretch, UI reconstruction or text changes."
+    }
+  ],
+  "updatedAt": "2026-10-20T04:14:24.713Z",
+  "supersededAssets": [
+    {
+      "file": "small-promo-440x280.png",
+      "width": 440,
+      "height": 280,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "b843f8ab8ad9a1aedafef0b5ab11f0766998dd6d220e67b15caedf346b3877df",
+      "source": "apps/public/media/tholi_brand_logo.png",
+      "sourceSha256": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
+      "background": "#faf7f0",
+      "backgroundToken": "packages/ui/styles/tokens.css: dark-mode --jade",
+      "transformation": "Existing Tholi wordmark resized proportionally and centered on an opaque brand-color canvas.",
+      "supersededBy": "small-promo-440x280-ivory.png",
+      "status": "deleted at user request"
+    },
+    {
+      "file": "marquee-promo-1400x560.png",
+      "width": 1400,
+      "height": 560,
+      "format": "PNG",
+      "bitDepth": 8,
+      "channels": 3,
+      "alpha": false,
+      "sha256": "f1bf22db312ddb40ee791d7ac3676212fa7502c71f01dd58f3252dc869006255",
+      "source": "apps/public/media/tholi_brand_logo.png",
+      "sourceSha256": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
+      "background": "#90c8b1",
+      "backgroundToken": "packages/ui/styles/tokens.css: dark-mode --jade",
+      "transformation": "Existing Tholi wordmark resized proportionally and centered on an opaque brand-color canvas.",
+      "supersededBy": "marquee-promo-1400x560-ivory.png",
+      "status": "deleted at user request"
+    }
+  ],
+  "revisions": [
+    {
+      "at": "2026-10-20T04:11:21.733Z",
+      "reason": "User rejected using a UI accent as the promo background. Use the established warm-ivory light surface instead.",
+      "replacements": [
+        {
+          "previousFile": "small-promo-440x280.png",
+          "file": "small-promo-440x280-ivory.png",
+          "background": "#faf7f0"
+        },
+        {
+          "previousFile": "marquee-promo-1400x560.png",
+          "file": "marquee-promo-1400x560-ivory.png",
+          "background": "#faf7f0"
+        }
+      ]
+    }
+  ]
+}
