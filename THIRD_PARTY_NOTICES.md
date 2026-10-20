@@ -15,6 +15,9 @@ their own licenses. The extension includes the complete license texts under
 - Manrope and Outfit fonts, packaged through Fontsource: SIL Open Font License 1.1, their respective designers and contributors. Font files are bundled locally; their license texts are included in the generated licenses directory.
 - Sharp, used to generate toolbar icon sizes at build time: Apache-2.0, Lovell Fuller and contributors.
 - Brand artwork in apps/public/media was supplied by the project owner.
+- Website typography: Newsreader and Source Sans 3 through Fontsource, SIL Open Font License 1.1. License texts are served under `/licenses/`.
+- Website animations: GSAP 3.15.0, GreenSock/Webflow, under the [GSAP standard license](https://gsap.com/standard-license). GSAP is bundled locally; no hosted animation script is loaded.
+- Chrome and Firefox logos identify browser compatibility; their respective owners retain trademark rights. Original asset sources are recorded in `apps/public/media/browsers/README.md`.
 - Fastify and plugins (optional API): MIT, Fastify contributors.
 
 Model upstream: https://huggingface.co/Xenova/all-MiniLM-L6-v2

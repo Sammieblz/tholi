@@ -37,13 +37,13 @@ export function HomePage() {
             <SiteLink to="/download" className="web-primary">
               Get Tholi
             </SiteLink>
-            <a href="#practice" className="web-text-link">
+            <SiteLink to="/#practice" className="web-secondary">
               Try it here
-            </a>
+            </SiteLink>
           </div>
           <p className="small">
-            Desktop previews for Chrome, Edge, Brave, compatible Chromium
-            browsers and Firefox. Local processing. No account required.
+            For Chrome, Edge, Brave, compatible Chromium browsers and Firefox.
+            Local processing. No account required.
           </p>
         </div>
       </section>
@@ -140,7 +140,7 @@ export function HomePage() {
               How continuous journeys work
             </SiteLink>
           </div>
-          <div className="interface-pair">
+          <div className="interface-pair" data-reveal="media">
             <ProductCapture
               name="guide-panel"
               title="Clear, at a glance"
@@ -171,7 +171,7 @@ export function HomePage() {
             </h2>
           </div>
           <div className="ownership-columns">
-            <div>
+            <div data-reveal="sequence">
               <h3>Local by default.</h3>
               <p>
                 Navigation, language processing and visual assistance run on
@@ -182,7 +182,7 @@ export function HomePage() {
                 Read how your data is handled
               </SiteLink>
             </div>
-            <div>
+            <div data-reveal="sequence">
               <h3>Arrival needs evidence.</h3>
               <p>
                 A click or an open menu is a step, not proof of a finished task.
@@ -194,7 +194,7 @@ export function HomePage() {
               </SiteLink>
             </div>
           </div>
-          <div className="evidence-gallery">
+          <div className="evidence-gallery" data-reveal="media">
             <ProductCapture
               name="live-guidance"
               title="The next step, right where you need it."
@@ -225,7 +225,7 @@ export function HomePage() {
         </div>
       </section>
       <section className="faq-chapter">
-        <div className="chapter-inner faq">
+        <div className="chapter-inner faq" data-reveal="heading">
           <div>
             <p className="eyebrow">BEFORE YOU FIND YOUR WAY</p>
             <h2>

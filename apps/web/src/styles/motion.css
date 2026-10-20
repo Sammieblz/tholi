@@ -12,12 +12,10 @@
 .web-secondary,
 .web-text-link {
   transition:
-    transform 120ms var(--ease-out),
-    opacity 120ms ease;
-}
-.web-primary:active,
-.web-secondary:active {
-  transform: scale(0.98);
+    transform var(--web-press-duration) var(--ease-out),
+    background-color var(--web-press-duration) ease,
+    border-color var(--web-press-duration) ease,
+    opacity var(--web-press-duration) ease;
 }
 .web-mobile-dialog {
   transition:
@@ -74,13 +72,27 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .web-primary:hover {
-    opacity: 0.92;
+    transform: translateY(-2px);
+    opacity: 0.94;
   }
   .web-secondary:hover {
     background: var(--sage);
+    transform: translateY(-2px);
   }
 }
+.web-primary:active,
+.web-secondary:active {
+  transform: scale(0.97);
+}
 @media (prefers-reduced-motion: reduce) {
+  .web-header-shell {
+    transition: none;
+  }
+  :is(.web-primary, .web-secondary, .web-text-link),
+  :is(.web-primary, .web-secondary, .web-text-link):hover,
+  :is(.web-primary, .web-secondary):active {
+    transform: none;
+  }
   .hero-heading,
   .hero-overview,
   .onboarding-step,

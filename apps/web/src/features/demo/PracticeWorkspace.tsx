@@ -1,5 +1,5 @@
 import { Popover } from "@base-ui/react/popover";
-import { Check, NavArrowDown, Refresh } from "iconoir-react";
+import { Check, Refresh } from "iconoir-react";
 import { type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { GuidanceApp } from "../../../../../packages/ui/guidance/GuidanceApp";
@@ -128,11 +128,7 @@ export function PracticeWorkspace({
               }}
               container={container.current}
               label="Account actions"
-              trigger={
-                <>
-                  Account menu <NavArrowDown width={16} aria-hidden="true" />
-                </>
-              }
+              trigger="Account menu"
               className={
                 highlighted && screen === "overview" && !menu
                   ? "demo-target"
@@ -193,12 +189,7 @@ export function PracticeWorkspace({
                     container={container.current}
                     label="Language choices"
                     language
-                    trigger={
-                      <>
-                        Language: {selection}
-                        <NavArrowDown width={16} aria-hidden="true" />
-                      </>
-                    }
+                    trigger={<>Language: {selection}</>}
                     className={
                       highlighted &&
                       task === "spanish" &&
@@ -266,7 +257,16 @@ export function PracticeWorkspace({
                 {tokenStyles +
                   motionStyles +
                   guidanceStyles +
-                  `:host{display:block;color-scheme:light;font-family:Manrope,system-ui,sans-serif} .tholi-app{height:100%;min-height:0;max-width:none;width:100%;margin:0;border:0} .tholi-header{flex:none} .tholi-body{min-height:0} .tholi-logo{max-width:80px} :host-context(html[data-input=keyboard]) *:not(.wf-seed):not(.wf-piece):not(.wf-route-orbit):not(.wf-checking):not(.tholi-route-signal){animation-duration:0ms!important;transition-duration:0ms!important}`}
+                  `:host{display:block;color-scheme:light;font-family:Manrope,system-ui,sans-serif}
+                  .tholi-app{height:100%;min-height:0;max-width:none;width:100%;margin:0;border:0}
+                  .tholi-header{flex:none} .tholi-body{min-height:0} .tholi-logo{max-width:80px}
+                  /* Website actions use labels, including the embedded practice. */
+                  .tholi-composer button[type=submit]>svg,
+                  .tholi-disclosure-chevron,.tholi-attention-trigger>svg{display:none}
+                  .tholi-chat-composer .tholi-send{width:auto;min-width:64px}
+                  .tholi-chat-composer .tholi-send span{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+                  .tholi-chat-composer textarea{padding-right:84px}
+                  :host-context(html[data-input=keyboard]) *:not(.wf-seed):not(.wf-piece):not(.wf-route-orbit):not(.wf-checking):not(.tholi-route-signal){animation-duration:0ms!important;transition-duration:0ms!important}`}
               </style>
               <GuidanceApp
                 embedded

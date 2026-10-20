@@ -11,6 +11,112 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+test("archive verification permits empty website folders only by opt-in and rejects unexpected files", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-web-archive-"));
+  const source = join(directory, "web");
+  const moduleUrl = pathToFileURL(
+    resolve("scripts/archive-extension.mjs"),
+  ).href;
+  const files = {
+    "index.html": createHash("sha256").update("<h1>Tholi</h1>").digest("hex"),
+    "website-release.json": createHash("sha256")
+      .update('{"version":"0.1.0"}')
+      .digest("hex"),
+  };
+  const run = (name: string, allowEmptyDirectories: boolean) =>
+    execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `import { archiveExtension } from ${JSON.stringify(moduleUrl)}; await archiveExtension(process.argv[1], process.argv[2], JSON.parse(process.argv[3]), {allowEmptyDirectories: process.argv[4] === 'true'});`,
+        source,
+        join(directory, name),
+        JSON.stringify(files),
+        String(allowEmptyDirectories),
+      ],
+      { stdio: "pipe" },
+    );
+  try {
+    await mkdir(join(source, "downloads"), { recursive: true });
+    await writeFile(join(source, "index.html"), "<h1>Tholi</h1>");
+    await writeFile(
+      join(source, "website-release.json"),
+      '{"version":"0.1.0"}',
+    );
+    expect(() => run("strict.zip", false)).toThrow();
+    expect(() => run("website.zip", true)).not.toThrow();
+    await writeFile(join(source, "unexpected.js"), "unexpected file");
+    expect(() => run("unexpected.zip", true)).toThrow();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 20_000);
+
+test("website releases require increasing versions and matching notes without changing the product version", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-web-version-"));
+  const script = resolve("scripts/website-version.mjs");
+  const run = (version: string, tag = "") =>
+    execFileSync(process.execPath, [script, version], {
+      cwd: directory,
+      stdio: "pipe",
+      env: {
+        ...process.env,
+        GITHUB_REF_TYPE: tag ? "tag" : "",
+        GITHUB_REF_NAME: tag,
+      },
+    });
+  try {
+    await mkdir(join(directory, "apps/web"), { recursive: true });
+    await mkdir(join(directory, "docs/releases/website/v0.1.0"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(directory, "apps/web/release.json"),
+      JSON.stringify({ version: "0.1.0" }),
+    );
+    await writeFile(
+      join(directory, "package.json"),
+      JSON.stringify({ version: "0.11.0" }),
+    );
+    await writeFile(
+      join(directory, "docs/releases/website/v0.1.0/README.md"),
+      "# Tholi website 0.1.0\n",
+    );
+    expect(() => run("--check", "web-v0.1.0")).not.toThrow();
+    expect(() => run("--check", "web-v0.2.0")).toThrow();
+    expect(() => run("0.1.0")).toThrow();
+    expect(() => run("../0.2.0")).toThrow();
+    expect(() => run("0.2.0")).toThrow();
+    await mkdir(join(directory, "docs/releases/website/v0.2.0"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(directory, "docs/releases/website/v0.2.0/README.md"),
+      "# Wrong release\n",
+    );
+    expect(() => run("0.2.0")).toThrow();
+    await writeFile(
+      join(directory, "docs/releases/website/v0.2.0/README.md"),
+      "# Tholi website 0.2.0\n",
+    );
+    expect(() => run("0.2.0")).not.toThrow();
+    expect(
+      JSON.parse(
+        await readFile(join(directory, "apps/web/release.json"), "utf8"),
+      ).version,
+    ).toBe("0.2.0");
+    expect(
+      JSON.parse(await readFile(join(directory, "package.json"), "utf8"))
+        .version,
+    ).toBe("0.11.0");
+    expect(() => run("0.1.0")).toThrow();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("release versioning keeps metadata in sync and rejects drift, missing notes and mismatched tags", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tholi-version-"));

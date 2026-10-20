@@ -8,6 +8,10 @@ on:
         description: Package candidates after full verification
         type: boolean
         default: false
+      website:
+        description: Publish the website release after certification
+        type: boolean
+        default: false
   push:
     tags: ["v*"]
 permissions:
@@ -152,3 +156,66 @@ jobs:
           name: full-validation-evidence-${{ github.run_attempt }}
           path: |
             output
+  publish-website:
+    needs: [build, tests, certify]
+    if: inputs.website == true && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: website-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: npm run check:website
+      - name: Check immutable website tag
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $websiteVersion = (Get-Content apps/web/release.json -Raw | ConvertFrom-Json).version
+          $websiteTag = "web-v$websiteVersion"
+          $existingRefs = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/$websiteTag" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect website release tags' }
+          $exists = @($existingRefs | Where-Object { $_.ref -eq "refs/tags/$websiteTag" }).Count -gt 0
+          "exists=$($exists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "version=$websiteVersion" >> $env:GITHUB_OUTPUT
+          "tag=$websiteTag" >> $env:GITHUB_OUTPUT
+          if ($exists) { Write-Host 'Website tag already exists; leaving its release and assets unchanged.' }
+      - uses: actions/download-artifact@v4
+        if: steps.release.outputs.exists != 'true'
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+      - uses: actions/download-artifact@v4
+        if: steps.release.outputs.exists != 'true'
+        with:
+          name: full-validation-evidence-${{ github.run_attempt }}
+          path: output
+      - run: npm run package:website
+        if: steps.release.outputs.exists != 'true'
+      - name: Publish tested website assets
+        if: steps.release.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEBSITE_VERSION: ${{ steps.release.outputs.version }}
+          WEBSITE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $stem = "output/releases/tholi-web-$env:WEBSITE_VERSION"
+          $notes = "docs/releases/website/v$env:WEBSITE_VERSION/README.md"
+          $preparedNotes = Get-Content $notes -Raw
+          $changesStart = $preparedNotes.IndexOf('## Changes')
+          $validationStart = $preparedNotes.IndexOf('## Validation')
+          if ($changesStart -lt 0 -or $validationStart -le $changesStart) { throw 'Website release notes are incomplete' }
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $publishedNotes = "# Tholi website $env:WEBSITE_VERSION`n`nPublished from commit $env:GITHUB_SHA after complete [Full validation]($runUrl).`n`n"
+          $publishedNotes += $preparedNotes.Substring($changesStart, $validationStart - $changesStart)
+          $publishedNotes += "`n## Validation`n`nFull certification passed for this exact source and build. The attached JSON records the run identity and per-file hashes. Native permissions, screen-reader and signed-in checks remain separate. Cloudflare deployment is a later step.`n"
+          $bodyPath = Join-Path $env:RUNNER_TEMP 'tholi-website-release.md'
+          Set-Content -LiteralPath $bodyPath -Value $publishedNotes -Encoding utf8
+          gh release create $env:WEBSITE_TAG "$stem.zip" "$stem.json" "$stem.zip.sha256" --target $env:GITHUB_SHA --title "Tholi website $env:WEBSITE_VERSION" --notes-file $bodyPath --latest=false
+          if ($LASTEXITCODE -ne 0) { throw 'Website publication failed; inspect the tag and assets before retrying.' }

@@ -5,6 +5,10 @@ bundled workspaces. `package.json` owns it. Package names, storage schemas, API
 protocol versions, model revisions and consent versions are independent
 compatibility identifiers; do not bump them just to match a product release.
 
+The separately deployable website now has its own delivery identifier and
+`web-vVERSION` tags. This does not change synchronized product versions. See
+[website releases](website-releases.md) for its preparation and publication gate.
+
 Use `MAJOR.MINOR.PATCH`: patch for compatible fixes, minor for new capabilities,
 major for breaking product/contracts changes. Before 1.0, explicitly document any
 breaking changes in a minor release. Use three numeric components accepted by

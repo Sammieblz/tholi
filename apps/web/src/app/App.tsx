@@ -45,6 +45,16 @@ const LegalPage = lazy(() =>
     default: module.LegalPage,
   })),
 );
+const SupportPage = lazy(() =>
+  import("../features/support/SupportPage").then((module) => ({
+    default: module.SupportPage,
+  })),
+);
+const ContactPage = lazy(() =>
+  import("../features/support/ContactPage").then((module) => ({
+    default: module.ContactPage,
+  })),
+);
 export function App() {
   const { path } = useRouter();
   const { trackEvent } = usePreferences();
@@ -64,6 +74,10 @@ export function App() {
       <AboutPage />
     ) : path === "/download" ? (
       <DownloadPage />
+    ) : path === "/support" ? (
+      <SupportPage />
+    ) : path === "/contact" ? (
+      <ContactPage />
     ) : path === "/signin" || path === "/signup" ? (
       <AuthPage key={path} signup={path === "/signup"} />
     ) : path === "/onboarding" ? (

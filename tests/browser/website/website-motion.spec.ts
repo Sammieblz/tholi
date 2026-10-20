@@ -1,6 +1,89 @@
 import { test, expect } from "../../support/browser-test";
 import os from "node:os";
 
+test("header returns on upward scroll and keyboard focus; download reveals respect preference changes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const header = page.locator(".web-header");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(navigation.getByRole("link")).toHaveText([
+    "About",
+    "Get Tholi",
+    "Docs",
+    "Sign in",
+  ]);
+  await page.mouse.wheel(0, 700);
+  await expect
+    .poll(async () => {
+      const box = (await header.boundingBox())!;
+      return box.y + box.height;
+    })
+    .toBeLessThanOrEqual(1);
+  await page.mouse.wheel(0, -100);
+  await expect
+    .poll(async () => (await header.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(0);
+  await page.mouse.wheel(0, 250);
+  await expect
+    .poll(async () => {
+      const box = (await header.boundingBox())!;
+      return box.y + box.height;
+    })
+    .toBeLessThanOrEqual(1);
+  await navigation.getByRole("link", { name: "About", exact: true }).focus();
+  await expect
+    .poll(async () => (await header.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(0);
+  await navigation.getByRole("link", { name: "About", exact: true }).click();
+  const principle = page.locator(".about-ownership");
+  const heading = principle.locator("h2");
+  const body = principle.locator("p").last();
+  await expect(heading).toHaveCSS("opacity", "0");
+  await heading.evaluate((element) => {
+    window.scrollTo({
+      top: scrollY + element.getBoundingClientRect().top - innerHeight * 0.65,
+      behavior: "instant",
+    });
+  });
+  await expect
+    .poll(() =>
+      heading.evaluate((element) => Number(getComputedStyle(element).opacity)),
+    )
+    .toBeGreaterThan(0);
+  const progress = await principle.evaluate((element) => ({
+    heading: Number(getComputedStyle(element.querySelector("h2")!).opacity),
+    body: Number(
+      getComputedStyle(element.querySelector("p:last-of-type")!).opacity,
+    ),
+  }));
+  expect(progress.heading).toBeLessThan(1);
+  expect(progress.heading).toBeGreaterThan(progress.body);
+  await expect(heading).toHaveCSS("opacity", "1");
+  await expect(body).toHaveCSS("opacity", "1");
+  // Reading back through a section must not restart its entrance.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await heading.scrollIntoViewIfNeeded();
+  await expect(heading).toHaveCSS("transform", "none");
+  await expect(heading).toHaveCSS("opacity", "1");
+  // Changing the preference clears even the still-pending reveals.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const part of await principle.locator("h2, p").all()) {
+    await expect(part).toHaveCSS("transform", "none");
+    await expect(part).toHaveCSS("opacity", "1");
+  }
+  await page.goto("/download");
+  await expect(page.locator(".browser-install-card")).toHaveCount(2);
+  for (const card of await page.locator(".browser-install-card").all()) {
+    await expect(card).toHaveCSS("transform", "none");
+    await expect(card).toHaveCSS("opacity", "1");
+  }
+});
+
 test("real recording loops with one control, both appearances and deliberate pause", async ({
   page,
 }) => {

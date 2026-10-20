@@ -150,6 +150,8 @@ test("all website routes reflow at four widths in both deliberate appearances", 
   const routes = [
     "/",
     "/about",
+    "/contact",
+    "/support",
     "/download",
     "/signup",
     "/signin",
@@ -179,7 +181,7 @@ test("all website routes reflow at four widths in both deliberate appearances", 
     ]);
     for (const width of [320, 375, 768, 1440]) {
       // A fresh renderer per layout group releases Vite's development-module
-      // connections. Ninety-six document reloads in one renderer can otherwise
+      // connections. Many document reloads in one renderer can otherwise
       // hit Chromium ERR_INSUFFICIENT_RESOURCES before a lazy article mounts.
       const page = await context.newPage();
       await page.emulateMedia({
@@ -223,7 +225,7 @@ test("all website routes reflow at four widths in both deliberate appearances", 
       await page.close();
     }
   }
-  expect(measurements).toHaveLength(96);
+  expect(measurements).toHaveLength(routes.length * 4 * 2);
   await info.attach("website-route-layouts", {
     body: JSON.stringify(measurements),
     contentType: "application/json",

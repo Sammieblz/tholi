@@ -1,5 +1,16 @@
 # Tholi changelog
 
+## Website 0.1.0 · Unreleased
+
+GSAP section reveals, a header that returns on upward scroll, self-hosted editorial
+typography, clearer signup entry points, and illustrated Chrome/Firefox setup
+cards. Accounts and store destinations remain explicit previews. Website delivery
+uses independent `web-vVERSION` tags and requires full certification after merge.
+Support and Contact pages add current help resources and a local email-draft
+form. The hero uses one installation action and a practice action; About credits
+the Zulu name umtholi (“finder”).
+[Website release notes](docs/releases/website/v0.1.0/README.md).
+
 ## 0.11.0 · Unreleased
 
 Performance follow-up: responsive Pause/Stop, bounded recovery, widget scan
