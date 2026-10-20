@@ -26,6 +26,8 @@ MiniLM and default Tesseract assets are packaged locally. Experimental Paddle as
 
 The optional single-owner API receives knowledge/context only when explicitly connected. Temporary masked images go there only when backend OCR is enabled. SQLite follows the same reusable/private persistence policy. It does not persist OCR payloads or private session context. Backend failure falls back to browser processing. A failed mirror deletion is reported for retry after reconnecting.
 
+Firefox declares no required data transmission. Connecting the optional backend requests its host access and optional authentication, browsing-activity, website-activity and website-content consent. These cover the API bearer token, website origins/routes, navigation context, bounded observations and optional masked OCR images sent to that chosen server. Every backend request checks the current grant; declining or revoking it blocks transmission and leaves local processing available. Mirror deletion failures still require reconnecting and retrying; revocation does not erase an existing server copy.
+
 Diagnostics are local, bounded and redacted. Do not capture authenticated screenshots or traces by default. Diagnostic exports omit labels, goals, paths, raw DOM and field values. See [security](security.md), [API setup](../guides/backend.md) and [native verification](../guides/getting-started.md).
 
 ## Tholi presentation data

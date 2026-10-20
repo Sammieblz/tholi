@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import backendDataPermissions from "./backend-data-permissions.json" with { type: "json" };
 export const extensionTargets = {
   chromium: "dist/extension",
   firefox: "dist/extension-firefox",
@@ -23,7 +24,14 @@ export async function extensionManifest(target) {
       open_at_install: false,
     },
     browser_specific_settings: {
-      gecko: { id: "tholi@ilunonsen.com", strict_min_version: "153.0" },
+      gecko: {
+        id: "tholi@ilunonsen.com",
+        strict_min_version: "153.0",
+        data_collection_permissions: {
+          required: ["none"],
+          optional: backendDataPermissions,
+        },
+      },
     },
   };
 }

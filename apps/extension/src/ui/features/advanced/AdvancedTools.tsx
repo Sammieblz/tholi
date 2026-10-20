@@ -1,4 +1,5 @@
 import { api } from "../../../platform/api";
+import { requestBackendAccess } from "../../../platform/site-access";
 import type { RouteStrategy } from "../../../../../../packages/page-model";
 import { LiveInspector } from "./LiveInspector";
 import { unresolvedTitle } from "../../app/presentationLabels";
@@ -174,9 +175,7 @@ export function AdvancedTools({
                 try {
                   if (backend.enabled) {
                     const url = new URL(backend.url);
-                    const granted = await api.permissions.request({
-                      origins: [url.protocol + "//" + url.hostname + "/*"],
-                    });
+                    const granted = await requestBackendAccess(url.origin);
                     if (!granted)
                       throw new Error("API access was not granted.");
                   }

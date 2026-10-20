@@ -1,4 +1,5 @@
 import { embeddedControlsHtml } from "../../../fixtures/multi-app/frame-html";
+import backendDataPermissions from "../../../../config/backend-data-permissions.json";
 import firefox from "selenium-webdriver/firefox.js";
 import { test, expect } from "../../../support/browser-test";
 import { openFirefoxExtension } from "../../../support/firefox-extension";
@@ -214,6 +215,27 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     expect(
       (await app.message({ type: "SET_BACKEND", ...settings })).error,
     ).toBeUndefined();
+    const dataConsent = await app.extension(async () => {
+      const api = (globalThis as any).browser;
+      const declared =
+        api.runtime.getManifest().browser_specific_settings.gecko
+          .data_collection_permissions;
+      return {
+        declared,
+        granted: await api.permissions.contains({
+          data_collection: declared.optional,
+        }),
+      };
+    });
+    expect(dataConsent.declared).toEqual({
+      required: ["none"],
+      optional: backendDataPermissions,
+    });
+    expect(dataConsent.granted).toBe(false);
+    expect(
+      (await app.message({ type: "SET_BACKEND", ...settings, enabled: true }))
+        .error,
+    ).toMatch(/data transmission/i);
     const isolation = await app.extension(async (tabId: number) => {
       const api = (globalThis as any).browser;
       const local = await api.storage.local.get(null);

@@ -1,4 +1,5 @@
 import { getPrivateSetting, setPrivateSetting } from "./private-settings";
+import { hasBackendAccess } from "./site-access";
 import type { PlanInput } from "../../../../packages/navigation-core/contracts";
 import { resultSchema } from "../../../../packages/navigation-core/contracts";
 import {
@@ -41,12 +42,33 @@ export async function setBackendSettings(settings: Settings) {
     throw new Error("Use HTTPS or a loopback HTTP address.");
   if (settings.enabled && settings.token.length < 32)
     throw new Error("Paste the API’s generated bearer token.");
+  if (settings.enabled && !(await hasBackendAccess(url.origin)))
+    throw new Error(
+      "Allow backend website access and data transmission before connecting.",
+    );
   await setPrivateSetting("backend", {
     url: url.origin,
     token: settings.token,
     enabled: settings.enabled,
   });
   return { ok: true };
+}
+async function backendFetch(
+  settings: Settings,
+  path: string,
+  init: RequestInit,
+) {
+  if (!(await hasBackendAccess(settings.url)))
+    throw new Error(
+      "Backend data transmission permission was declined or revoked.",
+    );
+  return fetch(settings.url + path, {
+    ...init,
+    headers: {
+      ...init.headers,
+      Authorization: "Bearer " + settings.token,
+    },
+  });
 }
 async function call(
   settings: Settings,
@@ -58,11 +80,10 @@ async function call(
     isPlanning = ["plans", "suggestions"].includes(path);
   if (isPlanning) planning.add(controller);
   try {
-    const response = await fetch(settings.url + "/v" + version + "/" + path, {
+    const response = await backendFetch(settings, "/v" + version + "/" + path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + settings.token,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
@@ -82,8 +103,7 @@ export async function backendNlp(
   if (!settings.enabled) return undefined;
   const version = input.protocolVersion === 2 ? 2 : 1;
   if (version === 2) {
-    const capability = await fetch(settings.url + "/v2/health", {
-      headers: { Authorization: "Bearer " + settings.token },
+    const capability = await backendFetch(settings, "/v2/health", {
       signal: AbortSignal.timeout(2000),
     });
     if (!capability.ok) return undefined;
@@ -132,8 +152,7 @@ export async function backendOcr(
 ) {
   const settings = await backendSettings();
   if (!settings.enabled) return;
-  const health = await fetch(settings.url + "/v2/health", {
-    headers: { Authorization: "Bearer " + settings.token },
+  const health = await backendFetch(settings, "/v2/health", {
     signal: AbortSignal.any([
       signal || new AbortController().signal,
       AbortSignal.timeout(2000),
@@ -141,11 +160,10 @@ export async function backendOcr(
   });
   if (!health.ok || !(await health.json()).capabilities?.includes("cpu-ocr"))
     return;
-  const response = await fetch(settings.url + "/v2/ocr", {
+  const response = await backendFetch(settings, "/v2/ocr", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: "Bearer " + settings.token,
     },
     body: JSON.stringify(input),
     signal: AbortSignal.any([

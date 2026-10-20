@@ -9,6 +9,9 @@ It follows the `0.10.1` source series; it does not replace an existing download.
 
 ## Changes
 
+- Prepare browser-store submission with Firefox's optional backend data consent.
+  Backend requests check the current grant, including after revocation; local
+  guidance remains available without data-transmission consent.
 - Pre-release performance follow-up: stop self-observation/replanning loops,
   prioritize Pause/Stop and release idle workers. See [measurements and validation
   scope](performance.md), including cache sizing and heavy-page limitations.

@@ -54,3 +54,19 @@ Earlier measurements remain historical rather than relabeled passes.
 
 No unchecked item is a pass. See [release notes](README.md) and
 [the release procedure](../../development/releasing.md).
+
+## October 19 store preparation
+
+The merge audit passed strict TypeScript and 299 unit tests. Store preparation
+then added Firefox's optional backend data declaration and native consent checks
+before every backend request. Local guidance requires no data-transmission grant.
+The focused consent/navigation checks pass (14 tests); types and version checks
+pass. Firefox conformance now also checks that a saved disabled connection cannot
+be enabled without native data consent.
+
+An initial full run built both targets and passed the unit and model/OCR groups,
+but was deliberately stopped before completion to correct the Firefox manifest.
+It is not certification for these changed bytes. A new complete coordinated full
+run remains required before packaging. Mozilla's preliminary validator reported
+no errors and 13 warnings on the earlier build, including the missing declaration
+and bundled-code warnings. Retain fresh validator output for the final build.

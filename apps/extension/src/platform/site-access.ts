@@ -1,4 +1,8 @@
 import { api, browserTarget, chromiumApi } from "./api";
+import backendDataPermissions from "../../../../config/backend-data-permissions.json";
+import type { Manifest } from "webextension-polyfill";
+const backendData =
+  backendDataPermissions as Manifest.OptionalDataCollectionPermission[];
 /** Host grants cannot include ports in Firefox; task identity still uses the exact origin. */
 export function hostPermissionPattern(origin: string) {
   const url = new URL(origin);
@@ -123,4 +127,27 @@ export function requestOriginAccess(origin: string) {
       ),
     );
   return api.permissions.request({ origins: [hostPermissionPattern(origin)] });
+}
+
+/** Request optional backend transmission consent in the Save connection gesture. */
+export function requestBackendAccess(origin: string) {
+  return api.permissions.request({
+    origins: [hostPermissionPattern(origin)],
+    ...(browserTarget() === "firefox"
+      ? { data_collection: [...backendData] }
+      : {}),
+  });
+}
+
+/** Recheck Firefox consent before every backend request, including saved connections. */
+export async function hasBackendAccess(origin: string) {
+  if (browserTarget() !== "firefox") return true;
+  try {
+    return await api.permissions.contains({
+      origins: [hostPermissionPattern(origin)],
+      data_collection: [...backendData],
+    });
+  } catch {
+    return false;
+  }
 }

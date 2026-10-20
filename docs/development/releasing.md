@@ -57,3 +57,6 @@ checksums and release notes before publication. The full-validation workflow run
 nightly, manually or on a matching version tag; its packaging input is explicit.
 It does not submit browser-store releases. A successful local build, a tag or a
 candidate archive alone does not mean the release has been published.
+
+See [browser-store submission](store-submission.md) for the target-specific
+uploads, permission explanations and matching Firefox reviewer source build.

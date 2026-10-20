@@ -25,6 +25,13 @@ Grant the browser's requested API-host access. The token uses protected Chromium
 local storage or Firefox extension-origin IndexedDB, never content-script storage. The extension's origin must exactly match the
 API allowlist. An unavailable backend uses the bundled local model.
 
+Firefox also asks for optional data-transmission consent when saving an enabled
+connection. This covers the API token, website origins/routes, navigation
+context, observations and explicitly enabled masked OCR images sent to your
+chosen server. Local processing needs none of these data grants. Revoking them
+in Firefox blocks further backend requests. Reconnect and retry any failed
+mirror deletion; revoking permission does not delete data already on your server.
+
 The authenticated OpenAPI specification is `/v1/openapi.json`. Endpoints:
 
 | Path               | Method   | Purpose                                     |

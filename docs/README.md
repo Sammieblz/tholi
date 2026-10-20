@@ -30,6 +30,7 @@ The local website at **http://127.0.0.1:5174/docs** publishes selected current r
 
 - [0.11.0 release notes and compatibility](releases/v0.11.0/README.md) · [validation status](releases/v0.11.0/validation.md)
 - [Changelog](../CHANGELOG.md) and [versioning/release procedure](development/releasing.md)
+- [Browser-store packages and Firefox reviewer instructions](development/store-submission.md)
 
 ## Design and implementation records
 
