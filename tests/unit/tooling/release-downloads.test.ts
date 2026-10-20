@@ -13,12 +13,82 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+const archiveModule = pathToFileURL(
+  resolve("scripts/archive-extension.mjs"),
+).href;
+const createArchive = (
+  source: string,
+  archive: string,
+  files: Record<string, string>,
+  allowEmptyDirectories = false,
+) =>
+  execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import { archiveExtension } from ${JSON.stringify(archiveModule)}; await archiveExtension(process.argv[1], process.argv[2], JSON.parse(process.argv[3]), {allowEmptyDirectories: process.argv[4] === 'true'});`,
+      source,
+      archive,
+      JSON.stringify(files),
+      String(allowEmptyDirectories),
+    ],
+    { stdio: "pipe" },
+  );
+
+test("extension ZIP paths use forward slashes for nested assets and scoped dependency licenses", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-archive-'"));
+  const source = join(directory, "extension");
+  const archive = join(directory, "firefox.zip");
+  const contents = {
+    "manifest.json": '{"manifest_version":3,"version":"0.11.0"}',
+    "licenses/@babel_runtime-LICENSE": "Bundled dependency license",
+    "assets/nested/guide's model.txt": "Preserve these exact bytes",
+  };
+  const files = Object.fromEntries(
+    Object.entries(contents).map(([name, value]) => [
+      name,
+      createHash("sha256").update(value).digest("hex"),
+    ]),
+  );
+  try {
+    await mkdir(join(source, "licenses"), { recursive: true });
+    await mkdir(join(source, "assets/nested"), { recursive: true });
+    for (const [name, value] of Object.entries(contents))
+      await writeFile(join(source, name), value);
+    createArchive(source, archive, files);
+    const names: string[] = JSON.parse(
+      execFileSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-Command",
+          "Add-Type -AssemblyName System.IO.Compression.FileSystem; " +
+            "$taskZip=[System.IO.Compression.ZipFile]::OpenRead('" +
+            archive.replaceAll("'", "''") +
+            "'); try { @($taskZip.Entries | ForEach-Object { $_.FullName }) | ConvertTo-Json -Compress } finally { $taskZip.Dispose() }",
+        ],
+        { encoding: "utf8" },
+      ),
+    );
+    expect(names.sort()).toEqual(Object.keys(contents).sort());
+    expect(names.every((name) => !name.includes("\\"))).toBe(true);
+    // The packager must also retain its per-file byte check.
+    await writeFile(join(source, "licenses/@babel_runtime-LICENSE"), "changed");
+    expect(() =>
+      createArchive(source, join(directory, "changed.zip"), files),
+    ).toThrow();
+    const originalArchive = await readFile(archive);
+    expect(() => createArchive(source, archive, files)).toThrow();
+    expect(await readFile(archive)).toEqual(originalArchive);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 20_000);
+
 test("archive verification permits empty website folders only by opt-in and rejects unexpected files", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tholi-web-archive-"));
   const source = join(directory, "web");
-  const moduleUrl = pathToFileURL(
-    resolve("scripts/archive-extension.mjs"),
-  ).href;
   const files = {
     "index.html": createHash("sha256").update("<h1>Tholi</h1>").digest("hex"),
     "website-release.json": createHash("sha256")
@@ -26,19 +96,7 @@ test("archive verification permits empty website folders only by opt-in and reje
       .digest("hex"),
   };
   const run = (name: string, allowEmptyDirectories: boolean) =>
-    execFileSync(
-      process.execPath,
-      [
-        "--input-type=module",
-        "-e",
-        `import { archiveExtension } from ${JSON.stringify(moduleUrl)}; await archiveExtension(process.argv[1], process.argv[2], JSON.parse(process.argv[3]), {allowEmptyDirectories: process.argv[4] === 'true'});`,
-        source,
-        join(directory, name),
-        JSON.stringify(files),
-        String(allowEmptyDirectories),
-      ],
-      { stdio: "pipe" },
-    );
+    createArchive(source, join(directory, name), files, allowEmptyDirectories);
   try {
     await mkdir(join(source, "downloads"), { recursive: true });
     await writeFile(join(source, "index.html"), "<h1>Tholi</h1>");

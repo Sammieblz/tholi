@@ -47,6 +47,56 @@ Firefox signing, manual permission-denial/handoff, screen-reader speech and
 signed-in workflows are separate pending checks. The documented busy-page limits
 and frozen GitHub held-out mismatch remain; no universal website accuracy is claimed.
 
+## October 20 Firefox AMO archive repair
+
+AMO rejected the original Firefox candidate with `INVALID_XPI_ENTRY` for
+`licenses\@babel_runtime-LICENSE`. Inspection found **244 backslash-containing
+paths among 273 entries**. The original archive verifier normalized those names
+before comparing hashes and therefore missed the invalid ZIP representation.
+The earlier zero-error validator result above did not establish that the
+uploaded ZIP was acceptable to AMO.
+
+The archive writer now creates explicit forward-slash member names. Its readback
+check rejects invalid/duplicate stored names and still verifies every file hash,
+unexpected files and the existing empty-directory policy. A regression test
+reproduced the original failure before the fix and passes afterward, including
+scoped dependency licenses, nested paths, apostrophes, changed bytes and refusal
+to overwrite an archive. All six release-tooling tests and TypeScript passed on
+Windows with Node 24.19.0. These focused checks do not claim a new full cohort.
+
+A **new, separately named upload candidate** was created from the original
+certified Firefox ZIP. Its original checksum and full-certificate file map were
+verified before repackaging; all 273 file hashes were verified again afterward.
+The build digest remains
+`7cbe24d141ea71becbd15f8f20b83c747242200e73aa1386d6037828ed8d357f`.
+The manifest version `0.11.0`, Firefox ID and all extension file contents are
+unchanged. This is a ZIP container repair using the original certified build,
+not a rebuild or certification of the latest source tree.
+
+| Upload candidate               |      Bytes | SHA256                                                             |
+| ------------------------------ | ---------: | ------------------------------------------------------------------ |
+| `tholi-firefox-0.11.0-amo.zip` | 29,016,970 | `580f7ec1e8241781aaaed95c1d30ce9cae2384508f8d080c2348f0f19fbc6dad` |
+
+The new `.json` sidecar records the original archive/certificate hashes,
+source revision, full-run identity, complete file map and local validator
+report. The `.sha256` sidecar records the corrected container checksum.
+Original Chromium, Firefox and source archives remain unchanged. The matching
+reviewer source is still `tholi-source-0.11.0.zip`, SHA256
+`060fc704330c90091b9734516325bad3f4761f2c51562605c44e6f19802fc9bc`.
+
+Mozilla **addons-linter 10.14.0** checked both actual ZIPs:
+
+- Original: **1 error**, `INVALID_XPI_ENTRY`, reproducing the store failure.
+- Corrected: **0 errors, 0 notices and 12 warnings**: three `DANGEROUS_EVAL` and
+  nine `UNSAFE_VAR_ASSIGNMENT` bundled-code warnings. These still need reviewer
+  explanation; a local validator pass does not establish approval or signing.
+
+Reports are under `output/qa/firefox-amo-repack-qbdV4i`, named
+`addons-linter-original.json` and `addons-linter-corrected.json`. The original
+full run remains `43376f90-e8bc-4e4b-baa2-4b2eb84249a0`; no new full-run identity
+was invented. The corrected ZIP has not been uploaded to AMO or attached to a
+GitHub release by this repair.
+
 ## Earlier version preparation
 
 Local checks on October 18, 2026 used `0.11.0` metadata and freshly rebuilt

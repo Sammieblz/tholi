@@ -56,6 +56,36 @@ Use the bundled 128-pixel icon and truthful product screenshots. Historical
 validation. No store account, payment, listing, signing or approval is implied by
 creating an archive.
 
+## Firefox archive filename validation
+
+ZIP members must use forward slashes, including paths such as
+`licenses/@babel_runtime-LICENSE`. Windows PowerShell's .NET Framework
+`CreateFromDirectory` can store backslashes instead, which AMO rejects as
+`INVALID_XPI_ENTRY`. The shared archive writer now writes `/` explicitly and
+checks stored names, duplicates and file hashes without normalizing a bad name
+during verification. Keep license files in the package.
+
+Validate the actual ZIP, rather than only its unpacked directory:
+
+```powershell
+npm exec --yes --package=addons-linter@10.14.0 --call 'addons-linter output/releases/tholi-firefox-VERSION.zip --output json'
+```
+
+Inspect `summary.errors` and the error list; the process exit status alone did
+not identify the invalid original archive in the October 20 comparison. Retain
+the JSON report and explain warnings for reviewers. Mozilla's
+[linter instructions](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/#check-your-code)
+describe the checks; a local pass does not establish AMO approval or signing.
+
+The original `tholi-firefox-0.11.0.zip` contains invalid Windows separators. For
+the initial 0.11.0 AMO submission, use the separately named
+**`output/releases/tholi-firefox-0.11.0-amo.zip`**. It retains all 273 certified
+file contents and the original manifest/version, with corrected ZIP paths.
+Its `.json` and `.sha256` sidecars record the original certificate, file hashes
+and new container checksum. Reuse `tholi-source-0.11.0.zip` for the reviewer
+source submission. Original archives remain intact; see the
+[repair evidence and checksum](../releases/v0.11.0/validation.md#october-20-firefox-amo-archive-repair).
+
 ## Permission explanations
 
 | Permission                        | Purpose                                                                           |

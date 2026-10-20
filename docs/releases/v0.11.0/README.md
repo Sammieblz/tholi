@@ -79,6 +79,13 @@ They remain historical evidence in the implementation record and cannot certify
 Validation and remaining manual checks are recorded in
 [validation.md](validation.md).
 
+October 20 AMO submission follow-up: the original Firefox ZIP used Windows
+separators in 244 archive paths. The corrected upload candidate is
+`tholi-firefox-0.11.0-amo.zip`, with the same 273 certified file contents and
+unchanged `0.11.0` manifest. Mozilla's validator reports zero errors and 12
+bundled-code warnings on this actual ZIP. The original archives and source
+package remain intact. See the [repair record](validation.md#october-20-firefox-amo-archive-repair).
+
 Known limits include incomplete signed-in Cloudflare/GitHub/Amazon verification,
 long frames on the busy-page stress scene, and a frozen GitHub held-out target
 mismatch within the existing quality threshold. No universal website accuracy,

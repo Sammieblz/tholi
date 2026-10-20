@@ -18,6 +18,12 @@ the Zulu name umtholi (“finder”).
 
 ## 0.11.0 · Unreleased
 
+Firefox AMO packaging follow-up: write portable ZIP paths and verify stored
+names without hiding Windows backslashes. The corrected
+`tholi-firefox-0.11.0-amo.zip` retains the original certified file contents;
+Mozilla's validator reports zero errors and 12 bundled-code warnings. See the
+[archive repair record](docs/releases/v0.11.0/validation.md#october-20-firefox-amo-archive-repair).
+
 Performance follow-up: responsive Pause/Stop, bounded recovery, widget scan
 exclusion, idle worker release and dense-page cache reuse.
 [Measurements and validation scope](docs/releases/v0.11.0/performance.md).
