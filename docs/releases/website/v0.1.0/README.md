@@ -1,8 +1,18 @@
 # Tholi website 0.1.0
 
-Status: **unreleased**. Prepare on `web-release`, merge to the default branch,
-then run Full validation with website publication enabled. A local preview or
-focused pass does not certify an archive or establish publication.
+Status: **published, merged and deployed** on October 20, 2026.
+The website is live at **[tholi.io](https://tholi.io)** on Cloudflare Pages.
+
+- [GitHub source prerelease `web-v0.1.0`](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.0),
+  published from `web-release` at `2a07c1c1be456a07ee1bd364a30657c8da35799a`.
+- [PR #22](https://github.com/Sammieblz/tholi/pull/22) merged the work into `main`
+  as `897048618a53fe7037f280ebe0dfa53812a5b3f3`.
+- The public site's `website-release.json` reports version 0.1.0. Its compiled
+  JavaScript and primary routes were checked in a browser after deployment.
+
+The GitHub release remains a source prerelease with no uploaded assets. Full
+certification and a certified website ZIP are separate, pending work; the live
+deployment does not establish archive certification.
 
 ## Changes
 
@@ -34,7 +44,8 @@ Website delivery is versioned as `web-v0.1.0`. The extension, optional API and
 bundled workspaces retain their synchronized product version, currently 0.11.0.
 Historical captures, downloads and release evidence retain their original versions.
 Accounts remain mock browser sessions; no real authentication or cloud sync is
-introduced. No browser-store listing or Cloudflare deployment is implied.
+introduced. Browser-store destinations remain previews. Cloudflare hosts the
+public website; this does not add a Tholi account, inference or SMTP backend.
 
 ## Design guidance
 
@@ -82,8 +93,21 @@ passed. See
 
 Full certification on the merged source remains required before packaging.
 
-## Publish after merge
+## Deployment and archive status
 
-See [website release procedure](../../../development/website-releases.md).
-The optional publication job reuses the exact build from the same complete,
-passing full-validation run; it does not rebuild or package the extensions.
+The merged revision passed the hosted
+[PR validation gate](https://github.com/Sammieblz/tholi/actions/runs/39493670268).
+The live site serves compiled assets and website version 0.1.0. Direct visits to
+Home, About, Support, Contact, Privacy, Terms and Get Tholi rendered successfully
+with no page runtime errors in the deployment smoke check.
+
+Cloudflare also injects a performance/analytics beacon independently of Tholi's
+cookie controls. The deployment follow-up updates the notices to disclose that
+behavior and the selected public origin and host. Contact delivery, real
+authentication and approved browser-store links remain future work.
+
+See the [website release and deployment procedure](../../../development/website-releases.md)
+for Cloudflare build settings and future certified archives. The existing source
+tag stays at its original revision. The publication workflow leaves existing
+tags and releases untouched; it cannot add a certified archive by rerunning
+against `web-v0.1.0`.

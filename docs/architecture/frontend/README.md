@@ -65,7 +65,7 @@ packages/overlay-ui/
 ## Ownership and extension points
 
 - Website features own components and styles. Shared layout belongs in `styles/site.css`; brand tokens and easing come from `packages/ui`. Marketing entrances belong on the website, not daily guidance controls.
-- `preferences` owns consent, pre-paint website appearance and the optional analytics boundary. The default has no production provider. The event allowlist excludes arbitrary text and extension data. Website Light/Dark preferences do not configure the extension's inverse-theme adaptation.
+- `preferences` owns consent, pre-paint website appearance and the optional analytics boundary. The default has no app analytics provider. The event allowlist excludes arbitrary text and extension data. Cloudflare's live host injects its own measurement script outside that boundary; app cookie choices do not control it. Website Light/Dark preferences do not configure the extension's inverse-theme adaptation.
 - `docs` owns an explicit Markdown registry, local search, safe GFM rendering and reference-link mapping. Raw HTML is disabled and images become source links. `legal` owns operator configuration and Tholi-specific launch-review drafts. Both route bundles are lazy-loaded; repository Markdown stays out of the initial Home bundle.
 - `marketing` loads a recording manifest rather than embedding recreated product UI. Capture tooling accepts only a real worker-verified public-page result and records immutable extension/media hashes. Brand-motion demonstrations emit no journey or completion evidence.
 - Mock passwords remain component-local and are discarded after form completion. Only name, email, and onboarding state enter website session storage. Downloads require no account.

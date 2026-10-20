@@ -1,17 +1,43 @@
 # Website 0.1.0 validation
 
-Status: **local PR checks passed; unreleased**. This is not full release
-certification, browser-store approval or a Cloudflare deployment.
+Status: **source prerelease published, merged into `main` and deployed on
+Cloudflare Pages**. Local and hosted PR checks passed. Full archive certification
+and browser-store approval are not established by this record.
 
 ## Source and environment
 
-- Branch: `web-release`, working-tree changes based on `ffdb2d1`. The owner must
-  commit and merge the reviewed changes before publication.
+- Published tag: `web-v0.1.0`, source revision
+  `2a07c1c1be456a07ee1bd364a30657c8da35799a` from `web-release`.
+- Merged revision: `897048618a53fe7037f280ebe0dfa53812a5b3f3` on `main`, through
+  [PR #22](https://github.com/Sammieblz/tholi/pull/22).
 - Product version: 0.11.0. Website delivery version: 0.1.0.
 - Windows, Node 24.19.0 and npm 11.17.0.
 - Date: October 20, 2026.
 
-## Passing checks
+## Publication and deployment evidence
+
+- [GitHub release](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.0)
+  published October 20 at 19:28 UTC. It remains marked prerelease and provides
+  GitHub's source archives; no built website ZIP or other assets are attached.
+- PR #22 merged at 20:38 UTC. The hosted **Validate offline navigation** PR gate
+  [passed on the merged revision](https://github.com/Sammieblz/tholi/actions/runs/39493670268).
+  This is PR evidence, not a complete Full validation run.
+- The owner deployed the website on Cloudflare Pages at **https://tholi.io**.
+  A public browser smoke check on October 20 rendered `/`, `/about`, `/support`,
+  `/contact`, `/privacy`, `/terms` and `/download` successfully, with HTTP 200
+  responses, the expected page headings and no page runtime errors.
+- `/website-release.json` returned JSON version `0.1.0`; the page loaded the
+  compiled entry `/assets/index-FBLKuLNO.js`. These observations establish the
+  visible website version, not the deployment's exact Git commit.
+- The public download page reports no packaged download available and offers
+  source setup. Chrome and Firefox store buttons remain labeled previews.
+- Cloudflare's injected script at `static.cloudflareinsights.com/beacon.min.js`
+  loaded successfully, and `/cdn-cgi/rum` returned 204 before a cookie choice.
+  Tholi's application analytics boundary remains inactive. The deployment
+  follow-up corrects the notices and cookie-settings copy to describe the
+  independent Cloudflare measurements; it does not change dashboard settings.
+
+## Passing source checks
 
 - `npm run typecheck` and `npm run check:website`.
 - Production website build with locally bundled GSAP and fonts.
@@ -36,11 +62,30 @@ certification, browser-store approval or a Cloudflare deployment.
   verification still rejects unexpected files; extension defaults remain strict.
 - Workflow YAML and script syntax checked. Publication depends on build, tests
   and certification, requires the default branch and an explicit website input,
-  and leaves existing tags/releases untouched. GitHub execution remains pending.
+  and leaves existing tags/releases untouched. The source prerelease already
+  exists, so this publication path will skip `web-v0.1.0`; no full-certification
+  publication run is claimed.
 - Prettier and `git diff --check` pass.
 
 Local evidence is under `output/qa`, including `timing-ci-all.json`, `unit.json`
-and `ui-build.json`. These reports retain their **PR** tier.
+and `ui-build.json`. These reports were collected at the **PR** tier; later
+focused invocations may replace local report files and do not recertify that run.
+
+## Deployment follow-up validation
+
+The status records and hosting/analytics disclosures were updated after the
+published source tag. These source changes require a commit, push and Cloudflare
+redeployment before the corrected notices appear on the public website.
+
+- Focused existing website unit suites: **20 checks passed** across four files.
+- Existing Chromium and Firefox browser checks: **4 passed**, covering publication
+  and operator disclosures, Cloudflare measurement disclosure, preference-cookie
+  withdrawal and keyboard operation at a 320 px viewport.
+- TypeScript, website version metadata and the production Vite build passed.
+- Prettier and whitespace checks passed on the changed files.
+
+This follow-up does not rerun or relabel the original PR cohort, provide Full
+validation evidence, change the published tag or create an archive.
 
 ## Visual and interaction review
 
@@ -83,21 +128,25 @@ The contact form does not claim delivery. Its email and copy buttons each measur
 275 × 50 px at the reviewed 375 px viewport. Screen-reader speech and actual email
 client launch/delivery remain manual checks; no email was sent by validation.
 
-## Remaining release and deployment work
+## Remaining capabilities and archive certification
 
-1. Commit/push the source, assets, notices and release documentation; merge to the
-   default branch. Generated `output/` evidence is not the release source.
-2. Run the complete **Full validation** workflow on the merged commit with
-   **Publish the website release after certification** enabled. Local PR evidence
-   cannot authorize packaging. The publication job verifies the same full build
-   again and records the exact clean source revision, file hashes and archive hash.
-3. Native Chrome installation/permission checks, screen-reader speech and signed-in
+1. Run complete **Full validation** before creating a certified website archive.
+   Local or hosted PR evidence cannot authorize packaging. The publication job
+   verifies the same full build and records the exact clean source revision,
+   file hashes and archive hash. The existing tag and source release stay intact;
+   use the next website version for a future automatic archive publication.
+2. Native Chrome installation/permission checks, screen-reader speech and signed-in
    manual workflows remain pending until performed. Engine tests and screenshots
    do not replace them.
-4. Accounts and store destinations remain explicitly mocked by the owner's
+3. Accounts and store destinations remain explicitly mocked by the owner's
    instruction. Real authentication and approved store URLs belong to a later
    version.
-5. Before Cloudflare deployment, configure the actual public origin and hosting
-   disclosures. Existing extension ZIPs are about 29 MB each, exceeding the
+   Contact drafts work locally; SMTP and backend delivery remain pending.
+4. Professional legal review and confirmation of the Cloudflare dashboard's
+   logging/retention configuration remain outstanding. The live analytics beacon
+   is independent of the app's cookie choices; changing it requires the hosting
+   configuration. Publish the corrected notices with the deployment follow-up.
+5. Existing extension ZIPs are about 29 MB each, exceeding the
    [Cloudflare Pages 25 MiB asset limit](https://developers.cloudflare.com/pages/platform/limits/#file-size).
-   Their download hosting and links must be addressed before uploading the site.
+   Choose suitable download hosting and verified links before enabling packaged
+   downloads on the live website. The current deployment uses source setup.

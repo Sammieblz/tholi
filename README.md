@@ -56,13 +56,18 @@ can open eligible menus and select explicitly requested view options. It stays o
 until enabled; credentials, forms and final actions remain yours. See the
 [controls and limits](docs/guides/using-tholi.md#optional-assisted-navigation).
 
-### Explore the local website
+### Explore the website
+
+**[tholi.io](https://tholi.io) is live on Cloudflare Pages.** Website 0.1.0 is
+[published on GitHub](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.0)
+and merged into `main`. See the [website release record](docs/releases/website/v0.1.0/README.md)
+for deployment and validation status. To run it locally:
 
 ```sh
 npm run dev:web
 ```
 
-Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs, installation help and downloads. Sign-up and sign-in are explicitly mocked. Dark is the default; optional preference cookies can remember Light/Dark. Production analytics is disabled.
+Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs, installation help and downloads. Sign-up and sign-in are explicitly mocked. Dark is the default; optional preference cookies can remember Light/Dark. The app's own analytics provider is inactive; the public Cloudflare deployment injects its own measurement script, independently of these cookie choices. See the [cookie notice](https://tholi.io/cookies) and [deployment record](docs/releases/website/v0.1.0/validation.md).
 
 **Source version: 0.11.0 (unreleased).** [Release notes](docs/releases/v0.11.0/README.md) · [Changelog](CHANGELOG.md). The website offers a packaged preview only when an eligible, verified archive is available; otherwise it shows source setup. Download version and checksum come from that archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/releases/v0.10.1/website.md).
 

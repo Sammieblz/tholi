@@ -78,7 +78,7 @@ export function CookieConsent() {
             <strong>A little choice about your browser.</strong>
             <p>
               Allow a cookie to remember your appearance, or keep essentials
-              only. Analytics is off.{" "}
+              only. On tholi.io, Cloudflare measurements run separately.{" "}
               <SiteLink to="/cookies">About cookies</SiteLink>
             </p>
           </div>
@@ -143,13 +143,14 @@ export function CookieConsent() {
             </label>
             <div className="cookie-category">
               <div>
-                <strong>Analytics</strong>
+                <strong>Website measurements</strong>
                 <p>
-                  Inactive. No provider is configured and no analytics requests
-                  are sent. A future service will need a new, specific choice.
+                  On tholi.io, Cloudflare measures page views and performance
+                  independently of these cookie choices. The app’s own optional
+                  analytics provider is inactive.
                 </p>
               </div>
-              <span className="cookie-category-state">Off</span>
+              <span className="cookie-category-state">See notice</span>
             </div>
             {!storageAvailable && (
               <p className="cookie-storage-note" role="status">
@@ -162,7 +163,7 @@ export function CookieConsent() {
                 Cookie details
               </SiteLink>
               <SiteLink to="/privacy" onClick={closeCookieSettings}>
-                Privacy draft
+                Privacy notice
               </SiteLink>
             </p>
             <div className="cookie-dialog-actions">

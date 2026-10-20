@@ -1,11 +1,16 @@
 # Tholi changelog
 
-## Website 0.1.0 · Unreleased
+## Website 0.1.0 · October 20, 2026
+
+Published on GitHub as [web-v0.1.0](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.0),
+merged into `main` through [PR #22](https://github.com/Sammieblz/tholi/pull/22)
+and deployed on Cloudflare Pages at [tholi.io](https://tholi.io).
 
 GSAP section reveals, a header that returns on upward scroll, self-hosted editorial
 typography, clearer signup entry points, and illustrated Chrome/Firefox setup
 cards. Accounts and store destinations remain explicit previews. Website delivery
-uses independent `web-vVERSION` tags and requires full certification after merge.
+uses independent `web-vVERSION` tags. The published source prerelease has no
+certified website ZIP; full certification remains required before packaging.
 Support and Contact pages add current help resources and a local email-draft
 form. The hero uses one installation action and a practice action; About credits
 the Zulu name umtholi (“finder”).

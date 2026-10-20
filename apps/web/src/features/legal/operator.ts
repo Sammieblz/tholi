@@ -17,6 +17,6 @@ export const legalOperator = {
   location: "Ohio, United States",
   email: "info@ilunonsen.com",
   companyUrl: "https://ilunonsen.com",
-  publicOrigin: publicOrigin(configuredOrigin),
+  publicOrigin: publicOrigin(configuredOrigin) ?? "https://tholi.io",
   reviewed: "October 20, 2026",
 };

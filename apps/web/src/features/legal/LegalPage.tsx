@@ -39,26 +39,18 @@ export function LegalPage({
         <p className="eyebrow">{labels[page]}</p>
         <h1>{titles[page]}</h1>
         <p className="web-intro">
-          A Tholi-specific record of how the preview works, what stays on your
-          device and where your choices apply.
+          A Tholi-specific record of how the website and extension preview work,
+          what stays on your device and where your choices apply.
         </p>
         <div className="legal-draft-note">
-          <strong>Launch-review draft</strong>
+          <strong>Publication and review</strong>
           <p>
-            Reviewed {legalOperator.reviewed}. Final hosting, provider
-            disclosures and legal review are still required before public
-            launch.{" "}
-            {legalOperator.publicOrigin ? (
-              <>
-                Configured public origin:{" "}
-                <a href={legalOperator.publicOrigin}>
-                  {legalOperator.publicOrigin}
-                </a>
-                .
-              </>
-            ) : (
-              "The public Tholi domain has not been selected."
-            )}
+            Updated {legalOperator.reviewed}. Tholi’s website is published at{" "}
+            <a href={legalOperator.publicOrigin}>
+              {legalOperator.publicOrigin}
+            </a>{" "}
+            and hosted on Cloudflare Pages. Professional legal review remains
+            pending.
           </p>
         </div>
       </header>

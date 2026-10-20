@@ -26,7 +26,7 @@ export function privacySections(): LegalSection[] {
             <a href={legalOperator.companyUrl}>ilunonsen.com</a>.
           </p>
           <p>
-            This notice covers the Tholi website preview and browser extension.
+            This notice covers the public Tholi website and browser extension.
             Tholi uses page context to guide you toward a destination you
             request and verify your progress. Normal guidance runs on your
             device without an account or backend. Connecting a private backend
@@ -39,7 +39,7 @@ export function privacySections(): LegalSection[] {
     },
     {
       id: "website",
-      title: "The website preview",
+      title: "The public website",
       children: (
         <>
           <p>
@@ -59,11 +59,11 @@ export function privacySections(): LegalSection[] {
             clear it using your browser’s site-data controls.
           </p>
           <p>
-            There is no production analytics provider configured and no
-            analytics or advertising collection in this preview. Optional
-            analytics will require a named provider, updated disclosures and
-            fresh consent before activation. Cookie choices govern actual
-            storage, as explained in the{" "}
+            On tholi.io, Cloudflare adds page-view and performance measurements
+            independently of the website’s cookie choices. The app’s own
+            optional analytics provider remains inactive, and there is no
+            advertising integration. Cookie choices govern Tholi’s appearance
+            storage; they do not disable Cloudflare’s injected script. See the{" "}
             <SiteLink to="/cookies">cookie notice</SiteLink>.
           </p>
         </>
@@ -324,18 +324,26 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            This website preview has no production account service, hosted
-            inference or advertising integration. The optional extension backend
-            described above is a separate connection you configure. Links to
-            GitHub and other websites leave Tholi and are governed by those
-            services. Browser stores also process installation and store account
+            This website has no production account service, hosted inference or
+            advertising integration. The optional extension backend described
+            above is a separate connection you configure. Links to GitHub and
+            other websites leave Tholi and are governed by those services.
+            Browser stores also process installation and store account
             information under their own policies.
           </p>
           <p>
-            A production host and analytics provider have not been selected for
-            this build. Their request metadata, retention, recipients and
-            international processing must be disclosed before public launch. The
-            contact form prepares a draft in page memory; it does not submit
+            Cloudflare Pages hosts tholi.io and delivers its assets. Cloudflare
+            processes connection and request information, including IP addresses
+            and traffic metadata, to deliver and protect the website. Its
+            processing, retention and international transfers are described in{" "}
+            <a href="https://www.cloudflare.com/privacypolicy/">
+              Cloudflare’s privacy policy
+            </a>
+            . This notice does not promise a specific hosting-log retention
+            period or processing country.
+          </p>
+          <p>
+            The contact form prepares a draft in page memory; it does not submit
             your message to a Tholi server or save it in browser storage.
             Opening an email draft passes its contents to your email app;
             copying uses your device’s clipboard. Contacting us by email shares
@@ -345,11 +353,11 @@ export function privacySections(): LegalSection[] {
             browsing captures.
           </p>
           <p>
-            The review date shown above identifies this draft’s latest update;
-            it does not establish a public launch or completed legal review. We
-            will revise this notice when actual product behavior changes.
-            Material optional processing will not be enabled by silently reusing
-            an earlier cookie choice.
+            The date shown above identifies this notice’s latest update;
+            professional legal review remains pending. We will revise this
+            notice when actual product behavior changes. Material optional
+            processing will not be enabled by silently reusing an earlier cookie
+            choice.
           </p>
         </>
       ),
@@ -364,12 +372,12 @@ export function termsSections(): LegalSection[] {
       children: (
         <>
           <p>
-            These draft terms cover the Tholi website preview and extension
+            These terms describe the public Tholi website and extension preview
             offered by {legalOperator.name}, {legalOperator.location}. They are
-            prepared for launch review and do not represent a completed
-            public-service agreement. Tholi provides contextual website
-            guidance; it does not act as the website or account provider.
-            Contact <Contact /> with questions.
+            published with the website; professional legal review remains
+            pending. Tholi provides contextual website guidance; it does not act
+            as the website or account provider. Contact <Contact /> with
+            questions.
           </p>
           <p>
             Browser-store distribution, when available, is subject to the
@@ -488,13 +496,13 @@ export function termsSections(): LegalSection[] {
             The <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
             <SiteLink to="/cookies">cookie notice</SiteLink> explain current
             data handling and your controls. Optional backend connections are
-            your choice and require a separately configured service. No
-            production analytics provider is active in this preview.
+            your choice and require a separately configured service. Cloudflare
+            hosts the website and provides the page/performance measurements
+            described in those notices.
           </p>
           <p>
-            Future paid services, real accounts, hosting or cloud inference
-            would need their own accurate terms and disclosures before
-            activation.
+            Future paid services, real accounts or cloud inference would need
+            their own accurate terms and disclosures before activation.
           </p>
           <p>
             If you connect a backend, choose an operator you trust, protect its
@@ -542,9 +550,9 @@ export function termsSections(): LegalSection[] {
             draft.
           </p>
           <p>
-            Send questions or reports to <Contact />. Before public launch, the
-            operator will review the final service description, dispute
-            provisions, hosting disclosures and effective terms.
+            Send questions or reports to <Contact />. The website is public;
+            professional review of the service description, dispute provisions,
+            hosting disclosures and effective terms remains pending.
           </p>
         </>
       ),
@@ -657,26 +665,35 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
     },
     {
       id: "analytics",
-      title: "Analytics is inactive",
+      title: "Cloudflare measurements and optional analytics",
       children: (
         <>
           <p>
-            No production analytics provider is configured. No analytics scripts
-            or events are sent by this preview, and the settings do not offer an
-            inactive pretend analytics switch.
+            On tholi.io, Cloudflare injects a measurement script that reports
+            page views and page-load performance. The script loads from
+            static.cloudflareinsights.com and sends measurements to
+            /cdn-cgi/rum. These host-level measurements run independently of
+            Tholi’s cookie choices; choosing Essential only does not disable
+            them. See{" "}
+            <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/">
+              Cloudflare’s data collection documentation
+            </a>
+            .
           </p>
           <p>
-            The software contains a consent gate for a future provider. It
-            cannot activate collection without that provider’s identity and
-            disclosures plus fresh provider-specific consent. Eligible future
-            events are limited to page views, download clicks and practice start
-            or completion. Destination text, conversations, account details,
-            documentation searches and extension observations are excluded.
+            The app’s own optional analytics provider is inactive. Its consent
+            gate applies to a future provider added by Tholi. It cannot activate
+            collection without that provider’s identity and disclosures plus
+            fresh provider-specific consent. Eligible future events are limited
+            to page views, download clicks and practice start or completion.
+            Destination text, conversations, account details, documentation
+            searches and extension observations are excluded.
           </p>
           <p>
-            Withdrawing consent stops future optional events and clears pending
-            work. A future provider and retention period will be listed here
-            before activation.
+            For that future app provider, withdrawing consent stops optional
+            events and clears pending work. Its identity and retention period
+            will be listed here before activation. This gate does not control
+            scripts added by the hosting platform.
           </p>
         </>
       ),

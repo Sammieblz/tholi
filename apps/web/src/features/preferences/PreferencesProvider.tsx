@@ -40,7 +40,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     initial.storageAvailable,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Deliberately no production provider, environment URL, script, or pixel.
+  // No app provider, environment URL, script or pixel. This does not govern
+  // scripts injected by the hosting platform.
   const [analytics] = useState(() => createConsentAnalytics());
 
   useEffect(() => {

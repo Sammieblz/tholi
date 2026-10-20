@@ -13,7 +13,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Optional API setup](guides/backend.md)
 - [Diagnostics](guides/troubleshooting.md)
 
-The local website at **http://127.0.0.1:5174/docs** publishes selected current references with search and heading links.
+The public website at **[tholi.io/docs](https://tholi.io/docs)** publishes selected current references with search and heading links. Local development uses **http://127.0.0.1:5174/docs**.
 
 ## Building Tholi
 
@@ -34,6 +34,7 @@ The local website at **http://127.0.0.1:5174/docs** publishes selected current r
 
 ## Design and implementation records
 
+- [Website 0.1.0: published release, merge and Cloudflare deployment](releases/website/v0.1.0/README.md) · [validation evidence](releases/website/v0.1.0/validation.md) · [website release and deployment procedure](development/website-releases.md)
 - [Navigation responsiveness, cancellation and memory follow-up](releases/v0.11.0/performance.md)
 - [Navigation recovery, context, assisted mode and validation](releases/v0.11.0/navigation-reliability.md)
 - [Current UI audit, implementation, skills, and validation](releases/v0.10.1/ui-audit.md)

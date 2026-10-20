@@ -48,7 +48,8 @@ export function sanitizeWebsiteEvent(event: WebsiteEvent): WebsiteEvent | null {
   return null;
 }
 
-/** No provider is configured in the production website. This boundary is inert
+/** No app provider is configured. Host-injected scripts are outside this boundary.
+ * This boundary is inert
  * until both an explicit provider and current, provider-specific consent exist. */
 export function createConsentAnalytics(
   provider: AnalyticsProvider | null = null,

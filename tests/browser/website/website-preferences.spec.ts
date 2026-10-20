@@ -153,7 +153,7 @@ test("blocked browser storage keeps theme and cookie choices usable in memory", 
   ).toBeVisible();
 });
 
-test("cookie settings are keyboard accessible at narrow widths with inactive analytics", async ({
+test("cookie settings stay keyboard accessible and distinguish host measurements", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });
@@ -200,7 +200,9 @@ test("cookie settings are keyboard accessible at narrow widths with inactive ana
   await expect(
     dialog.getByRole("button", { name: "Close cookie settings", exact: true }),
   ).toBeFocused();
-  await expect(dialog).toContainText("No provider is configured");
+  await expect(dialog).toContainText(
+    "Cloudflare measures page views and performance independently of these cookie choices",
+  );
   await expect(dialog.getByRole("checkbox")).toHaveCount(1);
   const preference = dialog.getByRole("checkbox", {
     name: /Appearance preferences/,
@@ -210,7 +212,7 @@ test("cookie settings are keyboard accessible at narrow widths with inactive ana
   await expect(preference).toBeChecked();
   const focusOrder = [
     dialog.getByRole("link", { name: "Cookie details", exact: true }),
-    dialog.getByRole("link", { name: "Privacy draft", exact: true }),
+    dialog.getByRole("link", { name: "Privacy notice", exact: true }),
     dialog.getByRole("button", { name: "Essential only", exact: true }),
     dialog.getByRole("button", { name: "Save choices", exact: true }),
     dialog.getByRole("button", { name: "Close cookie settings", exact: true }),

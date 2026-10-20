@@ -60,7 +60,7 @@ test("documentation search, fragments, source links and browser Back stay usable
   ).toBeVisible();
 });
 
-test("launch drafts disclose the operator and open working cookie choices", async ({
+test("published notices disclose hosting and preserve working cookie choices", async ({
   page,
   context,
 }) => {
@@ -69,7 +69,17 @@ test("launch drafts disclose the operator and open working cookie choices", asyn
     "Your information, in plain sight.",
   );
   await expect(page.locator(".legal-draft-note")).toContainText(
-    "Launch-review draft",
+    "Publication and review",
+  );
+  await expect(page.locator(".legal-draft-note")).toContainText(
+    "hosted on Cloudflare Pages",
+  );
+  await expect(page.locator(".legal-draft-note")).toContainText(
+    "Professional legal review remains pending",
+  );
+  await expect(page.locator(".legal-draft-note a")).toHaveAttribute(
+    "href",
+    "https://tholi.io",
   );
   await expect(page.locator(".legal-prose")).toContainText("ILUNỌNSEN LLC");
   await expect(page.locator(".legal-prose")).toContainText(
@@ -111,13 +121,18 @@ test("launch drafts disclose the operator and open working cookie choices", asyn
   );
   await expect(page.getByRole("table")).toContainText("tholi_consent");
   await expect(page.getByRole("table")).toContainText("180 days");
+  await expect(page.locator("#analytics + p")).toContainText(
+    "choosing Essential only does not disable them",
+  );
   await page
     .locator(".legal-prose")
     .getByRole("button", { name: "Cookie settings", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "Cookie settings" });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("No provider is configured");
+  await expect(dialog).toContainText(
+    "Cloudflare measures page views and performance independently of these cookie choices",
+  );
   await dialog
     .getByRole("checkbox", { name: /Appearance preferences/ })
     .check();
