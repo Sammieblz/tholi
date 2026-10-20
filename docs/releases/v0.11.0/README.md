@@ -81,7 +81,8 @@ Validation and remaining manual checks are recorded in
 
 October 20 AMO submission follow-up: the original Firefox ZIP used Windows
 separators in 244 archive paths. The corrected upload candidate is
-`tholi-firefox-0.11.0-amo.zip`, with the same 273 certified file contents and
+[tholi-firefox-0.11.0-amo.zip](https://github.com/Sammieblz/tholi/releases/download/v0.11.0/tholi-firefox-0.11.0-amo.zip),
+with the same 273 certified file contents and
 unchanged `0.11.0` manifest. Mozilla's validator reports zero errors and 12
 bundled-code warnings on this actual ZIP. The original archives and source
 package remain intact. See the [repair record](validation.md#october-20-firefox-amo-archive-repair).

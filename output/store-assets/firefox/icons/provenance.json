@@ -1,0 +1,34 @@
+{
+  "source": "apps/public/media/tholi_icon.png",
+  "sourceSha256": "1ad7fec0d5473bd917f6e3b9871c1b1abf1760ecf8c1630a70abad3baff9518b",
+  "transformation": "Existing build-brand.mjs Sharp resize(size, size, {fit: contain}) and PNG encoding; original colours and transparency retained.",
+  "files": [
+    {
+      "file": "icon-32.png",
+      "width": 32,
+      "height": 32,
+      "format": "png",
+      "transparency": true,
+      "bytes": 1925,
+      "sha256": "ad33d21ef92feb1791dee198eb6415a99b0c87eb415e9d918cd6b760b079f29a"
+    },
+    {
+      "file": "icon-64.png",
+      "width": 64,
+      "height": 64,
+      "format": "png",
+      "transparency": true,
+      "bytes": 5383,
+      "sha256": "6f63455e96c6ca5331c9cac8ab8b4f9a2b8f735a0d4314617142ba5e12f6efe1"
+    },
+    {
+      "file": "icon-128.png",
+      "width": 128,
+      "height": 128,
+      "format": "png",
+      "transparency": true,
+      "bytes": 15557,
+      "sha256": "046fc8702746ec70d79611641cc7eb13dc5b2f44976651884212ed3cf1395968"
+    }
+  ]
+}

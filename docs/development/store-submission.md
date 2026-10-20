@@ -83,7 +83,10 @@ the initial 0.11.0 AMO submission, use the separately named
 file contents and the original manifest/version, with corrected ZIP paths.
 Its `.json` and `.sha256` sidecars record the original certificate, file hashes
 and new container checksum. Reuse `tholi-source-0.11.0.zip` for the reviewer
-source submission. Original archives remain intact; see the
+source submission. The corrected ZIP and sidecars are attached to the
+[GitHub release](https://github.com/Sammieblz/tholi/releases/tag/v0.11.0), whose
+main Firefox download now uses the corrected candidate. Original archives
+remain intact, with the original Firefox ZIP labeled superseded; see the
 [repair evidence and checksum](../releases/v0.11.0/validation.md#october-20-firefox-amo-archive-repair).
 
 ## Permission explanations

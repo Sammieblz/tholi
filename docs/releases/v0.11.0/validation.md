@@ -94,8 +94,14 @@ Mozilla **addons-linter 10.14.0** checked both actual ZIPs:
 Reports are under `output/qa/firefox-amo-repack-qbdV4i`, named
 `addons-linter-original.json` and `addons-linter-corrected.json`. The original
 full run remains `43376f90-e8bc-4e4b-baa2-4b2eb84249a0`; no new full-run identity
-was invented. The corrected ZIP has not been uploaded to AMO or attached to a
-GitHub release by this repair.
+was invented.
+
+The corrected [Firefox AMO ZIP](https://github.com/Sammieblz/tholi/releases/download/v0.11.0/tholi-firefox-0.11.0-amo.zip),
+its checksum, repair provenance and actual-ZIP validator report were published
+to the existing GitHub release on October 20. The release's main Firefox link
+now selects the corrected ZIP. The original archive is retained and labeled
+superseded; the release tag and original certification remain intact. AMO
+submission, signing and store approval are still separate outcomes.
 
 ## Earlier version preparation
 
