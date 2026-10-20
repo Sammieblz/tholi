@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-export async function archiveExtension(extension, archive, files) {
+export async function archiveExtension(
+  extension,
+  archive,
+  files,
+  { allowEmptyDirectories = false } = {},
+) {
   const quote = (s) => "'" + s.replaceAll("'", "''") + "'";
   execFileSync("powershell.exe", [
     "-NoProfile",
@@ -11,7 +16,12 @@ export async function archiveExtension(extension, archive, files) {
       quote(archive) +
       ",[System.IO.Compression.CompressionLevel]::Optimal,$false)",
   ]);
-  // Read every zipped member back and compare its bytes with the evaluated build.
+  // Website builds can retain an empty downloads directory in fresh checkouts.
+  // Keep the stricter extension default; directory entries contain no file data.
+  const entries = allowEmptyDirectories
+    ? "$taskZip.Entries | Where-Object { $_.Name -ne '' }"
+    : "$taskZip.Entries";
+  // Read every zipped file back and compare its bytes with the evaluated build.
   const zipped = JSON.parse(
     execFileSync(
       "powershell.exe",
@@ -22,7 +32,9 @@ export async function archiveExtension(extension, archive, files) {
           "$taskZip=[System.IO.Compression.ZipFile]::OpenRead(" +
           quote(archive) +
           ")\n" +
-          "try { @($taskZip.Entries | ForEach-Object { $taskStream=$_.Open(); try { $taskHash=[System.Security.Cryptography.SHA256]::Create(); [pscustomobject]@{name=$_.FullName;sha256=([BitConverter]::ToString($taskHash.ComputeHash($taskStream))).Replace('-','').ToLowerInvariant()} } finally { $taskStream.Dispose();$taskHash.Dispose() } }) | ConvertTo-Json -Compress } finally {$taskZip.Dispose()}",
+          "try { @(" +
+          entries +
+          " | ForEach-Object { $taskStream=$_.Open(); try { $taskHash=[System.Security.Cryptography.SHA256]::Create(); [pscustomobject]@{name=$_.FullName;sha256=([BitConverter]::ToString($taskHash.ComputeHash($taskStream))).Replace('-','').ToLowerInvariant()} } finally { $taskStream.Dispose();$taskHash.Dispose() } }) | ConvertTo-Json -Compress } finally {$taskZip.Dispose()}",
       ],
       { encoding: "utf8" },
     ),

@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu, Xmark } from "iconoir-react";
 import { SiteLink, useRouter } from "../app/router";
 import { repositoryUrl } from "../config/project";
 import { legalOperator } from "../features/legal/operator";
+import websiteRelease from "../../release.json";
 import { useAccount } from "../features/account/session";
 import {
   CookieConsent,
@@ -23,6 +24,7 @@ const footerGroups = [
   {
     title: "Learn",
     links: [
+      ["Support", "/support"],
       ["Documentation", "/docs"],
       ["Troubleshooting", "/docs/troubleshooting"],
       ["Source code", repositoryUrl],
@@ -33,7 +35,7 @@ const footerGroups = [
     links: [
       ["About Tholi", "/about"],
       ["ILUNỌNSEN", legalOperator.companyUrl],
-      ["Contact", `mailto:${legalOperator.email}`],
+      ["Contact", "/contact"],
     ],
   },
   {
@@ -50,9 +52,57 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   const { account } = useAccount();
   const { openCookieSettings } = usePreferences();
   const [menu, setMenu] = useState(false);
+  const header = useRef<HTMLDivElement>(null);
   useEffect(() => setMenu(false), [path]);
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    let previous = Math.max(0, scrollY),
+      travel = 0,
+      direction = 0,
+      frame = 0;
+    const show = () => {
+      element.dataset.hidden = "false";
+    };
+    const update = () => {
+      frame = 0;
+      const current = Math.max(0, scrollY);
+      const delta = current - previous;
+      previous = current;
+      element.dataset.scrolled = String(current > 32);
+      if (current < 120 || menu || element.contains(document.activeElement)) {
+        show();
+        travel = 0;
+        return;
+      }
+      if (Math.abs(delta) < 2) return;
+      const next = Math.sign(delta);
+      travel = next === direction ? travel + Math.abs(delta) : Math.abs(delta);
+      direction = next;
+      if (next < 0 && travel >= 12) show();
+      else if (next > 0 && travel >= 44) element.dataset.hidden = "true";
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    show();
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    element.addEventListener("focusin", show);
+    return () => {
+      cancelAnimationFrame(frame);
+      removeEventListener("scroll", onScroll);
+      element.removeEventListener("focusin", show);
+    };
+  }, [path, menu]);
   const links = (
     <>
+      <SiteLink
+        to="/about"
+        aria-current={path === "/about" ? "page" : undefined}
+      >
+        About
+      </SiteLink>
       <SiteLink
         to="/download"
         aria-current={path === "/download" ? "page" : undefined}
@@ -65,12 +115,6 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       >
         Docs
       </SiteLink>
-      <SiteLink
-        to="/about"
-        aria-current={path === "/about" ? "page" : undefined}
-      >
-        About
-      </SiteLink>
       <SiteLink to={account ? "/welcome" : "/signin"}>
         {account ? "Welcome" : "Sign in"}
       </SiteLink>
@@ -81,48 +125,50 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <header className="web-header">
-        <SiteLink to="/" className="brand-link" aria-label="Tholi home">
-          <img
-            className="web-logo"
-            src="/media/tholi_brand_logo.png"
-            alt="Tholi"
-            width="112"
-            height="45"
-          />
-        </SiteLink>
-        <nav aria-label="Main navigation">{links}</nav>
-        <div className="header-actions">
-          <ThemeToggle />
-          <SiteLink to="/download" className="web-primary header-install">
-            Get the preview
+      <div ref={header} className="web-header-shell" data-hidden="false">
+        <header className="web-header">
+          <SiteLink to="/" className="brand-link" aria-label="Tholi home">
+            <img
+              className="web-logo"
+              src="/media/tholi_brand_logo.png"
+              alt="Tholi"
+              width="112"
+              height="45"
+            />
           </SiteLink>
-          <Dialog.Root open={menu} onOpenChange={setMenu}>
-            <Dialog.Trigger
-              className="mobile-menu icon-button"
-              aria-label="Open navigation"
-            >
-              <Menu aria-hidden="true" />
-            </Dialog.Trigger>
-            <Dialog.Portal>
-              <Dialog.Backdrop className="web-backdrop" />
-              <Dialog.Popup className="web-mobile-dialog">
-                <Dialog.Title>Explore Tholi</Dialog.Title>
-                <Dialog.Close
-                  className="icon-button"
-                  aria-label="Close navigation"
-                >
-                  <Xmark aria-hidden="true" />
-                </Dialog.Close>
-                {links}
-                <SiteLink to="/signup" className="web-primary">
-                  Try a demo account
-                </SiteLink>
-              </Dialog.Popup>
-            </Dialog.Portal>
-          </Dialog.Root>
-        </div>
-      </header>
+          <nav aria-label="Main navigation">{links}</nav>
+          <div className="header-actions">
+            <ThemeToggle />
+            <SiteLink to="/signup" className="web-primary header-install">
+              Get started
+            </SiteLink>
+            <Dialog.Root open={menu} onOpenChange={setMenu}>
+              <Dialog.Trigger
+                className="mobile-menu icon-button"
+                aria-label="Open navigation"
+              >
+                <Menu aria-hidden="true" />
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Backdrop className="web-backdrop" />
+                <Dialog.Popup className="web-mobile-dialog">
+                  <Dialog.Title>Explore Tholi</Dialog.Title>
+                  <Dialog.Close
+                    className="icon-button"
+                    aria-label="Close navigation"
+                  >
+                    <Xmark aria-hidden="true" />
+                  </Dialog.Close>
+                  {links}
+                  <SiteLink to="/signup" className="web-primary">
+                    Get started
+                  </SiteLink>
+                </Dialog.Popup>
+              </Dialog.Portal>
+            </Dialog.Root>
+          </div>
+        </header>
+      </div>
       <main id="main-content" key={path} className="web-main">
         {children}
       </main>
@@ -179,7 +225,8 @@ export function SiteLayout({ children }: { children: ReactNode }) {
               licensed.
             </small>
             <span>
-              Local website preview · Mock accounts · Analytics inactive
+              Website {websiteRelease.version} · Mock accounts · Analytics
+              inactive
             </span>
           </div>
         </div>

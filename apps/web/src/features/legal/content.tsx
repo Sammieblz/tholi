@@ -26,10 +26,13 @@ export function privacySections(): LegalSection[] {
             <a href={legalOperator.companyUrl}>ilunonsen.com</a>.
           </p>
           <p>
-            This notice describes the local website preview and the Tholi
-            extension. Other websites you visit have their own privacy
-            practices. The operator’s corporate-site policy applies separately
-            to that site.
+            This notice covers the Tholi website preview and browser extension.
+            Tholi uses page context to guide you toward a destination you
+            request and verify your progress. Normal guidance runs on your
+            device without an account or backend. Connecting a private backend
+            is optional and changes where some data is processed, as explained
+            below. Other websites, including the operator’s corporate site, have
+            their own privacy practices.
           </p>
         </>
       ),
@@ -72,13 +75,13 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            When you start guidance or page exploration on an authorized
-            website, Tholi reads bounded control labels, accessible names,
-            headings, roles, form metadata, relationships, availability and
-            geometry. It does not read input or textarea values, passwords,
-            one-time codes or editable contents. Labels themselves may still
-            contain personal information; automatic redaction cannot identify
-            every private label.
+            Opening the panel alone does not start page discovery. When you
+            start guidance or page exploration on an authorized website, Tholi
+            reads bounded control labels, accessible names, headings, roles,
+            form metadata, relationships, availability and geometry. It does not
+            read input or textarea values, passwords, one-time codes or editable
+            contents. Labels themselves may still contain personal information;
+            automatic redaction cannot identify every private label.
           </p>
           <p>
             Guide mode leaves website interaction with you. Optional assisted
@@ -90,6 +93,15 @@ export function privacySections(): LegalSection[] {
             Restricted browser pages and unpermitted origins cannot be
             inspected.
           </p>
+          <p>
+            Task context includes your destination, details you supply,
+            task-related website addresses and navigation transitions, and
+            relevant interface interactions. Requests, labels and visible page
+            content can contain names, usernames, communications, locations,
+            health information or financial information. Tholi does not reliably
+            identify or exclude every sensitive category. Do not put passwords,
+            payment credentials or other secrets into a destination or message.
+          </p>
         </>
       ),
     },
@@ -100,10 +112,13 @@ export function privacySections(): LegalSection[] {
         <>
           <p>
             Your destination, supplied parameters, entity bindings, unfinished
-            journeys, composer draft and bounded conversation history remain in
-            trusted extension browser-session storage. They are not synchronized
-            with this website or a cloud account. A private session ends with
-            the browser session.
+            journeys, composer draft and up to 80 conversation messages are
+            stored in trusted extension browser-session storage. They are not
+            synchronized with this website or a cloud account. Relevant task
+            text and session context may nevertheless be sent to a backend you
+            explicitly connect; session-only storage is a retention limit, not a
+            guarantee that information never leaves your device. Session data is
+            cleared when the browser session ends.
           </p>
           <p>
             Reusable, sanitized interface semantics and parameterized routes are
@@ -114,6 +129,13 @@ export function privacySections(): LegalSection[] {
             private OCR text, field values and image coordinates are not saved
             as route knowledge. See the <SourcePrivacy /> for the exact current
             limits.
+          </p>
+          <p>
+            Appearance, guidance preferences, widget bounds and configured
+            backend settings use separate persistent extension storage. They can
+            outlast a browser session. Expiration of learned knowledge is
+            applied when records are accessed; it is not a promise of scheduled
+            deletion from a closed browser or an independent server’s backups.
           </p>
         </>
       ),
@@ -137,6 +159,30 @@ export function privacySections(): LegalSection[] {
             you do not want processed. Default local models run on your device;
             experimental engines are identified separately.
           </p>
+          <p>
+            A capture can still contain sensitive information displayed outside
+            editable fields. Masking does not guarantee removal of all personal,
+            health, financial or communication content. Captures are processed
+            locally by default; enabling backend OCR sends masked images to the
+            backend you configure.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "local-models",
+      title: "Local models and optional browser AI",
+      children: (
+        <>
+          <p>
+            The default language model, OCR workers and executable model
+            runtimes are bundled with the extension. Normal guidance does not
+            require a hosted model API. If you separately enable Chrome’s
+            built-in language model option, Chrome may download its model. That
+            option processes bounded, sanitized observations and task context
+            through Chrome’s local Prompt API. Model suggestions remain subject
+            to Tholi’s verification and action boundaries.
+          </p>
         </>
       ),
     },
@@ -146,12 +192,16 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            No backend is required. If you explicitly connect one, it may
-            process bounded observations and private session context in memory.
-            The supplied API persists reusable knowledge under the same
-            parameterized-route policy. Backend OCR sends temporary masked
-            captures only when you enable it. The supplied service does not
-            persist OCR payloads or private session context in payload logs.
+            Backend access is disabled by default. If you explicitly connect
+            one, requests can include your task text, supplied task details,
+            website origins and routes, bounded page observations, navigation
+            context and reusable website knowledge. These requests support
+            planning, suggestions and knowledge mirroring. The supplied API
+            processes private session context in memory and persists reusable
+            knowledge under the same parameterized-route policy. Backend OCR
+            sends temporary masked captures only when you enable it. The
+            supplied service does not persist OCR payloads or private session
+            context in payload logs.
           </p>
           <p>
             You control the backend deployment, host and access credentials. A
@@ -160,6 +210,69 @@ export function privacySections(): LegalSection[] {
             describe an independent operator’s practices.{" "}
             <SiteLink to="/docs/backend">Backend setup</SiteLink> explains the
             trust boundary.
+          </p>
+          <p>
+            Backend URLs must use HTTPS, except that HTTP is allowed for a
+            service on your own computer’s loopback address. A remote backend
+            and its infrastructure may receive connection metadata such as your
+            IP address in addition to request content. Their logging, retention
+            and processing location depend on that deployment.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "backend-credentials",
+      title: "Backend credentials and permission choices",
+      children: (
+        <>
+          <p>
+            Connecting a backend stores its address, enabled state and API
+            bearer token in extension-controlled persistent storage: protected
+            local storage on Chromium, or extension-origin IndexedDB on Firefox.
+            Website scripts and Tholi’s page widget are not given the token.
+            Requests to the configured backend send it in an Authorization
+            header. This is separate from website passwords, which page
+            discovery does not read. Browser access controls protect these
+            settings; Tholi does not add its own encryption at rest.
+          </p>
+          <p>
+            Firefox also requests optional browser consent for backend
+            transmission of authentication information, browsing activity,
+            website activity and website content. Declining that consent keeps
+            local processing available. Disabling the backend or revoking its
+            applicable browser permissions prevents subsequent authorized
+            requests; it does not erase saved credentials or copies already
+            received by the server. To clear the saved token, disable Connect
+            this browser, empty the API token field and select Save connection.
+            Rotate the token at your backend if access should be invalidated.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "limited-use",
+      title: "How we limit use and sharing",
+      children: (
+        <>
+          <p>
+            Tholi’s use of information received through Chrome APIs adheres to
+            the{" "}
+            <a href="https://developer.chrome.com/docs/webstore/program-policies/limited-use">
+              Chrome Web Store User Data Policy, including Limited Use
+            </a>
+            . We use extension data to provide and improve its disclosed
+            website-guidance functionality. We do not sell it, use it for
+            personalized advertising, or use or transfer it for creditworthiness
+            or lending decisions.
+          </p>
+          <p>
+            Transfers are limited to providing that functionality, complying
+            with law, protecting against abuse, or a business transfer with
+            explicit prior consent. Human access requires your explicit consent
+            to specific data, a security or legal need, or aggregated,
+            anonymized data for permitted internal operations. Ordinary local
+            guidance does not upload observations to us for staff review.
           </p>
         </>
       ),
@@ -170,12 +283,14 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            Pause retains the destination. Stop cancels navigation. Closing or
-            hiding the widget retains the current session; it is not deletion.
-            Reset current session clears unfinished journeys, draft and
-            conversation. Separate Forget and Clear controls remove learned
-            website knowledge and saved routes. Uninstalling removes
-            extension-owned local data.
+            Pause retains the destination and stops page observation and
+            guidance. Stop cancels the active guidance task and observation.
+            Minimizing the widget can keep authorized observation active;
+            closing or hiding a surface is not deletion. Use Pause or Stop when
+            you want observation to end. Reset current session clears unfinished
+            journeys, draft and conversation. Separate Forget and Clear controls
+            remove learned website knowledge and saved routes. Uninstalling
+            removes extension-owned local data.
           </p>
           <p>
             If a connected backend is offline during deletion, Tholi reports the
@@ -185,11 +300,20 @@ export function privacySections(): LegalSection[] {
             independently from the extension.
           </p>
           <p>
-            For questions, access or deletion requests, email <Contact />.
-            Include only what is needed to explain your request. We cannot
-            retrieve or erase device-only extension data remotely. Applicable
-            privacy rights depend on your location and the processing involved;
-            this preview does not require you to waive them.
+            Local deletion or uninstalling does not itself erase a backend’s
+            database, infrastructure logs or backups. Complete remote deletion
+            while connected where supported, and contact the backend operator
+            about any other retained copies. Disabling a connection alone does
+            not send a deletion request.
+          </p>
+          <p>
+            For questions, access, correction or deletion requests, email{" "}
+            <Contact />. Include only what is needed to explain your request. We
+            cannot retrieve or erase device-only extension data remotely.
+            Applicable privacy rights depend on your location and the processing
+            involved; this preview does not require you to waive them. Where
+            applicable, you may also raise a concern with your privacy
+            regulator.
           </p>
         </>
       ),
@@ -200,22 +324,30 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            This local preview has no account backend, hosted inference,
-            background upload service or advertising integration. It does not
-            sell or share extension observations for advertising. Links to
+            This website preview has no production account service, hosted
+            inference or advertising integration. The optional extension backend
+            described above is a separate connection you configure. Links to
             GitHub and other websites leave Tholi and are governed by those
-            services.
+            services. Browser stores also process installation and store account
+            information under their own policies.
           </p>
           <p>
             A production host and analytics provider have not been selected for
             this build. Their request metadata, retention, recipients and
-            international processing must be disclosed before public launch.
-            Contacting us by email necessarily shares the message with the
-            company’s email service; do not send passwords or private browsing
-            captures.
+            international processing must be disclosed before public launch. The
+            contact form prepares a draft in page memory; it does not submit
+            your message to a Tholi server or save it in browser storage.
+            Opening an email draft passes its contents to your email app;
+            copying uses your device’s clipboard. Contacting us by email shares
+            the message with the company’s email service. We use correspondence
+            to respond to your request and retain it as needed for that request
+            and applicable obligations; do not send passwords or private
+            browsing captures.
           </p>
           <p>
-            We will revise this notice when actual product behavior changes.
+            The review date shown above identifies this draft’s latest update;
+            it does not establish a public launch or completed legal review. We
+            will revise this notice when actual product behavior changes.
             Material optional processing will not be enabled by silently reusing
             an earlier cookie choice.
           </p>
@@ -232,10 +364,19 @@ export function termsSections(): LegalSection[] {
       children: (
         <>
           <p>
-            These draft terms describe the Tholi website preview and extension
+            These draft terms cover the Tholi website preview and extension
             offered by {legalOperator.name}, {legalOperator.location}. They are
             prepared for launch review and do not represent a completed
-            public-service agreement. Contact <Contact /> with questions.
+            public-service agreement. Tholi provides contextual website
+            guidance; it does not act as the website or account provider.
+            Contact <Contact /> with questions.
+          </p>
+          <p>
+            Browser-store distribution, when available, is subject to the
+            relevant store’s own terms. Installing the extension does not
+            authorize a private backend connection, purchases or future paid
+            services. The permissions you grant and features you enable control
+            access as described in the privacy notice.
           </p>
           <p>
             The website, download and extension require no account. Website
@@ -253,9 +394,11 @@ export function termsSections(): LegalSection[] {
           <p>
             Tholi helps identify a next step from observed interfaces. You
             remain responsible for deciding whether a suggested action matches
-            your intention and for performing website interactions,
-            authentication, purchases, plan changes, deployments and
-            cancellations.
+            your intention. Guide mode leaves website interactions with you.
+            Optional assisted navigation can open eligible menus and select
+            explicitly requested view options. It does not enter credentials,
+            submit forms or perform final actions. You handle authentication,
+            purchases, plan changes, deployments and cancellations.
           </p>
           <p>
             Guidance can be incomplete or wrong when interfaces change,
@@ -352,6 +495,36 @@ export function termsSections(): LegalSection[] {
             Future paid services, real accounts, hosting or cloud inference
             would need their own accurate terms and disclosures before
             activation.
+          </p>
+          <p>
+            If you connect a backend, choose an operator you trust, protect its
+            access token and review its hosting, retention and security
+            practices. A remote connection can transmit task details and page
+            context; enabling backend OCR can also transmit masked captures. An
+            independent operator’s additional terms may apply. Disabling a
+            connection does not delete data already received by that operator.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "ending-use",
+      title: "Stopping use and product changes",
+      children: (
+        <>
+          <p>
+            You can stop using Tholi at any time. Pause or stop guidance,
+            disable optional connections, remove browser permissions or
+            uninstall the extension. Use its separate deletion controls to
+            remove saved knowledge and session context. Uninstalling cannot
+            erase data already held by a backend or another website.
+          </p>
+          <p>
+            Features and compatibility may change as Tholi and third-party
+            websites evolve. We will update these documents when the service
+            changes; new optional processing requires the relevant choice or
+            consent before activation. Future terms for hosted or paid services
+            do not narrow rights already granted under the MIT License.
           </p>
         </>
       ),

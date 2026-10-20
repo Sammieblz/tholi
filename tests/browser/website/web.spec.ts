@@ -1,5 +1,79 @@
 import { test, expect } from "../../support/browser-test";
 import { createHash } from "node:crypto";
+
+test("get started opens signup and download cards disclose mock stores with working manual directions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Get started", exact: true }),
+  ).toHaveCount(1);
+  await page
+    .locator(".hero")
+    .getByRole("link", { name: "Try it here", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/#practice$/);
+  await expect(page.locator("#practice")).toBeFocused();
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "About", exact: true })
+    .focus();
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "About", exact: true })
+    .click();
+  await expect(page.locator(".about-story").first()).toContainText(
+    "the Zulu word for “finder.”",
+  );
+  await expect(page.locator("em[lang=zu]")).toHaveText("umtholi");
+  await page
+    .locator(".header-actions")
+    .getByRole("link", { name: "Get started" })
+    .click();
+  await expect(page).toHaveURL(/\/signup$/);
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await expect(page.locator("#demo-account-note")).toContainText(
+    "No real account is created",
+  );
+  await page.goto("/download");
+  for (const browser of ["Chrome", "Firefox"]) {
+    const card = page.getByRole("article").filter({
+      has: page.getByRole("heading", {
+        name: `Tholi for ${browser}`,
+        exact: true,
+      }),
+    });
+    await expect(card).toContainText("Store listing coming soon");
+    await expect
+      .poll(() =>
+        card
+          .locator("img")
+          .evaluate((image: HTMLImageElement) => image.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    await card
+      .getByRole("link", { name: `Add to ${browser}`, exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `browser=${browser.toLowerCase()}#installation-${browser.toLowerCase()}$`,
+      ),
+    );
+    await expect(
+      page.locator(`#installation-${browser.toLowerCase()}`),
+    ).toBeFocused();
+    await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
+      browser.toLowerCase(),
+    );
+    await expect(page.locator(".install-grid")).toContainText(
+      browser === "Firefox" ? "Load Temporary Add-on" : "Load unpacked",
+    );
+  }
+});
 for (const width of [375])
   test(`Tholi website ${width}px onboarding and download integrity`, async ({
     page,

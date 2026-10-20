@@ -23,7 +23,7 @@
   height: 64px;
 }
 .auth-aside p {
-  font-family: Outfit, Manrope, sans-serif;
+  font-family: var(--web-font-display);
   font-size: 42px;
   line-height: 1.12;
   font-weight: 400;

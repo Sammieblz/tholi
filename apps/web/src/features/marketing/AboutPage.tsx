@@ -24,17 +24,17 @@ export function AboutPage() {
         <WayfinderStage />
       </div>
       <div className="about-story" data-reveal="heading">
-        <span>THE NAME</span>
+        <span data-reveal-part>THE NAME</span>
         <div>
-          <h2>Inspired by umtholi.</h2>
+          <h2>A shorter name. The same meaning.</h2>
           <p>
-            Tholi’s name draws on the idea of finding your way. A little
-            direction at the right moment can make unfamiliar software feel more
-            familiar, without turning every task into another thing to learn.
+            Tholi is shortened from <em lang="zu">umtholi</em>, the Zulu word
+            for “finder.” Our name carries that meaning forward: a little
+            direction to help you find your way through unfamiliar software.
           </p>
         </div>
       </div>
-      <div className="about-principles">
+      <div className="about-principles" data-reveal="heading">
         <div>
           <span className="eyebrow">CLARITY</span>
           <h3>One useful next step.</h3>
@@ -60,8 +60,8 @@ export function AboutPage() {
           </p>
         </div>
       </div>
-      <div className="about-story">
-        <span>THE WORK IN PROGRESS</span>
+      <div className="about-story" data-reveal="heading">
+        <span data-reveal-part>THE WORK IN PROGRESS</span>
         <div>
           <h2>Capable. Honest. Still learning.</h2>
           <p>
@@ -75,7 +75,7 @@ export function AboutPage() {
           </SiteLink>
         </div>
       </div>
-      <div className="about-ownership">
+      <div className="about-ownership" data-reveal="closing">
         <div>
           <p className="eyebrow">MADE BY ILUNỌNSEN</p>
           <h2>
@@ -86,8 +86,8 @@ export function AboutPage() {
           <p>
             Tholi is operated by{" "}
             <a href="https://ilunonsen.com">ILUNỌNSEN LLC</a>, in Ohio, United
-            States. Questions or feedback? Reach us at{" "}
-            <a href="mailto:info@ilunonsen.com">info@ilunonsen.com</a>.
+            States. Questions or feedback?{" "}
+            <SiteLink to="/contact">Get in touch with the Tholi team</SiteLink>.
           </p>
         </div>
         <SiteLink to="/download" className="web-primary">

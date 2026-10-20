@@ -287,7 +287,7 @@
   min-height: 100px;
 }
 .wayfinder-stage-caption strong {
-  font-family: Outfit, Manrope, sans-serif;
+  font-family: var(--web-font-display);
   font-size: 24px;
   font-weight: 500;
 }

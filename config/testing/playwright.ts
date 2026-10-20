@@ -65,7 +65,9 @@ const projects: Project[] = [
     },
     ...(full
       ? {}
-      : { grep: /download|account|onboarding|theme|cookie|documentation/ }),
+      : {
+          grep: /download|account|onboarding|theme|cookie|documentation|contact|support/,
+        }),
   }),
   project("ui-website", "ui", "website", {
     timeout: 45_000,

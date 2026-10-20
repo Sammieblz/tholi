@@ -4,6 +4,8 @@ export const PUBLIC_PAGES = [
   "home",
   "about",
   "download",
+  "support",
+  "contact",
   "signup",
   "signin",
   "onboarding",

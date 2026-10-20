@@ -2,6 +2,11 @@
   --web-max: 1280px;
   --web-gutter: clamp(20px, 4vw, 56px);
   --web-space: clamp(56px, 7vw, 100px);
+  --web-font-body:
+    "Source Sans 3 Variable", "Source Sans 3", system-ui, sans-serif;
+  --web-font-display: "Newsreader Variable", Newsreader, Georgia, serif;
+  --web-press-duration: 140ms;
+  --web-header-duration: 220ms;
 }
 :root[data-tholi-theme="dark"] {
   --surface: #111b17;
@@ -32,7 +37,42 @@
   --web-closing: #e0e9df;
 }
 body {
-  font-family: Manrope, system-ui, sans-serif;
+  font-family: var(--web-font-body);
+  font-size: 17px;
+}
+@font-face {
+  font-family: "Source Sans 3 Variable";
+  src: url("../../../../node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2")
+    format("woff2");
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("../../../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2")
+    format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+.web-header-shell {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background: var(--surface);
+  border-bottom: 1px solid transparent;
+  transition: transform var(--web-header-duration) var(--ease-out);
+}
+.web-header-shell[data-scrolled="true"] {
+  border-bottom-color: var(--line);
+}
+.web-header-shell[data-hidden="true"] {
+  transform: translateY(-100%);
+}
+.web-header-shell:focus-within {
+  transform: none;
+}
+html[data-input="keyboard"] .web-header-shell {
+  transition: none;
 }
 html {
   scrollbar-width: thin;
@@ -142,13 +182,14 @@ html[data-web-scroll-intent]::-webkit-scrollbar-thumb {
   padding-block: 0;
 }
 .web-main :is(h2, h3, [id]) {
-  scroll-margin-top: 28px;
+  scroll-margin-top: 120px;
 }
 .web-main h1,
 .web-main h2,
 .web-main h3 {
-  font-family: Outfit, Manrope, sans-serif;
-  font-weight: 500;
+  font-family: var(--web-font-display);
+  font-weight: 450;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 .web-main h1 {
@@ -185,7 +226,7 @@ html[data-web-scroll-intent]::-webkit-scrollbar-thumb {
   padding: 13px 22px;
   border-radius: 9px;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 .web-primary {
@@ -269,7 +310,7 @@ html[data-web-scroll-intent]::-webkit-scrollbar-thumb {
 }
 .footer-intro p {
   color: var(--ink);
-  font-family: Outfit, Manrope, sans-serif;
+  font-family: var(--web-font-display);
   font-size: 23px;
   line-height: 1.3;
   margin: 22px 0;
@@ -341,7 +382,7 @@ html[data-web-scroll-intent]::-webkit-scrollbar-thumb {
 }
 .web-mobile-dialog h2 {
   margin: 0 0 20px;
-  font-family: Outfit, Manrope, sans-serif;
+  font-family: var(--web-font-display);
   font-weight: 500;
 }
 .web-mobile-dialog a {

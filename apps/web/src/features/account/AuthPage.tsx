@@ -73,7 +73,8 @@ export function AuthPage({ signup }: { signup: boolean }) {
         <h1>{signup ? "A clear place to start." : "Welcome back."}</h1>
         <p className="small" id="demo-account-note">
           Explore a mock account using example details. No real account is
-          created and nothing is sent.
+          created and nothing is sent. Real accounts are coming in a later
+          version.
         </p>
         <form
           noValidate
@@ -163,7 +164,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
               {errors.session}
             </p>
           )}
-          <button className="primary" disabled={loading}>
+          <button className="primary web-primary" disabled={loading}>
             {loading ? (
               <>
                 <Wayfinder state="planning" />
@@ -174,6 +175,11 @@ export function AuthPage({ signup }: { signup: boolean }) {
             )}
           </button>
         </form>
+        <p className="auth-legal small">
+          Read our <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
+          <SiteLink to="/terms">terms</SiteLink> before trying the account
+          preview.
+        </p>
         <p className="auth-switch">
           <SiteLink to={signup ? "/signin" : "/signup"}>
             {signup

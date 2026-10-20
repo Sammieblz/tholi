@@ -18,5 +18,5 @@ export const legalOperator = {
   email: "info@ilunonsen.com",
   companyUrl: "https://ilunonsen.com",
   publicOrigin: publicOrigin(configuredOrigin),
-  reviewed: "October 16, 2026",
+  reviewed: "October 20, 2026",
 };
