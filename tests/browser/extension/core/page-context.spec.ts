@@ -14,7 +14,12 @@ async function goal(
   await app.panel
     .getByRole("button", { name: "Guide me", exact: true })
     .evaluate((e) => (e as HTMLButtonElement).click());
-  await expect.poll(async () => (await app.view()).goalPlan?.goal).toBe(text);
+  await expect
+    .poll(async () => (await app.view()).goalPlan)
+    .toMatchObject({
+      goal: text,
+      status: "guiding",
+    });
 }
 test("heading hierarchy resolves repeated section controls and refreshes local site context", async ({}, info) => {
   const app = await openNavigatorExtension(
