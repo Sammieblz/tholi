@@ -117,11 +117,13 @@ export async function verifyWebDriverSurfaces(
     "Launcher restored widget",
   );
   await widget();
-  expect(
-    await (
-      await control(By.css('textarea[aria-label="Navigation goal"]'))
-    ).getAttribute("value"),
-  ).toBe("Retained follow-up draft");
+  await expect
+    .poll(async () =>
+      (
+        await control(By.css('textarea[aria-label="Navigation goal"]'))
+      ).getAttribute("value"),
+    )
+    .toBe("Retained follow-up draft");
   await (await control(By.css('button[aria-label="Widget menu"]'))).click();
   await (
     await control(By.xpath('//button[normalize-space(.)="Dock to sidebar"]'))

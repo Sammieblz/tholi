@@ -281,9 +281,9 @@
   },
   "extensionVersion": "0.11.0",
   "validation": {
-    "selection": "focused",
-    "tier": "pr",
-    "runId": "6ca4fefd-a758-4532-8237-79237b7b4c43",
+    "selection": "complete",
+    "tier": "full",
+    "runId": "7505e815-5d0b-49ec-85e9-4092d31083df",
     "buildDigest": "ce062329b566f51b2b30dbd32a85500f3f44d7c76c6a91518a31a050142716d3"
   },
   "browsers": [
@@ -294,33 +294,499 @@
     {
       "name": "chromium",
       "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
+    },
+    {
+      "name": "chromium",
+      "version": "156.0.8078.4"
     }
   ],
   "scope": "e2e",
-  "evaluatedAt": "2026-10-20T00:10:39.130Z",
+  "evaluatedAt": "2026-10-20T00:20:02.158Z",
   "passed": true,
   "files": [
-    "tests/browser/extension/core/page-context.spec.ts"
+    "tests/browser/extension/core/accessibility.spec.ts",
+    "tests/browser/extension/core/authentication.spec.ts",
+    "tests/browser/extension/core/dashboard-navigation.spec.ts",
+    "tests/browser/extension/core/extension.spec.ts",
+    "tests/browser/extension/core/geometry.spec.ts",
+    "tests/browser/extension/core/lifecycle.spec.ts",
+    "tests/browser/extension/core/live-navigation.spec.ts",
+    "tests/browser/extension/core/page-context.spec.ts",
+    "tests/browser/extension/core/task-journey.spec.ts"
   ],
   "projects": [
-    "core-desktop"
+    "core-desktop",
+    "narrow"
   ],
-  "expected": 2,
-  "configuredCount": 2,
+  "expected": 47,
+  "configuredCount": 47,
   "cases": [
+    {
+      "id": "ddd864604af8a6a0198f-5caeafcdf5fc8beb38a7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\accessibility.spec.ts / panel exposes distinct status announcements, stable polling and usable keyboard controls",
+      "status": "passed",
+      "elapsedMs": 13335,
+      "disposalMs": 380.5748999999996
+    },
+    {
+      "id": "70f6afe7e350c931056e-78c5f7253066072ade7f",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains create-account context through a dynamic account menu, a new document and form fields",
+      "status": "passed",
+      "elapsedMs": 7464,
+      "disposalMs": 396.1807000000008
+    },
+    {
+      "id": "70f6afe7e350c931056e-b30027230f52d8220562",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / retains a plain login goal through an expected cross-origin popup",
+      "status": "passed",
+      "elapsedMs": 6091,
+      "disposalMs": 482.1803
+    },
+    {
+      "id": "70f6afe7e350c931056e-638d1e32b33de3a0f80a",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an unmatched destination reports an unavailable estimate instead of zero clicks",
+      "status": "passed",
+      "elapsedMs": 5770,
+      "disposalMs": 392.0330999999933
+    },
+    {
+      "id": "70f6afe7e350c931056e-c1e5d96ae014bc19f0bc",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\authentication.spec.ts / an authentication server redirect retains context while unrelated navigation is rejected",
+      "status": "passed",
+      "elapsedMs": 10252,
+      "disposalMs": 419.53319999999803
+    },
+    {
+      "id": "d23bd77383021f8f1c37-c136595d52bf2437753a",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / cloudflare: account settings survives an unmounted menu without substituting product settings",
+      "status": "passed",
+      "elapsedMs": 5051,
+      "disposalMs": 458.3429000000033
+    },
+    {
+      "id": "d23bd77383021f8f1c37-4fccf2e3dd94510b96da",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\dashboard-navigation.spec.ts / github: account settings survives an unmounted menu without substituting product settings",
+      "status": "passed",
+      "elapsedMs": 5263,
+      "disposalMs": 445.7852000000057
+    },
+    {
+      "id": "da119938d3268322a91b-ee5f444ec7573367880d",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / explicit activation, verified steps, retention branch and final hard stop",
+      "status": "passed",
+      "elapsedMs": 2976
+    },
+    {
+      "id": "da119938d3268322a91b-effa1d5873edd7644117",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / wrong turn reroutes, alternate label survives, pause and stop remove guidance",
+      "status": "passed",
+      "elapsedMs": 2540
+    },
+    {
+      "id": "da119938d3268322a91b-b0fe67c118663d4da7b2",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / login excludes synthetic secrets and requires resume",
+      "status": "passed",
+      "elapsedMs": 1911
+    },
+    {
+      "id": "da119938d3268322a91b-67ed155d1b0e52b5a605",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / ambiguous duplicates and unknown screens stop instead of guessing",
+      "status": "passed",
+      "elapsedMs": 1643
+    },
+    {
+      "id": "da119938d3268322a91b-fc278d0545d7f94a2df1",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / delayed same-URL render waits, and full page navigation stops",
+      "status": "passed",
+      "elapsedMs": 2644
+    },
+    {
+      "id": "da119938d3268322a91b-4569ec84a7de348b05ba",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / production localhost access is available without a toolbar grant",
+      "status": "passed",
+      "elapsedMs": 1469
+    },
+    {
+      "id": "da119938d3268322a91b-cda108e7cf0021b0f000",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / two origin-filtered tasks have independent previews and billing completion",
+      "status": "passed",
+      "elapsedMs": 2224
+    },
+    {
+      "id": "da119938d3268322a91b-1d00303a55b1ba347aae",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / active sessions reject switching and delayed updates from a previous route",
+      "status": "passed",
+      "elapsedMs": 410
+    },
+    {
+      "id": "da119938d3268322a91b-6a75c4668893f3d1d34b",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / unsupported tabs offer no tasks and cannot replace a pinned session",
+      "status": "passed",
+      "elapsedMs": 438
+    },
+    {
+      "id": "da119938d3268322a91b-076d2c793fd057bed7f3",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\extension.spec.ts / debug inspector renders scoring and exports bounded diagnostics",
+      "status": "passed",
+      "elapsedMs": 1245
+    },
+    {
+      "id": "7a6b7f055de881ba5856-524ebaeceb7f3683bb69",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\geometry.spec.ts / passive overlay follows geometry, all four edges, browser zoom and reduced motion",
+      "status": "passed",
+      "elapsedMs": 7456,
+      "disposalMs": 413.6944999999978
+    },
+    {
+      "id": "1f1785dee40219527314-070dc4bb76ca9d3e29f4",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / Back and Forward keep fresh full-document and same-document bindings without duplicate progress",
+      "status": "passed",
+      "elapsedMs": 5989,
+      "disposalMs": 486.76140000000305
+    },
+    {
+      "id": "1f1785dee40219527314-56ce7a14cc21c6fc5746",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores running without duplicate guidance",
+      "status": "passed",
+      "elapsedMs": 5585,
+      "disposalMs": 388.7256000000052
+    },
+    {
+      "id": "1f1785dee40219527314-be21f435b08ad4792b7c",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep running pinned",
+      "status": "passed",
+      "elapsedMs": 5394,
+      "disposalMs": 381.42630000000645
+    },
+    {
+      "id": "1f1785dee40219527314-437b9479dd0a4779aaa7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores waiting without duplicate guidance",
+      "status": "passed",
+      "elapsedMs": 5986,
+      "disposalMs": 389.94749999999476
+    },
+    {
+      "id": "1f1785dee40219527314-6ec96b1af719c96694dd",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep waiting pinned",
+      "status": "passed",
+      "elapsedMs": 5836,
+      "disposalMs": 453.9661999999953
+    },
+    {
+      "id": "1f1785dee40219527314-d70e5278bf6ff91639e1",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / actual service-worker suspension restores paused without duplicate guidance",
+      "status": "passed",
+      "elapsedMs": 5836,
+      "disposalMs": 356.3767999999982
+    },
+    {
+      "id": "1f1785dee40219527314-597074e75fe172678687",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\lifecycle.spec.ts / tab switching and closure keep paused pinned",
+      "status": "passed",
+      "elapsedMs": 4431,
+      "disposalMs": 388.73769999999786
+    },
+    {
+      "id": "23aa19f1721e64a18ead-b3a0ff37e08a4f53c045",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed",
+      "elapsedMs": 10324,
+      "disposalMs": 390.4299000000028
+    },
+    {
+      "id": "23aa19f1721e64a18ead-7a0956c620b829c1e6bb",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / open shadow roots refresh and verify controls without reading field values",
+      "status": "passed",
+      "elapsedMs": 4708,
+      "disposalMs": 372.46059999999125
+    },
+    {
+      "id": "23aa19f1721e64a18ead-81a5634f1aaf1f2235e8",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / same-document navigation with replaced DOM verifies once and preserves the session",
+      "status": "passed",
+      "elapsedMs": 5699,
+      "disposalMs": 385.65970000001835
+    },
+    {
+      "id": "23aa19f1721e64a18ead-1b4c07b5776b2e1e2407",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / edit entry points use page and section context, then stop at publishing or an undeclared edit effect",
+      "status": "passed",
+      "elapsedMs": 6604,
+      "disposalMs": 390.49619999999413
+    },
+    {
+      "id": "23aa19f1721e64a18ead-bd3933e53c136e41e9e6",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / language intent selects the primary popup, awaits a choice, then verifies the chosen destination",
+      "status": "passed",
+      "elapsedMs": 6376,
+      "disposalMs": 414.6075000000128
+    },
+    {
+      "id": "23aa19f1721e64a18ead-9af36e646dd32ee1e408",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / detached popups need matching purpose and user interaction, and description changes rescan the target",
+      "status": "passed",
+      "elapsedMs": 6928,
+      "disposalMs": 412.3429999999935
+    },
+    {
+      "id": "23aa19f1721e64a18ead-ca7ec0b7bb01545a734e",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed",
+      "elapsedMs": 6530,
+      "disposalMs": 522.1003999999957
+    },
+    {
+      "id": "23aa19f1721e64a18ead-8cab36428ca2c3553739",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / page loads verify the actual destination, reject stale IDs, preserve pause and stop",
+      "status": "passed",
+      "elapsedMs": 6015,
+      "disposalMs": 382.0935999999929
+    },
+    {
+      "id": "23aa19f1721e64a18ead-1a454340f45fc5d70cb7",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / changed controls invalidate pending plans and memory, and forgetting stops observation",
+      "status": "passed",
+      "elapsedMs": 4400,
+      "disposalMs": 402.31710000001476
+    },
+    {
+      "id": "23aa19f1721e64a18ead-8eba35e1c8783c2e4460",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / goal form uses semantic fallback, model proposals are checked, and consequential controls stop guidance",
+      "status": "passed",
+      "elapsedMs": 6797,
+      "disposalMs": 376.835699999996
+    },
+    {
+      "id": "23aa19f1721e64a18ead-925ae3ca7b96eeda0496",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\live-navigation.spec.ts / site knowledge survives a complete browser restart and clear-all removes it",
+      "status": "passed",
+      "elapsedMs": 11208,
+      "disposalMs": 699.8377999999793
+    },
     {
       "id": "a3c2465ddc327f7e7bba-1c094d1726e7ac73ef4d",
       "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / heading hierarchy resolves repeated section controls and refreshes local site context",
       "status": "passed",
-      "elapsedMs": 5786,
-      "disposalMs": 399.6322999999993
+      "elapsedMs": 5649,
+      "disposalMs": 375.2038000000175
     },
     {
       "id": "a3c2465ddc327f7e7bba-4a30cd92bb411900760d",
       "name": " / core-desktop / tests\\browser\\extension\\core\\page-context.spec.ts / structured model intent survives a rerendered owned menu while invalid AI falls back to live matching",
       "status": "passed",
-      "elapsedMs": 6144,
-      "disposalMs": 401.7338
+      "elapsedMs": 5891,
+      "disposalMs": 363.49069999999483
+    },
+    {
+      "id": "af04636c97843afb0727-b12bd7332448f7394a23",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains one destination through modal, full document navigation and preference selection",
+      "status": "passed",
+      "elapsedMs": 6052,
+      "disposalMs": 376.6396999999997
+    },
+    {
+      "id": "af04636c97843afb0727-78bafa935906f7b29ef3",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a wrong native selection cannot complete the destination",
+      "status": "passed",
+      "elapsedMs": 5169,
+      "disposalMs": 359.9327999999805
+    },
+    {
+      "id": "af04636c97843afb0727-f6fffe7b4167aaeb2a67",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / saved routes persist across browser restart and rebind after a website change",
+      "status": "passed",
+      "elapsedMs": 10501,
+      "disposalMs": 721.1491000000096
+    },
+    {
+      "id": "af04636c97843afb0727-e5356fcfbed58b72cfda",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / retains the objective while a stale control is replaced and recalculates",
+      "status": "passed",
+      "elapsedMs": 5544,
+      "disposalMs": 361.717799999984
+    },
+    {
+      "id": "af04636c97843afb0727-78e5a106d8db1b52bc93",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / cross-origin destination requires continuation and then verifies the retained task",
+      "status": "passed",
+      "elapsedMs": 9723,
+      "disposalMs": 405.140699999989
+    },
+    {
+      "id": "af04636c97843afb0727-2d4f52115b9886cd71df",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / a linked popup retains task context through explicit tab continuation",
+      "status": "passed",
+      "elapsedMs": 5728,
+      "disposalMs": 411.93210000000545
+    },
+    {
+      "id": "af04636c97843afb0727-b3fcb2b109b82d41386e",
+      "name": " / core-desktop / tests\\browser\\extension\\core\\task-journey.spec.ts / model follow-ups receive the original destination and verified progress after a dynamic menu",
+      "status": "passed",
+      "elapsedMs": 5905,
+      "disposalMs": 424.6389999999956
+    },
+    {
+      "id": "23aa19f1721e64a18ead-042cc410042fbb986f65",
+      "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / live inspector explains goal candidates and exports private verification evidence without changing navigation",
+      "status": "passed",
+      "elapsedMs": 10318,
+      "disposalMs": 390.8618999999999
+    },
+    {
+      "id": "23aa19f1721e64a18ead-daddecff84299e99c2b6",
+      "name": " / narrow / tests\\browser\\extension\\core\\live-navigation.spec.ts / generic discovery plans menu and preference steps, validates arrival, and redacts memory",
+      "status": "passed",
+      "elapsedMs": 7519,
+      "disposalMs": 399.1463999999978
     }
   ]
 }

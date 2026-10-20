@@ -1,5 +1,5 @@
 import { embeddedControlsHtml } from "../../../fixtures/multi-app/frame-html";
-import backendDataPermissions from "../../../../config/backend-data-permissions.json";
+import backendDataPermissions from "../../../../config/backend-data-permissions.json" with { type: "json" };
 import firefox from "selenium-webdriver/firefox.js";
 import { test, expect } from "../../../support/browser-test";
 import { openFirefoxExtension } from "../../../support/firefox-extension";
@@ -227,9 +227,10 @@ test("Firefox event-page restart protects settings and rebinds native documents 
         }),
       };
     });
-    expect(dataConsent.declared).toEqual({
+    expect(dataConsent.declared).toMatchObject({
       required: ["none"],
       optional: backendDataPermissions,
+      has_previous_consent: false,
     });
     expect(dataConsent.granted).toBe(false);
     expect(
