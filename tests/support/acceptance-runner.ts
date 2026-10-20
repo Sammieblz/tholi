@@ -1,7 +1,10 @@
 import { expect, type TestInfo, type Locator } from "@playwright/test";
 import type { AcceptanceCase } from "../../packages/acceptance-metrics";
 import { openNavigatorExtension } from "./navigator-extension";
-import { hasFinalStepEvidence } from "./final-step-evidence";
+import {
+  hasFinalStepEvidence,
+  hasRecoveredSectionEvidence,
+} from "./final-step-evidence";
 import { negativeGoals, refusalCases } from "./acceptance-contracts";
 export type NavigatorApp = Awaited<ReturnType<typeof openNavigatorExtension>>;
 export type GoalContract = { id: string; goal: string; expected: string };
@@ -188,9 +191,53 @@ export async function runGoalContract(
   await probe.resetClicks();
   const reply = await probe.setGoal(contract.goal);
   expect(reply.error).toBeUndefined();
+  const acknowledged = reply.view;
+  if (
+    reply.view.status === "running" &&
+    reply.view.goalPlan.status === "unresolved" &&
+    reply.view.goalPlan.recoveryStage === "retrieval"
+  ) {
+    // A changing page may acknowledge the retained request before guidance is
+    // ready. Wait for this request, keeping the target and outcome oracles below.
+    const requestId = reply.view.request.id;
+    await expect
+      .poll(
+        async () => {
+          const current = await probe.progress();
+          return (
+            current.request?.id === requestId &&
+            current.status === "running" &&
+            (current.goalPlan?.status === "guiding" ||
+              (oracle.kind === "section" &&
+                current.goalPlan?.status === "completed"))
+          );
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true);
+    reply.view = await probe.view();
+    expect(reply.view.request?.id).toBe(requestId);
+  }
   result.modelCalls += Number(reply.view.goalPlan.source === "on-device");
   result.unresolved = reply.view.goalPlan.status === "unresolved";
   result.stopped = reply.view.status === "stopped";
+  if (oracle.kind === "section" && reply.view.goalPlan.status === "completed") {
+    const actual = await oracle.outcome();
+    const correct = hasRecoveredSectionEvidence(
+      acknowledged,
+      reply.view,
+      oracle.selectedLabel,
+      actual,
+    );
+    result.targets.push(correct);
+    result.verifications.push(actual);
+    if (!actual) result.falseSuccess++;
+    await recordAutomation(probe, result);
+    result.completed = correct && actual;
+    expect(correct).toBe(true);
+    expect(actual).toBe(true);
+    return;
+  }
   expect(reply.view.goalPlan.status).toBe("guiding");
   let view = reply.view;
   let selected = view.page.controls.find(

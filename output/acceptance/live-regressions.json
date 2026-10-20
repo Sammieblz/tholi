@@ -1,13 +1,13 @@
 {
   "artifactFiles": {
     "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
-    "THIRD_PARTY_NOTICES.md": "acf7a0f83e3e7a4cfb526fb19738477ecf5e10f4e54cd1879feaff85dd4899ba",
-    "content.js": "a664d8f059a844e9fef34cf2eb72166b26a76578e2033b24607eb13d1e0b3230",
-    "content.js.map": "b97213077cf3a76ceb1d1c622791c913af0358b53304768d7bf07200190a00fd",
+    "THIRD_PARTY_NOTICES.md": "3ec97b8a467f3d68a45d531e9b0df2ef420f48f3e1d415846d24da5aa728fd70",
+    "content.js": "8b8ecd2b822734c60f9fed61147813673de4e6ee430a4528361c85a47c6e3c17",
+    "content.js.map": "58873781eb0ac15987a1371bd79bfd43cbbf9b70df7f8961ed6b8c02b2bffe6e",
     "discovery-lock.json": "4aa189c178714f51ffdaab3272389f3a3d3c71d5652fe74014a322c5cd6d6f6a",
-    "frame-agent.js": "42008dda93fdcc6218b68754e194ab77a2207382fd6d972162b05054ce19c741",
-    "frame-agent.js.map": "ce6f198983f95ade8b37fa6425b0f280812b02ffa93c4dc1b2957e30d2aefcc3",
-    "inference.js": "5799afc035119dd23928e177467567a3e89c87829ab3aa6afc781484c1f0b5af",
+    "frame-agent.js": "1efa0b7cc0ad219a57c2ef8552ffef0b9c2af5b10c5618efb9c9729483c6d4a0",
+    "frame-agent.js.map": "79752b2d318ee55d308d27df89379ffdac9f225bf0601be104e51dec34a185cd",
+    "inference.js": "6b2cd2faa8b374eb4c124922cca29feac49649441367cf4eea4860813aa2739a",
     "licenses/@babel_runtime-LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76",
     "licenses/@base-ui_react-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
     "licenses/@base-ui_utils-LICENSE": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a",
@@ -234,7 +234,7 @@
     "licenses/zod-LICENSE": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8",
     "licenses/zod-to-json-schema-LICENSE": "80d3168ad2f70f6f5bb2ab22b23414707abf6f0a392034891481ae36a1a429d4",
     "licenses/zwitch-license": "ca4662cb5d1b738fbe5350c0d5485ba11773b4b7208974082ae6e129a52d631d",
-    "manifest.json": "9818f864ae0fa37e7e617d50084e566c5744d208a5140bb9bc7f58148fb8c522",
+    "manifest.json": "dc551369a82eee24d242d85b489276b069412c6f93f8b9934ade697b613b90cd",
     "manrope-latin-wght-normal-73PUZEUA.woff2": "a30ddcd349703aff7464c34bef3fffdff405ee50c113440d7c8693c02d210972",
     "media/icon-128.png": "046fc8702746ec70d79611641cc7eb13dc5b2f44976651884212ed3cf1395968",
     "media/icon-16.png": "31cb0cc626200eb9127b0c86bd57a9048ad296d0580eec4b20592ca7b182cd46",
@@ -249,46 +249,46 @@
     "models/Xenova/all-MiniLM-L6-v2/tokenizer.json": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
     "models/Xenova/all-MiniLM-L6-v2/tokenizer_config.json": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
     "ocr-lock.json": "2d9400385852cab1afb909cf9260876e45c1a58e8f6a839bbf64c190eff1aa7d",
-    "ocr-worker.js": "a670af4337a9d24d40dc560d2e70aa38b866ccd4abee667882748fe2d4cdd19a",
+    "ocr-worker.js": "769ec50f0aa263b788566b69060618e466466a1b8ac0ced9328c182182997fda",
     "ocr/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "ocr/eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
     "ocr/tesseract-core-lstm.wasm.js": "775a35df6f2ae100e02609443e6bd5cafcd07983dd6175454ca4a432a7730687",
     "ocr/tesseract-core-simd-lstm.wasm.js": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
     "ocr/worker.min.js": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
     "offscreen.html": "6663936252c9e7a0f580b9015f73df49838acc7ede1716689dfc6510881275b3",
-    "offscreen.js": "90ebd2bbb701da34f7689b38d79c90fdf26ccff867fee3f321a3ffe48c3838c7",
-    "offscreen.js.map": "9fa8dea99b1fcdbfdd4598e54ddae68c5e33e5c400b37b7824c9ba3f442e9bb9",
+    "offscreen.js": "da602eb10b9f003629f2aee30a428e48fe8a3357e94cbee0b31fe8ebff594bac",
+    "offscreen.js.map": "f52844b7e50e40e6105972fc7cf9af9010bafdab3cb4c609a2e5b0539d6d13e1",
     "outfit-latin-wght-normal-5FXBKKJF.woff2": "6c18d579fd87c3776be068b762cbc83fde3acb543d49eabd3ade842eb987e887",
     "runtime/ort-wasm-simd-threaded.mjs": "c57ca56328877353a575e51bbca6f18450027d6c9bf2307a2cb2c41363b4de9f",
     "runtime/ort-wasm-simd-threaded.wasm": "06ba057753da3847e4c24f02d91ab133455b0817c69a44993a9a53a2146df9e3",
-    "sidepanel.css": "d65069c883887ea3c485e371def48a17031047b30c3c633ca91339a745612493",
-    "sidepanel.css.map": "d67c3d30603b3be6a8068c156f51b3dd17f942580e9718adf923c5621196fb2f",
+    "sidepanel.css": "c642113af24bcd9a02bafc7b2d6e9882eb44020f24566f81360e16d3e0634cb8",
+    "sidepanel.css.map": "497dcb7292e79e0a24f87c6ad81cf620505e1d00ba87d34bc83f75686411463d",
     "sidepanel.html": "c573a6fd1e89418f559b2084b564f15d2e73468787b893299cddaeeb914dc2f4",
-    "sidepanel.js": "4e71d7e37aeebf4e4a097a2f048a743d68366173326c2bfd76b636411db89fbc",
-    "sidepanel.js.map": "9a9fdce83c765c68d060a87417d6fae24c879a322dbbbd7aa7b308cb3f2f1036",
+    "sidepanel.js": "f850c516ad109a6c9d2e0349a1dae8fa48d119a0ad1b3d5d5df72af8e255073d",
+    "sidepanel.js.map": "76a36a74e2d9147e636ce0ef32bfdd73a5ee2faaaf76af4fc6751e649793d19f",
     "theme-page.js": "796255b3a4d7ae22e2c10aa28fa3fcc24b5e132826a848580547a4139e1d1184",
-    "theme-page.js.map": "c411d0afb3792ea8cdb7187be84c90e5bd5f482beb682ec71ea5169926f07114",
+    "theme-page.js.map": "b9e5fd0ec850d236b16eb069e02ded694f309cdd1fbdc71e81437aabd3de50ff",
     "third-party.json": "b11430b164fe93cf21ed290f8e45b4be9f5d035d89de28bc3e3acb58853feaac",
     "vision-policy.json": "d885022d8ab0bc4f3cd07a065464ce3f4b87a869de09b35861dcc67dda43c7c1",
     "widget.html": "02e067f49f69098d2210b8eabd442c4fa55070ad851f4540106d60ef1728ef04",
-    "worker.js": "ca4f2fdaa19bb0b29afa86adf350d878a04e9016e08d242feb9f3da1cf501fe3",
-    "worker.js.map": "1cd197092ebbdfd37157549c0c342a06340ebc59591d358ccfcdb439ab33753d"
+    "worker.js": "aeeae60d472a121713a9e72e00414ceab71a7e826ae6b491b16b2ab11505857a",
+    "worker.js.map": "c3b87ddbc0bba8cad9c3ccddcc4851c229eb33b93c51e7c438d799fea344527f"
   },
   "target": "chromium",
   "buildTargets": {
-    "chromium": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89",
-    "firefox": "f875a94db65e0335d425dd189a5166812fb151b3762384e228a6ce8914e88799"
+    "chromium": "c53f9ad28c0f6c8b59c18a0c10cea10c94036095691667558e4dda34ffc01357",
+    "firefox": "7cbe24d141ea71becbd15f8f20b83c747242200e73aa1386d6037828ed8d357f"
   },
-  "extensionVersion": "0.10.1",
+  "extensionVersion": "0.11.0",
   "validation": {
     "selection": "complete",
     "tier": "full",
-    "runId": "browser-support-20261017-final-4",
-    "buildDigest": "158656eb14fc86e6872ffa82ea1604b71dfdbb1196074fdb5d1a13aabc9def89"
+    "runId": "882b2113-468b-414e-af1b-743c1eabf04f",
+    "buildDigest": "c53f9ad28c0f6c8b59c18a0c10cea10c94036095691667558e4dda34ffc01357"
   },
   "browsers": [],
   "scope": "live",
-  "evaluatedAt": "2026-10-17T21:44:37.625Z",
+  "evaluatedAt": "2026-10-20T01:17:21.150Z",
   "passed": true,
   "files": [
     "tests/browser/live/authentication.spec.ts",
@@ -308,99 +308,99 @@
       "id": "70f6afe7e350c931056e-7557d055867933e97b21",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 38408,
-      "disposalMs": 6566.893000000004
+      "elapsedMs": 8743,
+      "disposalMs": 759.9640999999992
     },
     {
       "id": "70f6afe7e350c931056e-39dfd278c7dfc4c99486",
       "name": " / live-desktop / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 13476,
-      "disposalMs": 2231.7209999999977
+      "elapsedMs": 9063,
+      "disposalMs": 698.9300999999978
     },
     {
       "id": "9ed70afab1bbfad1daab-734b32180cba89f70f11",
       "name": " / live-desktop / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
       "status": "passed",
-      "elapsedMs": 27954,
-      "disposalMs": 5046.998900000006
+      "elapsedMs": 12575,
+      "disposalMs": 996.1065999999992
     },
     {
       "id": "7a6b7f055de881ba5856-ad4d9c9304397444eca1",
       "name": " / live-desktop / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
       "status": "passed",
-      "elapsedMs": 37125,
-      "disposalMs": 5345.607900000003
+      "elapsedMs": 20487,
+      "disposalMs": 1827.3562999999995
     },
     {
       "id": "49def915946a04ed21ee-45e36e9b474cdacd13be",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
       "status": "passed",
-      "elapsedMs": 23096,
-      "disposalMs": 4896.330799999996
+      "elapsedMs": 10392,
+      "disposalMs": 949.898199999996
     },
     {
       "id": "49def915946a04ed21ee-5453017254bcb6f06e39",
       "name": " / live-desktop / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
       "status": "passed",
-      "elapsedMs": 44983,
-      "disposalMs": 4598.416500000021
+      "elapsedMs": 24117,
+      "disposalMs": 956.2884999999951
     },
     {
       "id": "ad78825e3796ab356f51-d2ed8d38ec30f8d30837",
       "name": " / live-desktop / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
       "status": "passed",
-      "elapsedMs": 52745,
-      "disposalMs": 7684.9563999999955
+      "elapsedMs": 28411,
+      "disposalMs": 1058.3516999999993
     },
     {
       "id": "70f6afe7e350c931056e-aa97a084a2637475fe22",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia How to log in retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 35003,
-      "disposalMs": 5269.962699999996
+      "elapsedMs": 8989,
+      "disposalMs": 926.5303000000004
     },
     {
       "id": "70f6afe7e350c931056e-850d0a7b6c9e50af7ffd",
       "name": " / live-narrow / tests\\browser\\live\\authentication.spec.ts / Wikipedia create account retains context after reaching its actual form",
       "status": "passed",
-      "elapsedMs": 14152,
-      "disposalMs": 2781.2309000000023
+      "elapsedMs": 8571,
+      "disposalMs": 923.6886000000013
     },
     {
       "id": "9ed70afab1bbfad1daab-65a17190a0f75dde6d28",
       "name": " / live-narrow / tests\\browser\\live\\edit.spec.ts / an unqualified edit goal highlights the article toolbar rather than section edit links",
       "status": "passed",
-      "elapsedMs": 25133,
-      "disposalMs": 5253.8348000000115
+      "elapsedMs": 14201,
+      "disposalMs": 2075.406899999998
     },
     {
       "id": "7a6b7f055de881ba5856-6d134c5c0d3dee279752",
       "name": " / live-narrow / tests\\browser\\live\\geometry.spec.ts / live Wikipedia geometry stays aligned through scroll, resize and browser zoom",
       "status": "passed",
-      "elapsedMs": 46660,
-      "disposalMs": 8598.593999999997
+      "elapsedMs": 21206,
+      "disposalMs": 2418.9755000000005
     },
     {
       "id": "49def915946a04ed21ee-ea1cfd200293b6352c6e",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / one Spanish destination survives the language picker and destination-origin permission boundary",
       "status": "passed",
-      "elapsedMs": 26657,
-      "disposalMs": 9972.985799999995
+      "elapsedMs": 11239,
+      "disposalMs": 1376.8656000000046
     },
     {
       "id": "49def915946a04ed21ee-93a15e68c7ee3673f4ec",
       "name": " / live-narrow / tests\\browser\\live\\language.spec.ts / change language highlights the live language selector, not the tools menu",
       "status": "passed",
-      "elapsedMs": 52378,
-      "disposalMs": 8104.374000000011
+      "elapsedMs": 25619,
+      "disposalMs": 1381.6310999999987
     },
     {
       "id": "ad78825e3796ab356f51-392b863573ed61745407",
       "name": " / live-narrow / tests\\browser\\live\\reported-page.spec.ts / reported DreamWorks references and privacy requests",
       "status": "passed",
-      "elapsedMs": 51332,
-      "disposalMs": 10691.738299999997
+      "elapsedMs": 28274,
+      "disposalMs": 1439.335300000006
     }
   ]
 }

@@ -5,6 +5,7 @@ import type { PinnedSession } from "../../../packages/route-registry/session";
 import { dockIntent } from "../../../apps/extension/src/ui/widget/presentation-state";
 import { contentMessageSchema } from "../../../packages/route-schema/index";
 import { fixture } from "../../integration/nlp/fixtures";
+import { interpretRequest } from "../../../packages/nlp/interpret";
 
 const id = "6692779e-ad63-4da7-82cd-a878c1ae23e1";
 function environment(seed: Record<string, unknown> = {}) {
@@ -212,6 +213,126 @@ it("scan churn retains submitted intent but suggestions cannot install a task", 
   expect(session.view!.request?.original).toBe("Open Help");
   expect(session.view!.verifiedSteps).toBe(3);
 });
+
+it.each(["already running", "arrives during foreground"])(
+  "background continuation %s cannot replace foreground intent",
+  async (scenario) => {
+    const { api, session, sender } = environment();
+    const page = { ...fixture(), revision: 1 };
+    const oldRequest = interpretRequest("Open old destination");
+    session.view!.request = oldRequest;
+    const local = await import("../../../apps/extension/src/inference/client");
+    const backend =
+      await import("../../../apps/extension/src/platform/backend-client");
+    vi.spyOn(backend, "backendNlp").mockResolvedValue(undefined);
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let first = true;
+    const planning = vi
+      .spyOn(local, "localNlp")
+      .mockImplementation(async (input) => {
+        if (first) {
+          first = false;
+          await gate;
+        }
+        page.revision++;
+        return {
+          requestId: input.requestId,
+          documentId: input.documentId,
+          revision: input.revision,
+        };
+      });
+    api.tabs.sendMessage.mockImplementation(
+      async (_tab: number, message: any) => {
+        if (message.type === "GET_PAGE")
+          return { page: structuredClone(page), view: session.view };
+        if (message.type === "INSTALL_REQUEST")
+          return {
+            view: { ...session.view, page, request: message.result.request },
+          };
+        return { ok: true };
+      },
+    );
+    const context = {
+      goalGeneration: 0,
+      session,
+      enqueue: async <T>(operation: () => Promise<T>) => operation(),
+      live: () => true,
+      inScope: () => true,
+      knownSites: new Map(),
+      knownTasks: new Map(),
+      suspended: [],
+      attemptVision: vi.fn(),
+      acceptView: async (view: any) => {
+        session.view = view;
+      },
+      save: vi.fn(),
+      remember: vi.fn(),
+    };
+    const { createJourneyService } =
+      await import("../../../apps/extension/src/background/journey-service");
+    const service = createJourneyService(context);
+    const panel = { ...sender, url: api.runtime.getURL("sidepanel.html") };
+    const content = { ...sender, url: "https://example.com/" };
+    const background = () =>
+      service
+        .handleNlp(
+          { type: "NLP_REPLAN", sessionId: id, request: oldRequest },
+          content,
+        )
+        .then(
+          (value) => ({ value, error: undefined }),
+          (error: Error) => ({ value: undefined, error }),
+        );
+    const foreground = () =>
+      service.handleNlp(
+        {
+          type: "SET_GOAL",
+          goal: "Open new destination",
+          revision: 0,
+          sessionId: id,
+          documentId: "document-a",
+        },
+        panel,
+      );
+    try {
+      if (scenario === "already running") {
+        const older = background();
+        await vi.waitFor(() => expect(planning).toHaveBeenCalledOnce());
+        const current = await foreground();
+        release!();
+        expect((await older).error?.message).toMatch(/foreground destination/);
+        expect(current).toMatchObject({
+          view: { request: { original: "Open new destination" } },
+        });
+      } else {
+        const current = foreground();
+        await vi.waitFor(() => expect(planning).toHaveBeenCalledOnce());
+        const reads = api.tabs.sendMessage.mock.calls.length;
+        expect((await background()).error?.message).toMatch(
+          /foreground destination/,
+        );
+        expect(api.tabs.sendMessage.mock.calls).toHaveLength(reads);
+        release!();
+        expect(await current).toMatchObject({
+          view: { request: { original: "Open new destination" } },
+        });
+      }
+      const intents = api.tabs.sendMessage.mock.calls
+        .map((call: any) => call[1].planningIntent)
+        .filter(Boolean);
+      expect(intents).toHaveLength(2);
+      expect(intents[0]).toMatchObject({ phase: "begin" });
+      expect(intents[1]).toEqual({ id: intents[0].id, phase: "end" });
+      expect(session.view!.request?.original).toBe("Open new destination");
+      expect(session.view!.verifiedSteps).toBe(3);
+    } finally {
+      release!();
+    }
+  },
+);
 
 it("assistance requires opt-in, the current document and a visible active surface", async () => {
   const { api, session, sender } = environment();

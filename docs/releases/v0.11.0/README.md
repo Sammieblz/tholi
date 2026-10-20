@@ -17,6 +17,8 @@ It follows the `0.10.1` source series; it does not replace an existing download.
   scope](performance.md), including cache sizing and heavy-page limitations.
 - Keep a destination through transient scan changes, with bounded recovery and
   fresh observations instead of repeatedly showing a page-change error.
+- Hold automatic recovery while a new foreground destination is planning, so an
+  older request cannot close its inference channel or install stale guidance.
 - Interpret natural sign-up/sign-in requests, synonyms and Unicode punctuation
   more consistently while protecting quoted names and URLs.
 - Reconcile selected menus, routes and foreground content to avoid repeatedly

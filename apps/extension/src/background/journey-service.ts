@@ -37,6 +37,10 @@ interface Context {
 }
 
 export function createJourneyService(context: Context) {
+  // A continuation must not change the query projection or install old work
+  // while a trusted foreground destination is being planned.
+  let foregroundRevision = 0;
+  let activeForeground = 0;
   async function handleNlp(raw: any, sender: Runtime.MessageSender) {
     const startedGeneration = context.goalGeneration;
     if (sender.id !== api.runtime.id) throw new Error("Invalid sender.");
@@ -45,193 +49,275 @@ export function createJourneyService(context: Context) {
       throw new Error("Trusted extension panel required.");
     if (!fromContent && !messageSchema.safeParse(raw).success)
       throw new Error("Invalid request.");
-    const captured = await context.enqueue(async () => {
-      if (
-        !context.session ||
-        !context.live() ||
-        context.session.navigationPending ||
-        context.session.view?.status !== "running"
-      )
-        throw new Error("Start or resume navigation first.");
-      if (
-        fromContent &&
-        (sender.tab?.id !== context.session.tabId ||
-          sender.documentId !== context.session.documentId ||
-          raw.sessionId !== context.session.sessionId ||
-          !context.inScope(sender.url || ""))
-      )
-        throw new Error("Stale document.");
-      if (
-        !fromContent &&
-        ((raw.sessionId && raw.sessionId !== context.session.sessionId) ||
-          (raw.documentId && raw.documentId !== context.session.documentId))
-      )
-        throw new Error(
-          "This destination belongs to a previous page. Send it on the current page.",
-        );
-      const query = sanitizeGoal(
-        raw.text || raw.goal || raw.request?.original || "",
-      );
-      const reply = await api.tabs.sendMessage(context.session.tabId, {
-        type: "GET_PAGE",
-        sessionId: context.session.sessionId,
-        ...(query ? { query } : {}),
-      });
-      if (!reply.page) throw new Error("Fresh page observation required.");
-      // A destination is an intent, not a binding to a control. Plan on the
-      // fresh scan; native document/session identity remains mandatory below.
-      const request = fromContent
-        ? requestSchema.parse(raw.request)
-        : raw.type === "CLARIFY"
-          ? context.session.view.request
-          : undefined;
-      return {
-        sessionId: context.session.sessionId,
-        documentId: context.session.documentId!,
-        request,
-        page: reply.page,
-        origin: context.session.origin!,
-        journey: context.session.view.journey,
-        tabId: context.session.tabId,
-        activeRequest: context.session.view.request,
-        target:
-          context.session.view.request?.tasks[
-            context.session.view.request.active
-          ]?.target,
-      };
-    });
-    let input: PlanInput = planInputSchema.parse({
-      requestId: captured.request?.id || raw.requestId || crypto.randomUUID(),
-      documentId: captured.documentId,
-      revision: captured.page.revision,
-      text: sanitizeGoal(captured.request?.original || raw.text || raw.goal),
-      observation: captured.page,
-      strategy: raw.strategy || captured.journey?.strategy || "fastest",
-      request: captured.request,
-      choice: raw.choice,
-      context: {
-        target: captured.target,
-        verifiedDestination: fromContent ? raw.verifiedDestination : undefined,
-      },
-      protocolVersion: 2,
-      tabId: captured.tabId,
-      frameId: 0,
-      navigationLedger: context.session?.ledger,
-      workflow: captured.journey?.workflow,
-      contextRevision: captured.journey?.workflow?.revision || 0,
-    });
-    if (
-      raw.type === "SET_GOAL" &&
-      captured.activeRequest &&
-      !["completed", "canceled"].includes(captured.activeRequest.status)
-    ) {
-      const parsed = interpretRequest(input.text, input.context, {
-        clauses: true,
-      });
-      if (sameDestination(parsed, captured.activeRequest)) {
-        input.request = captured.activeRequest;
-        input.requestId = captured.activeRequest.id;
-        input.text = captured.activeRequest.original;
-      }
+    const foreground = raw.type === "SET_GOAL" || raw.type === "CLARIFY";
+    if (foreground) {
+      foregroundRevision++;
+      activeForeground++;
     }
-    const site = context.knownSites.get(captured.origin);
-    input.journey = captured.journey;
-    if (raw.savedRouteId) {
-      const saved = (context.knownTasks.get(captured.origin) || []).find(
-        (task) => task.id === raw.savedRouteId,
-      );
-      if (saved) {
-        input.savedRoute = saved;
-        input.context = { ...input.context, target: saved.objective.purpose };
-      }
-    }
-    if (captured.journey?.savedRouteId)
-      input.savedRoute = (
-        context.knownTasks.get(captured.journey.origin) || []
-      ).find((t) => t.id === captured.journey!.savedRouteId);
-    for (let attempt = 0; attempt < 2; attempt++) {
-      let value;
-      try {
-        value = await backendNlp(input, raw.type === "NLP_SUGGEST", site);
-      } catch {
-        value = undefined;
-      }
-      if (startedGeneration !== context.goalGeneration)
-        throw new Error("Planning was replaced or canceled.");
-      value ??= await localNlp(input, site, raw.type === "NLP_SUGGEST");
-      const applied = await context.enqueue(async () => {
-        if (startedGeneration !== context.goalGeneration)
-          throw new Error("This request was replaced or canceled.");
-        if (
-          fromContent &&
-          context.session?.view?.request?.id !== captured.request?.id
-        )
-          throw new Error("Older request result.");
+    const intentRevision = foregroundRevision;
+    const intentId = foreground ? crypto.randomUUID() : undefined;
+    let intentSession: { tabId: number; sessionId: string } | undefined;
+    const assertCurrentIntent = () => {
+      if (
+        intentRevision !== foregroundRevision ||
+        (!foreground && activeForeground)
+      )
+        throw new Error("Planning was replaced by a foreground destination.");
+    };
+    try {
+      const captured = await context.enqueue(async () => {
+        assertCurrentIntent();
         if (
           !context.session ||
-          context.session.sessionId !== captured.sessionId ||
-          context.session.view?.status !== "running" ||
-          context.session.navigationPending
+          !context.live() ||
+          context.session.navigationPending ||
+          context.session.view?.status !== "running"
         )
-          throw new Error("Planning canceled by navigation or Stop.");
-        if (context.session.documentId !== captured.documentId)
-          throw new Error(
-            "The website moved to another page. Send this destination on the current page.",
-          );
-        const fresh = await api.tabs.sendMessage(context.session.tabId, {
-          type: "GET_PAGE",
-          sessionId: context.session.sessionId,
-        });
+          throw new Error("Start or resume navigation first.");
         if (
           fromContent &&
-          input.journey &&
-          fresh.view?.journey?.requestTaskId === input.journey.requestTaskId &&
-          (fresh.view.journey.totalVerified ??
-            fresh.view.journey.progress.length) !==
-            (input.journey.totalVerified ?? input.journey.progress.length)
-        ) {
-          input = {
-            ...input,
-            journey: fresh.view.journey,
-            observation: fresh.page,
-            revision: fresh.page.revision,
-            documentId: context.session.documentId!,
-          };
-          return undefined;
-        }
-        if (
-          context.session.documentId !== input.documentId ||
-          fresh.page.revision !== input.revision ||
-          (input.workflow &&
-            fresh.view?.journey?.workflow?.revision !== input.contextRevision)
-        ) {
-          input = {
-            ...input,
-            documentId: context.session.documentId!,
-            observation: fresh.page,
-            revision: fresh.page.revision,
-            workflow: fresh.view?.journey?.workflow,
-            contextRevision: fresh.view?.journey?.workflow?.revision || 0,
-          };
-          return undefined;
-        }
-        if (raw.type === "NLP_SUGGEST")
-          return {
-            requestId: input.requestId,
-            documentId: input.documentId,
-            revision: input.revision,
-            contextRevision: input.contextRevision,
-            suggestions: value,
-          };
-        const result = resultSchema.parse(value);
-        if (
-          result.documentId !== input.documentId ||
-          result.revision !== input.revision ||
-          result.requestId !== input.requestId ||
-          result.contextRevision !== input.contextRevision
+          (sender.tab?.id !== context.session.tabId ||
+            sender.documentId !== context.session.documentId ||
+            raw.sessionId !== context.session.sessionId ||
+            !context.inScope(sender.url || ""))
         )
-          throw new Error("Stale planning result.");
-        if (fromContent) {
+          throw new Error("Stale document.");
+        if (
+          !fromContent &&
+          ((raw.sessionId && raw.sessionId !== context.session.sessionId) ||
+            (raw.documentId && raw.documentId !== context.session.documentId))
+        )
+          throw new Error(
+            "This destination belongs to a previous page. Send it on the current page.",
+          );
+        const query = sanitizeGoal(
+          raw.text || raw.goal || raw.request?.original || "",
+        );
+        if (intentId)
+          intentSession = {
+            tabId: context.session.tabId,
+            sessionId: context.session.sessionId,
+          };
+        const reply = await api.tabs.sendMessage(context.session.tabId, {
+          type: "GET_PAGE",
+          ...(intentId
+            ? { planningIntent: { id: intentId, phase: "begin" } }
+            : {}),
+          sessionId: context.session.sessionId,
+          ...(query ? { query } : {}),
+        });
+        assertCurrentIntent();
+        if (!reply.page) throw new Error("Fresh page observation required.");
+        // A destination is an intent, not a binding to a control. Plan on the
+        // fresh scan; native document/session identity remains mandatory below.
+        const request = fromContent
+          ? requestSchema.parse(raw.request)
+          : raw.type === "CLARIFY"
+            ? context.session.view.request
+            : undefined;
+        return {
+          sessionId: context.session.sessionId,
+          documentId: context.session.documentId!,
+          request,
+          page: reply.page,
+          origin: context.session.origin!,
+          journey: context.session.view.journey,
+          tabId: context.session.tabId,
+          activeRequest: context.session.view.request,
+          target:
+            context.session.view.request?.tasks[
+              context.session.view.request.active
+            ]?.target,
+        };
+      });
+      let input: PlanInput = planInputSchema.parse({
+        requestId: captured.request?.id || raw.requestId || crypto.randomUUID(),
+        documentId: captured.documentId,
+        revision: captured.page.revision,
+        text: sanitizeGoal(captured.request?.original || raw.text || raw.goal),
+        observation: captured.page,
+        strategy: raw.strategy || captured.journey?.strategy || "fastest",
+        request: captured.request,
+        choice: raw.choice,
+        context: {
+          target: captured.target,
+          verifiedDestination: fromContent
+            ? raw.verifiedDestination
+            : undefined,
+        },
+        protocolVersion: 2,
+        tabId: captured.tabId,
+        frameId: 0,
+        navigationLedger: context.session?.ledger,
+        workflow: captured.journey?.workflow,
+        contextRevision: captured.journey?.workflow?.revision || 0,
+      });
+      if (
+        raw.type === "SET_GOAL" &&
+        captured.activeRequest &&
+        !["completed", "canceled"].includes(captured.activeRequest.status)
+      ) {
+        const parsed = interpretRequest(input.text, input.context, {
+          clauses: true,
+        });
+        if (sameDestination(parsed, captured.activeRequest)) {
+          input.request = captured.activeRequest;
+          input.requestId = captured.activeRequest.id;
+          input.text = captured.activeRequest.original;
+        }
+      }
+      const site = context.knownSites.get(captured.origin);
+      input.journey = captured.journey;
+      if (raw.savedRouteId) {
+        const saved = (context.knownTasks.get(captured.origin) || []).find(
+          (task) => task.id === raw.savedRouteId,
+        );
+        if (saved) {
+          input.savedRoute = saved;
+          input.context = { ...input.context, target: saved.objective.purpose };
+        }
+      }
+      if (captured.journey?.savedRouteId)
+        input.savedRoute = (
+          context.knownTasks.get(captured.journey.origin) || []
+        ).find((t) => t.id === captured.journey!.savedRouteId);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        assertCurrentIntent();
+        let value;
+        try {
+          value = await backendNlp(input, raw.type === "NLP_SUGGEST", site);
+        } catch {
+          value = undefined;
+        }
+        assertCurrentIntent();
+        if (startedGeneration !== context.goalGeneration)
+          throw new Error("Planning was replaced or canceled.");
+        value ??= await localNlp(input, site, raw.type === "NLP_SUGGEST");
+        const applied = await context.enqueue(async () => {
+          assertCurrentIntent();
+          if (startedGeneration !== context.goalGeneration)
+            throw new Error("This request was replaced or canceled.");
+          if (
+            fromContent &&
+            context.session?.view?.request?.id !== captured.request?.id
+          )
+            throw new Error("Older request result.");
+          if (
+            !context.session ||
+            context.session.sessionId !== captured.sessionId ||
+            context.session.view?.status !== "running" ||
+            context.session.navigationPending
+          )
+            throw new Error("Planning canceled by navigation or Stop.");
+          if (context.session.documentId !== captured.documentId)
+            throw new Error(
+              "The website moved to another page. Send this destination on the current page.",
+            );
+          const fresh = await api.tabs.sendMessage(context.session.tabId, {
+            type: "GET_PAGE",
+            sessionId: context.session.sessionId,
+          });
+          assertCurrentIntent();
+          if (
+            fromContent &&
+            input.journey &&
+            fresh.view?.journey?.requestTaskId ===
+              input.journey.requestTaskId &&
+            (fresh.view.journey.totalVerified ??
+              fresh.view.journey.progress.length) !==
+              (input.journey.totalVerified ?? input.journey.progress.length)
+          ) {
+            input = {
+              ...input,
+              journey: fresh.view.journey,
+              observation: fresh.page,
+              revision: fresh.page.revision,
+              documentId: context.session.documentId!,
+            };
+            return undefined;
+          }
+          if (
+            context.session.documentId !== input.documentId ||
+            fresh.page.revision !== input.revision ||
+            (input.workflow &&
+              fresh.view?.journey?.workflow?.revision !== input.contextRevision)
+          ) {
+            input = {
+              ...input,
+              documentId: context.session.documentId!,
+              observation: fresh.page,
+              revision: fresh.page.revision,
+              workflow: fresh.view?.journey?.workflow,
+              contextRevision: fresh.view?.journey?.workflow?.revision || 0,
+            };
+            return undefined;
+          }
+          if (raw.type === "NLP_SUGGEST")
+            return {
+              requestId: input.requestId,
+              documentId: input.documentId,
+              revision: input.revision,
+              contextRevision: input.contextRevision,
+              suggestions: value,
+            };
+          const result = resultSchema.parse(value);
+          if (
+            result.documentId !== input.documentId ||
+            result.revision !== input.revision ||
+            result.requestId !== input.requestId ||
+            result.contextRevision !== input.contextRevision
+          )
+            throw new Error("Stale planning result.");
+          if (fromContent) {
+            if (needsVision(result.plan, !!result.clarification))
+              setTimeout(
+                () =>
+                  void context.attemptVision(
+                    captured.sessionId,
+                    result.requestId,
+                  ),
+                100,
+              );
+            return result;
+          }
+          if (
+            raw.type === "SET_GOAL" &&
+            context.session.view?.journey &&
+            context.session.view.request &&
+            result.request?.id !== context.session.view.request.id
+          ) {
+            const correction =
+              !!result.workflow &&
+              result.workflow.id === context.session.view.journey.workflow?.id;
+            const parked =
+              !correction &&
+              suspendJourney(
+                context.session.view.journey,
+                context.session.view.request,
+                context.session.origin!,
+                context.session.tabId,
+              );
+            if (parked && !context.suspended.some((e) => e.id === parked.id)) {
+              if (context.suspended.length >= 5)
+                throw new Error(
+                  "Five unfinished journeys are saved. Remove one from Resume previous task, then submit this destination again.",
+                );
+              context.suspended.push(parked);
+            }
+          }
+          assertCurrentIntent();
+          const reply = await api.tabs.sendMessage(context.session.tabId, {
+            type: "INSTALL_REQUEST",
+            sessionId: context.session.sessionId,
+            result,
+            strategy: raw.strategy,
+            savedRouteId: raw.savedRouteId,
+          });
+          assertCurrentIntent();
+          if (reply.error) return undefined;
+          await context.acceptView(reply.view);
+          await context.remember();
+          await context.save();
           if (needsVision(result.plan, !!result.clarification))
             setTimeout(
               () =>
@@ -241,115 +327,83 @@ export function createJourneyService(context: Context) {
                 ),
               100,
             );
-          return result;
-        }
+          return structuredClone(context.session);
+        });
+        if (applied) return applied;
+      }
+      // Suggestions cannot install or replace a task, including during scan churn.
+      if (raw.type === "NLP_SUGGEST")
+        return {
+          requestId: input.requestId,
+          documentId: captured.documentId,
+          revision: input.revision,
+          contextRevision: input.contextRevision,
+          suggestions: [],
+        };
+      // Retain a first request too, rather than claiming retention while leaving the
+      // previous task in the panel after a mutation storm exhausted stale retries.
+      const request =
+        input.request ||
+        interpretRequest(input.text, input.context, { clauses: true });
+      request.id = input.requestId;
+      const retained = await context.enqueue(async () => {
+        assertCurrentIntent();
         if (
-          raw.type === "SET_GOAL" &&
-          context.session.view?.journey &&
-          context.session.view.request &&
-          result.request?.id !== context.session.view.request.id
-        ) {
-          const correction =
-            !!result.workflow &&
-            result.workflow.id === context.session.view.journey.workflow?.id;
-          const parked =
-            !correction &&
-            suspendJourney(
-              context.session.view.journey,
-              context.session.view.request,
-              context.session.origin!,
-              context.session.tabId,
-            );
-          if (parked && !context.suspended.some((e) => e.id === parked.id)) {
-            if (context.suspended.length >= 5)
-              throw new Error(
-                "Five unfinished journeys are saved. Remove one from Resume previous task, then submit this destination again.",
-              );
-            context.suspended.push(parked);
-          }
-        }
+          startedGeneration !== context.goalGeneration ||
+          !context.session ||
+          context.session.sessionId !== captured.sessionId ||
+          context.session.documentId !== captured.documentId ||
+          context.session.view?.status !== "running" ||
+          context.session.navigationPending
+        )
+          return;
+        const fresh = await api.tabs.sendMessage(context.session.tabId, {
+          type: "GET_PAGE",
+          sessionId: context.session.sessionId,
+        });
+        if (!fresh.page) return;
+        const pending = {
+          requestId: request.id,
+          documentId: captured.documentId,
+          revision: fresh.page.revision,
+          protocolVersion: 2,
+          contextRevision: fresh.view?.journey?.workflow?.revision || 0,
+          status: "pending-indexing",
+          request,
+          reason:
+            "The page is still updating. I’m checking its controls; your destination is retained.",
+          activity: {
+            embedded: 0,
+            cacheHits: 0,
+            llmCalls: 0,
+            modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+          },
+        };
+        if (fromContent) return pending;
         const reply = await api.tabs.sendMessage(context.session.tabId, {
           type: "INSTALL_REQUEST",
           sessionId: context.session.sessionId,
-          result,
-          strategy: raw.strategy,
-          savedRouteId: raw.savedRouteId,
+          result: pending,
         });
-        if (reply.error) return undefined;
-        await context.acceptView(reply.view);
-        await context.remember();
-        await context.save();
-        if (needsVision(result.plan, !!result.clarification))
-          setTimeout(
-            () =>
-              void context.attemptVision(captured.sessionId, result.requestId),
-            100,
-          );
-        return structuredClone(context.session);
+        if (reply.view) {
+          await context.acceptView(reply.view);
+          await context.save();
+          return structuredClone(context.session);
+        }
       });
-      if (applied) return applied;
+      if (retained) return retained;
+      throw new Error("Planning was replaced or canceled.");
+    } finally {
+      if (foreground) activeForeground--;
+      if (intentId && intentSession)
+        void api.tabs
+          .sendMessage(intentSession.tabId, {
+            type: "GET_PAGE",
+            sessionId: intentSession.sessionId,
+            planningIntent: { id: intentId, phase: "end" },
+          })
+          .catch(() => {});
     }
-    // Suggestions cannot install or replace a task, including during scan churn.
-    if (raw.type === "NLP_SUGGEST")
-      return {
-        requestId: input.requestId,
-        documentId: captured.documentId,
-        revision: input.revision,
-        contextRevision: input.contextRevision,
-        suggestions: [],
-      };
-    // Retain a first request too, rather than claiming retention while leaving the
-    // previous task in the panel after a mutation storm exhausted stale retries.
-    const request =
-      input.request ||
-      interpretRequest(input.text, input.context, { clauses: true });
-    request.id = input.requestId;
-    const retained = await context.enqueue(async () => {
-      if (
-        startedGeneration !== context.goalGeneration ||
-        !context.session ||
-        context.session.sessionId !== captured.sessionId ||
-        context.session.documentId !== captured.documentId ||
-        context.session.view?.status !== "running" ||
-        context.session.navigationPending
-      )
-        return;
-      const fresh = await api.tabs.sendMessage(context.session.tabId, {
-        type: "GET_PAGE",
-        sessionId: context.session.sessionId,
-      });
-      if (!fresh.page) return;
-      const pending = {
-        requestId: request.id,
-        documentId: captured.documentId,
-        revision: fresh.page.revision,
-        protocolVersion: 2,
-        contextRevision: fresh.view?.journey?.workflow?.revision || 0,
-        status: "pending-indexing",
-        request,
-        reason:
-          "The page is still updating. I’m checking its controls; your destination is retained.",
-        activity: {
-          embedded: 0,
-          cacheHits: 0,
-          llmCalls: 0,
-          modelRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
-        },
-      };
-      if (fromContent) return pending;
-      const reply = await api.tabs.sendMessage(context.session.tabId, {
-        type: "INSTALL_REQUEST",
-        sessionId: context.session.sessionId,
-        result: pending,
-      });
-      if (reply.view) {
-        await context.acceptView(reply.view);
-        await context.save();
-        return structuredClone(context.session);
-      }
-    });
-    if (retained) return retained;
-    throw new Error("Planning was replaced or canceled.");
   }
   return { handleNlp };
 }

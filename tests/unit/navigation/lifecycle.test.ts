@@ -18,6 +18,81 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
 });
+it("foreground planning fences old recovery callbacks and ignores an older lease release", async () => {
+  vi.useFakeTimers();
+  const page = { ...fixture(), controls: [] };
+  vi.spyOn(PageDiscovery.prototype, "snapshot").mockReturnValue(page);
+  const request = interpretRequest("Open Help");
+  const coach = new PageCoach(vi.fn());
+  coach.view.request = request;
+  let release: ((result: PlanResult) => void) | undefined;
+  const planner = vi.fn(
+    () =>
+      new Promise<PlanResult>((resolve) => {
+        release = resolve;
+      }),
+  );
+  Object.assign(coach, { requestPlanner: planner });
+  try {
+    coach.recheckJourney();
+    expect(planner).toHaveBeenCalledOnce();
+    const oldIntent = crypto.randomUUID(),
+      currentIntent = crypto.randomUUID();
+    coach.getPage("New destination", { id: oldIntent, phase: "begin" });
+    coach.getPage("Newest destination", { id: currentIntent, phase: "begin" });
+    coach.getPage(undefined, { id: oldIntent, phase: "end" });
+    release!({
+      requestId: request.id,
+      documentId: "doc",
+      revision: page.revision,
+      status: "pending-indexing",
+      request,
+      reason: "Checking the old destination",
+      activity: {
+        embedded: 0,
+        cacheHits: 0,
+        llmCalls: 0,
+        modelRevision: "test",
+      },
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(planner).toHaveBeenCalledOnce();
+    expect(coach.view.status).toBe("running");
+    expect(coach.view.request?.original).toBe(request.original);
+    expect(coach.view.verifiedSteps).toBe(0);
+    coach.getPage(undefined, { id: currentIntent, phase: "end" });
+    expect(planner).toHaveBeenCalledTimes(2);
+  } finally {
+    coach.stop();
+  }
+});
+it.each(["pause", "stop"] as const)(
+  "a foreground planning lease cannot override manual %s",
+  async (action) => {
+    vi.useFakeTimers();
+    vi.spyOn(PageDiscovery.prototype, "snapshot").mockReturnValue({
+      ...fixture(),
+      controls: [],
+    });
+    const coach = new PageCoach(vi.fn());
+    const request = interpretRequest("Open Help");
+    coach.view.request = request;
+    const planner = vi.fn();
+    Object.assign(coach, { requestPlanner: planner });
+    const intent = crypto.randomUUID();
+    try {
+      coach.getPage("New destination", { id: intent, phase: "begin" });
+      coach[action]();
+      coach.getPage(undefined, { id: intent, phase: "end" });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(coach.view.status).toBe(action === "pause" ? "paused" : "stopped");
+      expect(planner).not.toHaveBeenCalled();
+      expect(coach.view.verifiedSteps).toBe(0);
+    } finally {
+      coach.stop();
+    }
+  },
+);
 it("assistance opens a fresh reversible menu once and leaves forms and final actions to the user", async () => {
   document.body.innerHTML =
     '<button aria-expanded="false" aria-controls="account-menu">Account menu</button><nav id="account-menu" hidden><a href="/settings">Settings</a></nav>';

@@ -351,7 +351,10 @@ if (!host[marker]) {
         return;
       }
       if (message.type === "GET_PAGE") {
-        respond({ page: coach?.getPage(message.query), view: coach?.view });
+        respond({
+          page: coach?.getPage(message.query, message.planningIntent),
+          view: coach?.view,
+        });
         return;
       }
       if (message.type === "FRAME_ACCESS") {

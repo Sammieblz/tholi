@@ -253,6 +253,7 @@ export class PageCoach {
   private selectedAt = 0;
   private planningRevision = "";
   private planningInFlight: object | undefined;
+  private foregroundPlanning: string | undefined;
   private verifiedDestination?: string;
   private workflowWaitTimer?: ReturnType<typeof setTimeout>;
   private cancelScroll?: () => void;
@@ -370,6 +371,7 @@ export class PageCoach {
     this.overlay.clear();
   }
   private teardown() {
+    this.foregroundPlanning = undefined;
     this.planningInFlight = undefined;
     this.inputHandoff = undefined;
     clearTimeout(this.recoveryTimer);
@@ -815,7 +817,30 @@ export class PageCoach {
   private verified(page: PageSnapshot) {
     return verifiedService(this.serviceContext(), page);
   }
-  getPage(query?: string) {
+  getPage(query?: string, intent?: { id: string; phase: "begin" | "end" }) {
+    // The background owns this short-lived lease. Invalidate old automatic
+    // planning callbacks without resetting their recovery budget or task.
+    if (intent?.phase === "end") {
+      if (this.foregroundPlanning === intent.id) {
+        this.foregroundPlanning = undefined;
+        this.planningInFlight = undefined;
+        if (
+          !this.view.selectedControlId &&
+          this.view.request?.status === "active"
+        ) {
+          this.planningRevision = "";
+          this.requestReplan();
+        }
+      }
+      return this.view.page;
+    }
+    if (intent?.phase === "begin" && this.view.status === "running") {
+      this.foregroundPlanning = intent.id;
+      this.planningInFlight = {};
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = undefined;
+      this.clearTarget();
+    }
     if (query) this.discovery.setQuery(query);
     this.refresh();
     return this.view.page;

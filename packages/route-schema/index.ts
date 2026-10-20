@@ -377,6 +377,10 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       type: z.literal("GET_PAGE"),
       sessionId: z.string().uuid(),
       query: z.string().max(1000).optional(),
+      planningIntent: z
+        .object({ id: z.string().uuid(), phase: z.enum(["begin", "end"]) })
+        .strict()
+        .optional(),
     })
     .strict(),
   z

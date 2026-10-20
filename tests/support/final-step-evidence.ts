@@ -36,3 +36,29 @@ export function hasFinalStepEvidence(
     current.goalPlan.source === "semantics"
   );
 }
+
+/** Recovery may reveal and verify a section between automation samples. */
+export function hasRecoveredSectionEvidence(
+  before: FinalStepView,
+  current: FinalStepView | undefined,
+  label: RegExp,
+  actual: boolean,
+) {
+  const receipt = current?.journey?.progress.at(-1);
+  return (
+    actual &&
+    before.goalPlan?.status === "unresolved" &&
+    before.goalPlan.recoveryStage === "retrieval" &&
+    current?.status === "running" &&
+    current.goalPlan?.status === "completed" &&
+    current.request?.status === "completed" &&
+    current.journey?.status === "completed" &&
+    current.verifiedSteps === before.verifiedSteps + 1 &&
+    current.journey.progress.length ===
+      (before.journey?.progress.length || 0) + 1 &&
+    hasFinalStepEvidence(before, current, "section", actual) &&
+    receipt?.kind === "section" &&
+    !!receipt.signature &&
+    label.test(receipt.label)
+  );
+}

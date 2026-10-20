@@ -70,3 +70,28 @@ It is not certification for these changed bytes. A new complete coordinated full
 run remains required before packaging. Mozilla's preliminary validator reported
 no errors and 13 warnings on the earlier build, including the missing declaration
 and bundled-code warnings. Retain fresh validator output for the final build.
+
+### Foreground planning follow-up
+
+The subsequent full attempt passed unit, model, core, integration, Firefox,
+UI, branded-browser and paired performance groups, then failed both reported-page
+live cases. Older automatic recovery could pause the session and dispose the
+inference channel while a new foreground destination was planning. That attempt
+does not certify a release.
+
+The background now fences superseded planning and temporarily holds content
+recovery during a trusted foreground request. Matching release messages resume
+recovery; older releases, Pause and Stop cannot revive canceled work. Five new
+regression cases cover these contracts within the existing lifecycle owners.
+The focused lifecycle suites pass all 37 cases, and both reported-page viewport
+reproductions pass with the isolated fix. Full certification must run again on
+the final source and frozen build; those focused results cannot authorize packaging.
+
+A later complete attempt passed all earlier groups and both reported-page cases,
+then failed one narrow Casino Royale search sample because the acceptance adapter
+asserted guidance immediately after a retained-request acknowledgement. The shared
+positive-contract runner now waits up to ten seconds for that same request to
+produce guidance before applying the unchanged target and independent outcome
+oracles. Both focused repetitions pass; their incomplete matrix report still
+rejects certification. Frozen cases, thresholds and negative-contract checks are
+unchanged. A fresh coordinated full cohort remains required.

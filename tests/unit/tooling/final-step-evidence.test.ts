@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 import type { SessionView } from "../../../packages/shared-types/index";
-import { hasFinalStepEvidence } from "../../support/final-step-evidence";
+import {
+  hasFinalStepEvidence,
+  hasRecoveredSectionEvidence,
+} from "../../support/final-step-evidence";
 
 const before = {
   status: "running",
@@ -117,4 +120,51 @@ it("requires a fresh semantic completion after a guiding baseline", () => {
       true,
     ),
   ).toBe(false);
+});
+
+it("requires a same-request section receipt and independent visibility after retrieval", () => {
+  const retained = {
+    ...before,
+    journey: { ...before.journey!, progress: [] },
+    goalPlan: {
+      ...before.goalPlan!,
+      status: "unresolved",
+      recoveryStage: "retrieval",
+    },
+  } as SessionView;
+  const receipt = {
+    origin: "https://example.com",
+    from: "before",
+    to: "after",
+    signature: "section-signature",
+    label: "References",
+    kind: "section",
+    durationMs: 200,
+    at: 1,
+  } as const;
+  const arrived = {
+    ...completed,
+    verifiedSteps: before.verifiedSteps + 1,
+    journey: { ...completed.journey!, progress: [receipt] },
+  } as SessionView;
+  const check = (value: SessionView, actual = true) =>
+    hasRecoveredSectionEvidence(retained, value, /^References$/, actual);
+  expect(check(arrived)).toBe(true);
+  expect(check(arrived, false)).toBe(false);
+  expect(check({ ...arrived, verifiedSteps: before.verifiedSteps })).toBe(
+    false,
+  );
+  expect(check({ ...arrived, status: "paused" })).toBe(false);
+  expect(
+    check({ ...arrived, request: { ...arrived.request!, id: "old" } }),
+  ).toBe(false);
+  for (const progress of [
+    [],
+    [{ ...receipt, label: "Other section" }],
+    [{ ...receipt, kind: "focus" as const }],
+    [{ ...receipt, signature: "" }],
+  ])
+    expect(
+      check({ ...arrived, journey: { ...arrived.journey!, progress } }),
+    ).toBe(false);
 });
