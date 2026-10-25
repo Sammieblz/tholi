@@ -1,79 +1,256 @@
 import { test, expect } from "../../support/browser-test";
 import { createHash } from "node:crypto";
+const storeUrls = {
+  Chrome:
+    "https://chromewebstore.google.com/detail/tholi/pliafmeneaalhbecphnodbifdfcajngk",
+  Firefox: "https://addons.mozilla.org/en-US/firefox/addon/tholi/",
+};
 
-test("get started opens signup and download cards disclose mock stores with working manual directions", async ({
+test("mobile account-free navigation offers browser selection and both stores", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "userAgent", {
+      value:
+        "Mozilla/5.0 (Linux; Android 16) Chrome/140.0.0.0 Mobile Safari/537.36",
+    }),
+  );
+  await page.setViewportSize({ width: 375, height: 850 });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Essential only", exact: true })
-    .click();
+  await expect(page.locator(".header-install")).toHaveText("Get Tholi");
+  await expect(page.locator(".header-install")).toHaveAttribute(
+    "href",
+    "/download",
+  );
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  const dialog = page.getByRole("dialog");
   await expect(
-    page.getByRole("link", { name: "Get started", exact: true }),
-  ).toHaveCount(1);
+    dialog.getByRole("link", { name: /Sign in|Sign up|Get started/ }),
+  ).toHaveCount(0);
+  await dialog.locator(".web-primary").click();
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(dialog).toHaveCount(0);
+  for (const browser of ["Chrome", "Firefox"]) {
+    const link = page
+      .locator(".browser-install-options")
+      .getByRole("link", { name: `Add to ${browser}`, exact: true });
+    await link.scrollIntoViewIfNeeded();
+    await expect(link).toBeVisible();
+    const box = await link.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+  }
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("published store download links navigate independently of cookies and developer metadata", async ({
+  page,
+  browserName,
+}) => {
+  let metadataRequests = 0;
+  await page.route("**/downloads/manifest.json", (route) => {
+    metadataRequests++;
+    return route.fulfill({ status: 503, body: "Unavailable" });
+  });
+  for (const url of Object.values(storeUrls))
+    await page.route(url, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<h1>Intercepted store listing</h1>",
+      }),
+    );
+  await page.goto("/");
+  await expect(page.locator(".web-header nav a")).toHaveText([
+    "About",
+    "Get Tholi",
+    "Docs",
+  ]);
+  await expect(
+    page.getByRole("link", { name: /Get started|Sign in|Sign up/ }),
+  ).toHaveCount(0);
+  const headerStore = browserName === "firefox" ? "Firefox" : "Chrome";
+  await page
+    .locator(".header-actions")
+    .getByRole("link", { name: `Add to ${headerStore}`, exact: true })
+    .click();
+  await expect(page).toHaveURL(storeUrls[headerStore]);
+  await page.goBack();
   await page
     .locator(".hero")
     .getByRole("link", { name: "Try it here", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/#practice$/);
   await expect(page.locator("#practice")).toBeFocused();
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("link", { name: "About", exact: true })
-    .focus();
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("link", { name: "About", exact: true })
-    .click();
+  await page.goto("/about");
+  await expect(page.locator("em[lang=zu]")).toHaveText("umtholi");
   await expect(page.locator(".about-story").first()).toContainText(
     "the Zulu word for “finder.”",
   );
-  await expect(page.locator("em[lang=zu]")).toHaveText("umtholi");
-  await page
-    .locator(".header-actions")
-    .getByRole("link", { name: "Get started" })
-    .click();
-  await expect(page).toHaveURL(/\/signup$/);
-  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
-  await expect(page.locator("#demo-account-note")).toContainText(
-    "No real account is created",
-  );
   await page.goto("/download");
-  for (const browser of ["Chrome", "Firefox"]) {
+  await expect(page.locator(".developer-installation")).not.toHaveAttribute(
+    "open",
+    "",
+  );
+  await expect(page.getByLabel("Your browser", { exact: true })).toHaveCount(0);
+  for (const [browser, url] of Object.entries(storeUrls)) {
     const card = page.getByRole("article").filter({
       has: page.getByRole("heading", {
         name: `Tholi for ${browser}`,
         exact: true,
       }),
     });
-    await expect(card).toContainText("Store listing coming soon");
+    await expect(card).toContainText("Available now");
+    await expect(card.locator("img")).toHaveAttribute("alt", "");
     await expect
       .poll(() =>
         card
           .locator("img")
-          .evaluate((image: HTMLImageElement) => image.naturalWidth),
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
       )
       .toBeGreaterThan(0);
-    await card
-      .getByRole("link", { name: `Add to ${browser}`, exact: true })
-      .click();
-    await expect(page).toHaveURL(
-      new RegExp(
-        `browser=${browser.toLowerCase()}#installation-${browser.toLowerCase()}$`,
+    const link = card.getByRole("link", {
+      name: `Add to ${browser}`,
+      exact: true,
+    });
+    await expect(link).toHaveAttribute("href", url);
+    await link.focus();
+    await expect(link).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(url);
+    await expect(page.getByRole("heading")).toHaveText(
+      "Intercepted store listing",
+    );
+    await page.goBack();
+  }
+  expect(metadataRequests).toBe(0);
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const summary = page.getByText("Developer installation", { exact: true });
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toContainText("could not be loaded");
+  expect(metadataRequests).toBe(1);
+});
+
+for (const retired of ["signin", "signup", "welcome"])
+  test(`retired account route /${retired} replaces history without a Back loop`, async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      sessionStorage.setItem(
+        "tholi-demo-account",
+        JSON.stringify({
+          name: "Legacy account reader",
+          email: "legacy@example.com",
+          onboarded: true,
+        }),
       ),
     );
+    await page.goto("/about");
+    // Let the lazy route and its initial focus settle before adding a bookmark.
+    await expect(page.locator("main h1")).toBeFocused();
+    await page.evaluate((route) => {
+      const link = document.createElement("a");
+      link.href = route;
+      link.textContent = "Legacy account bookmark";
+      document.querySelector("main")!.append(link);
+    }, "/" + retired);
+    await page.getByRole("link", { name: "Legacy account bookmark" }).click();
+    await expect(page).toHaveURL(/\/download$/);
+    await expect(page.locator("main h1")).toBeFocused();
     await expect(
-      page.locator(`#installation-${browser.toLowerCase()}`),
-    ).toBeFocused();
-    await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
-      browser.toLowerCase(),
+      page.locator('input[type="password"], .auth-page'),
+    ).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText(
+      "Legacy account reader",
     );
-    await expect(page.locator(".install-grid")).toContainText(
-      browser === "Firefox" ? "Load Temporary Add-on" : "Load unpacked",
-    );
-  }
+    await expect(
+      page.getByRole("link", { name: /Welcome|Sign in|Sign up/ }),
+    ).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    await page.goForward();
+    await expect(page).toHaveURL(/\/download$/);
+  });
+
+test("account-free onboarding, dark theme and reduced motion retain local practice", async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/onboarding");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-tholi-theme",
+    "dark",
+  );
+  await expect(page.locator("main")).toContainText(
+    "cannot check whether Tholi is installed",
+  );
+  await expect(
+    page.locator('input[type="email"], input[type="password"]'),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Skip onboarding" }).click();
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(page.locator("main h1")).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("dark-download.png"),
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(() => sessionStorage.getItem("tholi-demo-account")),
+  ).toBeNull();
 });
+
+for (const failure of ["missing", "invalid", "unavailable"])
+  test(`store download actions remain available with ${failure} developer metadata`, async ({
+    page,
+  }) => {
+    await page.route("**/downloads/manifest.json", (route) =>
+      failure === "invalid"
+        ? route.fulfill({
+            json: {
+              schemaVersion: 2,
+              targets: {
+                chromium: {
+                  target: "chromium",
+                  url: "https://untrusted.example/archive.zip",
+                },
+                firefox: {
+                  target: "firefox",
+                  url: "https://untrusted.example/archive.zip",
+                },
+              },
+            },
+          })
+        : route.fulfill({
+            status: failure === "missing" ? 404 : 503,
+            body: "Unavailable",
+          }),
+    );
+    await page.goto("/download");
+    await page.getByText("Developer installation", { exact: true }).click();
+    await expect(page.getByRole("status")).toContainText(
+      failure === "missing" ? "No packaged download" : "could not be loaded",
+    );
+    for (const [browser, url] of Object.entries(storeUrls)) {
+      await page.route(url, (route) =>
+        route.fulfill({ contentType: "text/html", body: "Store fixture" }),
+      );
+      await page
+        .locator(".browser-install-options")
+        .getByRole("link", { name: `Add to ${browser}`, exact: true })
+        .click();
+      await expect(page).toHaveURL(url);
+      await page.goBack();
+    }
+    await expect(
+      page.getByRole("link", { name: /Download .* developer ZIP/ }),
+    ).toHaveCount(0);
+  });
+
 for (const width of [375])
   test(`Tholi website ${width}px onboarding and download integrity`, async ({
     page,
@@ -148,26 +325,10 @@ for (const width of [375])
       fullPage: true,
       animations: "disabled",
     });
-    await page.goto("/signup");
-    await page.getByLabel("Name", { exact: true }).fill("Ada");
-    await page.getByLabel("Email", { exact: true }).fill("ada@example.com");
-    await page
-      .getByLabel("Demo password", { exact: true })
-      .fill("demo-only-password");
-    await page
-      .getByRole("button", { name: "Create demo account", exact: true })
-      .click();
+    await page.goto("/onboarding");
     await expect(
-      page.getByRole("heading", { name: "Make room for a guide." }),
+      page.getByText("No Tholi account required.", { exact: false }),
     ).toBeVisible();
-    expect(
-      await page.evaluate(() => JSON.stringify({ ...sessionStorage })),
-    ).not.toContain("demo-only-password");
-    await page.getByRole("button", { name: "Skip onboarding" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Hello, Ada." }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Replay onboarding" }).click();
     await page.getByRole("button", { name: "Try the demonstration" }).click();
     await page
       .getByRole("radio", { name: "Conversation", exact: true })
@@ -178,18 +339,18 @@ for (const width of [375])
         .getByRole("button", { name: "Conversation", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Finish onboarding" }).click();
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page).toHaveURL(/\/download$/);
     expect(
       await page.evaluate(() => sessionStorage.getItem("tholi-demo-account")),
     ).toBeNull();
-    await page.goto("/download");
+    await page.getByText("Developer installation", { exact: true }).click();
     await page
       .getByLabel("Your browser", { exact: true })
       .selectOption("chrome");
     if (width === 375)
       expect(
         await page
-          .locator(".install-grid")
+          .locator(".manual-installation .install-grid")
           .evaluate(
             (grid) =>
               getComputedStyle(grid).gridTemplateColumns.split(" ").length,
@@ -204,7 +365,7 @@ for (const width of [375])
     if (manifest) {
       await expect(
         page.getByRole("link", {
-          name: "Download Chromium preview",
+          name: "Download Chromium developer ZIP",
           exact: true,
         }),
       ).toHaveAttribute("href", manifest.url);
@@ -223,7 +384,7 @@ for (const width of [375])
       );
       await expect(
         page.getByRole("link", {
-          name: "Download Chromium preview",
+          name: "Download Chromium developer ZIP",
           exact: true,
         }),
       ).toHaveCount(0);
@@ -233,11 +394,30 @@ for (const width of [375])
       .selectOption("firefox");
     await expect(page).toHaveURL(/browser=firefox/);
     await expect(
-      page.getByText("Firefox developer preview", { exact: false }).first(),
+      page.getByText("Firefox developer build", { exact: false }).first(),
     ).toBeVisible();
     await expect(
       page.getByText(/Temporary installation is removed when Firefox restarts/),
     ).toBeVisible();
+    if (manifest?.targets?.firefox) {
+      const release = manifest.targets.firefox;
+      const zip = page.getByRole("link", {
+        name: "Download Firefox developer ZIP",
+        exact: true,
+      });
+      await expect(zip).toHaveAttribute("href", release.url);
+      const archive = await page.request.get(release.url);
+      expect(archive.ok()).toBe(true);
+      expect(
+        createHash("sha256")
+          .update(await archive.body())
+          .digest("hex"),
+      ).toBe(release.sha256);
+      await page.getByText("Version and checksum", { exact: true }).click();
+      await expect(page.locator(".download-evidence code")).toHaveText(
+        release.sha256,
+      );
+    }
     await page.goBack();
     await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
       "chrome",
@@ -247,27 +427,6 @@ for (const width of [375])
       fullPage: true,
     });
   });
-test("reduced motion, dark theme, sign-in and long content", async ({
-  page,
-}, info) => {
-  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto("/signin");
-  await page.getByLabel("Email", { exact: true }).fill("you@example.com");
-  await page.getByLabel("Demo password", { exact: true }).fill("short");
-  await page.getByRole("button", { name: "Sign in to demo" }).click();
-  await expect(page.getByRole("alert")).toContainText("at least 8 characters");
-  await page
-    .getByLabel("Demo password", { exact: true })
-    .fill("demo-only-password");
-  await page.getByRole("button", { name: "Sign in to demo" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Hello, you." }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: info.outputPath("dark-welcome.png"),
-    fullPage: true,
-  });
-});
 
 test("practice conversation retains context and verifies manual outcomes", async ({
   page,
@@ -309,25 +468,65 @@ test("practice conversation retains context and verifies manual outcomes", async
   await expect(demo.locator(".demo-target")).toHaveCount(0);
 });
 
-test("mock form errors identify fields and focus the first invalid input", async ({
+test("developer download deep links retain browser query and fragment targets", async ({
   page,
 }) => {
-  await page.goto("/signup");
-  await page
-    .getByRole("button", { name: "Create demo account", exact: true })
-    .click();
-  const email = page.getByLabel("Email", { exact: true });
-  await expect(email).toBeFocused();
-  await expect(email).toHaveAttribute("aria-invalid", "true");
-  await expect(email).toHaveAttribute("aria-describedby", "demo-email-error");
-  await email.fill("ada@example.com");
-  await page
-    .getByRole("button", { name: "Create demo account", exact: true })
-    .click();
-  await expect(page.getByLabel("Demo password", { exact: true })).toBeFocused();
-  await expect(page.locator("#demo-password-error")).toContainText(
-    "at least 8 characters",
+  await page.route("**/downloads/manifest.json", (route) =>
+    route.fulfill({ status: 404, body: "Not found" }),
   );
+  for (const destination of [
+    "/download?browser=firefox",
+    "/download?browser=firefox#installation-firefox",
+    "/download#installation-firefox",
+  ]) {
+    await page.goto(destination);
+    await expect(page.locator(".developer-installation")).toHaveAttribute(
+      "open",
+      "",
+    );
+    await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
+      "firefox",
+    );
+    if (destination.includes("#"))
+      await expect(page.locator("#installation-firefox")).toBeFocused();
+  }
+  await page.goto("/download#developer-installation");
+  await expect(page.locator("#developer-installation")).toBeFocused();
+  await expect(page.getByRole("status")).toContainText("No packaged download");
+});
+
+test("developer download rejects a package for the wrong browser target", async ({
+  page,
+}) => {
+  await page.route("**/downloads/manifest.json", (route) =>
+    route.fulfill({
+      json: {
+        schemaVersion: 2,
+        targets: {
+          firefox: {
+            target: "chromium",
+            version: "0.11.0",
+            url: "/downloads/tholi-0.11.0.zip",
+            sha256: "a".repeat(64),
+            bytes: 1024,
+            status: "fixture",
+            minimumBrowserVersion: "140",
+            installationKind: "unpacked",
+          },
+        },
+      },
+    }),
+  );
+  await page.goto("/download?browser=firefox#installation-firefox");
+  await expect(page.getByRole("status")).toContainText("could not be loaded");
+  await expect(
+    page.getByRole("link", { name: /Download .* developer ZIP/ }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator(".browser-install-options")
+      .getByRole("link", { name: "Add to Firefox", exact: true }),
+  ).toHaveAttribute("href", storeUrls.Firefox);
 });
 
 test("download loading and failed requests remain distinct from unavailable releases", async ({
@@ -345,9 +544,9 @@ test("download loading and failed requests remain distinct from unavailable rele
       await route.fulfill({ status: 503, body: "Unavailable" });
     } else await route.fulfill({ status: 404, body: "Not found" });
   });
-  await page.goto("/download");
+  await page.goto("/download?browser=chromium");
   await expect(page.getByRole("status")).toContainText(
-    "Finding the packaged preview",
+    "Finding the developer package",
   );
   await expect(
     page.getByText("No packaged download is available", { exact: false }),
@@ -389,13 +588,16 @@ test("download loading and failed requests remain distinct from unavailable rele
   await expect(selector).toBeFocused();
   await expect(
     page.getByRole("link", {
-      name: "Download Firefox developer preview",
+      name: "Download Firefox developer ZIP",
       exact: true,
     }),
   ).toHaveAttribute("href", "/downloads/tholi-firefox-0.10.1.zip");
   await page.getByLabel("Your browser", { exact: true }).selectOption("edge");
   await expect(
-    page.getByRole("link", { name: "Download Chromium preview", exact: true }),
+    page.getByRole("link", {
+      name: "Download Chromium developer ZIP",
+      exact: true,
+    }),
   ).toHaveAttribute("href", "/downloads/tholi-0.10.1.zip");
   await page.goBack();
   await expect(page.getByLabel("Your browser", { exact: true })).toHaveValue(
@@ -403,7 +605,7 @@ test("download loading and failed requests remain distinct from unavailable rele
   );
   await expect(
     page.getByRole("link", {
-      name: "Download Firefox developer preview",
+      name: "Download Firefox developer ZIP",
       exact: true,
     }),
   ).toBeVisible();

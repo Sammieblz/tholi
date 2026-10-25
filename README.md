@@ -33,6 +33,13 @@ _Actual Chrome extension capture on public [Wikipedia](https://en.wikipedia.org/
 
 ## Try Tholi
 
+Install Tholi from the Chrome Web Store or Firefox Add-ons using
+**[Get Tholi](https://tholi.io/download)**. No Tholi account is required. Open the
+Extensions menu, pin Tholi, then open it on a website and grant access when asked.
+You choose the destination and make the clicks.
+
+### Developer installation
+
 Use **Node 24.19.x** and npm. From the repository root:
 
 ```sh
@@ -67,13 +74,13 @@ for deployment and validation status. To run it locally:
 npm run dev:web
 ```
 
-Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs, installation help and downloads. Sign-up and sign-in are explicitly mocked. Dark is the default; optional preference cookies can remember Light/Dark. The app's own analytics provider is inactive; the public Cloudflare deployment injects its own measurement script, independently of these cookie choices. See the [cookie notice](https://tholi.io/cookies) and [deployment record](docs/releases/website/v0.1.0/validation.md).
+Open **http://127.0.0.1:5174** for the real extension recording, interactive practice, searchable docs and store installation. Website 0.1.1 is prepared in the [published-store launch record](docs/releases/website/v0.1.1/README.md); mock account routes are retired. Developer downloads and source instructions are secondary. Dark is the default; optional preference cookies can remember Light/Dark. The app's own analytics provider is inactive; the public Cloudflare deployment injects its own measurement script, independently of these cookie choices. See the [cookie notice](https://tholi.io/cookies) and [deployment record](docs/releases/website/v0.1.0/validation.md).
 
-**Source version: 0.11.0 (unreleased).** [Release notes](docs/releases/v0.11.0/README.md) · [Changelog](CHANGELOG.md). The website offers a packaged preview only when an eligible, verified archive is available; otherwise it shows source setup. Download version and checksum come from that archive, independently of the source version. Downloads and extension use need no account. See [website setup and behavior](docs/releases/v0.10.1/website.md).
+**Extension/API version: 0.11.0, published on both stores.** [Release notes](docs/releases/v0.11.0/README.md) · [Changelog](CHANGELOG.md). The website offers developer ZIPs only when an eligible, verified archive is available; otherwise its developer area shows source setup. Download version and checksum come from that archive, independently of the source version. Store links remain available without developer archives. No Tholi account is required.
 
-## Preview boundaries
+## Current limitations
 
-Tholi is a working preview. Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/guides/getting-started.md).
+Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed shadow roots and native dialogs can still interrupt a route. An unclear route remains incomplete. OCR suggestions never establish completion. Native permission/accessibility checks and signed-in Amazon, Cloudflare and GitHub verification remain [pending](docs/guides/getting-started.md).
 
 The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and browser-provided model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/releases/records/2026-10-maintenance.md) must not be confused with default-engine support.
 

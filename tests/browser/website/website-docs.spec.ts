@@ -1,7 +1,7 @@
 import { expect, test } from "../../support/browser-test";
 import { createConsent } from "../../../apps/web/src/features/preferences/cookies";
 
-test("documentation search, fragments, source links and browser Back stay usable", async ({
+test("documentation search, fragments, help links and browser Back stay usable", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -9,6 +9,15 @@ test("documentation search, fragments, source links and browser Back stay usable
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Make yourself at home.",
   );
+  await expect(page.locator(".docs-index-card")).toHaveCount(8);
+  await expect(page.getByText("Under the hood", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page
+      .getByRole("navigation", { name: "Documentation chapters" })
+      .getByRole("link", { name: "For developers", exact: true }),
+  ).toHaveAttribute("href", "/docs/developers");
   const search = page.getByRole("searchbox", { name: "Search documentation" });
   await search.fill("Widget menu");
   const results = page.getByRole("navigation", {
@@ -30,13 +39,17 @@ test("documentation search, fragments, source links and browser Back stay usable
   await expect(page.locator(".docs-content")).toContainText("Widget menu");
   await expect(
     page.getByRole("link", { name: "Read the Markdown source" }),
-  ).toHaveAttribute(
-    "href",
-    "https://github.com/Sammieblz/tholi/blob/main/docs/guides/using-tholi.md",
-  );
+  ).toHaveCount(0);
+  const help = page.getByRole("navigation", { name: "More help" });
+  await expect(
+    help.getByRole("link", { name: "Tholi Support" }),
+  ).toHaveAttribute("href", "/support");
+  await expect(
+    help.getByRole("link", { name: "Contact Tholi" }),
+  ).toHaveAttribute("href", "/contact");
   await page
     .getByRole("navigation", { name: "Documentation chapters" })
-    .getByRole("link", { name: "Security and boundaries", exact: true })
+    .getByRole("link", { name: "Privacy and permissions", exact: true })
     .click();
   await expect(page).toHaveURL(/\/docs\/security$/);
   await page.goBack();
@@ -44,7 +57,7 @@ test("documentation search, fragments, source links and browser Back stay usable
   await expect(page.locator("#widget-and-continuity")).toBeFocused();
   await page.goto("/docs/journeys#context-and-continuity");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Continuous journeys",
+    "Choosing and changing a destination",
   );
   await expect(page.locator("#context-and-continuity")).toBeFocused();
   await expect(page.locator("main")).toHaveCount(1);
@@ -58,6 +71,50 @@ test("documentation search, fragments, source links and browser Back stay usable
   await expect(
     page.getByText("Try a shorter phrase, such as permissions or widget."),
   ).toBeVisible();
+});
+
+test("retired documentation links replace history with the matching GitHub reference and retain fragments", async ({
+  page,
+}) => {
+  await page.route("https://github.com/Sammieblz/tholi/blob/main/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><h1>Developer reference</h1>",
+    }),
+  );
+  const references = {
+    architecture: "docs/architecture/navigation.md",
+    "natural-language": "docs/architecture/natural-language.md",
+    backend: "docs/guides/backend.md",
+    contributing: "CONTRIBUTING.md",
+  };
+  for (const [slug, source] of Object.entries(references)) {
+    await page.goto("/about");
+    await expect(page.locator("main h1")).toContainText("A patient guide");
+    await expect(page.locator("main h1")).toBeFocused();
+    await page.evaluate((slug) => {
+      const link = document.createElement("a");
+      link.href = `/docs/${slug}#details`;
+      link.textContent = "Older developer reference";
+      document.querySelector("main")!.append(link);
+    }, slug);
+    await page
+      .getByRole("link", { name: "Older developer reference", exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      `https://github.com/Sammieblz/tholi/blob/main/${source}#details`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Developer reference" }),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page.locator("main h1")).toContainText("A patient guide");
+  }
+  await page.goto("/docs/backend.html#browser-origins");
+  await expect(page).toHaveURL(
+    "https://github.com/Sammieblz/tholi/blob/main/docs/guides/backend.md#browser-origins",
+  );
 });
 
 test("published notices disclose hosting and preserve working cookie choices", async ({

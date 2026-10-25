@@ -174,7 +174,7 @@ test("cookie settings stay keyboard accessible and distinguish host measurements
   await expect(page.locator(".install-grid")).toBeVisible();
   await expect(page.locator("main h1")).toBeFocused();
   await expect(
-    page.getByText("Finding the packaged preview…", { exact: true }),
+    page.getByText("Finding the developer package…", { exact: true }),
   ).toHaveCount(0);
   await page.evaluate(() => document.fonts.ready);
   for (const button of await banner.getByRole("button").all()) {

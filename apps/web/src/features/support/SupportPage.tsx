@@ -19,7 +19,7 @@ const paths = [
   {
     number: "03",
     title: "Keep your browser yours.",
-    text: "Understand website access, local processing and Tholi’s boundaries.",
+    text: "Choose website access and learn how to manage your local data.",
     label: "Permissions and privacy",
     to: "/docs/security",
   },
@@ -90,24 +90,21 @@ export function SupportPage() {
             </SiteLink>
           </details>
           <details>
-            <summary>Firefox removed Tholi after a restart.</summary>
+            <summary>How do I install Tholi on Firefox?</summary>
             <p>
-              The current manual Firefox setup uses a temporary add-on. Firefox
-              removes it when the browser restarts. Follow the Firefox setup
-              steps to load it again while the store listing is being prepared.
+              Install Tholi from Firefox Add-ons using the Firefox card on the
+              download page. Store installation stays available after restarting
+              Firefox. Open the Extensions menu to find and pin Tholi.
             </p>
-            <SiteLink
-              to="/download?browser=firefox#installation-firefox"
-              className="web-text-link"
-            >
+            <SiteLink to="/download" className="web-text-link">
               Firefox setup
             </SiteLink>
           </details>
           <details>
             <summary>Do I need an account to use Tholi?</summary>
             <p>
-              No. You can install and use the extension without an account.
-              Account pages on this website are local demonstrations for now.
+              No Tholi account is required. Install from your browser’s store
+              and use the extension with local processing by default.
             </p>
             <SiteLink to="/download" className="web-text-link">
               Get the extension

@@ -1,9 +1,13 @@
 import { useEffect } from "react";
 
-/** Marketing enhancement only: content stays readable without animation JS. */
+/** Optional entrances: content stays readable without animation JS. */
 export function useSectionReveal(path: string) {
   useEffect(() => {
-    if (!["/", "/about", "/download", "/support"].includes(path)) return;
+    if (
+      !["/", "/about", "/download", "/support", "/docs"].includes(path) &&
+      !path.startsWith("/docs/")
+    )
+      return;
     const root = document.getElementById("main-content");
     if (!root) return;
     let canceled = false;
@@ -24,21 +28,6 @@ export function useSectionReveal(path: string) {
           const onFocus = () => {
             if (document.documentElement.dataset.input === "keyboard") finish();
           };
-          const onKey = (event: KeyboardEvent) => {
-            if (
-              [
-                "Tab",
-                "ArrowDown",
-                "ArrowUp",
-                "PageDown",
-                "PageUp",
-                "Home",
-                "End",
-                " ",
-              ].includes(event.key)
-            )
-              finish();
-          };
           const observe = () => {
             if (keyboard) return;
             context.add(() => {
@@ -53,6 +42,9 @@ export function useSectionReveal(path: string) {
                   )
                     return;
                   observed.add(element);
+                  // Help is read repeatedly. Keep its entrances brief and its
+                  // paragraphs and navigation available throughout.
+                  const documentReveal = element.dataset.reveal === "document";
                   const column =
                     element.dataset.reveal === "sequence"
                       ? Array.from(
@@ -67,7 +59,7 @@ export function useSectionReveal(path: string) {
                   // Animate complete reading blocks, never individual words or
                   // nested descendants of an already animated block.
                   const parts =
-                    element.dataset.reveal === "surface"
+                    documentReveal || element.dataset.reveal === "surface"
                       ? [element]
                       : element.dataset.reveal === "media"
                         ? (Array.from(element.children) as HTMLElement[])
@@ -81,13 +73,21 @@ export function useSectionReveal(path: string) {
                   (parts.length ? parts : [element]).forEach((part, index) => {
                     gsap.fromTo(
                       part,
-                      { opacity: 0, y: part.matches("h1, h2, h3") ? 40 : 32 },
+                      {
+                        opacity: documentReveal ? 0.35 : 0,
+                        y: documentReveal
+                          ? 8
+                          : part.matches("h1, h2, h3")
+                            ? 40
+                            : 32,
+                      },
                       {
                         opacity: 1,
                         y: 0,
-                        duration: 1.1,
-                        delay:
-                          (Math.min(index, 3) + Math.max(column, 0)) * 0.08,
+                        duration: documentReveal ? 0.28 : 1.1,
+                        delay: documentReveal
+                          ? 0
+                          : (Math.min(index, 3) + Math.max(column, 0)) * 0.08,
                         ease: "power2.out",
                         clearProps: "opacity,transform",
                         scrollTrigger: {
@@ -106,12 +106,12 @@ export function useSectionReveal(path: string) {
           // Lazy routes commit after App's effect; discover their content too.
           const observer = new MutationObserver(observe);
           observer.observe(root, { childList: true, subtree: true });
-          addEventListener("keydown", onKey);
+          addEventListener("keydown", finish);
           root.addEventListener("focusin", onFocus);
           observe();
           return () => {
             observer.disconnect();
-            removeEventListener("keydown", onKey);
+            removeEventListener("keydown", finish);
             root.removeEventListener("focusin", onFocus);
             context.revert();
           };

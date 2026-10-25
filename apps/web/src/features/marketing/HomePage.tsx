@@ -43,7 +43,7 @@ export function HomePage() {
           </div>
           <p className="small">
             For Chrome, Edge, Brave, compatible Chromium browsers and Firefox.
-            Local processing. No account required.
+            Local processing. No Tholi account required.
           </p>
         </div>
       </section>
@@ -137,7 +137,7 @@ export function HomePage() {
               views keeps the same journey.
             </p>
             <SiteLink className="web-text-link" to="/docs/journeys">
-              How continuous journeys work
+              Choose and change your destination
             </SiteLink>
           </div>
           <div className="interface-pair" data-reveal="media">
@@ -190,7 +190,7 @@ export function HomePage() {
                 consequential changes. Tholi checks the requested result.
               </p>
               <SiteLink to="/docs/security" className="web-text-link">
-                Understand the boundaries
+                Privacy and permissions
               </SiteLink>
             </div>
           </div>
@@ -231,7 +231,7 @@ export function HomePage() {
             <h2>
               A helpful guide.
               <br />
-              An honest preview.
+              Honest about its limits.
             </h2>
             <p>Useful direction includes knowing what still needs work.</p>
             <SiteLink to="/docs" className="web-text-link">
@@ -261,15 +261,14 @@ export function HomePage() {
               <p>
                 No. It presents actual navigation events and route evidence
                 using the local pipeline. General-purpose LLM answers are not
-                part of this preview.
+                part of this release.
               </p>
             </details>
             <details>
               <summary>Do I need an account?</summary>
               <p>
-                No account is needed to download or use the extension. The
-                account and onboarding flows on this website are labeled local
-                demonstrations.
+                No Tholi account is needed to install or use the extension. You
+                can also try the optional practice here without signing in.
               </p>
             </details>
             <details>
@@ -294,7 +293,8 @@ export function HomePage() {
               made clear.
             </h2>
             <p>
-              Choose the desktop Chromium or Firefox preview. No account needed.
+              Available on the Chrome Web Store and Firefox Add-ons. No Tholi
+              account required.
             </p>
           </div>
           <SiteLink to="/download" className="web-primary">

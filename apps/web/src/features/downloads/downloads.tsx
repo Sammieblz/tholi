@@ -1,8 +1,47 @@
 import { useEffect, useState } from "react";
 import { Download, Refresh } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
+import { SiteLink } from "../../app/router";
 import { usePreferences } from "../preferences";
-import { selectedBrowser, type ExtensionTarget } from "./browsers";
+import {
+  desktopStore,
+  selectedBrowser,
+  stores,
+  type ExtensionTarget,
+} from "./browsers";
+export function StoreLink({
+  target,
+  className = "web-primary",
+  describedBy,
+}: {
+  target: ExtensionTarget;
+  className?: string;
+  describedBy?: string;
+}) {
+  const store = stores[target];
+  return (
+    <a href={store.url} className={className} aria-describedby={describedBy}>
+      Add to {store.name}
+    </a>
+  );
+}
+export function InstallLink({
+  className = "web-primary",
+}: {
+  className?: string;
+}) {
+  const store = desktopStore();
+  return store ? (
+    <StoreLink
+      target={store.id === "firefox" ? "firefox" : "chromium"}
+      className={className}
+    />
+  ) : (
+    <SiteLink to="/download" className={className}>
+      Get Tholi
+    </SiteLink>
+  );
+}
 export interface DownloadManifest {
   version: string;
   url: string;
@@ -99,23 +138,23 @@ export function DownloadButton({ download }: { download: DownloadState }) {
       >
         <Download width={19} aria-hidden="true" />
         {download.release.target === "firefox"
-          ? "Download Firefox developer preview"
-          : "Download Chromium preview"}
+          ? "Download Firefox developer ZIP"
+          : "Download Chromium developer ZIP"}
       </a>
     );
   if (download.status === "loading")
     return (
       <div className="download-status" role="status">
         <Wayfinder state="planning" />
-        Finding the packaged preview…
+        Finding the developer package…
       </div>
     );
   if (download.status === "error")
     return (
       <div className="download-status download-problem">
         <p role="status">
-          The download information could not be loaded. Your account is not
-          needed.
+          The developer download information could not be loaded. Store
+          installation is still available above.
         </p>
         <button onClick={download.retry}>
           <Refresh width={16} aria-hidden="true" />

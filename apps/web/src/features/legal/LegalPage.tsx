@@ -39,8 +39,8 @@ export function LegalPage({
         <p className="eyebrow">{labels[page]}</p>
         <h1>{titles[page]}</h1>
         <p className="web-intro">
-          A Tholi-specific record of how the website and extension preview work,
-          what stays on your device and where your choices apply.
+          A Tholi-specific record of how the website and extension work, what
+          stays on your device and where your choices apply.
         </p>
         <div className="legal-draft-note">
           <strong>Publication and review</strong>

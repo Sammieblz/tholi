@@ -114,7 +114,7 @@ export function CookieConsent() {
               </Dialog.Close>
             </div>
             <Dialog.Description>
-              You can use every part of this preview with essential cookies
+              You can use every part of this website with essential cookies
               only. Your choice lasts 180 days and can be changed here.
             </Dialog.Description>
             <div className="cookie-category">

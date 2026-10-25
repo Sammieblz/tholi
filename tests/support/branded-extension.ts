@@ -3,6 +3,7 @@ import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import edge from "selenium-webdriver/edge.js";
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { attachWebDriverExtension } from "./webdriver-extension";
 import {
@@ -21,6 +22,9 @@ export async function openBrandedExtension(
     "--remote-debugging-pipe",
   );
   options.set("webSocketUrl", true);
+  const builder = new Builder().forBrowser(
+    name === "edge" ? "MicrosoftEdge" : "chrome",
+  );
   if (name === "brave") {
     const binary =
       process.env.THOLI_BRAVE_BINARY ||
@@ -34,10 +38,28 @@ export async function openBrandedExtension(
         "Brave is required for branded verification. Set THOLI_BRAVE_BINARY or fetch the pinned portable browser.",
       );
     (options as chrome.Options).setChromeBinaryPath(binary);
+    // Hosted runners put Chrome's driver on PATH. Resolve Brave's own engine
+    // instead, which can be a different Chromium major from installed Chrome.
+    const paths = JSON.parse(
+      execFileSync(
+        resolve(
+          "node_modules/selenium-webdriver/bin/windows/selenium-manager.exe",
+        ),
+        [
+          "--browser",
+          "chrome",
+          "--browser-path",
+          binary,
+          "--skip-driver-in-path",
+          "--output",
+          "json",
+          "--avoid-stats",
+        ],
+        { encoding: "utf8" },
+      ),
+    ).result;
+    builder.setChromeService(new chrome.ServiceBuilder(paths.driver_path));
   }
-  const builder = new Builder().forBrowser(
-    name === "edge" ? "MicrosoftEdge" : "chrome",
-  );
   if (name === "edge") builder.setEdgeOptions(options as edge.Options);
   else builder.setChromeOptions(options as chrome.Options);
   const driver = await builder.build();

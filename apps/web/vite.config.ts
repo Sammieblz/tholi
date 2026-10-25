@@ -1,7 +1,9 @@
 import { defineConfig } from "vite";
 import websiteRelease from "./release.json";
+import { staticSite } from "./build/static-site";
 export default defineConfig({
   plugins: [
+    staticSite(),
     {
       name: "website-release-metadata",
       generateBundle() {

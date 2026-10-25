@@ -77,9 +77,8 @@ export function ContactPage() {
         <div className="contact-form-area">
           <h2>What’s on your mind?</h2>
           <p id="contact-delivery-note" className="contact-delivery-note">
-            Direct form delivery is coming soon. For now, prepare your message
-            here, then send it through your email app. Nothing is sent by this
-            form.
+            Prepare your message here, then send it through your email app.
+            Nothing is sent by this form.
           </p>
           <form
             noValidate

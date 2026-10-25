@@ -13,7 +13,18 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Optional API setup](guides/backend.md)
 - [Diagnostics](guides/troubleshooting.md)
 
-The public website at **[tholi.io/docs](https://tholi.io/docs)** publishes selected current references with search and heading links. Local development uses **http://127.0.0.1:5174/docs**.
+## Public help
+
+The website at **[tholi.io/docs](https://tholi.io/docs)** publishes practical help
+for people using the current extension. Its eight guides are maintained in
+[`help/`](help/): installation, using Tholi, destinations, session controls,
+appearance, privacy and permissions, troubleshooting, and a short developer
+overview. Search and heading links work within those guides. Local website
+development uses **http://127.0.0.1:5174/docs**.
+
+The references elsewhere in this index retain technical details for developers.
+The website's **For developers** guide links here for source setup, architecture,
+API contracts, diagnostics and contributions.
 
 ## Building Tholi
 
