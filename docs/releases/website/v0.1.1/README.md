@@ -4,6 +4,8 @@ Tholi is published on the Chrome Web Store and Firefox Add-ons. This website
 update makes store installation the main path for the account-free local
 extension.
 
+## Changes
+
 - Both browser cards link directly to their approved listings. Recognized desktop
   browsers receive a matching header action; other browsers receive Get Tholi.
 - Setup explains browser confirmation, opening/pinning Tholi, website access and
@@ -36,6 +38,8 @@ Existing branding, fonts, themes and arrow-free button styling remain.
 Real accounts, cloud plans, payments and credits stay in the existing roadmap.
 Extension/API version remains **0.11.0**. Existing tags, archives and historical
 validation records are unchanged.
+
+## Validation
 
 See [validation](validation.md) for actual checks. Publication of a certified
 website archive requires the existing full-certification workflow. Merge and
