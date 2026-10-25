@@ -253,12 +253,46 @@ reports remain historical. Website 0.1.1 and extension/API 0.11.0 remain
 unchanged; no archive, publication or deployment is part of this follow-up.
 Native screen-reader speech and release certification remain pending.
 
-## Publication and deployment
+## Certified publication and deployment
 
-Run the existing **Full validation** workflow on the reviewed default branch
-before publishing a certified website archive. PR and focused reports do not
-authorize packaging. Preserve existing tags and archives.
+Website **0.1.1** was [published on GitHub](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.1) on October 25, 2026,
+from source [`8269c96`](https://github.com/Sammieblz/tholi/commit/8269c963123ba65348919e1d21c9025b465350bd). Complete
+[Full validation](https://github.com/Sammieblz/tholi/actions/runs/40228633819) passed under identity `40228633819-1`.
+All eleven test owners, combined certification and website publication passed.
+Every report and immutable build used the same coordinated run.
 
-After the approved Cloudflare deployment, record its revision and verify the
-rendered primary routes, compiled assets, both exact store-link destinations and
-`/website-release.json` reporting 0.1.1. Live deployment checks remain pending.
+The release attaches `tholi-web-0.1.1.zip`, its JSON provenance and SHA256
+record. Download verification confirmed the tag's exact source revision,
+website 0.1.1, product 0.11.0, certification identity and all **90 archive
+file hashes**. The ZIP SHA256 is:
+
+```text
+b16d2deec8dbd30921ccadbf485a165bb89827b92d8f1da1fa4621239ba9a0ee
+```
+
+An earlier [full run](https://github.com/Sammieblz/tholi/actions/runs/40226418031)
+passed every test but could not certify because the workflow assigned the
+multi-app browser performance report to the model job. The mapping was
+corrected to integration, each owner now checks that all declared reports
+exist, and the entire workflow ran again. The failed run did not authorize
+publication and its reports were not combined with the successful run.
+
+The release also resolves Brave's driver from its own binary, ignoring an
+incompatible ChromeDriver on the hosted runner's PATH. The website packager
+requires committed source and notes while allowing regenerated evidence under
+`output/`; full verification still checks those reports before packaging.
+Existing product archives, tags, frozen acceptance inputs and thresholds remain
+unchanged. Only the website was packaged.
+
+[Cloudflare deployment `43e2a445`](https://dash.cloudflare.com/?to=/07d7d52ea2593eef763629001dad2ad0/pages/view/tholi/43e2a445-e534-49bc-be0a-fdf4e47517ac)
+reported success for the certified source. Fresh checks confirmed website
+version 0.1.1, the homepage, download page, documentation index, Getting started
+and Support, including canonical metadata and compiled JavaScript responses.
+Both approved store destinations were verified. Opening a listing does not
+establish installation.
+
+Local publication feedback is preserved under
+`output/qa/website-0.1.1-release/`, separately from historical validation.
+Native permissions, screen-reader speech and signed-in checks remain separate
+and pending. Future releases must repeat certification for their own exact
+source and build; existing archives and tags remain immutable.

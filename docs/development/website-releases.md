@@ -7,22 +7,27 @@ product tags continue to use `vVERSION` under [the product procedure](releasing.
 
 ## Current deployment
 
-Website **0.1.0** is published at **[tholi.io](https://tholi.io)** on Cloudflare
-Pages. The [source prerelease](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.0)
-was published on October 20, 2026 and merged through
-[PR #22](https://github.com/Sammieblz/tholi/pull/22). See the
-[release record](../releases/website/v0.1.0/README.md) and
-[validation evidence](../releases/website/v0.1.0/validation.md).
+Website **0.1.1** is published at **[tholi.io](https://tholi.io)** on Cloudflare
+Pages. The [certified GitHub release](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.1) was published on October
+25, 2026 from [`8269c96`](https://github.com/Sammieblz/tholi/commit/8269c963123ba65348919e1d21c9025b465350bd), after complete
+[Full validation](https://github.com/Sammieblz/tholi/actions/runs/40228633819). The website ZIP, per-file provenance JSON and
+SHA256 record are attached to that release.
 
-That GitHub release contains source archives, with no certified built website
-ZIP attached. Deployment and source publication are complete; archive
-certification remains separate. Keep the original tag at its published commit.
+The initial Cloudflare deployment of that source was verified: website version
+0.1.1, primary routes, compiled assets and both approved store destinations.
+See the [release record](../releases/website/v0.1.1/README.md) and
+[certification and deployment evidence](../releases/website/v0.1.1/validation.md).
+Extension/API version remains 0.11.0.
+
+The previous 0.1.0 source release and its original tag remain unchanged.
+Its deployment and source-only archive history are preserved in the
+[0.1.0 record](../releases/website/v0.1.0/README.md).
 
 ## Prepare and validate
 
-Website **0.1.1** is prepared in [the published-store launch record](../releases/website/v0.1.1/README.md).
-It replaces the 0.1.0 mock store/account entry points with published store links
-and account-free installation. It is not yet recorded as the deployed revision.
+Website **0.1.1** is released. Use the next independent website version for
+further changes; the published-store and account-free installation behavior is
+recorded in its release notes.
 
 1. Add `docs/releases/website/vVERSION/README.md` with first line
    `# Tholi website VERSION`, changes, boundaries and actual validation status.
@@ -99,8 +104,8 @@ privacy/cookie notices and verify actual network requests. App consent code
 does not control a host-injected script.
 
 Pages has a [25 MiB asset limit](https://developers.cloudflare.com/pages/platform/limits/#file-size),
-while existing extension ZIPs are about 29 MB each. The live site currently
-offers source setup without a packaged download. Use suitable download hosting
-and verified links before enabling those downloads. Keep target-specific
+while existing extension ZIPs are about 29 MB each. Published store links are the
+primary installation path. Use suitable download hosting and verified links
+before enabling developer ZIP downloads. Keep target-specific
 checksums and versions intact; a local generated archive should not be copied
 into a deployment merely because it is present in `output/`.

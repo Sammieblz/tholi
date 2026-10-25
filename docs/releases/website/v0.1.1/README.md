@@ -1,5 +1,15 @@
 # Tholi website 0.1.1
 
+Status: **published, certified and deployed** on October 25, 2026.
+
+- [GitHub release `web-v0.1.1`](https://github.com/Sammieblz/tholi/releases/tag/web-v0.1.1), with the verified website ZIP,
+  provenance JSON and SHA256 record.
+- Certified source [`8269c96`](https://github.com/Sammieblz/tholi/commit/8269c963123ba65348919e1d21c9025b465350bd) after complete
+  [Full validation](https://github.com/Sammieblz/tholi/actions/runs/40228633819), run `40228633819-1`.
+- The initial Cloudflare deployment serves website 0.1.1 at
+  [tholi.io](https://tholi.io). Its primary routes, compiled assets and both
+  approved store destinations passed post-deployment checks.
+
 Tholi is published on the Chrome Web Store and Firefox Add-ons. This website
 update makes store installation the main path for the account-free local
 extension.
@@ -41,9 +51,6 @@ validation records are unchanged.
 
 ## Validation
 
-See [validation](validation.md) for actual checks. Publication of a certified
-website archive requires the existing full-certification workflow. Merge and
-Cloudflare deployment follow [website releases](../../../development/website-releases.md).
-
-After deployment, verify both store links, primary route headings and
-`/website-release.json` at tholi.io, and record the Cloudflare deployment revision.
+See [validation](validation.md) for certification, archive hashes and deployment
+checks. Future website releases follow the same
+[release procedure](../../../development/website-releases.md).
