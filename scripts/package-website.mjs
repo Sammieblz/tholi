@@ -14,9 +14,18 @@ const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
 }).trim();
 assert.equal(
-  execFileSync("git", ["status", "--porcelain", "--untracked-files=normal"], {
-    encoding: "utf8",
-  }).trim(),
+  execFileSync(
+    "git",
+    [
+      "status",
+      "--porcelain",
+      "--untracked-files=normal",
+      "--",
+      ".",
+      ":(exclude)output/",
+    ],
+    { encoding: "utf8" },
+  ).trim(),
   "",
   "Commit release source and notes before packaging website provenance",
 );
