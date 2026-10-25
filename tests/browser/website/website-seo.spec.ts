@@ -1,5 +1,5 @@
 import { test, expect, deterministicNetwork } from "../../support/browser-test";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import sharp from "sharp";
 import {
   publicPages,
@@ -49,6 +49,26 @@ test("search metadata and documentation are present in production HTML without J
             .textContent()) || "{}",
         )["@graph"].length,
       ).toBeGreaterThan(2);
+      if (route.path.startsWith("/docs/")) {
+        const graph = JSON.parse(
+          (await head
+            .locator('script[type="application/ld+json"]')
+            .textContent())!,
+        )["@graph"];
+        expect(
+          graph.some(
+            (item: { "@type": string }) => item["@type"] === "Article",
+          ),
+        ).toBe(true);
+        await expect(page.locator(".docs-prose")).not.toContainText(
+          "contextRevision",
+        );
+        await expect(
+          page
+            .getByRole("navigation", { name: "More help" })
+            .getByRole("link", { name: "Tholi Support" }),
+        ).toBeVisible();
+      }
       if (route.path === "/contact") {
         await expect(page.locator(".contact-form-area form")).toBeHidden();
         await expect(
@@ -164,6 +184,25 @@ test("documentation sitemap, crawler guidance and brand assets have real content
   expect(
     await (await page.request.get("/docs/using-tholi.md")).text(),
   ).toContain("https://tholi.io/docs/appearance");
+  const exportedGuides = (await readdir("dist/web/docs")).filter((file) =>
+    file.endsWith(".md"),
+  );
+  expect(exportedGuides.sort()).toEqual([
+    "appearance.md",
+    "developers.md",
+    "getting-started.md",
+    "journeys.md",
+    "security.md",
+    "sessions.md",
+    "troubleshooting.md",
+    "using-tholi.md",
+  ]);
+  const completeHelp = await (await page.request.get("/llms-full.txt")).text();
+  expect(completeHelp).toContain(
+    "https://github.com/Sammieblz/tholi/blob/main/docs/guides/backend.md",
+  );
+  expect(completeHelp).not.toContain("contextRevision");
+  expect(completeHelp).not.toContain("ServiceWorker.stopWorker");
   for (const [path, size] of [
     ["/icons/favicon-32.png", 32],
     ["/icons/favicon-96.png", 96],
@@ -194,6 +233,22 @@ test("documentation sitemap, crawler guidance and brand assets have real content
   const redirects = await readFile("dist/web/_redirects", "utf8");
   for (const path of ["signin", "signup", "welcome"])
     expect(redirects).toContain(`/${path} /download 301`);
+  for (const [slug, source] of Object.entries({
+    architecture: "docs/architecture/navigation.md",
+    "natural-language": "docs/architecture/natural-language.md",
+    backend: "docs/guides/backend.md",
+    contributing: "CONTRIBUTING.md",
+  })) {
+    for (const suffix of ["", "/", ".html"])
+      expect(redirects).toContain(
+        `/docs/${slug}${suffix} https://github.com/Sammieblz/tholi/blob/main/${source} 301`,
+      );
+    expect(redirects).toContain(
+      `/docs/${slug}.md https://raw.githubusercontent.com/Sammieblz/tholi/main/${source} 301`,
+    );
+    expect(locations).not.toContain(`https://tholi.io/docs/${slug}`);
+    expect(await readdir("dist/web/docs")).not.toContain(`${slug}.html`);
+  }
   const notFoundRobots = await page.evaluate(
     (html) =>
       new DOMParser()

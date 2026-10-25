@@ -1,4 +1,4 @@
-.web-main:not(:has(> .home-page)) {
+.web-main:not(:has(> :is(.home-page, .docs-layout))) {
   animation: web-page-enter 180ms var(--ease-out) both;
 }
 .hero-heading,

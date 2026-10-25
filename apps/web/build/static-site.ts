@@ -90,12 +90,15 @@ export function staticSite(): Plugin {
         );
         await write(
           "_redirects",
-          site.retiredAccountPaths
-            .flatMap((path: string) => [
+          [
+            ...site.retiredAccountPaths.flatMap((path: string) => [
               `${path} /download 301`,
               `${path}/ /download 301`,
-            ])
-            .join("\n") + "\n",
+            ]),
+            ...Object.entries(site.documentationRedirects).map(
+              ([path, destination]) => `${path} ${destination} 301`,
+            ),
+          ].join("\n") + "\n",
         );
         await write(
           "_headers",

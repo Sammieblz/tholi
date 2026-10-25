@@ -137,7 +137,7 @@ export function HomePage() {
               views keeps the same journey.
             </p>
             <SiteLink className="web-text-link" to="/docs/journeys">
-              How continuous journeys work
+              Choose and change your destination
             </SiteLink>
           </div>
           <div className="interface-pair" data-reveal="media">
@@ -190,7 +190,7 @@ export function HomePage() {
                 consequential changes. Tholi checks the requested result.
               </p>
               <SiteLink to="/docs/security" className="web-text-link">
-                Understand the boundaries
+                Privacy and permissions
               </SiteLink>
             </div>
           </div>

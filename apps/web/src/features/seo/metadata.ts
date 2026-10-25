@@ -44,7 +44,7 @@ export const publicPages: PageMetadata[] = [
   page(
     "/docs",
     "Tholi documentation | Setup, guidance and privacy",
-    "Learn how to install Tholi, start website guidance, manage local data and understand permissions, navigation limits and optional backend connections.",
+    "Get practical help installing Tholi, following guidance, managing your local data and solving common problems. Find developer references on GitHub.",
     "Documentation",
     "DocsPage",
   ),
@@ -207,7 +207,7 @@ export function structuredData(metadata: PageMetadata) {
     });
   if (article)
     graph.push({
-      "@type": "TechArticle",
+      "@type": "Article",
       "@id": url + "#article",
       headline: article.title,
       description: article.description,

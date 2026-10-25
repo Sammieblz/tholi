@@ -20,8 +20,19 @@ extension.
   structured data, a sitemap and LLM-readable documentation. Website favicons,
   mobile shortcut icons and the social banner reuse the existing brand assets.
   See [SEO owners and deployment checks](../../../development/website-seo.md).
+- Documentation now offers eight practical guides for installation, daily use,
+  privacy and troubleshooting, with one short developer overview. Technical
+  references remain in the repository; their old public URLs redirect to the
+  matching GitHub documents. Search and crawler exports use the public help.
+- Documentation styling uses a bounded reading column, larger body text and a
+  sticky contents rail on wide screens. Smaller layouts retain inline contents.
+  Larger serif group labels and dividers distinguish navigation categories from
+  links. A narrow ink marker identifies the current guide without a filled pill.
+  Headings and guide cards reveal once with short motion; typing, keyboard use
+  and reduced motion keep reading immediate. Mouse section navigation avoids
+  a full-row heading outline while keyboard focus remains visible.
 
-Existing branding, fonts, themes, motion and arrow-free button styling remain.
+Existing branding, fonts, themes and arrow-free button styling remain.
 Real accounts, cloud plans, payments and credits stay in the existing roadmap.
 Extension/API version remains **0.11.0**. Existing tags, archives and historical
 validation records are unchanged.

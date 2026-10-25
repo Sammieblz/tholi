@@ -1,6 +1,84 @@
 import { test, expect } from "../../support/browser-test";
 import os from "node:os";
 
+test("documentation entrances settle once and leave keyboard, search and reduced motion immediate", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 720 });
+  await page.goto("/docs");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const lastCard = page.locator(".docs-index-card").last();
+  // A block below the viewport waits for its first scroll, then stays settled.
+  await expect(lastCard).toHaveCSS("opacity", "0.35");
+  await lastCard.scrollIntoViewIfNeeded();
+  await expect(lastCard).toHaveCSS("opacity", "1");
+  await expect(lastCard).toHaveCSS("transform", "none");
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await lastCard.scrollIntoViewIfNeeded();
+  await expect(lastCard).toHaveCSS("transform", "none");
+
+  // Typing directly after pointer focus must cancel reveals too, without Tab.
+  await page.goto("/docs");
+  await expect(lastCard).toHaveCSS("opacity", "0.35");
+  const search = page.getByRole("searchbox", { name: "Search documentation" });
+  await search.click();
+  await search.pressSequentially("widget");
+  await search.clear();
+  await expect(lastCard).toHaveCSS("opacity", "1");
+  await expect(lastCard).toHaveCSS("transform", "none");
+
+  const chapters = page.getByRole("navigation", {
+    name: "Documentation chapters",
+  });
+  await chapters
+    .getByRole("link", { name: "Getting started", exact: true })
+    .click();
+  const lastHeading = page.locator(".docs-prose .docs-heading").last();
+  await expect(lastHeading).toHaveCSS("opacity", "0.35");
+  await expect(chapters.locator("[aria-current='page']")).toHaveText(
+    "Getting started",
+  );
+  await expect(chapters.locator("[aria-current='page']")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  // Keyboard scrolling/focus must reveal even the pending blocks immediately.
+  await page.keyboard.press("Tab");
+  await expect(lastHeading).toHaveCSS("opacity", "1");
+  await expect(lastHeading).toHaveCSS("transform", "none");
+  await search.fill("widget");
+  const result = page
+    .getByRole("navigation", { name: "Documentation search results" })
+    .getByRole("link", { name: "Using Tholi", exact: true });
+  await result.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/docs\/using-tholi$/);
+  await expect(page.locator(".docs-prose .docs-heading").last()).toHaveCSS(
+    "transform",
+    "none",
+  );
+  await expect(page.locator(".docs-article-header")).toHaveCSS("opacity", "1");
+  // Changing the OS preference also cancels pending entrances on the open page.
+  await page.goto("/docs/getting-started");
+  await expect(lastHeading).toHaveCSS("opacity", "0.35");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(lastHeading).toHaveCSS("opacity", "1");
+  await expect(lastHeading).toHaveCSS("transform", "none");
+  await chapters
+    .getByRole("link", { name: "Using Tholi", exact: true })
+    .click();
+  await expect(page.locator(".docs-article-header")).toHaveCSS(
+    "transform",
+    "none",
+  );
+  await expect(page.locator(".docs-prose .docs-heading").last()).toHaveCSS(
+    "opacity",
+    "1",
+  );
+});
+
 test("header returns on upward scroll and keyboard focus; download reveals respect preference changes", async ({
   page,
 }) => {

@@ -1,40 +1,30 @@
 import { articleCatalog, type ArticleMetadata } from "./catalog";
-import contributing from "../../../../../CONTRIBUTING.md?raw";
-import naturalLanguage from "../../../../../docs/architecture/natural-language.md?raw";
-import architecture from "../../../../../docs/architecture/navigation.md?raw";
-import security from "../../../../../docs/architecture/security.md?raw";
-import sessions from "../../../../../docs/architecture/sessions.md?raw";
-import appearance from "../../../../../docs/guides/appearance.md?raw";
-import backend from "../../../../../docs/guides/backend.md?raw";
-import gettingStarted from "../../../../../docs/guides/getting-started.md?raw";
-import journeys from "../../../../../docs/guides/journeys.md?raw";
-import troubleshooting from "../../../../../docs/guides/troubleshooting.md?raw";
-import usingTholi from "../../../../../docs/guides/using-tholi.md?raw";
+import gettingStarted from "../../../../../docs/help/getting-started.md?raw";
+import usingTholi from "../../../../../docs/help/using-tholi.md?raw";
+import journeys from "../../../../../docs/help/journeys.md?raw";
+import sessions from "../../../../../docs/help/sessions.md?raw";
+import appearance from "../../../../../docs/help/appearance.md?raw";
+import security from "../../../../../docs/help/security.md?raw";
+import troubleshooting from "../../../../../docs/help/troubleshooting.md?raw";
+import developers from "../../../../../docs/help/developers.md?raw";
 import { repositorySourceUrl } from "../../config/project";
 
 export { repositoryUrl } from "../../config/project";
+export { documentationGroups } from "./catalog";
 export type DocumentationArticle = ArticleMetadata & { markdown: string };
 const markdown: Record<string, string> = {
   "getting-started": gettingStarted,
   "using-tholi": usingTholi,
-  journeys: journeys,
-  sessions: sessions,
-  appearance: appearance,
-  troubleshooting: troubleshooting,
-  security: security,
-  architecture: architecture,
-  "natural-language": naturalLanguage,
-  backend: backend,
-  contributing: contributing,
+  journeys,
+  sessions,
+  appearance,
+  troubleshooting,
+  security,
+  developers,
 };
 export const articles: DocumentationArticle[] = articleCatalog.map(
   (article) => ({ ...article, markdown: markdown[article.slug] }),
 );
-export const documentationGroups = [
-  "Start here",
-  "Using Tholi",
-  "Under the hood",
-] as const;
 export function headingId(text: string) {
   return text
     .toLowerCase()
@@ -119,7 +109,9 @@ export function resolveDocumentationLink(
   } catch {
     return { href: "", local: false };
   }
-  relative = legacySources[relative.split("/").at(-1)!] || relative;
+  // Current help links take precedence over old, basename-only source aliases.
+  if (!articles.some((article) => article.source === relative))
+    relative = legacySources[relative.split("/").at(-1)!] || relative;
   const registered = articles.find((article) => article.source === relative);
   return registered
     ? { href: `/docs/${registered.slug}${target.hash}`, local: true }

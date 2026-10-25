@@ -1,94 +1,78 @@
 /** Shared metadata for documentation, SEO and static exports. No article bodies. */
+export const documentationGroups = [
+  "Start here",
+  "Everyday use",
+  "Help and privacy",
+  "Developers",
+] as const;
 export type ArticleMetadata = {
   slug: string;
   title: string;
   description: string;
-  group: "Start here" | "Using Tholi" | "Under the hood";
+  group: (typeof documentationGroups)[number];
   source: string;
 };
 export const articleCatalog: ArticleMetadata[] = [
   {
     slug: "getting-started",
     title: "Getting started",
-    description:
-      "Install from the store, grant website access and begin a destination.",
+    description: "Install Tholi, open it on a website and try your first task.",
     group: "Start here",
-    source: "docs/guides/getting-started.md",
+    source: "docs/help/getting-started.md",
   },
   {
     slug: "using-tholi",
     title: "Using Tholi",
     description:
-      "Guide, Conversation, the floating widget and the local practice.",
+      "Follow instructions, use Conversation and keep your guide beside the page.",
     group: "Start here",
-    source: "docs/guides/using-tholi.md",
+    source: "docs/help/using-tholi.md",
   },
   {
     slug: "journeys",
-    title: "Continuous journeys",
+    title: "Choosing and changing a destination",
     description:
-      "How destinations, corrections and return routes work across screens.",
-    group: "Using Tholi",
-    source: "docs/guides/journeys.md",
+      "Write a useful request, clarify your goal and continue across pages.",
+    group: "Everyday use",
+    source: "docs/help/journeys.md",
   },
   {
     slug: "sessions",
-    title: "Your session",
-    description:
-      "Pause, Stop, close, resume and understand session continuity.",
-    group: "Using Tholi",
-    source: "docs/architecture/sessions.md",
+    title: "Pausing and resuming",
+    description: "Pause, stop, minimize or return to an unfinished task.",
+    group: "Everyday use",
+    source: "docs/help/sessions.md",
   },
   {
     slug: "appearance",
     title: "Appearance",
-    description: "Website appearance and the extension's contrasting guidance.",
-    group: "Using Tholi",
-    source: "docs/guides/appearance.md",
+    description:
+      "Adjust website appearance and understand extension contrast and motion.",
+    group: "Everyday use",
+    source: "docs/help/appearance.md",
+  },
+  {
+    slug: "security",
+    title: "Privacy and permissions",
+    description:
+      "Choose website access and manage your local tasks, routes and memory.",
+    group: "Help and privacy",
+    source: "docs/help/security.md",
   },
   {
     slug: "troubleshooting",
     title: "Troubleshooting",
     description:
-      "Understand missing evidence and safely export local diagnostics.",
-    group: "Using Tholi",
-    source: "docs/guides/troubleshooting.md",
+      "Find checks for missing guidance, access problems and unclear next steps.",
+    group: "Help and privacy",
+    source: "docs/help/troubleshooting.md",
   },
   {
-    slug: "security",
-    title: "Security and boundaries",
-    description: "Permissions, private inputs, review and verified outcomes.",
-    group: "Under the hood",
-    source: "docs/architecture/security.md",
-  },
-  {
-    slug: "architecture",
-    title: "How guidance works",
-    description: "Discovery, grounded planning, live binding and verification.",
-    group: "Under the hood",
-    source: "docs/architecture/navigation.md",
-  },
-  {
-    slug: "natural-language",
-    title: "Natural language",
+    slug: "developers",
+    title: "For developers",
     description:
-      "English interpretation, local models and contextual retrieval.",
-    group: "Under the hood",
-    source: "docs/architecture/natural-language.md",
-  },
-  {
-    slug: "backend",
-    title: "Optional backend",
-    description: "Connect a self-hosted API when you choose to use one.",
-    group: "Under the hood",
-    source: "docs/guides/backend.md",
-  },
-  {
-    slug: "contributing",
-    title: "Contributing",
-    description:
-      "Development, regression checks and truthful release artifacts.",
-    group: "Under the hood",
-    source: "CONTRIBUTING.md",
+      "Find source installation, private backend setup and contribution guides on GitHub.",
+    group: "Developers",
+    source: "docs/help/developers.md",
   },
 ];

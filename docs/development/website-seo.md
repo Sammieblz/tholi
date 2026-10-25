@@ -11,17 +11,18 @@ or an external rendering service.
   URLs, Open Graph, Twitter cards and JSON-LD. Client navigation updates the
   same metadata without accumulating duplicate tags.
 - `apps/web/src/features/docs/catalog.ts` shares article metadata with the
-  documentation UI, SEO and static exports. Markdown bodies stay in their
-  existing source files and outside the initial JavaScript bundle.
+  documentation UI, SEO and static exports. The eight public guides live in
+  `docs/help/` and stay outside the initial JavaScript bundle. Repository
+  architecture, API and contributor references are linked, not imported.
 - `apps/web/src/entry-server.tsx` renders the actual public components with
   empty cookie access and an isolated static router. It resolves lazy pages,
   then serializes plain markup without hidden streaming fragments. Static form
   controls are disabled until their client handlers mount. Native links work
   immediately. No browser globals, account data or extension state are mocked.
 - `apps/web/build/static-site.ts` extends the existing Vite build. It produces
-  21 public page documents and `404.html`, route styles, `sitemap.xml`,
+  18 public page documents and `404.html`, route styles, `sitemap.xml`,
   `robots.txt`, `llms.txt`, `llms-full.txt`, documentation `.md` files, Cloudflare
-  `_headers` and `_redirects`. Twenty canonical routes are indexable. Optional
+  `_headers` and `_redirects`. Seventeen canonical routes are indexable. Optional
   onboarding and missing pages use `noindex, follow`.
 
 Run `npm run build:web`. Output remains `dist/web`. Canonicals use
@@ -39,6 +40,14 @@ JSON-LD describes the operator, website, local application, documentation and
 breadcrumb hierarchy. It uses actual store links and the product version. No
 review counts, ratings, invented modification dates or future paid plans are
 added. Search engines decide whether to index a page or display rich results.
+Public help uses `Article` structured data.
+
+`features/docs/redirects.ts` shares retired technical destinations between the
+client router and Cloudflare output. The four old technical article URLs, their
+trailing-slash and `.html` aliases lead to the matching GitHub references. Their
+`.md` aliases lead to raw GitHub Markdown. Client replacement navigation retains
+fragments without adding a redirect entry to Back history. Retained help URLs
+continue to use local search and heading navigation.
 
 ## Favicons and sharing
 

@@ -74,7 +74,7 @@ speech or signed-in website workflows; those checks remain pending.
 
 ## SEO follow-up
 
-The site now builds 22 plain HTML documents, route-specific metadata, structured
+The initial SEO follow-up built 22 plain HTML documents, route-specific metadata, structured
 data, a sitemap, crawler guidance and Markdown exports. Brand-derived icons and
 the social preview are committed assets. The runtime shares route metadata with
 the generated HTML. Details and primary references are in
@@ -129,6 +129,129 @@ was added. Subsequent formatting only normalized line endings.
 The earlier complete PR gate predates this CSS correction. This focused follow-up
 does not certify a release archive; full certification remains required before
 packaging.
+
+## Consumer documentation follow-up
+
+Public documentation now contains eight task-oriented guides from `docs/help/`,
+with a short developer entry linking to repository references. The earlier
+technical guides, architecture documents and contributor instructions remain
+unchanged. A shared map redirects retired technical bookmarks and raw exports to
+their matching GitHub sources. The public build now contains 18 public HTML
+pages plus `404.html`, with 17 indexable routes.
+
+The existing catalog, local search, safe Markdown renderer, heading navigation
+and metadata owners are retained. Public help uses `Article` structured data.
+Support and Contact links stay in a consistent article-footer order, following
+the verified `ui-ux-pro-max` Consistent Help guidance. Its narrower plain-language
+search had no database match; short instructions and actual control labels follow
+the approved content plan. `fixing-accessibility` guidance preserves semantic
+headings, native links, keyboard navigation and the existing visible focus rings.
+No visual identity or upstream skill files changed.
+
+TypeScript, the production website build and **32 focused website unit tests**
+passed. A further run of the six documentation unit cases passed after adding
+checks for every local help link and fragment. All **60 website browser cases**
+passed in Chromium and Firefox, run `2e5286ed-2f0f-49f3-a713-6cd751ab3638`.
+Coverage includes public HTML without JavaScript, search, retained anchors,
+Article metadata, public-only exports, all retired technical destinations,
+replacement history, four widths and both themes. Screenshots of the help index
+and privacy guide were captured at 375 and 1440 px in both themes and reviewed.
+
+Existing technical reference hashes still match the pre-task copies. Current
+feedback is preserved under `output/qa/consumer-docs/`, including separate
+focused build/timing records. The fresh complete `test:ci` run,
+`798c6cb7-5cb2-4154-8531-36924b262efe`, passed TypeScript, the complete production
+build, **325 unit tests and 132 browser cases** (47 core, 20 integration,
+2 native Firefox and 63 UI). No prepared-build shortcut was used.
+
+This run's reports and log are preserved separately from the earlier checks.
+The generated tracked core report was restored to its pre-task bytes after
+saving the new evidence. Formatting, whitespace and version checks passed.
+Website 0.1.1 and extension/API 0.11.0 remain unchanged. Existing release archive
+checksums still match; no archive, publication or deployment was performed.
+Cloudflare's actual HTTP redirects still require a post-deployment check; local
+checks verified their definitions and intercepted client navigation.
+
+## Documentation styling follow-up
+
+The documentation CSS now bounds article prose to 68ch, uses 17 px body text
+(16 px on mobile), increases list and heading spacing, and moves the contents
+navigation to a sticky right rail at widths of 1200 px or more. Smaller layouts
+keep an inline contents panel. Sidebar labels and cards use the established
+Source Sans 3 and Newsreader fonts with the existing theme tokens. Sticky
+navigation leaves room for the returning site header. Search-ring padding is
+retained.
+
+Section headings keep their focus destination and stable anchors. Mouse clicks
+do not draw a heading outline; native keyboard focus uses a small outline around
+the heading rather than the full article row. Permalink targets are at least
+44 px. No content, routing, JavaScript behavior or animation was changed.
+
+Applied `baseline-ui` guidance for hierarchy, existing tokens and no added
+animation, `ui-ux-pro-max` verified Line Length and Line Height guidance, and
+`fixing-accessibility` guidance for visible keyboard focus. The production website
+build passed. A temporary probe passed **32 combinations** of Chromium/Firefox,
+Light/Dark, widths 320/375/768/1440, and the installation/destination guides.
+It checked natural Tab-and-Enter navigation, pointer focus, search-ring
+clearance, readable font sizes, contents placement and horizontal overflow.
+Screenshots of desktop/mobile articles, pointer navigation and keyboard focus
+were visually reviewed. No permanent CSS-only test or diagnostic source was
+added. Feedback is under `output/qa/docs-style/`.
+
+The complete existing website browser scope passed: **60 cases**, Chromium and
+Firefox, run `b543ac21-e9c3-4766-a99f-c36107e7d8a0`. It covered the existing
+four-width/two-theme route matrix, search, anchors, Back navigation, redirects,
+static HTML, crawler files and motion. Build and timing evidence is preserved
+under `output/qa/docs-style/`. Formatting and whitespace checks passed.
+
+The earlier repository PR gate predates this CSS-only follow-up and has not
+been relabeled. Native screen-reader speech and release certification remain
+pending. No version, archive, publication or deployment changed.
+
+## Documentation navigation and motion follow-up
+
+Sidebar groups now use 20 px Newsreader headings and thin dividers, separate
+from the 14 px Source Sans 3 links. The current guide uses stronger ink text
+and a narrow marker without a filled background. Mobile navigation keeps the
+four groups in two columns. Native links, `aria-current`, 44 px targets and
+the search field's focus-ring clearance are preserved.
+
+The existing GSAP reveal owner handles short documentation entrances: 280 ms,
+8 px translation and opacity with the established `power2.out` curve. Headings
+and guide cards enter once; paragraphs and sidebar controls stay available.
+The current marker uses the existing 140 ms press token. Keyboard input,
+including typing after pointer focus, ends pending reveals. Reduced-motion
+changes revert GSAP styles and remove marker movement. No animation library,
+per-frame React state or separate documentation animation driver was added.
+
+Applied the local `animate` guidance for occasional entrances and immediate
+keyboard actions, `animation-performance` for transform/opacity and cleanup,
+`fixing-accessibility` for focus and current-location semantics, and the
+`ui-ux-pro-max` Active State search result for a clear navigation indicator.
+Removed duplicate active rules, redundant mobile and inherited CSS declarations,
+the overlapping documentation page fade, self-repeating registry properties
+and a repeated developer prompt on the index. A temporary PostCSS inspection
+found no repeated documentation selectors or properties within the same scope.
+
+A temporary visual/focus probe passed **32 combinations** of Chromium/Firefox,
+Light/Dark, widths 320/375/768/1440 and two guides. Desktop and mobile screenshots
+were reviewed, including keyboard focus. Evidence is preserved separately under
+`output/qa/docs-navigation/`; no diagnostic source was retained.
+
+Fresh complete `test:ci` run `71da05f2-c033-4ab9-bf39-cd1260d0a585` passed
+TypeScript, the complete production build, **325 unit tests and 134 browser
+cases** (47 core, 20 integration, 2 native Firefox and 65 UI). No prepared-build
+shortcut was used. The new documentation motion regression passed in Chromium
+and Firefox, covering one-time entrances, direct search typing, keyboard
+navigation and live reduced-motion changes. Existing search, fragments, Back,
+static HTML and metadata checks also passed.
+
+The log and all nine reports were saved with the same validation identity.
+The generated tracked core report was restored to its pre-task bytes after
+saving the fresh evidence. Formatting and whitespace checks passed. Earlier
+reports remain historical. Website 0.1.1 and extension/API 0.11.0 remain
+unchanged; no archive, publication or deployment is part of this follow-up.
+Native screen-reader speech and release certification remain pending.
 
 ## Publication and deployment
 

@@ -14,6 +14,7 @@ export {
 export { articles, resolveDocumentationLink } from "./features/docs/registry";
 export { publicOrigin, repositoryUrl } from "./config/project";
 export { stores } from "./features/downloads/browsers";
+export { documentationRedirects } from "./features/docs/redirects";
 
 /** Render actual public components, without cookies, a browser or extension state. */
 export async function renderPage(path: string): Promise<string> {

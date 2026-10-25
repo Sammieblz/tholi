@@ -7,7 +7,6 @@ import {
   articles,
   documentationGroups,
   headingId,
-  repositoryUrl,
   resolveDocumentationLink,
   searchDocumentation,
   type DocumentationArticle,
@@ -53,7 +52,7 @@ export function DocumentationBody({
     const tag = node?.tagName === "h1" ? "h2" : node?.tagName || "h2";
     return createElement(
       tag,
-      { id: heading?.id, className: "docs-heading" },
+      { id: heading?.id, className: "docs-heading", "data-reveal": "document" },
       children,
       heading && (
         <SiteLink
@@ -172,7 +171,7 @@ export function DocsPage({ slug }: { slug?: string }) {
             )}
           </nav>
         ) : (
-          <nav aria-label="Documentation chapters">
+          <nav className="docs-chapters" aria-label="Documentation chapters">
             {documentationGroups.map((group) => (
               <div className="docs-nav-group" key={group}>
                 <h2>{group}</h2>
@@ -195,27 +194,21 @@ export function DocsPage({ slug }: { slug?: string }) {
       <div className="docs-content">
         {article ? (
           <article key={article.slug}>
-            <header className="docs-article-header">
+            <header className="docs-article-header" data-reveal="document">
               <p className="eyebrow">{article.group}</p>
               <h1>{article.title}</h1>
               <p className="web-intro">{article.description}</p>
-              <a
-                className="docs-source-link"
-                href={`${repositoryUrl}/blob/main/${article.source}`}
-              >
-                Read the Markdown source
-              </a>
             </header>
             <DocumentationBody article={article} />
             <footer className="docs-article-footer">
               <p>
-                This page comes from the current repository reference. Dated
-                validation reports describe their recorded build, rather than
-                promising results on every website.
+                Need a hand with your next step? Browse common questions or
+                contact Tholi for help.
               </p>
-              <a href={`${repositoryUrl}/issues`}>
-                Report a documentation issue
-              </a>
+              <nav className="docs-help-links" aria-label="More help">
+                <SiteLink to="/support">Tholi Support</SiteLink>
+                <SiteLink to="/contact">Contact Tholi</SiteLink>
+              </nav>
             </footer>
           </article>
         ) : slug ? (
@@ -231,19 +224,20 @@ export function DocsPage({ slug }: { slug?: string }) {
           </div>
         ) : (
           <>
-            <header className="docs-index-header">
+            <header className="docs-index-header" data-reveal="document">
               <p className="eyebrow">A little direction</p>
               <h1>Make yourself at home.</h1>
               <p className="web-intro">
-                Start with your first destination, understand how Tholi keeps
-                your place, or look under the hood. These are the same reference
-                documents maintained with the product.
+                Install Tholi, find your next step and learn the controls that
+                keep you in charge. Choose a guide below or search for what you
+                need.
               </p>
             </header>
             <div className="docs-index-grid">
               {results.map((item) => (
                 <SiteLink
                   className="docs-index-card"
+                  data-reveal="document"
                   to={`/docs/${item.slug}`}
                   key={item.slug}
                 >

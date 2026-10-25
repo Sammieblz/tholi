@@ -69,6 +69,32 @@ describe("website search metadata contracts", () => {
         publicPages.some((page) => page.path === `/docs/${article.slug}`),
       ),
     ).toBe(true);
+    for (const slug of [
+      "architecture",
+      "natural-language",
+      "backend",
+      "contributing",
+    ]) {
+      expect(publicPages.some((page) => page.path === `/docs/${slug}`)).toBe(
+        false,
+      );
+      expect(metadataForPath(`/docs/${slug}`).index).toBe(false);
+    }
+    for (const article of articleCatalog) {
+      const graph = structuredData(metadataForPath(`/docs/${article.slug}`))[
+        "@graph"
+      ];
+      expect(
+        graph.some(
+          (item) => (item as { "@type": string })["@type"] === "Article",
+        ),
+      ).toBe(true);
+      expect(
+        graph.some(
+          (item) => (item as { "@type": string })["@type"] === "TechArticle",
+        ),
+      ).toBe(false);
+    }
   });
   it("escapes attribute, element and JSON boundaries and refuses credential-bearing origins", () => {
     const value = `</script><script>alert("x")</script>\u2028`;

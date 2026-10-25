@@ -19,7 +19,7 @@ const paths = [
   {
     number: "03",
     title: "Keep your browser yours.",
-    text: "Understand website access, local processing and Tholi’s boundaries.",
+    text: "Choose website access and learn how to manage your local data.",
     label: "Permissions and privacy",
     to: "/docs/security",
   },

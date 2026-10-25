@@ -3,6 +3,7 @@ import metadata from "../../../../package.json" with { type: "json" };
 /** Canonical repository links come from the root package metadata. */
 export const repositoryUrl = metadata.repository.url.replace(/\.git$/, "");
 export const repositorySourceUrl = `${repositoryUrl}/blob/main/`;
+export const repositoryRawSourceUrl = `https://raw.githubusercontent.com${new URL(repositoryUrl).pathname}/main/`;
 
 export function resolvePublicOrigin(value: unknown) {
   if (typeof value === "string" && value.trim()) {
