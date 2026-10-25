@@ -1,16 +1,45 @@
-# Browser setup and native verification
+# Getting started
+
+Tholi is available on the Chrome Web Store and Firefox Add-ons. Visit
+[Get Tholi](https://tholi.io/download), choose **Add to Chrome** or **Add to
+Firefox**, review the listing and permissions, then confirm installation in your
+browser. Opening the listing does not install the extension. Use desktop Chrome
+(Chromium **140 or newer**) or Firefox **153 or newer**.
+
+No Tholi account is required. Normal guidance processes data locally. Connecting
+your own private backend is optional; the extension explains the data sent before
+you enable that connection.
+
+1. Open your browser's **Extensions** menu, find Tholi and pin it to the toolbar
+   for easy access.
+2. Visit the website you want help with and select the Tholi toolbar icon. Grant
+   access to that website when asked. Restricted browser pages cannot be guided.
+3. Enter a destination and choose **Guide me**. Follow the instruction and page
+   highlight. You make the clicks and handle website sign-in and consequential
+   actions. A click alone does not establish arrival.
+
+You can try the [optional account-free practice](https://tholi.io/onboarding)
+before installing. Website practice uses an isolated sample and cannot confirm
+installation or change your extension's state.
+
+## Developer installation
+
+For verified ZIPs and manual build directions, expand **Developer installation**
+on the [download page](https://tholi.io/download#developer-installation).
 
 Use Windows and Node 24.19.x. Run `npm ci` and `npm run build:extension`. The normal build produces both targets with the same pinned local model, single-thread WASM and safety boundaries. Focus a target with `npm run build:extension -- --target=chromium` or `--target=firefox`.
 
-## Chromium: Chrome, Edge and Brave
+### Chromium: Chrome, Edge and Brave
 
 Use Chromium **140 or newer**. Open `chrome://extensions`, `edge://extensions` or `brave://extensions`. Enable **Developer mode**, select **Load unpacked**, and choose `dist/extension`. Reload Tholi after rebuilding, then refresh existing website tabs. Other current Chromium browsers are compatible only when the required native document, scripting, storage and surface capabilities pass; that is not explicit branded verification.
 
-## Firefox developer preview
+### Firefox development build
 
-Use Firefox **153 or newer**, rather than an older ESR. Open `about:debugging`, select **This Firefox → Load Temporary Add-on**, and choose `dist/extension-firefox/manifest.json`. The add-on ID is `tholi@ilunonsen.com`. This unsigned preview is removed when Firefox restarts; load it again for the next development session. Reload after a build and refresh website tabs. Signing and store publication are separate work.
+Use Firefox **153 or newer**, rather than an older ESR. Open `about:debugging`, select **This Firefox → Load Temporary Add-on**, and choose `dist/extension-firefox/manifest.json`. The add-on ID is `tholi@ilunonsen.com`. This unsigned development build is removed when Firefox restarts; load it again for the next development session. Reload after a build and refresh website tabs. The published store version uses normal store installation instead.
 
-The website's `/download?browser=firefox` selector preserves a shareable installation choice. A Chromium archive is never offered as a Firefox artifact. When an eligible target archive is unavailable, use source setup. Existing product footage was captured in Chrome.
+The website's `/download?browser=firefox#installation-firefox` link opens the developer instructions for Firefox. Verified developer ZIPs, versions and checksums appear there when an eligible archive is available. A Chromium archive is never offered as a Firefox artifact. When an eligible target archive is unavailable, use source setup. Existing product footage was captured in Chrome.
+
+## Using your guide
 
 On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
 

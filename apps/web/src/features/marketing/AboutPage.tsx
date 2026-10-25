@@ -65,10 +65,10 @@ export function AboutPage() {
         <div>
           <h2>Capable. Honest. Still learning.</h2>
           <p>
-            This is a working preview. Complex dashboards and signed-in journeys
-            still need more real-site verification. When evidence is missing, a
-            task stays incomplete. A polished interface cannot make an uncertain
-            route reliable.
+            Tholi is available on Chrome and Firefox. Complex dashboards and
+            signed-in journeys still need more real-site verification. When
+            evidence is missing, a task stays incomplete. A polished interface
+            cannot make an uncertain route reliable.
           </p>
           <SiteLink to="/docs" className="web-text-link">
             Understand the current experience
@@ -91,7 +91,7 @@ export function AboutPage() {
           </p>
         </div>
         <SiteLink to="/download" className="web-primary">
-          Try the extension preview
+          Get Tholi
         </SiteLink>
       </div>
     </section>

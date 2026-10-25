@@ -1,6 +1,27 @@
 .download-page {
   margin: 32px auto;
 }
+.developer-installation {
+  margin-block: 48px;
+  border-block: 1px solid var(--line);
+}
+.developer-installation > summary {
+  cursor: pointer;
+  padding-block: 22px;
+  min-height: 44px;
+  font-weight: 600;
+}
+.install-grid.store-install-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.store-install-logos {
+  gap: 24px;
+}
+@media (max-width: 700px) {
+  .install-grid.store-install-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .download-heading {
   display: grid;
   grid-template-columns: 1.4fr 0.6fr;

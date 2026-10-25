@@ -29,10 +29,10 @@ export function privacySections(): LegalSection[] {
             This notice covers the public Tholi website and browser extension.
             Tholi uses page context to guide you toward a destination you
             request and verify your progress. Normal guidance runs on your
-            device without an account or backend. Connecting a private backend
-            is optional and changes where some data is processed, as explained
-            below. Other websites, including the operator’s corporate site, have
-            their own privacy practices.
+            device without a Tholi account or backend. Connecting a private
+            backend is optional and changes where some data is processed, as
+            explained below. Other websites, including the operator’s corporate
+            site, have their own privacy practices.
           </p>
         </>
       ),
@@ -44,19 +44,16 @@ export function privacySections(): LegalSection[] {
         <>
           <p>
             You can read the documentation, download the extension and try the
-            practice without an account or optional cookies. Product recordings,
-            screenshots, fonts and practice assets are served with this website.
-            The practice is a controlled local demonstration, rather than a
-            connection to your installed extension.
+            practice without a Tholi account or optional cookies. Product
+            recordings, screenshots, fonts and practice assets are served with
+            this website. The practice is a controlled local demonstration,
+            rather than a connection to your installed extension.
           </p>
           <p>
-            Sign-up and sign-in are visibly mocked. If you use them, your
-            supplied name, email and onboarding progress stay in this website’s
-            browser-session storage. Passwords are validated locally, never
-            stored and never sent to an account service. Sign-out removes the
-            mock account. Closing the browser session normally ends this
-            storage; a browser’s session-restore behavior can vary. You can also
-            clear it using your browser’s site-data controls.
+            The public website has no sign-up, sign-in or account management
+            service. Installation and optional practice do not create a Tholi
+            account or store your name, email, password or onboarding progress.
+            Contact drafts are handled separately as described below.
           </p>
           <p>
             On tholi.io, Cloudflare adds page-view and performance measurements
@@ -311,7 +308,7 @@ export function privacySections(): LegalSection[] {
             <Contact />. Include only what is needed to explain your request. We
             cannot retrieve or erase device-only extension data remotely.
             Applicable privacy rights depend on your location and the processing
-            involved; this preview does not require you to waive them. Where
+            involved; using Tholi does not require you to waive them. Where
             applicable, you may also raise a concern with your privacy
             regulator.
           </p>
@@ -368,28 +365,28 @@ export function termsSections(): LegalSection[] {
   return [
     {
       id: "scope",
-      title: "About this preview",
+      title: "About Tholi",
       children: (
         <>
           <p>
-            These terms describe the public Tholi website and extension preview
-            offered by {legalOperator.name}, {legalOperator.location}. They are
+            These terms describe the public Tholi website and extension offered
+            by {legalOperator.name}, {legalOperator.location}. They are
             published with the website; professional legal review remains
             pending. Tholi provides contextual website guidance; it does not act
             as the website or account provider. Contact <Contact /> with
             questions.
           </p>
           <p>
-            Browser-store distribution, when available, is subject to the
-            relevant store’s own terms. Installing the extension does not
-            authorize a private backend connection, purchases or future paid
-            services. The permissions you grant and features you enable control
-            access as described in the privacy notice.
+            Tholi is distributed through the Chrome Web Store and Firefox
+            Add-ons, subject to each store’s own terms. Installing the extension
+            does not authorize a private backend connection, purchases or future
+            paid services. The permissions you grant and features you enable
+            control access as described in the privacy notice.
           </p>
           <p>
-            The website, download and extension require no account. Website
-            account screens are demonstrations, with no real registration, paid
-            subscription, synchronization or authentication service.
+            The website and local extension require no Tholi account. The
+            website does not offer registration, paid subscriptions, cloud
+            synchronization or an authentication service.
           </p>
         </>
       ),
@@ -472,11 +469,11 @@ export function termsSections(): LegalSection[] {
       children: (
         <>
           <p>
-            This is a preview, provided without a promise of uninterrupted
-            availability, a particular route, error-free results or suitability
-            for a particular purpose. The MIT License supplies the software’s
-            applicable warranty and liability language. Nothing here removes
-            rights or remedies that applicable law does not allow us to exclude.
+            Tholi is provided without a promise of uninterrupted availability, a
+            particular route, error-free results or suitability for a particular
+            purpose. The MIT License supplies the software’s applicable warranty
+            and liability language. Nothing here removes rights or remedies that
+            applicable law does not allow us to exclude.
           </p>
           <p>
             Downloads are labeled with their actual packaged version and
@@ -704,10 +701,12 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
       children: (
         <>
           <p>
-            When you choose to try mock account screens, browser-session storage
-            keeps your supplied name, email and onboarding state. It does not
-            keep passwords, and there is no real account or credential
-            transmission. Sign-out clears the mock account.
+            The public website does not use account sessions or store account
+            details. Earlier website demonstrations may have left a{" "}
+            <code>tholi-demo-account</code> entry in browser-session storage.
+            This version does not read or write it. You can remove that legacy
+            entry with your browser’s site-data controls; session restoration
+            can affect when the browser clears it automatically.
           </p>
           <p>
             The extension has its own local and session stores, separate from

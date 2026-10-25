@@ -4,6 +4,12 @@
   justify-content: space-between;
   gap: 32px;
 }
+.onboarding-store-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 20px;
+}
 .onboarding-heading > div {
   max-width: 720px;
 }

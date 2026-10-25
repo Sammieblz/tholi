@@ -1,28 +1,15 @@
-import { Check, ShieldCheck } from "iconoir-react";
+import { ShieldCheck } from "iconoir-react";
 import { useState } from "react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
-import { useAccount } from "../account/session";
 import { Demo } from "../demo/Demo";
-import { DownloadButton, useDownload } from "../downloads/downloads";
+import { StoreLink } from "../downloads/downloads";
 import "./onboarding.css";
 export function OnboardingPage() {
   const [step, setStep] = useState(0),
-    [mode, setMode] = useState<"guide" | "conversation">("guide"),
-    [error, setError] = useState("");
-  const { account, save } = useAccount(),
-    { go } = useRouter(),
-    download = useDownload();
-  const complete = () => {
-    try {
-      if (account) save({ ...account, onboarded: true });
-      go("/welcome");
-    } catch {
-      setError(
-        "Your demo preference could not be saved. You can still install Tholi without an account.",
-      );
-    }
-  };
+    [mode, setMode] = useState<"guide" | "conversation">("guide");
+  const { go } = useRouter();
+  const complete = () => go("/download");
   return (
     <section className="onboarding">
       <div className="onboarding-heading">
@@ -41,10 +28,8 @@ export function OnboardingPage() {
       </div>
       <ol className="onboarding-progress" aria-label="Onboarding progress">
         <li aria-current={step === 0 ? "step" : undefined}>
-          <span>
-            {step === 1 ? <Check width={14} aria-hidden="true" /> : "1"}
-          </span>
-          Install your guide
+          <span>1</span>
+          Explore installation
         </li>
         <li aria-current={step === 1 ? "step" : undefined}>
           <span>2</span>Take a practice run
@@ -61,7 +46,14 @@ export function OnboardingPage() {
                   widget is available when you would rather keep the guide
                   closer to the page.
                 </p>
-                <DownloadButton download={download} />
+                <p>
+                  No Tholi account required. Your browser confirms installation;
+                  this practice cannot check whether Tholi is installed.
+                </p>
+                <div className="onboarding-store-links">
+                  <StoreLink target="chromium" />
+                  <StoreLink target="firefox" />
+                </div>
                 <SiteLink to="/download" className="web-text-link">
                   See installation steps{" "}
                 </SiteLink>
@@ -91,7 +83,7 @@ export function OnboardingPage() {
             <fieldset className="preview-mode">
               <legend>Choose how to practice</legend>
               <p className="small">
-                A website preview preference. It does not change an installed
+                A practice preference. It does not change an installed
                 extension.
               </p>
               {(["guide", "conversation"] as const).map((value) => (
@@ -113,16 +105,11 @@ export function OnboardingPage() {
           </>
         )}
       </div>
-      {error && (
-        <p role="alert" className="auth-error">
-          {error}
-        </p>
-      )}
       <button className="text-button" onClick={complete}>
         Skip onboarding
       </button>
       <p className="onboarding-caption">
-        Optional, local demonstration · {step + 1} of 2
+        Optional, account-free practice · {step + 1} of 2
       </p>
     </section>
   );

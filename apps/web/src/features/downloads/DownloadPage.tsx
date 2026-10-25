@@ -1,6 +1,11 @@
-import { useRouter } from "../../app/router";
-import { SiteLink } from "../../app/router";
-import { browsers, selectedBrowser, type ExtensionTarget } from "./browsers";
+import { useEffect, useState } from "react";
+import { SiteLink, useRouter } from "../../app/router";
+import {
+  browsers,
+  selectedBrowser,
+  stores,
+  type ExtensionTarget,
+} from "./browsers";
 import {
   ArrowRight,
   Check,
@@ -10,7 +15,7 @@ import {
 } from "iconoir-react";
 import packageMetadata from "../../../../../package.json";
 import { repositoryUrl } from "../../config/project";
-import { DownloadButton, useDownload } from "./downloads";
+import { DownloadButton, StoreLink, useDownload } from "./downloads";
 import "./downloads.css";
 
 const chromiumSteps = [
@@ -53,7 +58,7 @@ function InstallIllustration({
           <div className="install-file">
             <Download aria-hidden="true" />
             <span>
-              Tholi preview<span className="small">ZIP archive</span>
+              Tholi developer build<span className="small">ZIP archive</span>
             </span>
           </div>
           <ArrowRight className="install-flow-arrow" aria-hidden="true" />
@@ -100,8 +105,197 @@ function InstallIllustration({
   );
 }
 export function DownloadPage() {
-  const { go, search } = useRouter();
-  const browser = selectedBrowser(search);
+  const { search, hash } = useRouter();
+  const targeted =
+    new URLSearchParams(search).has("browser") ||
+    /^#(?:installation-|developer-installation$)/.test(hash);
+  const [developerOpen, setDeveloperOpen] = useState(targeted);
+  useEffect(() => {
+    if (targeted) setDeveloperOpen(true);
+  }, [targeted, search, hash]);
+  return (
+    <section className="download-page">
+      <div className="download-heading" data-reveal="heading">
+        <div>
+          <p className="eyebrow">YOUR GUIDE, ONE TAB AWAY</p>
+          <h1>
+            Your browser.
+            <br />A clearer way forward.
+          </h1>
+          <p className="web-intro">
+            A small guide for the things you came to do. Choose your browser,
+            add Tholi, and tell it where you want to go.
+          </p>
+          <p className="download-promise">
+            <ShieldCheck aria-hidden="true" /> Local by default. No Tholi
+            account required.
+          </p>
+        </div>
+        <div className="download-intro-note" data-reveal-part>
+          <img
+            src="/media/tholi_brand_logo.png"
+            alt="Tholi"
+            width="120"
+            height="48"
+          />
+          <p>
+            One destination.
+            <br />
+            One helpful next step.
+          </p>
+          <span>Chrome & Firefox · Desktop extension</span>
+        </div>
+      </div>
+      <div className="browser-install-options" aria-label="Choose a browser">
+        {(["chromium", "firefox"] as const).map((target) => {
+          const store = stores[target];
+          const browser = browsers.find((item) => item.id === store.id)!;
+          return (
+            <article
+              className="browser-install-card"
+              key={target}
+              data-reveal="sequence"
+            >
+              <div className="browser-card-top" data-reveal-part>
+                <img
+                  src={`/media/browsers/${store.id}.svg`}
+                  width="64"
+                  height="64"
+                  alt=""
+                />
+                <span className="browser-store-status">Available now</span>
+              </div>
+              <h2>Tholi for {store.name}</h2>
+              <p>
+                {target === "chromium"
+                  ? "A little direction, right beside your tabs."
+                  : "Your next step, with your browser still yours."}
+              </p>
+              <StoreLink
+                target={target}
+                describedBy={`${store.id}-install-note`}
+              />
+              <p
+                id={`${store.id}-install-note`}
+                className="browser-install-note"
+              >
+                Opens {store.listing}. {browser.minimum}+ on desktop. Your
+                browser confirms installation.
+              </p>
+            </article>
+          );
+        })}
+      </div>
+      <section aria-labelledby="store-setup-title">
+        <div className="install-heading" data-reveal="heading">
+          <p className="eyebrow">YOUR FIRST FEW STEPS</p>
+          <h2 id="store-setup-title">Make room for a guide.</h2>
+          <p>
+            Install from your browser’s store, then start on a website you want
+            help with.
+          </p>
+        </div>
+        <ol className="install-grid store-install-grid">
+          <li data-reveal="sequence">
+            <div
+              className="install-illustration store-install-logos"
+              aria-hidden="true"
+            >
+              <img
+                src="/media/browsers/chrome.svg"
+                alt=""
+                width="64"
+                height="64"
+              />
+              <img
+                src="/media/browsers/firefox.svg"
+                alt=""
+                width="64"
+                height="64"
+              />
+            </div>
+            <span className="install-number">01</span>
+            <h3>Add from the store</h3>
+            <p>
+              Choose Chrome or Firefox above. Review the listing and
+              permissions, then confirm in your browser. Opening a listing does
+              not install Tholi.
+            </p>
+          </li>
+          <li data-reveal="sequence">
+            <div className="install-illustration" aria-hidden="true">
+              <div className="install-chrome-panel">
+                <span>Extensions</span>
+                <div className="install-tholi">
+                  <img
+                    src="/media/tholi_brand_logo.png"
+                    width="66"
+                    height="27"
+                    alt=""
+                  />
+                  <span>Pin to toolbar</span>
+                </div>
+              </div>
+            </div>
+            <span className="install-number">02</span>
+            <h3>Open your guide</h3>
+            <p>
+              Find Tholi in your browser’s Extensions menu. Pin it to the
+              toolbar for easy access, then select its icon to open the guide.
+            </p>
+          </li>
+          <li data-reveal="sequence">
+            <InstallIllustration step={3} />
+            <span className="install-number">03</span>
+            <h3>Choose a destination</h3>
+            <p>
+              On the website you want help with, grant website access when
+              asked. Tell Tholi what you want to do and start guidance. You make
+              the clicks and confirm consequential actions.
+            </p>
+          </li>
+        </ol>
+      </section>
+      <div className="web-note">
+        <ShieldCheck aria-hidden="true" />
+        <p>
+          You choose which websites Tholi can access. Pause or stop guidance
+          whenever you need. Processing stays local by default; connecting your
+          own private backend is optional.
+        </p>
+      </div>
+      <details
+        className="developer-installation"
+        id="developer-installation"
+        open={developerOpen}
+        onToggle={(event) => setDeveloperOpen(event.currentTarget.open)}
+      >
+        <summary>Developer installation</summary>
+        <noscript>
+          <p>
+            Developer metadata needs JavaScript. See the{" "}
+            <a href={repositoryUrl}>source repository</a> for build
+            instructions. Store links above work without JavaScript.
+          </p>
+        </noscript>
+        {developerOpen && <DeveloperInstallation />}
+      </details>
+      <div className="download-next-step" data-reveal="closing">
+        <div>
+          <h2>Want to look around first?</h2>
+          <p>Get a feel for Tholi with a short practice before installing.</p>
+        </div>
+        <SiteLink className="web-secondary" to="/onboarding">
+          Try the guide
+        </SiteLink>
+      </div>
+    </section>
+  );
+}
+
+function DeveloperInstallation() {
+  const { go, search, hash } = useRouter();
+  const browser = selectedBrowser(search, hash);
   const firefox = browser.target === "firefox";
   const download = useDownload(browser.target as ExtensionTarget),
     release = download.release;
@@ -126,191 +320,92 @@ export function DownloadPage() {
       ]
     : chromiumSteps;
   return (
-    <section className="download-page">
-      <div className="download-heading" data-reveal="heading">
-        <div>
-          <p className="eyebrow">YOUR GUIDE, ONE TAB AWAY</p>
-          <h1>
-            Your browser.
-            <br />A clearer way forward.
-          </h1>
-          <p className="web-intro">
-            A small guide for the things you came to do. Choose your browser,
-            add Tholi, and tell it where you want to go.
-          </p>
-          <p className="download-promise">
-            <ShieldCheck aria-hidden="true" /> Local by default. No account
-            required.
-          </p>
-        </div>
-        <div className="download-intro-note" data-reveal-part>
-          <img
-            src="/media/tholi_brand_logo.png"
-            alt="Tholi"
-            width="120"
-            height="48"
-          />
-          <p>
-            One destination.
-            <br />
-            One helpful next step.
-          </p>
-          <span>Chrome & Firefox · Desktop extension</span>
-        </div>
-      </div>
-      <div className="browser-install-options" aria-label="Choose a browser">
-        {(
-          [
-            {
-              id: "chrome",
-              name: "Chrome",
-              text: "A little direction, right beside your tabs.",
-              minimum: browsers.find((item) => item.id === "chrome")!.minimum,
-            },
-            {
-              id: "firefox",
-              name: "Firefox",
-              text: "Your next step, with your browser still yours.",
-              minimum: browsers.find((item) => item.id === "firefox")!.minimum,
-            },
-          ] as const
-        ).map((option) => (
-          <article
-            className="browser-install-card"
-            key={option.id}
-            data-reveal="sequence"
-          >
-            <div className="browser-card-top" data-reveal-part>
-              <img
-                src={`/media/browsers/${option.id}.svg`}
-                width="64"
-                height="64"
-                alt=""
-              />
-              <span className="browser-store-status">
-                Store listing coming soon
-              </span>
-            </div>
-            <h2>Tholi for {option.name}</h2>
-            <p>{option.text}</p>
-            <SiteLink
-              className="web-primary"
-              to={`/download?browser=${option.id}#installation-${option.id}`}
-              aria-describedby={`${option.id}-install-note`}
-            >
-              Add to {option.name}
-            </SiteLink>
-            <p
-              id={`${option.id}-install-note`}
-              className="browser-install-note"
-            >
-              Preview button: opens manual setup below, not a store listing.{" "}
-              {option.minimum}+ on desktop.
-              {option.id === "firefox" &&
-                " Temporary installation lasts until Firefox restarts."}
-            </p>
-          </article>
-        ))}
-      </div>
-      <section
-        className="manual-installation"
-        id={`installation-${browser.id}`}
-        tabIndex={-1}
-        aria-labelledby="installation-title"
-      >
-        <div className="install-heading" data-reveal="heading">
-          <p className="eyebrow">YOUR FIRST FEW STEPS</p>
-          <h2 id="installation-title">Let’s get you set up.</h2>
-          <p>
-            While the store listings are being prepared, you can install the
-            developer preview yourself. Choose your browser for the matching
-            package and illustrated directions. Firefox uses a temporary
-            installation.
-          </p>
-        </div>
-        <div className="download-card" data-reveal="surface">
-          <span className="download-platform">DESKTOP BROWSER PREVIEW</span>
-          <div className="browser-choice">
-            <label htmlFor="tholi-download-browser">Your browser</label>
-            <select
-              id="tholi-download-browser"
-              value={browser.id}
-              onChange={(event) => {
-                const next = browsers.find(
-                  (item) => item.id === event.target.value,
-                )!;
-                go("/download?browser=" + next.id);
-              }}
-            >
-              {browsers.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p>
-            {firefox
-              ? "Firefox developer preview"
-              : "Chromium developer preview"}{" "}
-            · {browser.minimum} or newer
-          </p>
-          <p className="small">
-            {browser.verification === "capability-dependent"
-              ? "Compatibility depends on the required browser capabilities."
-              : "Native installation certification is pending for this browser."}
-          </p>
-          <p>
-            Extension manager: <code>{browser.manager}</code>
-          </p>
-          <DownloadButton download={download} />
-          {release && (
-            <>
-              <strong>Preview {release.version}</strong>
-              <span>
-                {(release.bytes / 1048576).toFixed(1)} MB ZIP ·{" "}
-                {firefox ? "Temporary installation" : "Unpacked installation"}
-              </span>
-            </>
-          )}
-          <p>Local processing. Your browser, your control.</p>
-        </div>
-        {release && (
-          <div className="download-evidence">
-            <p>
-              {release.version === packageMetadata.version
-                ? "This package includes the current Tholi interface. Signed-in workflow verification remains in progress."
-                : `The UI development version is ${packageMetadata.version}. This download is the earlier packaged preview until the redesigned build passes release checks.`}
-            </p>
-            <details>
-              <summary>Version and checksum</summary>
-              <p>
-                Packaged version {release.version} · {release.status}
-              </p>
-              <code>{release.sha256}</code>
-            </details>
-          </div>
-        )}
-        <ol className="install-grid">
-          {steps.map((step, index) => (
-            <li key={step.title}>
-              <InstallIllustration step={index} firefox={firefox} />
-              <span className="install-number">0{index + 1}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-      <div className="web-note">
-        <ShieldCheck aria-hidden="true" />
+    <section
+      className="manual-installation"
+      id={`installation-${browser.id}`}
+      tabIndex={-1}
+      aria-labelledby="installation-title"
+    >
+      <div className="install-heading" data-reveal="heading">
+        <p className="eyebrow">FOR DEVELOPERS</p>
+        <h2 id="installation-title">Manual installation</h2>
         <p>
-          You choose which websites Tholi can access. Pause or stop guidance
-          whenever you need. Website sign-in and consequential changes stay with
-          you. Store buttons currently demonstrate the intended entry points;
-          these downloads use manual developer installation.
+          Use these builds for local development. Choose your browser for the
+          matching ZIP and manual directions. Store installation above is the
+          recommended path for everyday use.
         </p>
       </div>
+      <div className="download-card" data-reveal="surface">
+        <span className="download-platform">DEVELOPER BUILD</span>
+        <div className="browser-choice">
+          <label htmlFor="tholi-download-browser">Your browser</label>
+          <select
+            id="tholi-download-browser"
+            value={browser.id}
+            onChange={(event) => {
+              const next = browsers.find(
+                (item) => item.id === event.target.value,
+              )!;
+              go("/download?browser=" + next.id);
+            }}
+          >
+            {browsers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p>
+          {firefox ? "Firefox developer build" : "Chromium developer build"} ·{" "}
+          {browser.minimum} or newer
+        </p>
+        <p className="small">
+          {browser.verification === "capability-dependent"
+            ? "Compatibility depends on the required browser capabilities."
+            : "Native installation certification is pending for this browser."}
+        </p>
+        <p>
+          Extension manager: <code>{browser.manager}</code>
+        </p>
+        <DownloadButton download={download} />
+        {release && (
+          <>
+            <strong>Developer build {release.version}</strong>
+            <span>
+              {(release.bytes / 1048576).toFixed(1)} MB ZIP ·{" "}
+              {firefox ? "Temporary installation" : "Unpacked installation"}
+            </span>
+          </>
+        )}
+        <p>Local processing. Your browser, your control.</p>
+      </div>
+      {release && (
+        <div className="download-evidence">
+          <p>
+            {release.version === packageMetadata.version
+              ? "This package matches the current extension source version. Signed-in website workflow verification remains in progress."
+              : `The UI development version is ${packageMetadata.version}. This developer download is an earlier package; use its recorded version and checksum.`}
+          </p>
+          <details>
+            <summary>Version and checksum</summary>
+            <p>
+              Packaged version {release.version} · {release.status}
+            </p>
+            <code>{release.sha256}</code>
+          </details>
+        </div>
+      )}
+      <ol className="install-grid">
+        {steps.map((step, index) => (
+          <li key={step.title}>
+            <InstallIllustration step={index} firefox={firefox} />
+            <span className="install-number">0{index + 1}</span>
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+          </li>
+        ))}
+      </ol>
       <details className="source-instructions">
         <summary>Build the latest interface from source</summary>
         <p>From the repository, using Node 24.19.x:</p>
@@ -330,15 +425,6 @@ export function DownloadPage() {
           View source repository
         </a>
       </details>
-      <div className="download-next-step" data-reveal="closing">
-        <div>
-          <h2>Want to look around first?</h2>
-          <p>Get a feel for Tholi with a short practice before installing.</p>
-        </div>
-        <SiteLink className="web-secondary" to="/#practice">
-          Try the guide
-        </SiteLink>
-      </div>
     </section>
   );
 }

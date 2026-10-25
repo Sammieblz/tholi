@@ -43,14 +43,45 @@
         /* Dark remains usable when cookies are unavailable. */
       }
     </script>
-    <meta
-      name="description"
-      content="Tholi makes your next step through website menus and controls clearer, while you stay in control."
+    <!-- tholi:seo:start -->
+    <!-- tholi:seo:end -->
+    <meta name="application-name" content="Tholi" />
+    <meta name="apple-mobile-web-app-title" content="Tholi" />
+    <meta name="theme-color" content="#101c17" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/icons/favicon-32.png"
     />
-    <title>Tholi | Find your way forward</title>
-    <link rel="icon" href="/media/tholi_icon.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      href="/icons/favicon-96.png"
+    />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <noscript
+      ><style>
+        button,
+        .demo,
+        .cookie-banner,
+        .contact-form-area form {
+          display: none !important;
+        }
+      </style></noscript
+    >
   </head>
   <body>
+    <noscript
+      ><p>
+        Installation links and documentation work without JavaScript.
+        Interactive controls need JavaScript. For support, email
+        <a href="mailto:info@ilunonsen.com">info@ilunonsen.com</a>.
+      </p></noscript
+    >
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

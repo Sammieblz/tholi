@@ -1,22 +1,9 @@
-const configuredOrigin = import.meta.env.VITE_THOLI_PUBLIC_ORIGIN;
-function publicOrigin(value: unknown) {
-  if (typeof value !== "string" || !value.trim()) return undefined;
-  try {
-    const url = new URL(value);
-    return ["https:", "http:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-      ? url.origin
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
+import { publicOrigin } from "../../config/project";
 export const legalOperator = {
   name: "ILUNỌNSEN LLC",
   location: "Ohio, United States",
   email: "info@ilunonsen.com",
   companyUrl: "https://ilunonsen.com",
-  publicOrigin: publicOrigin(configuredOrigin) ?? "https://tholi.io",
-  reviewed: "October 20, 2026",
+  publicOrigin,
+  reviewed: "October 25, 2026",
 };

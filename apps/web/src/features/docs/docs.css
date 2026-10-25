@@ -7,7 +7,9 @@
 }
 .docs-sidebar {
   min-width: 0;
-  padding: 8px 0;
+  /* Leave room for outer focus rings inside the scroll container. */
+  padding: 8px;
+  margin-inline: -8px;
   position: sticky;
   top: 24px;
   max-height: calc(100dvh - 48px);

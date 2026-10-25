@@ -1,3 +1,4 @@
+import { articleCatalog, type ArticleMetadata } from "./catalog";
 import contributing from "../../../../../CONTRIBUTING.md?raw";
 import naturalLanguage from "../../../../../docs/architecture/natural-language.md?raw";
 import architecture from "../../../../../docs/architecture/navigation.md?raw";
@@ -12,111 +13,23 @@ import usingTholi from "../../../../../docs/guides/using-tholi.md?raw";
 import { repositorySourceUrl } from "../../config/project";
 
 export { repositoryUrl } from "../../config/project";
-export type DocumentationArticle = {
-  slug: string;
-  title: string;
-  description: string;
-  group: "Start here" | "Using Tholi" | "Under the hood";
-  source: string;
-  markdown: string;
+export type DocumentationArticle = ArticleMetadata & { markdown: string };
+const markdown: Record<string, string> = {
+  "getting-started": gettingStarted,
+  "using-tholi": usingTholi,
+  journeys: journeys,
+  sessions: sessions,
+  appearance: appearance,
+  troubleshooting: troubleshooting,
+  security: security,
+  architecture: architecture,
+  "natural-language": naturalLanguage,
+  backend: backend,
+  contributing: contributing,
 };
-export const articles: DocumentationArticle[] = [
-  {
-    slug: "getting-started",
-    title: "Getting started",
-    description:
-      "Install the preview, grant website access and begin a destination.",
-    group: "Start here",
-    source: "docs/guides/getting-started.md",
-    markdown: gettingStarted,
-  },
-  {
-    slug: "using-tholi",
-    title: "Using Tholi",
-    description:
-      "Guide, Conversation, the floating widget and the local practice.",
-    group: "Start here",
-    source: "docs/guides/using-tholi.md",
-    markdown: usingTholi,
-  },
-  {
-    slug: "journeys",
-    title: "Continuous journeys",
-    description:
-      "How destinations, corrections and return routes work across screens.",
-    group: "Using Tholi",
-    source: "docs/guides/journeys.md",
-    markdown: journeys,
-  },
-  {
-    slug: "sessions",
-    title: "Your session",
-    description:
-      "Pause, Stop, close, resume and understand session continuity.",
-    group: "Using Tholi",
-    source: "docs/architecture/sessions.md",
-    markdown: sessions,
-  },
-  {
-    slug: "appearance",
-    title: "Appearance",
-    description: "Website appearance and the extension's contrasting guidance.",
-    group: "Using Tholi",
-    source: "docs/guides/appearance.md",
-    markdown: appearance,
-  },
-  {
-    slug: "troubleshooting",
-    title: "Troubleshooting",
-    description:
-      "Understand missing evidence and safely export local diagnostics.",
-    group: "Using Tholi",
-    source: "docs/guides/troubleshooting.md",
-    markdown: troubleshooting,
-  },
-  {
-    slug: "security",
-    title: "Security and boundaries",
-    description: "Permissions, private inputs, review and verified outcomes.",
-    group: "Under the hood",
-    source: "docs/architecture/security.md",
-    markdown: security,
-  },
-  {
-    slug: "architecture",
-    title: "How guidance works",
-    description: "Discovery, grounded planning, live binding and verification.",
-    group: "Under the hood",
-    source: "docs/architecture/navigation.md",
-    markdown: architecture,
-  },
-  {
-    slug: "natural-language",
-    title: "Natural language",
-    description:
-      "English interpretation, local models and contextual retrieval.",
-    group: "Under the hood",
-    source: "docs/architecture/natural-language.md",
-    markdown: naturalLanguage,
-  },
-  {
-    slug: "backend",
-    title: "Optional backend",
-    description: "Connect a self-hosted API when you choose to use one.",
-    group: "Under the hood",
-    source: "docs/guides/backend.md",
-    markdown: backend,
-  },
-  {
-    slug: "contributing",
-    title: "Contributing",
-    description:
-      "Development, regression checks and truthful release artifacts.",
-    group: "Under the hood",
-    source: "CONTRIBUTING.md",
-    markdown: contributing,
-  },
-];
+export const articles: DocumentationArticle[] = articleCatalog.map(
+  (article) => ({ ...article, markdown: markdown[article.slug] }),
+);
 export const documentationGroups = [
   "Start here",
   "Using Tholi",

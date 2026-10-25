@@ -15,6 +15,7 @@ import {
   writeThemeCookie,
   type ConsentRecord,
   type WebsiteTheme,
+  type CookieAccess,
 } from "./cookies";
 
 interface PreferencesContextValue {
@@ -31,8 +32,14 @@ interface PreferencesContextValue {
 }
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
-export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [cookies] = useState(browserCookies);
+export function PreferencesProvider({
+  children,
+  cookieAccess,
+}: {
+  children: ReactNode;
+  cookieAccess?: CookieAccess;
+}) {
+  const [cookies] = useState(() => cookieAccess ?? browserCookies());
   const [initial] = useState(() => readWebsitePreferences(cookies));
   const [theme, updateTheme] = useState<WebsiteTheme>(initial.theme);
   const [consent, updateConsent] = useState(initial.consent);
@@ -47,6 +54,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.tholiTheme = theme;
     document.documentElement.style.colorScheme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "light" ? "#faf7f0" : "#101c17");
   }, [theme]);
   useEffect(() => {
     analytics.setConsent(consent);

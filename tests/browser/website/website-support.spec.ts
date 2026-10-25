@@ -16,11 +16,11 @@ test("support links lead to a contact form that prepares email without claiming 
     "A little help, when you need it.",
   );
   await page
-    .getByText("Firefox removed Tholi after a restart.", { exact: true })
+    .getByText("How do I install Tholi on Firefox?", { exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: "Firefox setup", exact: true }),
-  ).toHaveAttribute("href", "/download?browser=firefox#installation-firefox");
+  ).toHaveAttribute("href", "/download");
   await page
     .getByRole("link", { name: "Contact support", exact: true })
     .click();

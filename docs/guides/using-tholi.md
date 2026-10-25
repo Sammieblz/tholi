@@ -66,9 +66,13 @@ Required decisions remain until resolved. Passive notices use a four-second toas
 
 ## Website and demonstration
 
-Home, About, Download, Sign-up, Sign-in, Onboarding, and Welcome are local routes. Documentation adds `/docs` and an allowlist of current `/docs/:slug` Markdown references. `/privacy`, `/terms`, and `/cookies` are Tholi-specific launch-review drafts for ILUNỌNSEN LLC in Ohio, United States. A selected production host, analytics provider, public Tholi domain and final legal review remain launch work. Mock accounts are visibly labeled; passwords are neither sent nor persisted. Downloads and extension use require no account.
+Home, About, Download, Support, Contact and optional Onboarding are public routes. Documentation adds `/docs` and an allowlist of current `/docs/:slug` Markdown references. The download page links directly to the published Chrome Web Store and Firefox Add-ons listings. Developer ZIPs, checksums and source setup are secondary, inside its collapsed **Developer installation** area. Opening a store listing does not establish installation.
 
-Website 0.1.0 is live at [tholi.io](https://tholi.io). It starts in Dark regardless of OS appearance and provides an explicit Light/Dark control. A necessary `tholi_consent` cookie remembers choices for 180 days; optional `tholi_theme` remembers appearance only after preference consent. Essential only, Allow preferences and Settings are actual controls. Withdrawing preferences removes the theme cookie. Without optional storage, appearance works in memory.
+No Tholi account is required. The public website does not mount mock accounts or collect account details. Legacy `/signup`, `/signin` and `/welcome` URLs redirect to `/download`, replacing their history entry. Optional `/onboarding` offers installation information and isolated practice, then returns to `/download` without claiming the extension was installed. Future real accounts and cloud plans remain separate roadmap work.
+
+The `/privacy`, `/terms` and `/cookies` notices describe ILUNỌNSEN LLC in Ohio, United States, current hosting and data practices; professional legal review remains pending. Contact prepares an email draft for you to send through your email app; it does not deliver form submissions.
+
+The website is hosted on Cloudflare Pages at [tholi.io](https://tholi.io). It starts in Dark regardless of OS appearance and provides an explicit Light/Dark control. A necessary `tholi_consent` cookie remembers choices for 180 days; optional `tholi_theme` remembers appearance only after preference consent. Essential only, Allow preferences and Settings are actual controls. Withdrawing preferences removes the theme cookie. Without optional storage, appearance works in memory.
 
 The app's optional analytics provider remains inactive. Cloudflare separately injects page/performance measurements on the public website, outside these cookie controls; Essential only does not disable that script. See the [cookie notice](https://tholi.io/cookies). Website preferences are separate from the installed extension.
 

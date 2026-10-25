@@ -1,0 +1,13 @@
+{
+  "dimensions": {
+    "width": 1200,
+    "height": 630
+  },
+  "sources": {
+    "apps/public/media/tholi_brand_logo.png": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
+    "apps/public/media/tholi_icon.png": "1ad7fec0d5473bd917f6e3b9871c1b1abf1760ecf8c1630a70abad3baff9518b",
+    "node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2": "62981321d9a3cc7a61a73792729043703fd6112da86e8ec848bb57f088578757",
+    "node_modules/@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2": "19143dca075972bc84e3fd9eab7416dd40cc565dccb2435a044bdfabe060c7d5"
+  },
+  "generator": "scripts/build-web-assets.mjs"
+}

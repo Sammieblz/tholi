@@ -20,6 +20,10 @@ certification remains separate. Keep the original tag at its published commit.
 
 ## Prepare and validate
 
+Website **0.1.1** is prepared in [the published-store launch record](../releases/website/v0.1.1/README.md).
+It replaces the 0.1.0 mock store/account entry points with published store links
+and account-free installation. It is not yet recorded as the deployed revision.
+
 1. Add `docs/releases/website/vVERSION/README.md` with first line
    `# Tholi website VERSION`, changes, boundaries and actual validation status.
 2. For later releases, run `npm run release:website -- VERSION`. The number must
@@ -50,10 +54,15 @@ and follow the full certification procedure above for future archive
 publication; do not move the old tag or silently replace its evidence or assets.
 
 This workflow does not merge branches, submit browser-store packages or deploy
-Cloudflare. Accounts and store buttons remain previews in 0.1.0; contact SMTP
-and backend delivery are also pending.
+Cloudflare. Version 0.1.0's account/store demonstrations are historical. Version
+0.1.1 hides mock accounts and links to the published stores. Contact remains an
+email-draft workflow; it does not send form submissions.
 
 ## Cloudflare Pages
+
+The static route, favicon, sitemap and crawler outputs are part of `build:web`.
+See [website SEO](website-seo.md) for owners, public crawl policy and post-deploy
+checks. Cloudflare edge redirects and 404 behavior require a deployed check.
 
 Run the build from the repository root. Use these settings for this repository:
 
@@ -74,7 +83,8 @@ deploying to another origin. Cloudflare's
 and [build image settings](https://developers.cloudflare.com/pages/configuration/build-image/)
 describe the dashboard fields and Node override.
 
-After deployment, open primary routes directly and check their rendered
+After deployment, open both store actions and verify their exact listing
+destinations, then open primary routes directly and check their rendered
 headings, compiled asset responses and `/website-release.json`. HTTP 200 alone
 does not establish a working route because the SPA fallback can serve HTML.
 Record the Cloudflare deployment revision separately when available; version

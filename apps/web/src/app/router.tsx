@@ -19,7 +19,7 @@ const RouterContext = createContext({
   path: "/",
   hash: "",
   search: "",
-  go: (_path: string) => {},
+  go: (_path: string, _options?: { replace?: boolean }) => {},
 });
 let nextKey = 0;
 function locationKey() {
@@ -31,7 +31,7 @@ function locationKey() {
 }
 function readLocation(returning = false): RouteLocation {
   return {
-    path: location.pathname,
+    path: location.pathname.replace(/\/+$/, "") || "/",
     hash: location.hash,
     search: location.search,
     key: locationKey(),
@@ -49,7 +49,29 @@ function mountedRouteElement(element: HTMLElement | null): HTMLElement | null {
   }
   return element;
 }
-export function Router({ children }: { children: ReactNode }) {
+/** Build-time rendering uses the same native links without browser effects. */
+export function StaticRouter({
+  path,
+  children,
+}: {
+  path: string;
+  children: ReactNode;
+}) {
+  return (
+    <RouterContext.Provider
+      value={{ path, hash: "", search: "", go: () => {} }}
+    >
+      {children}
+    </RouterContext.Provider>
+  );
+}
+export function Router({
+  children,
+  manageTitle = true,
+}: {
+  children: ReactNode;
+  manageTitle?: boolean;
+}) {
   const [route, setRoute] = useState(readLocation);
   const currentKey = useRef(route.key);
   const scrollPositions = useRef(
@@ -110,7 +132,7 @@ export function Router({ children }: { children: ReactNode }) {
         Array.from(document.querySelectorAll<HTMLElement>("main h1"))
           .map(mountedRouteElement)
           .find(Boolean) || null;
-      if (heading)
+      if (heading && manageTitle)
         document.title = `${heading.textContent?.trim() || "Tholi"} | Tholi`;
       // A lazy route may have mounted only its loading status. Wait for the
       // actual article and fragment rather than focusing a fabricated heading.
@@ -159,30 +181,33 @@ export function Router({ children }: { children: ReactNode }) {
       clearTimeout(deadline);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [route]);
-  const go = useCallback((destination: string) => {
-    const next = new URL(destination, location.href);
-    if (
-      next.origin !== location.origin ||
-      !["http:", "https:"].includes(next.protocol)
-    )
-      return;
-    const url = `${next.pathname}${next.search}${next.hash}`;
-    if (url !== `${location.pathname}${location.search}${location.hash}`) {
-      scrollPositions.current.set(currentKey.current, {
-        left: scrollX,
-        top: scrollY,
-      });
-      history.pushState(
-        { tholiKey: `tholi-${Date.now()}-${nextKey++}` },
-        "",
-        url,
-      );
-    }
-    const nextRoute = readLocation();
-    currentKey.current = nextRoute.key;
-    setRoute(nextRoute);
-  }, []);
+  }, [route, manageTitle]);
+  const go = useCallback(
+    (destination: string, options?: { replace?: boolean }) => {
+      const next = new URL(destination, location.href);
+      if (
+        next.origin !== location.origin ||
+        !["http:", "https:"].includes(next.protocol)
+      )
+        return;
+      const url = `${next.pathname}${next.search}${next.hash}`;
+      if (url !== `${location.pathname}${location.search}${location.hash}`) {
+        scrollPositions.current.set(currentKey.current, {
+          left: scrollX,
+          top: scrollY,
+        });
+        history[options?.replace ? "replaceState" : "pushState"](
+          { tholiKey: `tholi-${Date.now()}-${nextKey++}` },
+          "",
+          url,
+        );
+      }
+      const nextRoute = readLocation();
+      currentKey.current = nextRoute.key;
+      setRoute(nextRoute);
+    },
+    [],
+  );
   return (
     <RouterContext.Provider
       value={{ path: route.path, hash: route.hash, search: route.search, go }}

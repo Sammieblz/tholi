@@ -6,6 +6,7 @@ import { useSectionReveal } from "./useSectionReveal";
 import { useScrollIntent } from "./useScrollIntent";
 import { lazy, Suspense, useEffect } from "react";
 import { usePreferences } from "../features/preferences";
+import { usePageMetadata } from "../features/seo/usePageMetadata";
 import {
   PUBLIC_PAGES,
   type PublicPage,
@@ -18,16 +19,6 @@ const AboutPage = lazy(() =>
 const DownloadPage = lazy(() =>
   import("../features/downloads/DownloadPage").then((module) => ({
     default: module.DownloadPage,
-  })),
-);
-const AuthPage = lazy(() =>
-  import("../features/account/AuthPage").then((module) => ({
-    default: module.AuthPage,
-  })),
-);
-const WelcomePage = lazy(() =>
-  import("../features/account/WelcomePage").then((module) => ({
-    default: module.WelcomePage,
   })),
 );
 const OnboardingPage = lazy(() =>
@@ -55,9 +46,15 @@ const ContactPage = lazy(() =>
     default: module.ContactPage,
   })),
 );
+function RetiredAccountRoute() {
+  const { go } = useRouter();
+  useEffect(() => go("/download", { replace: true }), [go]);
+  return <div role="status">Opening installation options…</div>;
+}
 export function App() {
   const { path } = useRouter();
   const { trackEvent } = usePreferences();
+  usePageMetadata(path);
   useEffect(() => {
     const page =
       path === "/" ? "home" : path.startsWith("/docs") ? "docs" : path.slice(1);
@@ -78,12 +75,10 @@ export function App() {
       <SupportPage />
     ) : path === "/contact" ? (
       <ContactPage />
-    ) : path === "/signin" || path === "/signup" ? (
-      <AuthPage key={path} signup={path === "/signup"} />
+    ) : ["/signin", "/signup", "/welcome"].includes(path) ? (
+      <RetiredAccountRoute />
     ) : path === "/onboarding" ? (
       <OnboardingPage />
-    ) : path === "/welcome" ? (
-      <WelcomePage />
     ) : path === "/docs" || path.startsWith("/docs/") ? (
       <DocsPage slug={path.split("/")[2]} />
     ) : path === "/privacy" || path === "/terms" || path === "/cookies" ? (

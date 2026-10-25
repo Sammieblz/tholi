@@ -5,7 +5,7 @@ import { SiteLink, useRouter } from "../app/router";
 import { repositoryUrl } from "../config/project";
 import { legalOperator } from "../features/legal/operator";
 import websiteRelease from "../../release.json";
-import { useAccount } from "../features/account/session";
+import { InstallLink } from "../features/downloads/downloads";
 import {
   CookieConsent,
   ThemeToggle,
@@ -49,7 +49,6 @@ const footerGroups = [
 ];
 export function SiteLayout({ children }: { children: ReactNode }) {
   const { path } = useRouter();
-  const { account } = useAccount();
   const { openCookieSettings } = usePreferences();
   const [menu, setMenu] = useState(false);
   const header = useRef<HTMLDivElement>(null);
@@ -115,9 +114,6 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       >
         Docs
       </SiteLink>
-      <SiteLink to={account ? "/welcome" : "/signin"}>
-        {account ? "Welcome" : "Sign in"}
-      </SiteLink>
     </>
   );
   return (
@@ -139,9 +135,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Main navigation">{links}</nav>
           <div className="header-actions">
             <ThemeToggle />
-            <SiteLink to="/signup" className="web-primary header-install">
-              Get started
-            </SiteLink>
+            <InstallLink className="web-primary header-install" />
             <Dialog.Root open={menu} onOpenChange={setMenu}>
               <Dialog.Trigger
                 className="mobile-menu icon-button"
@@ -160,9 +154,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
                     <Xmark aria-hidden="true" />
                   </Dialog.Close>
                   {links}
-                  <SiteLink to="/signup" className="web-primary">
-                    Get started
-                  </SiteLink>
+                  <InstallLink />
                 </Dialog.Popup>
               </Dialog.Portal>
             </Dialog.Root>
@@ -225,8 +217,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
               licensed.
             </small>
             <span>
-              Website {websiteRelease.version} · Mock accounts · Analytics
-              inactive
+              Website {websiteRelease.version} · Available on Chrome and Firefox
             </span>
           </div>
         </div>

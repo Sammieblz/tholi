@@ -9,14 +9,14 @@ apps/web/src/
   components/SiteLayout.tsx    Header, accessible mobile navigation, footer
   config/project.ts           Repository links derived from root package metadata
   features/
-    account/                  Mock auth, session state, welcome, styles
+    account/                  Unrouted mock drafts, excluded from production imports
     demo/                     Sample workspace and interactive walkthrough
     downloads/                Manifest loading, download button, setup page
     docs/                     Allowlisted repository Markdown, safe GFM, search
     legal/                    Operator configuration and launch-review drafts
     preferences/              First-party cookie choices, theme, consent-gated analytics boundary
     marketing/                Home/about, genuine video, brand-motion stage and scroll companion
-    onboarding/               Skippable walkthrough and preview preferences
+    onboarding/               Optional account-free installation and isolated practice
   styles/                     Shared website layout and motion
 
 apps/extension/src/
@@ -68,7 +68,7 @@ packages/overlay-ui/
 - `preferences` owns consent, pre-paint website appearance and the optional analytics boundary. The default has no app analytics provider. The event allowlist excludes arbitrary text and extension data. Cloudflare's live host injects its own measurement script outside that boundary; app cookie choices do not control it. Website Light/Dark preferences do not configure the extension's inverse-theme adaptation.
 - `docs` owns an explicit Markdown registry, local search, safe GFM rendering and reference-link mapping. Raw HTML is disabled and images become source links. `legal` owns operator configuration and Tholi-specific launch-review drafts. Both route bundles are lazy-loaded; repository Markdown stays out of the initial Home bundle.
 - `marketing` loads a recording manifest rather than embedding recreated product UI. Capture tooling accepts only a real worker-verified public-page result and records immutable extension/media hashes. Brand-motion demonstrations emit no journey or completion evidence.
-- Mock passwords remain component-local and are discarded after form completion. Only name, email, and onboarding state enter website session storage. Downloads require no account.
+- The public app mounts no mock account provider and imports no account screens. Legacy account URLs replace their history entry with `/download`. Native store links use the canonical browser configuration independently of ZIP metadata, cookies and account state. Developer metadata loads only when its disclosure opens. Optional onboarding cannot own extension state or confirm installation.
 - The controller composes feature actions and dedicated session hooks. Feature components receive typed state/actions without opening duplicate polling or inference sessions. Privileged configuration remains sidebar-only.
 - Draft restoration checks local edit revisions before applying a session snapshot. Local edits stay protected from restoration until the matching `UI_SAVE` acknowledgement; older reads and replies after unmount cannot overwrite current typing. A surface handoff can restore a clean draft without changing the worker-owned task.
 - `packages/ui` has no Chrome calls or navigation discovery. Its appearance helper samples computed CSS backgrounds only. Both surfaces receive the same presentation and callbacks. Keep the stable `guidance` and `tokens.css` entries when adding shared components.
