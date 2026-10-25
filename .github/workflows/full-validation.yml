@@ -75,7 +75,6 @@ jobs:
               output/nlp/results.json
               output/multi-app/model.json
               output/multi-app/runtime.json
-              output/multi-app/performance.json
               output/vision/runtime.json
               output/vision/routes.json
               output/vision/performance.json
@@ -86,6 +85,7 @@ jobs:
             evidence: |
               output/nlp/browser-build.json
               output/multi-app/browser.json
+              output/multi-app/performance.json
               output/vision/browser.json
               output/reliability
           - group: unit
@@ -118,6 +118,18 @@ jobs:
       - run: npm run fetch:browser-tools
         if: matrix.group == 'brands'
       - run: npm run test:full -- --group ${{ matrix.group }}
+      - name: Require complete owner evidence
+        shell: pwsh
+        env:
+          THOLI_OWNER_EVIDENCE: ${{ matrix.evidence }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($evidencePath in ($env:THOLI_OWNER_EVIDENCE -split '\r?\n')) {
+            $evidencePath = $evidencePath.Trim()
+            if ($evidencePath -and -not (Test-Path -LiteralPath $evidencePath)) {
+              throw "Missing required owner evidence: $evidencePath"
+            }
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
