@@ -44,3 +44,5 @@ parentPort!.on("message", (message) => {
         parentPort!.postMessage({ id: message.id, error: error.message }),
     );
 });
+// Imports, storage and request handling are initialized; model loading stays lazy.
+parentPort!.postMessage({ type: "ready" });

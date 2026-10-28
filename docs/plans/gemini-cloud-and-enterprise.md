@@ -3,7 +3,7 @@
 ## Decision record
 
 **ADR:** portable backend and service contracts. **Recorded:** 2026-10-28.
-**Status:** proposed for adoption through the issue #25 pull request; implementation is deferred to its dependent tickets.
+**Status:** adopted through [PR #64](https://github.com/Sammieblz/tholi/pull/64), merged 2026-10-28. Implementation proceeds through its dependent tickets; [current API runtime ownership](../architecture/backend.md) records the #26 foundation.
 
 This is the canonical architecture plan for [roadmap #23](https://github.com/Sammieblz/tholi/issues/23) and the decision deliverable for [issue #25](https://github.com/Sammieblz/tholi/issues/25). The navigation baseline prerequisite, [#24](https://github.com/Sammieblz/tholi/issues/24), was merged in [PR #63](https://github.com/Sammieblz/tholi/pull/63), commit `68eac0d47e02b8a77f347e4b63fe8c165e3ead9a`. Its [protocol](../development/testing/navigation-baseline.md) and [dated acceptance evidence](../development/testing/navigation-baseline-2026-10-27.md) remain the comparison baseline. This document does not turn that baseline into evidence for cloud navigation.
 
@@ -273,6 +273,6 @@ The adopted design adds identity, database operations, metering and consent comp
 
 Review uses the existing API/storage/contracts, browser transport and journey owner, website routing and roadmap dependencies. PostgreSQL guidance applied from the installed `supabase-postgres-best-practices` skill: bounded connection pools, least-privilege runtime roles, RLS defense and queue claims. This is database guidance, not adoption of Supabase or its identity SQL functions. PostgreSQL's documented owner-bypass behavior and transaction-local scope take precedence over generic examples.
 
-On 2026-10-28, independent agent reviews covered legacy compatibility and contract ownership, tenancy/auth/privacy, job failure behavior, deployment budgets and roadmap scope. Their concrete findings are incorporated in this record; human adoption remains subject to PR review and merge. Local validation passed: Markdown formatting, 72 local documentation targets across the five changed files, unchanged extension/API and website version checks, and whitespace checks. No runtime tests or infrastructure experiments are claimed by those checks.
+On 2026-10-28, independent agent reviews covered legacy compatibility and contract ownership, tenancy/auth/privacy, job failure behavior, deployment budgets and roadmap scope. Their concrete findings are incorporated in this record; adoption subsequently completed through PR #64. Local validation passed: Markdown formatting, 72 local documentation targets across the five changed files, unchanged extension/API and website version checks, and whitespace checks. No runtime tests or infrastructure experiments are claimed by those checks.
 
 The existing deterministic `npm run test:ci` PR gate remains required through the normal contribution workflow; its actual result belongs in the PR. This document alone is not implementation evidence, human approval or release certification. Full certification is required before packaging under the repository's [testing policy](../development/testing/README.md); no archive or deployment is part of this change.

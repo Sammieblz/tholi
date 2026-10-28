@@ -1,9 +1,10 @@
 # Optional Tholi API
 
 The API is optional; the extension runs NLP and OCR locally without it.
-This guide covers the current single-owner private API. The planned authenticated
-service has a separate [architecture and compatibility decision](../plans/gemini-cloud-and-enterprise.md);
-its accounts, PostgreSQL profile and cloud contracts are not implemented yet.
+This guide covers the single-owner private API and the new health-only service
+bootstrap. Accounts, PostgreSQL and cloud navigation are later work under the
+[architecture and compatibility decision](../plans/gemini-cloud-and-enterprise.md).
+See [runtime ownership and lifecycle](../architecture/backend.md) for developer boundaries.
 
 Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, `npm run fetch:ocr` and
 `npm run build:api`. Start the optional API with `npm run start:api`.
@@ -50,7 +51,7 @@ The authenticated OpenAPI specification is `/v1/openapi.json`. Endpoints:
 | `/v1/forget`       | POST     | Forget a website and its derived data       |
 | `/v1/clear`        | POST     | Clear all knowledge/routes/derived data     |
 
-Use HTTPS through a reverse proxy for self-hosted connections. The service
+Use HTTPS through a reverse proxy for self-hosted connections. The private API
 continues to bind loopback; TLS, authentication and firewall configuration of
 that proxy are the owner's responsibility. Accounts and synchronization are
 not implemented. `NAVIGATOR_DATA_DIR`, `NAVIGATOR_MODELS`, and `NAVIGATOR_PORT`
@@ -75,7 +76,7 @@ recognized text are not persisted or payload-logged. Enable backend OCR
 explicitly in the extension to send temporary masked images; older or failed
 backends fall back locally. Paddle is a browser experiment, not an API capability.
 
-The service retains `NAVIGATOR_*` environment variables, `.navigator-api`, the
+The private API retains `NAVIGATOR_*` environment variables, `.navigator-api`, the
 SQLite filename and the `@internet-navigator/api` package identity for existing
 installations. Its displayed name is Tholi, and OpenAPI metadata reads the API
 package version. See [naming and compatibility](../development/naming.md).
@@ -83,3 +84,27 @@ package version. See [naming and compatibility](../development/naming.md).
 ## Browser origins
 
 The explicit API allowlist accepts `chrome-extension://` plus the installed 32-letter Chromium ID, or `moz-extension://` plus Firefox's actual internal UUID. It accepts no wildcards or ordinary website origins. In the extension inspector, `browser.runtime.getURL("")` (Firefox) or `chrome.runtime.getURL("")` (Chromium) gives that installation's URL; omit its trailing slash in `NAVIGATOR_EXTENSION_ORIGINS`. Firefox's add-on ID `tholi@ilunonsen.com` is not its internal origin UUID. Keep each installation's exact origin in the allowlist. Tokens remain private and installations do not synchronize knowledge.
+
+## Service runtime foundation
+
+From the repository, run `npm ci`, `npm run build:api` and
+`npm run start:service`. This profile needs no model downloads, cloud credentials
+or private API connection file. It defaults to `http://127.0.0.1:8788` and currently
+provides only `/health/live` and `/health/ready`. It cannot be connected as an
+extension navigation backend yet; `/v1`, `/v2` and account routes are absent.
+
+| Setting                        | Default     | Purpose                                                                          |
+| ------------------------------ | ----------- | -------------------------------------------------------------------------------- |
+| `THOLI_SERVICE_HOST`           | `127.0.0.1` | Explicit service bind address; a container can use `0.0.0.0`                     |
+| `THOLI_SERVICE_PORT` or `PORT` | `8788`      | Integer port from 1 to 65535; both values must agree when supplied               |
+| `THOLI_SERVICE_ORIGINS`        | Empty       | Comma-separated exact HTTP(S) browser origins, without paths or trailing slashes |
+
+Non-browser health calls without an Origin header work without credentials.
+Browser origins must match the configured allowlist. The service never reads
+`NAVIGATOR_*` as a fallback or accepts a private token as account authentication.
+
+The private profile also has `/health/live` and `/health/ready`, protected by its
+existing bearer/origin policy. Readiness describes initialized resources, not a
+warmed model. Stop either executable with Ctrl+C or SIGTERM for bounded cleanup.
+Invalid environment or stored connection settings fail startup without replacing
+the private token. Keep malformed settings for diagnosis and correct them locally.
