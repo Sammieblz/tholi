@@ -28,7 +28,7 @@ API contracts, diagnostics and contributions.
 
 ## Building Tholi
 
-- [Portable backend, Gemini and desktop roadmap](https://github.com/Sammieblz/tholi/issues/23), starting with the [navigation baseline protocol](development/testing/navigation-baseline.md)
+- [Portable backend, Gemini and desktop roadmap](https://github.com/Sammieblz/tholi/issues/23), with the [navigation baseline protocol](development/testing/navigation-baseline.md) and [backend architecture decision and service contracts](plans/gemini-cloud-and-enterprise.md)
 
 - [Contribution and release procedure](../CONTRIBUTING.md)
 - [Frontend structure and ownership](architecture/frontend/README.md)
