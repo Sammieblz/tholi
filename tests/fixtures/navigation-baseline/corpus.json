@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "scope": "Issue #24: public, signed-out, read-only navigation. No edits, accounts, submissions, private captures or paid inference. An initial local-only measurement may inspect every case; held-out cases must not inform later prompt, retrieval or model tuning.",
+  "initialState": "Fresh disposable Chromium profile for each task, no saved knowledge, on-device NLP defaults, optional LLM and private backend disabled, guide mode, English page, document top.",
+  "viewport": { "width": 1280, "height": 900 },
+  "timeoutMs": 10000,
+  "cases": [
+    { "id": "wiki-text", "app": "wikipedia", "split": "calibration", "goal": "Make text larger", "kind": "choice", "target": "Large", "initialChoice": "Small" },
+    { "id": "wiki-theme", "app": "wikipedia", "split": "calibration", "goal": "Switch to dark mode", "kind": "choice", "target": "Dark", "initialChoice": "Light" },
+    { "id": "wiki-width", "app": "wikipedia", "split": "calibration", "goal": "Set width to wide", "kind": "choice", "target": "Wide", "initialChoice": "Standard" },
+    { "id": "wiki-references", "app": "wikipedia", "split": "calibration", "goal": "Help me find references", "kind": "section", "target": "References" },
+    { "id": "wiki-search", "app": "wikipedia", "split": "calibration", "goal": "Show search", "kind": "focus", "target": "Search Wikipedia" },
+    { "id": "wiki-languages", "app": "wikipedia", "split": "calibration", "goal": "Show languages", "kind": "expand", "target": "languages" },
+    { "id": "wiki-history", "app": "wikipedia", "split": "held-out", "goal": "See previous revisions of this article", "kind": "navigation", "target": "View history", "query": "action=history" },
+    { "id": "wiki-plot", "app": "wikipedia", "split": "held-out", "goal": "Take me to the plot summary", "kind": "section", "target": "Plot" },
+    { "id": "wiki-information", "app": "wikipedia", "split": "held-out", "goal": "Show information about this page", "kind": "navigation", "target": "Page information", "query": "action=info", "reveal": "Tools" },
+    { "id": "github-issues", "app": "github", "split": "calibration", "goal": "Find the bug reports for this repository", "kind": "navigation", "target": "Issues", "path": "/microsoft/vscode/issues" },
+    { "id": "github-pulls", "app": "github", "split": "calibration", "goal": "Show proposed code changes", "kind": "navigation", "target": "Pull requests", "path": "/microsoft/vscode/pulls" },
+    { "id": "github-actions", "app": "github", "split": "calibration", "goal": "Inspect this project's build workflows", "kind": "navigation", "target": "Actions", "path": "/microsoft/vscode/actions" },
+    { "id": "github-projects", "app": "github", "split": "calibration", "goal": "Open this repository's project boards", "kind": "navigation", "target": "Projects", "path": "/microsoft/vscode/projects" },
+    { "id": "github-security", "app": "github", "split": "calibration", "goal": "Find the security information for this repository", "kind": "navigation", "target": "Security", "path": "/microsoft/vscode/security" },
+    { "id": "github-insights", "app": "github", "split": "calibration", "goal": "Show contributor activity and repository insights", "kind": "navigation", "target": "Insights", "path": "/microsoft/vscode/pulse" },
+    { "id": "github-license", "app": "github", "split": "held-out", "goal": "Read the license for this project", "kind": "navigation", "target": "MIT license", "path": "/microsoft/vscode/blob/main/LICENSE.txt" },
+    { "id": "github-contributing", "app": "github", "split": "held-out", "goal": "Read how to contribute to this project", "kind": "navigation", "target": "Contributing", "path": "/microsoft/vscode/blob/main/CONTRIBUTING.md" },
+    { "id": "github-releases", "app": "github", "split": "held-out", "goal": "Find published versions of this project", "kind": "navigation", "target": "Releases", "path": "/microsoft/vscode/releases" }
+  ],
+  "apps": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Casino_Royale_(novel)",
+    "github": "https://github.com/microsoft/vscode"
+  }
+}

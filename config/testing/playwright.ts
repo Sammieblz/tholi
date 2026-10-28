@@ -81,6 +81,14 @@ const projects: Project[] = [
       : { grepInvert: /all website routes reflow|scroll companion stays/ }),
   }),
 ];
+if (browserGroup === "navigation-baseline")
+  projects.push(
+    project("navigation-baseline", "navigation-baseline", "live", {
+      testMatch: "navigation-baseline.spec.ts",
+      timeout: 90000,
+      use: { viewport: { width: 1280, height: 900 }, trace: "off" },
+    }),
+  );
 if (full) {
   projects.push(
     project(
@@ -98,6 +106,7 @@ if (full) {
   for (const { name, width, height } of matrix.viewports) {
     projects.push(
       project("live-" + name, "live", "live", {
+        testIgnore: "navigation-baseline.spec.ts",
         use: { viewport: { width, height }, trace: "retain-on-failure" },
       }),
     );
@@ -131,6 +140,7 @@ export default defineConfig({
   webServer: [
     ...(![
       "live",
+      "navigation-baseline",
       "firefox",
       "brands",
       "browser-performance",
