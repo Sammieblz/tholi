@@ -37,6 +37,7 @@
     "fetch:model": "node scripts/fetch-model.mjs",
     "build:api": "node scripts/build-api.mjs",
     "start:api": "node apps/api/dist/cli.js",
+    "start:service": "node apps/api/dist/service.js",
     "test:nlp": "node scripts/test.mjs nlp",
     "package:api": "node scripts/package-api.mjs",
     "test:nlp:browser": "node scripts/test.mjs nlp-browser",

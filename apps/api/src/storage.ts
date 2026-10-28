@@ -29,6 +29,18 @@ export class SqliteStorage implements DerivedStore, KnowledgeStore {
   private db: DatabaseSync;
   constructor(path: string) {
     this.db = new DatabaseSync(path);
+    try {
+      this.initialize();
+    } catch (error) {
+      try {
+        this.db.close();
+      } catch {
+        // Keep the initialization error if closing the failed database also fails.
+      }
+      throw error;
+    }
+  }
+  private initialize() {
     this.db.exec(
       "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS sites(origin TEXT PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS routes(id TEXT PRIMARY KEY, origin TEXT NOT NULL, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS embeddings(key TEXT PRIMARY KEY, revision TEXT NOT NULL, vector TEXT NOT NULL, used_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS embeddings_usage ON embeddings(used_at); CREATE TABLE IF NOT EXISTS indexes(origin TEXT PRIMARY KEY, data TEXT NOT NULL);",
     );
