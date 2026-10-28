@@ -11,6 +11,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Appearance and website contrast](guides/appearance.md)
 - [Privacy](architecture/privacy.md) and [security](architecture/security.md)
 - [Optional API setup](guides/backend.md)
+- [API profiles, ownership and lifecycle](architecture/backend.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

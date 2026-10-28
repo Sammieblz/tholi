@@ -22,3 +22,5 @@ parentPort!.on("message", (message) => {
       idle = setTimeout(() => void engine.close(), 60000);
     });
 });
+// Recognition starts the native engine only when a bounded capture is requested.
+parentPort!.postMessage({ type: "ready" });
