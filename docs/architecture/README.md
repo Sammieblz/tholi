@@ -5,6 +5,7 @@
 - [Bundled NLP and indexing](natural-language.md)
 - [Session, document and worker continuity](sessions.md)
 - [Authored fixture routes and registry contracts](authored-routes.md)
+- [Portable backend architecture and service contracts](../plans/gemini-cloud-and-enterprise.md), including local/VM/cloud profiles and legacy compatibility
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 

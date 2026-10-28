@@ -1,6 +1,10 @@
 # Optional Tholi API
 
 The API is optional; the extension runs NLP and OCR locally without it.
+This guide covers the current single-owner private API. The planned authenticated
+service has a separate [architecture and compatibility decision](../plans/gemini-cloud-and-enterprise.md);
+its accounts, PostgreSQL profile and cloud contracts are not implemented yet.
+
 Install Node **24.19.x**, run `npm ci`, `npm run fetch:model`, `npm run fetch:ocr` and
 `npm run build:api`. Start the optional API with `npm run start:api`.
 It listens at `http://127.0.0.1:8787`. First startup writes a random bearer
