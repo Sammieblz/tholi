@@ -10,3 +10,6 @@ tests/fixtures/*/corpus.sha256 text eol=lf
 
 # The acceptance declaration is also a byte-frozen input.
 tests/browser/acceptance/matrix.json text eol=lf
+
+# Container entrypoint scripts must remain executable by Linux shells.
+infra/local/**/*.sh text eol=lf

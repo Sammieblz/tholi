@@ -21,6 +21,13 @@ harness and independent outcomes, and does not change release certification.
 
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
+The separate Linux `containers` job runs `npm run test:local-stack -- --optional`
+against fresh local volumes and participates in `validate`. It builds only the
+API container and does not duplicate the full application/model build. This
+infrastructure smoke uses no paid accounts or external mail destinations. See
+[local stack setup and safety](../local-stack.md) for prerequisites, retained-data
+checks and redacted evidence. Ordinary unit runs do not need a Docker daemon.
+
 Nightly at 06:00 UTC, manual full validation and version tags retain public-site journeys, frozen model/OCR benchmarks, busy-page/performance budgets and every responsive acceptance scenario. Public tests include the reported-page and language cases formerly hidden in the NLP browser folder. PR contexts reject unexpected public HTTP requests; explicitly fulfilled fixtures remain usable. The full coordinator applies the same fixture-only network policy to its local browser groups, enabling public access only for live-site and acceptance groups.
 
 Each workflow builds extension, website, API and browser fixtures once. Core/integration groups start only the demo preview; UI starts demo and website previews; live-site groups start neither; acceptance starts only the demo needed by its local fixture. Parallel jobs download immutable artifacts and verify `output/build-manifest.json`, including pinned inference assets. Heavy model jobs stay isolated. npm downloads and verified pinned assets are cached; caches never replace hash validation. State reads are passive and bounded. Starting a browser fixture waits for both worker state and the panel ready controls. Headless exports use a shared browser-completion/file adapter; automatic-download prompts are explicitly pregranted in disposable profiles. Only the two export fixtures select Chromium’s disk-backed blob transport to avoid host memory-pressure starvation; performance profiles retain normal browser settings. Fresh profiles preserve test isolation, while extension files are shared. Fixture-only permission copies are created once per worker. Native grants still require manual verification.

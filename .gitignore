@@ -24,3 +24,8 @@ output/build-manifest.json
 graphify-out/
 
 output/browser-tools/
+
+# Local infrastructure credentials. Commit only the documented template.
+.env
+.env.*
+!.env.example

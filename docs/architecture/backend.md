@@ -50,6 +50,14 @@ No second navigation engine, tenant repository, account implementation or idle
 durable-worker stub is introduced. Later tickets add those service capabilities
 through these owners and their adopted contracts.
 
+The [local container stack](../development/local-stack.md) uses this same build
+and executable, with PostgreSQL, a local OIDC realm and captured mail. Its default
+internal networks deny internet egress. Infrastructure credentials are not injected
+into the health-only API before their adapters exist. `THOLI_MODEL_PROVIDER`
+defaults to `fake`; any other provider fails startup until #39 implements the
+actual inference adapter and spending enforcement. This policy does not advertise
+an inference endpoint or change the legacy local model.
+
 ## Health, errors and shutdown
 
 Both profiles provide `GET /health/live` and `GET /health/ready`. The private
