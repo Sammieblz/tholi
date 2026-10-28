@@ -15,6 +15,10 @@ Existing focused `test:e2e`, `test:ui`, `test:nlp`, `test:multi-app`, `test:visi
 
 ## Feedback versus certification
 
+The [navigation baseline and perception comparison](navigation-baseline.md) is
+the opt-in measurement protocol for roadmap #23. It reuses the installed-extension
+harness and independent outcomes, and does not change release certification.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 Nightly at 06:00 UTC, manual full validation and version tags retain public-site journeys, frozen model/OCR benchmarks, busy-page/performance budgets and every responsive acceptance scenario. Public tests include the reported-page and language cases formerly hidden in the NLP browser folder. PR contexts reject unexpected public HTTP requests; explicitly fulfilled fixtures remain usable. The full coordinator applies the same fixture-only network policy to its local browser groups, enabling public access only for live-site and acceptance groups.

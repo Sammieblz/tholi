@@ -183,6 +183,7 @@ export async function runGoalContract(
     revealLabel?: RegExp;
     revealed?: AcceptanceElement;
     selectedLabel: RegExp;
+    matchesTarget?: (control: any) => boolean;
     kind: string;
     outcome: () => Promise<boolean>;
     picker?: boolean;
@@ -305,7 +306,8 @@ export async function runGoalContract(
   const correct =
     !!selected &&
     selected.kind === oracle.kind &&
-    oracle.selectedLabel.test(selected.label);
+    oracle.selectedLabel.test(selected.label) &&
+    (!oracle.matchesTarget || oracle.matchesTarget(selected));
   result.targets.push(correct);
   await recordAutomation(probe, result);
   expect(correct).toBe(true);

@@ -19,6 +19,7 @@ import {
 } from "./evidence";
 import AccuracyReporter from "./accuracy-reporter";
 const output: Record<string, string> = {
+  "navigation-baseline": "output/qa/navigation-baseline.json",
   firefox: "output/qa/firefox-build.json",
   branded: "output/qa/branded-build.json",
   "browser-performance": "output/qa/browser-performance.json",
@@ -122,6 +123,7 @@ export default class BrowserReporter implements Reporter {
     }
     const extra: Record<string, unknown> = {};
     for (const [name, key] of [
+      ["navigation-baseline", "measurement"],
       ["motion-benchmark", "motion"],
       ["native-surfaces", "surfaces"],
       ["paired-performance", "pairedPerformance"],

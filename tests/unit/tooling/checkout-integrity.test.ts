@@ -29,6 +29,7 @@ test("Windows-style Git checkout preserves hashed recording text and frozen corp
   for (const corpus of [
     "nlp",
     "multi-app",
+    "navigation-baseline",
     "continuity",
     "reliability-vision",
   ]) {

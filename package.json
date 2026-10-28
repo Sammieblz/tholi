@@ -26,6 +26,7 @@
     "test:e2e": "node scripts/test.mjs core",
     "format": "prettier --write apps packages routes tests scripts docs config .github *.ts *.json *.md",
     "test:live:wikipedia": "node scripts/test.mjs live",
+    "test:navigation:baseline": "node scripts/test.mjs navigation-baseline",
     "test:acceptance": "node scripts/test.mjs acceptance",
     "package:extension": "node scripts/package-extension.mjs",
     "fetch:ocr": "node scripts/fetch-ocr.mjs",

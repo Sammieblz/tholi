@@ -22,6 +22,7 @@ const full =
       "brands",
       "browser-performance",
       "live",
+      "navigation-baseline",
       "acceptance",
       "acceptance-chromium",
       "acceptance-firefox",
@@ -85,6 +86,7 @@ function vitest(scope) {
   ]);
 }
 const browserGroups = {
+  "navigation-baseline": ["navigation-baseline"],
   core: ["core-desktop", "narrow"],
   integration: ["nlp", "multi-app", "continuity", "reliability"],
   ui: ["ui-extension", "ui-website", "ui-website-firefox"],
@@ -111,6 +113,7 @@ const browserGroups = {
 function browser(scope) {
   env.THOLI_BROWSER_GROUP = scope;
   env.THOLI_BROWSER_NETWORK = [
+    "navigation-baseline",
     "live",
     "acceptance",
     "acceptance-chromium",
