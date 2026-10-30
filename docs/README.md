@@ -12,6 +12,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Privacy](architecture/privacy.md) and [security](architecture/security.md)
 - [Optional API setup](guides/backend.md)
 - [API profiles, ownership and lifecycle](architecture/backend.md)
+- [Cloud-free local backend containers](development/local-stack.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

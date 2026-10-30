@@ -86,13 +86,14 @@ The default local pipeline combines Compromise, lexical retrieval and MiniLM. Op
 
 ## Build and contribute
 
-| Work                                | Command                                   | Output                                     |
-| ----------------------------------- | ----------------------------------------- | ------------------------------------------ |
-| Chromium and Firefox extensions     | `npm run build:extension`                 | `dist/extension`, `dist/extension-firefox` |
-| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`                     |
-| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                                  |
-| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md)        |
-| Deterministic PR validation         | `npm run test:ci`                         | Local validation                           |
+| Work                                | Command                                   | Output                                             |
+| ----------------------------------- | ----------------------------------------- | -------------------------------------------------- |
+| Chromium and Firefox extensions     | `npm run build:extension`                 | `dist/extension`, `dist/extension-firefox`         |
+| Product website                     | `npm run dev:web` / `npm run build:web`   | Port 5174 / `dist/web`                             |
+| Controlled Northstar test workspace | `npm run dev:demo`                        | Port 5173                                          |
+| Optional local API                  | `npm run build:api` / `npm run start:api` | [API setup](docs/guides/backend.md)                |
+| Cloud-free backend infrastructure   | `npm run local:init` / `npm run local:up` | [Container setup](docs/development/local-stack.md) |
+| Deterministic PR validation         | `npm run test:ci`                         | Local validation                                   |
 
 Install the test browsers once with `npx playwright install chromium firefox`. The [release procedure](docs/development/releasing.md) covers versioning and certification. The [contribution guide](CONTRIBUTING.md) lists focused checks, frozen corpora and exact-byte release gates. Packaging never substitutes historical test reports for the current build.
 

@@ -32,6 +32,11 @@ TypeScript rejects unused locals and parameters. Build hashing is shared by test
 
 Install browser binaries once with `npx playwright install chromium firefox`. Run browser/model suites sequentially on memory-constrained machines. `npm run build:extension:experimental:paddle` includes Paddle/OpenCV for evaluation; the normal build removes their inactive assets. A failed experiment must never be counted as a passing default-engine gate.
 
+For backend container changes, run `npm run test:local-stack -- --optional` with
+the Linux Docker engine running. The [local stack guide](docs/development/local-stack.md)
+describes startup, synthetic credentials, retained volumes and explicit resets.
+This smoke is also a required Linux PR job; ordinary unit checks need no daemon.
+
 ## CI and releases
 
 Follow [versioning and releases](docs/development/releasing.md). Create version-specific notes under `docs/releases/vVERSION`, then run `npm run release:version -- VERSION`. `npm run check:version` rejects drift between product, API, workspace and extension metadata or a mismatched CI tag. Keep historical evidence and capture versions unchanged.

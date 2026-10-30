@@ -1,0 +1,36 @@
+{
+  "realm": "tholi-local",
+  "displayName": "Tholi local development",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "smtpServer": {
+    "host": "mail",
+    "port": "1025",
+    "from": "noreply@example.test",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
+  "clients": [],
+  "users": [
+    {
+      "username": "tholi-local-user",
+      "email": "user@example.test",
+      "firstName": "Local",
+      "lastName": "Fixture",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${OIDC_TEST_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

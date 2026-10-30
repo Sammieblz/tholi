@@ -1,0 +1,9 @@
+# Explicit future opt-in only. The current service rejects this provider even
+# with these settings. No live adapter, credentials or egress are enabled here.
+services:
+  api:
+    profiles: [gemini]
+    environment:
+      THOLI_MODEL_PROVIDER: gemini
+      THOLI_GEMINI_OPT_IN: ${THOLI_GEMINI_OPT_IN:?Explicit Gemini opt-in is required}
+      THOLI_GEMINI_SPEND_LIMIT_USD: ${THOLI_GEMINI_SPEND_LIMIT_USD:?An explicit spend limit is required}

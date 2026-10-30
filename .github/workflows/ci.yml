@@ -74,12 +74,26 @@ jobs:
             output/vision/browser.json
             output/reliability/browser.json
             test-results
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - run: npm run test:local-stack -- --optional
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-evidence-containers-${{ github.run_attempt }}
+          path: output/qa/local-stack/**/smoke.json
   validate:
     if: always()
-    needs: [build, tests]
+    needs: [build, tests, containers]
     runs-on: windows-latest
     steps:
       - name: Require every fast gate
         shell: pwsh
         run: |
-          if ('${{ needs.build.result }}' -ne 'success' -or '${{ needs.tests.result }}' -ne 'success') { exit 1 }
+          if ('${{ needs.build.result }}' -ne 'success' -or '${{ needs.tests.result }}' -ne 'success' -or '${{ needs.containers.result }}' -ne 'success') { exit 1 }

@@ -101,6 +101,20 @@ describe("API configuration profiles", () => {
     ).toThrow(/host/);
   });
 
+  it("defaults to the cloud-free model policy and fails closed for live or unknown providers", () => {
+    expect(parseServiceConfig({ THOLI_MODEL_PROVIDER: "fake" })).toEqual(
+      parseServiceConfig({}),
+    );
+    for (const provider of ["gemini", "unknown", ""])
+      expect(() =>
+        parseServiceConfig({
+          THOLI_MODEL_PROVIDER: provider,
+          THOLI_GEMINI_OPT_IN: "true",
+          THOLI_GEMINI_SPEND_LIMIT_USD: "1",
+        }),
+      ).toThrow();
+  });
+
   it.each([
     "*",
     "null",

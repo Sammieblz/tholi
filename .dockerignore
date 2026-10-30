@@ -1,0 +1,31 @@
+# Keep the build context limited to the existing API build and workspace owners.
+**
+!package.json
+!package-lock.json
+!LICENSE
+!apps/
+!apps/api/
+!apps/api/Dockerfile
+!apps/api/package.json
+!apps/api/src/
+!apps/api/src/**
+!packages/
+!packages/**
+!scripts/
+!scripts/build-api.mjs
+
+# Never copy local dependencies, generated output or secrets from allowed trees.
+**/node_modules
+**/dist
+**/.env*
+**/*.env
+**/.npmrc
+**/.netrc
+**/*.pem
+**/*.key
+**/.git
+**/.codex
+**/.agents
+**/.aws
+**/.navigator-api
+**/output

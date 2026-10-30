@@ -1,8 +1,10 @@
 # Optional Tholi API
 
 The API is optional; the extension runs NLP and OCR locally without it.
-This guide covers the single-owner private API and the new health-only service
-bootstrap. Accounts, PostgreSQL and cloud navigation are later work under the
+This guide covers the single-owner private API and the health-only service
+bootstrap. A [containerized local stack](../development/local-stack.md) provides
+PostgreSQL, local identity, captured mail and optional storage/telemetry without
+cloud accounts. Application database integration, accounts and cloud navigation are later work under the
 [architecture and compatibility decision](../plans/gemini-cloud-and-enterprise.md).
 See [runtime ownership and lifecycle](../architecture/backend.md) for developer boundaries.
 
@@ -93,11 +95,12 @@ or private API connection file. It defaults to `http://127.0.0.1:8788` and curre
 provides only `/health/live` and `/health/ready`. It cannot be connected as an
 extension navigation backend yet; `/v1`, `/v2` and account routes are absent.
 
-| Setting                        | Default     | Purpose                                                                          |
-| ------------------------------ | ----------- | -------------------------------------------------------------------------------- |
-| `THOLI_SERVICE_HOST`           | `127.0.0.1` | Explicit service bind address; a container can use `0.0.0.0`                     |
-| `THOLI_SERVICE_PORT` or `PORT` | `8788`      | Integer port from 1 to 65535; both values must agree when supplied               |
-| `THOLI_SERVICE_ORIGINS`        | Empty       | Comma-separated exact HTTP(S) browser origins, without paths or trailing slashes |
+| Setting                        | Default     | Purpose                                                                                  |
+| ------------------------------ | ----------- | ---------------------------------------------------------------------------------------- |
+| `THOLI_SERVICE_HOST`           | `127.0.0.1` | Explicit service bind address; a container can use `0.0.0.0`                             |
+| `THOLI_SERVICE_PORT` or `PORT` | `8788`      | Integer port from 1 to 65535; both values must agree when supplied                       |
+| `THOLI_SERVICE_ORIGINS`        | Empty       | Comma-separated exact HTTP(S) browser origins, without paths or trailing slashes         |
+| `THOLI_MODEL_PROVIDER`         | `fake`      | Cloud-free policy; live/unknown providers fail startup until the model adapter milestone |
 
 Non-browser health calls without an Origin header work without credentials.
 Browser origins must match the configured allowlist. The service never reads

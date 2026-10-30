@@ -2,6 +2,8 @@
 
 These instructions apply recursively throughout the repository. For roadmap #23, work in issue sequence and use each issue's acceptance criteria to bound the change. Keep repository guidance here as a single source instead of copying it into nested memory files.
 
+Commit changes locally, push the branch, then open a pull request. If local Git writes are blocked, report the blocker; do not replace this workflow with remote-only commits.
+
 ## Before editing
 
 1. Search existing implementation and tests before adding either.

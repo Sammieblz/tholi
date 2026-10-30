@@ -174,6 +174,13 @@ export function validatePrivateConnection(value: unknown): {
 }
 
 export function parseServiceConfig(env: Environment) {
+  // This composition root has no live model adapter yet. Fail closed instead of
+  // accepting an opt-in flag or a budget that this version cannot enforce.
+  const model = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
+  if (model !== "fake")
+    throw new Error(
+      "Only the cloud-free fake model policy is available. Live inference and enforced spending limits require the model adapter milestone (#39).",
+    );
   const platformPort = environmentValue(env, "PORT");
   const servicePort = environmentValue(env, "THOLI_SERVICE_PORT");
   if (

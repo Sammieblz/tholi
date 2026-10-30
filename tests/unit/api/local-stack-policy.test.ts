@@ -1,0 +1,257 @@
+import { expect, test } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve, sep } from "node:path";
+import {
+  assertOwnedSmokeProject,
+  inspectLocalStack,
+} from "../../../scripts/lib/local-stack-policy.mjs";
+import { localStackArguments } from "../../../scripts/local-stack.mjs";
+
+function composeModel() {
+  const image = "registry.test/local:1@sha256:" + "a".repeat(64);
+  const service = () => ({
+    image,
+    networks: { application: null } as Record<string, null>,
+    environment: {} as Record<string, string>,
+    ports: [] as { host_ip: string; published: string; target: number }[],
+    volumes: [] as { type: string; source: string }[],
+  });
+  return {
+    name: "tholi-smoke-example-1234abcd",
+    services: {
+      api: {
+        ...service(),
+        build: { context: "." },
+        user: "1000:1000",
+        read_only: true,
+        cap_drop: ["ALL"],
+        security_opt: ["no-new-privileges:true"],
+      },
+      postgres: {
+        ...service(),
+        volumes: [{ type: "volume", source: "postgres" }],
+      },
+      oidc: service(),
+      mail: service(),
+      gateway: { ...service(), networks: { application: null, ingress: null } },
+    },
+    networks: {
+      application: { internal: true, external: false },
+      ingress: { internal: false, external: false },
+    },
+    volumes: {
+      postgres: {
+        name: "tholi-smoke-example-1234abcd_postgres",
+        external: false,
+      },
+    },
+  };
+}
+
+test("resolved local-stack policy returns only redacted deployment evidence", () => {
+  const config = composeModel();
+  config.services.postgres.environment.POSTGRES_PASSWORD =
+    "local-secret-should-never-be-reported";
+  config.services.gateway.ports.push({
+    host_ip: "127.0.0.1",
+    published: "18788",
+    target: 8788,
+  });
+  const evidence = inspectLocalStack(config);
+  expect(evidence.services).toEqual([
+    "api",
+    "gateway",
+    "mail",
+    "oidc",
+    "postgres",
+  ]);
+  expect(evidence.ports).toEqual([
+    { service: "gateway", host: "127.0.0.1", published: 18788, target: 8788 },
+  ]);
+  expect(evidence.fingerprint).toMatch(/^[a-f0-9]{64}$/);
+  expect(JSON.stringify(evidence)).not.toContain(
+    config.services.postgres.environment.POSTGRES_PASSWORD,
+  );
+  config.services.postgres.environment.POSTGRES_PASSWORD =
+    "another-local-secret";
+  expect(inspectLocalStack(config).fingerprint).not.toBe(evidence.fingerprint);
+});
+
+test.each([
+  [
+    "root API",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.user = "0:0";
+    },
+  ],
+  [
+    "writable API filesystem",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.read_only = false;
+    },
+  ],
+  [
+    "retained capabilities",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.cap_drop = [];
+    },
+  ],
+  [
+    "new privileges",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.security_opt = [];
+    },
+  ],
+  [
+    "mutable infrastructure image",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.oidc.image = "registry.test/oidc:latest";
+    },
+  ],
+  [
+    "external egress",
+    (config: ReturnType<typeof composeModel>) => {
+      config.networks.application.internal = false;
+    },
+  ],
+  [
+    "public port",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.gateway.ports.push({
+        host_ip: "0.0.0.0",
+        published: "8788",
+        target: 8788,
+      });
+    },
+  ],
+  [
+    "application ingress access",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.networks.ingress = null;
+    },
+  ],
+  [
+    "gateway credentials",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.gateway.environment.POSTGRES_PASSWORD = "must-not-leak";
+    },
+  ],
+  [
+    "direct private-service publishing",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.ports.push({
+        host_ip: "127.0.0.1",
+        published: "8788",
+        target: 8788,
+      });
+    },
+  ],
+  [
+    "provider credential",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.environment.GEMINI_API_KEY = "must-not-leak";
+    },
+  ],
+  [
+    "live model default",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.environment.THOLI_MODEL_PROVIDER = "gemini";
+    },
+  ],
+  [
+    "SMTP relay",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.mail.environment.MP_SMTP_RELAY_HOST =
+        "production-smtp.invalid";
+    },
+  ],
+  [
+    "SMTP forwarding",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.mail.environment.MP_SMTP_FORWARD_CONFIG =
+        "/run/forward.yml";
+    },
+  ],
+  [
+    "external volume",
+    (config: ReturnType<typeof composeModel>) => {
+      config.volumes.postgres.external = true;
+    },
+  ],
+  [
+    "another project's volume",
+    (config: ReturnType<typeof composeModel>) => {
+      config.volumes.postgres.name = "developer_database";
+    },
+  ],
+] as const)("local-stack policy rejects %s", (_name, change) => {
+  const config = composeModel();
+  change(config);
+  expect(() => inspectLocalStack(config)).toThrow("Unsafe local stack:");
+});
+
+test("smoke cleanup requires both a disposable name and its exact allocation", () => {
+  const project = "tholi-smoke-example-1234abcd";
+  expect(() => assertOwnedSmokeProject(project, project)).not.toThrow();
+  expect(() => assertOwnedSmokeProject("tholi-local", "tholi-local")).toThrow();
+  expect(() =>
+    assertOwnedSmokeProject(project, "tholi-smoke-other-1234abcd"),
+  ).toThrow();
+  expect(() =>
+    assertOwnedSmokeProject("tholi-smoke-example-1234abcd extra", project),
+  ).toThrow();
+});
+
+test("regular teardown preserves volumes and reset requires an explicit matching project", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-compose-policy-"));
+  const envFile = join(directory, ".env");
+  const project = "tholi-policy-test";
+  try {
+    await writeFile(envFile, `COMPOSE_PROJECT_NAME="${project}" # local\n`);
+    const options = { envFile };
+    expect(localStackArguments({ ...options, action: "down" })).not.toContain(
+      "--volumes",
+    );
+    const down = localStackArguments({ ...options, action: "down" });
+    expect(down[down.indexOf("--project-name") + 1]).toBe(project);
+    expect(() => localStackArguments({ ...options, action: "reset" })).toThrow(
+      "--confirm-delete",
+    );
+    expect(() =>
+      localStackArguments({
+        ...options,
+        action: "reset",
+        confirmDelete: "another-project",
+      }),
+    ).toThrow("--confirm-delete");
+    expect(
+      localStackArguments({
+        ...options,
+        action: "reset",
+        confirmDelete: project,
+      }),
+    ).toContain("--volumes");
+    expect(() =>
+      localStackArguments({
+        ...options,
+        action: "up",
+        selectedProfiles: ["live-gemini"],
+      }),
+    ).toThrow("Only the storage and telemetry profiles");
+    await writeFile(envFile, "COMPOSE_PROJECT_NAME=../../bad\n");
+    expect(() => localStackArguments({ ...options, action: "down" })).toThrow(
+      "Compose project name",
+    );
+  } finally {
+    if (
+      !resolve(directory).startsWith(
+        resolve(tmpdir()) + sep + "tholi-compose-policy-",
+      )
+    )
+      throw new Error(
+        "Refusing cleanup outside the local policy test directory.",
+      );
+    await rm(directory, { recursive: true, force: true });
+  }
+});
