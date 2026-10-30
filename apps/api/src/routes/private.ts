@@ -88,6 +88,7 @@ export async function registerPrivateApi(
     },
   });
   app.addHook("onRequest", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
     if (
       request.headers.origin &&
       !options.origins.includes(request.headers.origin)

@@ -12,6 +12,13 @@ export interface RuntimeResource {
   close(): void | Promise<void>;
 }
 
+/** Application-facing context; never contains HTTP credentials or browser authority. */
+export interface ServiceRequestContext {
+  readonly requestId: string;
+  readonly deadlineAt: number;
+  readonly signal: AbortSignal;
+}
+
 export interface NavigationRepository extends KnowledgeStore {
   mirror(site: SiteMemory): Promise<void>;
 }

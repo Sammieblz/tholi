@@ -31,7 +31,7 @@ export async function createApi(
   );
 }
 
-/** Service foundation: no private bearer, local database or model workers. */
+/** Explicit service profile; private bearers never grant service access. */
 export async function createServiceApi(
   input: ServiceApiOptions,
   resources: RuntimeResource[] = [],
@@ -41,7 +41,9 @@ export async function createServiceApi(
     await app.register(cors, {
       origin: (origin, callback) =>
         callback(null, !origin || options.origins.includes(origin)),
-      methods: ["GET"],
+      methods: ["GET", "POST"],
+      allowedHeaders: ["Content-Type", "X-Tholi-Timeout-Ms"],
+      exposedHeaders: ["X-Request-Id"],
       strictPreflight: true,
     });
     app.addHook("onRequest", async (request) => {
@@ -51,6 +53,8 @@ export async function createServiceApi(
       )
         throw new ApiError(403, "FORBIDDEN", "Origin is not allowed.");
     });
+    const { registerServiceApi } = await import("./routes/service");
+    await registerServiceApi(app);
     registerHealth(app, "service", lifecycle);
   });
 }

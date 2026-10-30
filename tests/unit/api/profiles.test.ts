@@ -249,8 +249,10 @@ test("shutdown stops application work before draining active HTTP responses", as
       Promise.all([app.close(), response]),
       deadline,
     ]);
-    expect(completed.status).toBe(200);
-    expect(JSON.parse(completed.body)).toEqual({ stopped: true });
+    expect(completed.status).toBe(503);
+    expect(JSON.parse(completed.body)).toMatchObject({
+      error: { code: "UNAVAILABLE", retryable: true },
+    });
     await app.close();
     for (const dependency of dependencies) {
       expect(dependency.stop).toHaveBeenCalledTimes(1);
@@ -308,13 +310,13 @@ test("service errors keep status, correlation and safe structured messages", asy
     },
   });
   const unexpected = await app.inject({ url: "/unexpected-error" });
-  expect(unexpected.statusCode).toBeGreaterThanOrEqual(500);
+  expect(unexpected.statusCode).toBe(500);
   expect(unexpected.json()).toMatchObject({
     error: {
-      code: expect.any(String),
+      code: "INTERNAL_ERROR",
       message: expect.any(String),
       requestId: expect.any(String),
-      retryable: expect.any(Boolean),
+      retryable: false,
     },
   });
   expect(unexpected.body).not.toContain(secret);
@@ -337,9 +339,11 @@ test("injected private capabilities retain private authentication and OpenAPI co
   for (const version of [1, 2]) {
     const unauthenticated = await app.inject({ url: `/v${version}/health` });
     expect(unauthenticated.statusCode).toBe(401);
+    expect(unauthenticated.headers["cache-control"]).toBe("no-store");
     expect(unauthenticated.json()).toEqual({ error: "Bearer token required." });
     const health = await app.inject({ url: `/v${version}/health`, headers });
     expect(health.statusCode).toBe(200);
+    expect(health.headers["cache-control"]).toBe("no-store");
     expect(health.json()).toMatchObject({
       version: apiPackage.version,
       llm: false,
@@ -349,6 +353,7 @@ test("injected private capabilities retain private authentication and OpenAPI co
       headers,
     });
     expect(specification.statusCode).toBe(200);
+    expect(specification.headers["cache-control"]).toBe("no-store");
     expect(specification.json().info).toMatchObject({
       title: "Tholi single-owner API",
       version: apiPackage.version,
@@ -360,6 +365,7 @@ test("injected private capabilities retain private authentication and OpenAPI co
     headers: { ...headers, origin: "https://tholi.io" },
   });
   expect(forbidden.statusCode).toBe(403);
+  expect(forbidden.headers["cache-control"]).toBe("no-store");
   expect(forbidden.json()).toEqual({ error: "Origin is not allowed." });
   const invalid = await app.inject({
     method: "POST",
@@ -368,6 +374,7 @@ test("injected private capabilities retain private authentication and OpenAPI co
     payload: {},
   });
   expect(invalid.statusCode).toBe(400);
+  expect(invalid.headers["cache-control"]).toBe("no-store");
   expect(invalid.json()).toEqual({ error: "Invalid API request." });
   expect(capabilities.workers.infer).not.toHaveBeenCalled();
   expect(capabilities.workers.recognize).not.toHaveBeenCalled();
