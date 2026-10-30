@@ -234,10 +234,13 @@ export function registerMessages(context: Context) {
             sessionId: context.session.sessionId,
             frameId: value.frame.frameId,
             documentId: value.frame.documentId,
-            parentFrameId: value.frame.parentFrameId,
             tabId: context.session.tabId,
             ...(raw.type === "FRAME_OBSERVATION"
-              ? { page: value.page, perception: value.perception }
+              ? {
+                  page: value.page,
+                  perception: value.perception,
+                  parentFrameId: value.frame.parentFrameId,
+                }
               : {
                   controlId: raw.controlId,
                   signature: raw.signature,
