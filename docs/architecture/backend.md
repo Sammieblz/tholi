@@ -4,14 +4,15 @@ The current API has two explicit bootstraps in the existing `apps/api` applicati
 The [portable backend decision](../plans/gemini-cloud-and-enterprise.md) defines the
 later service architecture. This page covers the runtime foundation from
 [#26](https://github.com/Sammieblz/tholi/issues/26) and service database foundation
-from [#28](https://github.com/Sammieblz/tholi/issues/28).
+from [#28](https://github.com/Sammieblz/tholi/issues/28), with
+[versioned service discovery and contracts](../development/service-api.md) from #29.
 
 ## Profiles and entrypoints
 
-| Profile        | Factory and executable                          | Current capabilities                                                            |
-| -------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| Legacy private | `createApi` in `server.ts`; `cli.js`            | Existing authenticated `/v1` and `/v2`, SQLite, local inference and OCR workers |
-| Service        | `createServiceApi` in `server.ts`; `service.js` | Health/readiness and injected resource lifecycle only                           |
+| Profile        | Factory and executable                          | Current capabilities                                                              |
+| -------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| Legacy private | `createApi` in `server.ts`; `cli.js`            | Existing authenticated `/v1` and `/v2`, SQLite, local inference and OCR workers   |
+| Service        | `createServiceApi` in `server.ts`; `service.js` | Health/readiness, capability negotiation, OpenAPI and injected resource lifecycle |
 
 The service profile has no account, navigation, PostgreSQL or durable-job endpoints
 yet. A private bearer never grants service access. It does not load SQLite,
@@ -52,7 +53,7 @@ and source maps before emitting a new set. No archive is changed by a build.
   These repositories have no service HTTP routes and never migrate private SQLite.
 
 There is one navigation engine and one repository owner per database profile.
-Authentication, service routes and durable worker execution remain later tickets.
+Authentication, protected service routes and durable worker execution remain later tickets.
 
 The [local container stack](../development/local-stack.md) uses this same build
 and executable, with PostgreSQL, a local OIDC realm and captured mail. Its default
@@ -95,7 +96,9 @@ object containing `code`, safe `message`, server-generated `requestId` and
 `retryable`; response headers include `X-Request-Id`. Validation, forbidden origin,
 unknown route, payload/content-type limits and unavailable service have distinct
 statuses/codes. Unexpected exceptions do not expose their original message.
-Full authenticated service routes and their OpenAPI contracts remain #29/#30 work.
+The [service API contract](../development/service-api.md) defines separate
+versioned discovery, strict schemas, request deadlines and future route inventory.
+Authenticated service routes remain #30 work.
 
 ## Validation ownership
 

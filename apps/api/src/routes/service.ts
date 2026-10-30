@@ -1,0 +1,147 @@
+import swagger from "@fastify/swagger";
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import apiPackage from "../../package.json" with { type: "json" };
+import {
+  SERVICE_CONTRACT_VERSION,
+  SERVICE_LIMITS,
+  SERVICE_PROTOCOL,
+  SERVICE_TIMEOUT_HEADER,
+  negotiateService,
+  serviceAuthIntentSchema,
+  serviceCapabilitiesSchema,
+  serviceCheckoutIntentSchema,
+  serviceErrorEnvelopeSchema,
+  serviceHandshakeInputSchema,
+  serviceHandshakeSuccessSchema,
+  servicePageQuerySchema,
+  serviceRequestMetadataSchema,
+  serviceRequestPolicySchema,
+  serviceRevisionGuardSchema,
+  serviceSyncQuerySchema,
+} from "../../../../packages/navigation-core/contracts-service";
+import { ApiError, duringServiceRequest } from "../http";
+import { SERVICE_ROUTES } from "./service-inventory";
+
+const capabilities = serviceCapabilitiesSchema.parse({
+  protocol: SERVICE_PROTOCOL,
+  version: SERVICE_CONTRACT_VERSION,
+  implementationVersion: apiPackage.version,
+  supportedVersions: [SERVICE_CONTRACT_VERSION],
+  capabilities: ["capabilities", "handshake", "openapi"],
+  availability: {
+    authentication: false,
+    accountData: false,
+    decisions: false,
+    billing: false,
+  },
+  limits: SERVICE_LIMITS,
+});
+
+const jsonSchema = (schema: z.ZodTypeAny) =>
+  zodToJsonSchema(schema, { target: "openApi3" });
+
+export async function registerServiceApi(app: FastifyInstance) {
+  const sharedSchemas = {
+    ServiceError: serviceErrorEnvelopeSchema,
+    PageQuery: servicePageQuerySchema,
+    RequestPolicy: serviceRequestPolicySchema,
+    RequestMetadata: serviceRequestMetadataSchema,
+    RevisionGuard: serviceRevisionGuardSchema,
+    SyncQuery: serviceSyncQuerySchema,
+    AuthIntent: serviceAuthIntentSchema,
+    CheckoutIntent: serviceCheckoutIntentSchema,
+  };
+  for (const [name, schema] of Object.entries(sharedSchemas))
+    app.addSchema({ $id: name, ...jsonSchema(schema) });
+  await app.register(swagger, {
+    openapi: {
+      info: {
+        title: "Tholi portable service API",
+        version: String(SERVICE_CONTRACT_VERSION),
+        description:
+          "Service contract version, independent of product releases and the legacy private /v1 and /v2 profiles. Only executable paths are available; x-tholi-route-inventory identifies planned work.",
+      },
+      security: [],
+    },
+  });
+  const emptyQuery = jsonSchema(z.object({}).strict());
+  const errors = Object.fromEntries(
+    [400, 403, 409, 413, 415, 500, 503, 504].map((status) => [
+      status,
+      { $ref: "ServiceError#" },
+    ]),
+  );
+  for (const route of SERVICE_ROUTES) {
+    if (route.status !== "implemented") continue;
+    app.route({
+      method: route.method,
+      url: route.path,
+      ...(route.operationId === "negotiateServiceCompatibility"
+        ? { bodyLimit: 8 * 1024 }
+        : {}),
+      schema: {
+        operationId: route.operationId,
+        summary: route.summary,
+        tags: [route.group],
+        querystring: emptyQuery,
+        headers: {
+          type: "object",
+          properties: {
+            [SERVICE_TIMEOUT_HEADER]: {
+              type: "string",
+              description: `Optional relative deadline, 1 through ${SERVICE_LIMITS.maxDeadlineMs} milliseconds. It may only shorten the server deadline.`,
+              pattern: "^[1-9][0-9]{0,4}$",
+            },
+          },
+        },
+        response: {
+          ...errors,
+          200:
+            route.operationId === "getServiceCapabilities"
+              ? jsonSchema(serviceCapabilitiesSchema)
+              : route.operationId === "negotiateServiceCompatibility"
+                ? jsonSchema(serviceHandshakeSuccessSchema)
+                : { type: "object", additionalProperties: true },
+        },
+        ...(route.operationId === "negotiateServiceCompatibility"
+          ? {
+              body: {
+                ...jsonSchema(serviceHandshakeInputSchema),
+                examples: [
+                  {
+                    protocol: SERVICE_PROTOCOL,
+                    versions: [SERVICE_CONTRACT_VERSION],
+                    client: { kind: "web", version: apiPackage.version },
+                    requiredCapabilities: ["handshake"],
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
+      handler: (request) =>
+        duringServiceRequest(request, () => {
+          if (route.operationId === "getServiceCapabilities")
+            return capabilities;
+          if (route.operationId === "getServiceOpenApi")
+            return {
+              ...app.swagger(),
+              "x-tholi-route-inventory": SERVICE_ROUTES,
+            };
+          const result = negotiateService(
+            serviceHandshakeInputSchema.parse(request.body),
+            capabilities,
+          );
+          if (!result.compatible)
+            throw new ApiError(
+              409,
+              "COMPATIBILITY_MISMATCH",
+              "The requested service contract or capability is unavailable.",
+            );
+          return serviceHandshakeSuccessSchema.parse(result);
+        }),
+    });
+  }
+}
