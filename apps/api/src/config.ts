@@ -1,4 +1,4 @@
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import { resolve } from "node:path";
 import { z } from "zod";
 import type { DatabaseOptions } from "./database/postgres";
@@ -9,6 +9,7 @@ import type {
   SupportOptions,
 } from "./application/support-contracts";
 import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-support";
+import { SERVICE_LIMITS } from "../../../packages/navigation-core/contracts-service";
 
 export interface ApiOptions {
   token: string;
@@ -20,9 +21,97 @@ export interface ApiOptions {
 
 export interface ServiceApiOptions {
   origins: string[];
+  transport?: Partial<ServiceTransportPolicy>;
   identity?: IdentityOptions;
   database?: DatabaseOptions;
   support?: SupportRuntimeOptions;
+}
+
+/** Replica-local delivery limits, separate from identity, account and credit authority. */
+export interface ServiceTransportPolicy {
+  trustedProxies: readonly string[];
+  rateLimitMax: number;
+  rateLimitWindowMs: number;
+  rateLimitMaxClients: number;
+  headersTimeoutMs: number;
+  requestTimeoutMs: number;
+  connectionTimeoutMs: number;
+  keepAliveTimeoutMs: number;
+  maxRequestsPerSocket: number;
+  maxHeaderBytes: number;
+}
+
+export const SERVICE_TRANSPORT_DEFAULTS: Readonly<ServiceTransportPolicy> =
+  Object.freeze({
+    trustedProxies: Object.freeze([]),
+    rateLimitMax: 300,
+    rateLimitWindowMs: 60000,
+    rateLimitMaxClients: 4096,
+    headersTimeoutMs: 10000,
+    requestTimeoutMs: 30000,
+    connectionTimeoutMs: 35000,
+    keepAliveTimeoutMs: 5000,
+    maxRequestsPerSocket: 100,
+    maxHeaderBytes: 16384,
+  });
+
+export function validateServiceTransportPolicy(
+  input: Partial<ServiceTransportPolicy> = {},
+): ServiceTransportPolicy {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid service transport policy.");
+  const parsed = z
+    .object({
+      trustedProxies: z.array(z.string().min(1).max(80)).max(32),
+      rateLimitMax: z.number().int().min(1).max(6000),
+      rateLimitWindowMs: z.number().int().min(1000).max(60000),
+      rateLimitMaxClients: z.number().int().min(1).max(65536),
+      headersTimeoutMs: z
+        .number()
+        .int()
+        .min(100)
+        .max(SERVICE_LIMITS.maxDeadlineMs),
+      requestTimeoutMs: z
+        .number()
+        .int()
+        .min(SERVICE_LIMITS.maxDeadlineMs)
+        .max(60000),
+      connectionTimeoutMs: z.number().int().min(30000).max(120000),
+      keepAliveTimeoutMs: z.number().int().min(100).max(30000),
+      maxRequestsPerSocket: z.number().int().min(1).max(1000),
+      maxHeaderBytes: z.number().int().min(1024).max(32768),
+    })
+    .strict()
+    .safeParse({ ...SERVICE_TRANSPORT_DEFAULTS, ...input });
+  if (!parsed.success) throw new Error("Invalid service transport policy.");
+  const policy = parsed.data;
+  for (const entry of policy.trustedProxies) {
+    const [address, prefix, ...extra] = entry.split("/");
+    const family = isIP(address);
+    if (
+      !family ||
+      extra.length ||
+      (prefix !== undefined &&
+        (!/^(0|[1-9]\d{0,2})$/.test(prefix) ||
+          Number(prefix) < (family === 4 ? 8 : 32) ||
+          Number(prefix) > (family === 4 ? 32 : 128)))
+    )
+      throw new Error(
+        "Trusted proxies must be bounded literal IP addresses or CIDRs.",
+      );
+    // IPv6 prefixes containing every mapped IPv4 address are also catch-alls.
+    if (family === 6 && prefix !== undefined && Number(prefix) < 104) {
+      const range = new BlockList();
+      range.addSubnet(address, Number(prefix), "ipv6");
+      if (range.check("::ffff:0:0", "ipv6"))
+        throw new Error(
+          "Trusted proxy ranges cannot include all IPv4 addresses.",
+        );
+    }
+  }
+  if (new Set(policy.trustedProxies).size !== policy.trustedProxies.length)
+    throw new Error("Trusted proxy entries must be distinct.");
+  return policy;
 }
 
 export interface SupportRuntimeOptions {
@@ -111,6 +200,7 @@ export function validateServiceOptions(
   if (!options || typeof options !== "object")
     throw new Error("Invalid service configuration.");
   const origins = validateOrigins(options.origins, true);
+  const transport = validateServiceTransportPolicy(options.transport);
   if (!!options.identity !== !!options.database)
     throw new Error(
       "Identity requires explicit service database configuration.",
@@ -118,7 +208,7 @@ export function validateServiceOptions(
   if (!options.identity) {
     if (options.support)
       throw new Error("Support requires the composed identity profile.");
-    return { origins };
+    return { origins, transport };
   }
   const identity = validateIdentityOptions(options.identity);
   if (!origins.includes(identity.webOrigin))
@@ -136,6 +226,7 @@ export function validateServiceOptions(
     );
   return {
     origins,
+    transport,
     identity,
     database: { ...options.database! },
     ...(options.support
@@ -764,12 +855,45 @@ export function parseServiceConfig(env: Environment) {
     throw new Error(
       "PORT and THOLI_SERVICE_PORT must agree when both are set.",
     );
+  const trustedProxies =
+    env.THOLI_SERVICE_TRUSTED_PROXIES === ""
+      ? undefined
+      : environmentValue(env, "THOLI_SERVICE_TRUSTED_PROXIES");
   const identity = parseIdentityConfig(env);
   if (supportEnabled(env) && !identity)
     throw new Error("Support requires the composed identity profile.");
   return {
     options: validateServiceOptions({
       origins: parseOrigins(env, "THOLI_SERVICE_ORIGINS", true) ?? [],
+      transport: {
+        ...Object.fromEntries(
+          Object.entries({
+            rateLimitMax: "RATE_LIMIT_MAX",
+            rateLimitWindowMs: "RATE_LIMIT_WINDOW_MS",
+            rateLimitMaxClients: "RATE_LIMIT_MAX_CLIENTS",
+            headersTimeoutMs: "HEADERS_TIMEOUT_MS",
+            requestTimeoutMs: "REQUEST_TIMEOUT_MS",
+            connectionTimeoutMs: "CONNECTION_TIMEOUT_MS",
+            keepAliveTimeoutMs: "KEEP_ALIVE_TIMEOUT_MS",
+            maxRequestsPerSocket: "MAX_REQUESTS_PER_SOCKET",
+            maxHeaderBytes: "MAX_HEADER_BYTES",
+          }).map(([key, suffix]) => [
+            key,
+            environmentBudget(
+              env,
+              `THOLI_SERVICE_${suffix}`,
+              SERVICE_TRANSPORT_DEFAULTS[
+                key as keyof Omit<ServiceTransportPolicy, "trustedProxies">
+              ],
+              1,
+              120000,
+            ),
+          ]),
+        ),
+        trustedProxies: trustedProxies
+          ? trustedProxies.split(",").map((entry) => entry.trim())
+          : [],
+      },
       ...(identity ? { identity, database: parseDatabaseConfig(env) } : {}),
       ...(supportEnabled(env)
         ? {

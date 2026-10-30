@@ -3,6 +3,7 @@ import { publicOrigin, repositoryUrl } from "../../config/project";
 import { articleCatalog } from "../docs/catalog";
 import { browsers, stores } from "../downloads/browsers";
 import { legalOperator } from "../legal/operator";
+import { accountAliases, accountPath } from "../account/paths";
 
 export type PageMetadata = {
   path: string;
@@ -125,15 +126,14 @@ export const publicPages: PageMetadata[] = [
     false,
   ),
 ];
-export const accountRedirects = {
-  "/welcome": "/account",
-  "/welcome/": "/account",
-  "/welcome.html": "/account",
-};
+export { accountAliases };
 export function metadataForPath(value: string): PageMetadata {
-  const path = new URL(value, publicOrigin).pathname.replace(/\/+$/, "") || "/";
-  if (path === "/welcome")
-    return publicPages.find((p) => p.path === "/account")!;
+  const requested =
+    new URL(value, publicOrigin).pathname.replace(/\/+$/, "") || "/";
+  const account = accountPath(requested);
+  const path = account
+    ? (accountAliases[account as keyof typeof accountAliases] ?? account)
+    : requested;
   return (
     publicPages.find((p) => p.path === path) ??
     page(

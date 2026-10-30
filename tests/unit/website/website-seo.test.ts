@@ -65,6 +65,8 @@ describe("website search metadata contracts", () => {
       expect(metadataForPath(path).index).toBe(false);
     }
     expect(metadataForPath("/welcome").path).toBe("/account");
+    expect(metadataForPath("/welcome.html?code=private").path).toBe("/account");
+    expect(metadataForPath("/account.html").path).toBe("/account");
     expect(
       articleCatalog.every((article) =>
         publicPages.some((page) => page.path === `/docs/${article.slug}`),

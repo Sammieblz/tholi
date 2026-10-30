@@ -5,12 +5,14 @@ import {
   type IncomingHttpHeaders,
 } from "node:http";
 import type { FastifyInstance } from "fastify";
-import { afterEach, expect, test } from "vitest";
+import { connect as openSocket, type Socket } from "node:net";
+import { afterEach, expect, test, vi } from "vitest";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import apiPackage from "../../../apps/api/package.json";
 import { ApiError, duringServiceRequest } from "../../../apps/api/src/http";
 import type { ServiceRequestContext } from "../../../apps/api/src/capabilities";
 import { createServiceApi } from "../../../apps/api/src/server";
+import type { ServiceTransportPolicy } from "../../../apps/api/src/config";
 import type { ServiceRouteInventoryEntry } from "../../../apps/api/src/routes/service-inventory";
 import {
   SERVICE_CONTRACT_VERSION,
@@ -40,11 +42,269 @@ afterEach(async () => {
   await Promise.all(applications.splice(0).map((app) => app.close()));
 });
 
-async function service(origins: string[] = []) {
-  const app = await createServiceApi({ origins });
+async function service(
+  origins: string[] = [],
+  transport?: Partial<ServiceTransportPolicy>,
+) {
+  const app = await createServiceApi({ origins, transport });
   applications.push(app);
   return app;
 }
+
+test("direct service admission ignores forged forwarding and correlation headers", async () => {
+  const app = await service([], { rateLimitMax: 2 });
+  for (let index = 0; index < 3; index++) {
+    const response = await app.inject({
+      url: "/health/live",
+      remoteAddress: "192.0.2.4",
+      headers: {
+        "x-forwarded-for": `203.0.113.${index}`,
+        forwarded: `for=203.0.113.${index};proto=https`,
+        "x-real-ip": `203.0.113.${index}`,
+        "cf-connecting-ip": `203.0.113.${index}`,
+        "x-forwarded-user": "administrator",
+        "x-request-id": "untrusted-correlation",
+      },
+    });
+    expect(response.statusCode).toBe(index < 2 ? 200 : 429);
+    expectCorrelation(response);
+    expect(response.headers["x-request-id"]).not.toBe("untrusted-correlation");
+    if (index === 2) {
+      expect(response.headers["retry-after"]).toMatch(/^\d+$/);
+      expect(response.json().error).toMatchObject({
+        code: "RATE_LIMITED",
+        retryable: true,
+      });
+      expect(response.body).not.toContain("administrator");
+    }
+  }
+});
+
+test("only an explicitly trusted immediate proxy supplies the first untrusted client hop", async () => {
+  const app = await service([], {
+    trustedProxies: ["127.0.0.1"],
+    rateLimitMax: 1,
+  });
+  app.get("/test-peer", async (request) => ({ ip: request.ip }));
+  const first = await app.inject({
+    url: "/test-peer",
+    remoteAddress: "127.0.0.1",
+    headers: { "x-forwarded-for": "203.0.113.8, 192.0.2.9" },
+  });
+  expect(first.json()).toEqual({ ip: "192.0.2.9" });
+  const forged = await app.inject({
+    url: "/test-peer",
+    remoteAddress: "127.0.0.1",
+    headers: { "x-forwarded-for": "203.0.113.99, 192.0.2.9" },
+  });
+  expect(forged.statusCode).toBe(429);
+  const untrusted = await app.inject({
+    url: "/test-peer",
+    remoteAddress: "192.0.2.20",
+    headers: { "x-forwarded-for": "198.51.100.1" },
+  });
+  expect(untrusted.json()).toEqual({ ip: "192.0.2.20" });
+  const changed = await app.inject({
+    url: "/test-peer",
+    remoteAddress: "192.0.2.20",
+    headers: { "x-forwarded-for": "198.51.100.2" },
+  });
+  expect(changed.statusCode).toBe(429);
+});
+
+test.each([
+  ["192.0.2.30", "::ffff:192.0.2.30"],
+  ["2001:db8::1", "2001:0db8:0:0:0:0:0:1"],
+])(
+  "equivalent client IP spellings share one admission budget: %s",
+  async (first, equivalent) => {
+    const app = await service([], {
+      trustedProxies: ["127.0.0.1"],
+      rateLimitMax: 1,
+    });
+    expect(
+      (
+        await app.inject({
+          url: "/health/live",
+          remoteAddress: "127.0.0.1",
+          headers: { "x-forwarded-for": first },
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await app.inject({
+          url: "/health/live",
+          remoteAddress: "127.0.0.1",
+          headers: { "x-forwarded-for": equivalent },
+        })
+      ).statusCode,
+    ).toBe(429);
+  },
+);
+
+test("admission retains saturated buckets and bounds new clients until expired slots can be reused", async () => {
+  const app = await service([], {
+    rateLimitMax: 1,
+    rateLimitWindowMs: 1000,
+    rateLimitMaxClients: 2,
+  });
+  const now = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  try {
+    const request = (remoteAddress: string) =>
+      app.inject({ url: "/health/live", remoteAddress });
+    expect((await request("192.0.2.1")).statusCode).toBe(200);
+    expect((await request("192.0.2.2")).statusCode).toBe(200);
+    expect((await request("192.0.2.3")).statusCode).toBe(429);
+    expect((await request("192.0.2.1")).statusCode).toBe(429);
+    clock.mockReturnValue(now + 1001);
+    expect((await request("192.0.2.3")).statusCode).toBe(200);
+  } finally {
+    clock.mockRestore();
+  }
+});
+
+test("preflight and malformed forwarded addresses retain direct admission protections", async () => {
+  const app = await service(["https://tholi.io"], {
+    trustedProxies: ["127.0.0.1"],
+    rateLimitMax: 1,
+  });
+  const headers = {
+    origin: "https://tholi.io",
+    "access-control-request-method": "GET",
+  };
+  expect(
+    (
+      await app.inject({
+        method: "OPTIONS",
+        url: "/api/v1/capabilities",
+        headers,
+      })
+    ).statusCode,
+  ).toBe(204);
+  const blocked = await app.inject({
+    method: "OPTIONS",
+    url: "/api/v1/capabilities",
+    headers,
+  });
+  expect(blocked.statusCode).toBe(429);
+  expectCorrelation(blocked);
+  const invalid = await app.inject({
+    url: "/health/live",
+    remoteAddress: "127.0.0.1",
+    headers: { "x-forwarded-for": "private-non-ip-value" },
+  });
+  expect(invalid.statusCode).toBe(400);
+  expect(invalid.body).not.toContain("private-non-ip-value");
+});
+
+async function rawHttp(
+  app: FastifyInstance,
+  payload: string,
+  nextRequest?: string,
+) {
+  const address = new URL(await app.listen({ host: "127.0.0.1", port: 0 }));
+  let socket: Socket | undefined;
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      let text = "";
+      socket = openSocket({ host: "127.0.0.1", port: Number(address.port) });
+      socket.setTimeout(2500, () =>
+        reject(new Error("The bounded HTTP receive check timed out.")),
+      );
+      socket.setEncoding("utf8");
+      socket.once("connect", () => socket!.write(payload));
+      socket.on("data", (chunk) => {
+        text += chunk;
+        if (!nextRequest) return;
+        const separator = text.indexOf("\r\n\r\n");
+        const length = /content-length:\s*(\d+)/i.exec(
+          text.slice(0, separator),
+        );
+        if (
+          separator >= 0 &&
+          length &&
+          Buffer.byteLength(text.slice(separator + 4)) >= Number(length[1])
+        ) {
+          const following = nextRequest;
+          nextRequest = undefined;
+          socket!.write(following);
+        }
+      });
+      socket.once("error", reject);
+      socket.once("close", () => resolve(text));
+    });
+  } finally {
+    socket?.destroy();
+  }
+}
+
+test("actual listener rejects oversized headers with safe noncacheable correlation", async () => {
+  const app = await service([], { maxHeaderBytes: 1024 });
+  const response = await rawHttp(
+    app,
+    `GET /health/live HTTP/1.1\r\nHost: localhost\r\nX-Private: ${"private-header-sentinel".repeat(100)}\r\n\r\n`,
+  );
+  expect(response).toMatch(/^HTTP\/1.1 431 /);
+  expect(response).toContain("Cache-Control: no-store");
+  expect(response).toContain("X-Request-Id: ");
+  expect(response).not.toContain("private-header-sentinel");
+  serviceErrorEnvelopeSchema.parse(JSON.parse(response.split("\r\n\r\n")[1]));
+});
+
+test("actual listener bounds incomplete headers while preserving the full application deadline", async () => {
+  const app = await service([], { headersTimeoutMs: 100 });
+  const response = await rawHttp(
+    app,
+    "GET /health/live HTTP/1.1\r\nHost: localhost\r\nX-Partial: ",
+  );
+  expect(response).toMatch(/^HTTP\/1.1 408 /);
+  expect(response).toContain("Cache-Control: no-store");
+  expect(app.server.headersTimeout).toBe(100);
+  expect(app.server.requestTimeout).toBe(30000);
+  expect(app.server.timeout).toBe(35000);
+  expect(app.server.keepAliveTimeout).toBe(5000);
+  expect(app.server.maxRequestsPerSocket).toBe(100);
+});
+
+test("actual listener advertises its socket request budget and bounds idle keepalive", async () => {
+  const app = await service([], {
+    maxRequestsPerSocket: 1,
+    keepAliveTimeoutMs: 100,
+  });
+  const response = await rawHttp(
+    app,
+    "GET /health/live HTTP/1.1\r\nHost: localhost\r\n\r\n",
+  );
+  expect(response).toMatch(/^HTTP\/1.1 200 /);
+  expect(response.toLowerCase()).toContain("connection: close");
+  expect(response.toLowerCase()).toContain("cache-control: no-store");
+});
+
+test("Node socket-budget rejection preserves no-store and unique server correlation before Fastify hooks", async () => {
+  const app = await service([], {
+    maxRequestsPerSocket: 1,
+    keepAliveTimeoutMs: 100,
+  });
+  const request =
+    "GET /health/live HTTP/1.1\r\nHost: localhost\r\nX-Request-Id: client-controlled\r\n\r\n";
+  const response = await rawHttp(app, request, request);
+  const messages = response.split("HTTP/1.1 ").slice(1);
+  expect(messages).toHaveLength(2);
+  expect(messages[0]).toMatch(/^200 /);
+  expect(messages[1]).toMatch(/^503 /);
+  const ids = messages.map((message) => {
+    expect(message.toLowerCase()).toContain("cache-control: no-store");
+    const id = /x-request-id: ([0-9a-f-]{36})/i.exec(message)?.[1];
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    return id;
+  });
+  expect(new Set(ids).size).toBe(2);
+  expect(response).not.toContain("client-controlled");
+});
 
 const handshake = (kind: "extension" | "web" | "desktop" = "extension") => ({
   protocol: SERVICE_PROTOCOL,

@@ -61,15 +61,15 @@ identity maintenance with separate SQL credentials and live polling health.
 
 ## Services and trust boundaries
 
-| Service            | Host access                          | Container address          | Persistence                         |
-| ------------------ | ------------------------------------ | -------------------------- | ----------------------------------- |
-| API                | `http://127.0.0.1:8788/health/ready` | `api:8788`                 | Account/session state in PostgreSQL |
-| Durable worker     | None                                 | SQL-only process           | Job state and outbox in PostgreSQL  |
-| PostgreSQL         | None                                 | `postgres:5432`            | Named PostgreSQL volume             |
-| Local OIDC         | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL    |
-| Mail capture       | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume                |
-| Private S3 storage | `http://localhost:18333`             | `storage:8333`             | Named storage volume                |
-| Optional telemetry | None                                 | OTLP HTTP `telemetry:4318` | No durable telemetry store          |
+| Service            | Host access                          | Container address             | Persistence                         |
+| ------------------ | ------------------------------------ | ----------------------------- | ----------------------------------- |
+| API                | `http://127.0.0.1:8788/health/ready` | `api:8788`                    | Account/session state in PostgreSQL |
+| Durable worker     | None                                 | SQL, SMTP and private storage | Job state and outbox in PostgreSQL  |
+| PostgreSQL         | None                                 | `postgres:5432`               | Named PostgreSQL volume             |
+| Local OIDC         | `http://localhost:18080`             | `oidc:8080`                   | Dedicated database in PostgreSQL    |
+| Mail capture       | `http://localhost:18025`             | SMTP `mail:1025`              | Named Mailpit volume                |
+| Private S3 storage | `http://localhost:18333`             | `storage:8333`                | Named storage volume                |
+| Optional telemetry | None                                 | OTLP HTTP `telemetry:4318`    | No durable telemetry store          |
 
 Ports are adjustable in `.env`; all published ports bind to loopback on the local
 gateway. It proxies only the four fixed application, identity, mail and private
@@ -205,18 +205,29 @@ local stacks.
 
 ## Verification
 
+See [gateway, CDN and TLS delivery](service-delivery.md) for proxy trust, direct
+API protection, private cache boundaries and the separate VM TLS reference.
+The local listener remains loopback HTTP; a VM TLS override does not turn the
+development identity realm or captured SMTP into hosted production services.
+
 ```sh
 npm run test:local-stack -- --optional
 ```
 
 The smoke command creates its own project and fresh volumes, generates disposable
 credentials, builds the API image and waits for real services. It checks health,
-identity discovery, captured synthetic mail, safe configuration, database retention
+identity discovery, captured synthetic mail, safe configuration, actual proxy/TLS
+boundaries and unchanged raw request bytes, database retention
 across container recreation, private storage, support mail and optional telemetry. It then deletes only
 the project and volumes it created. It never resets the developer project.
 Evidence under `output/qa/local-stack/` records source/config/image identities and
 observed results without raw credentials. Cached image layers are allowed;
 fresh-volume evidence is not a claim to have tested every host OS.
+
+The synthetic TLS check needs OpenSSL. Linux CI uses its installed command;
+Windows prefers Git for Windows' native `mingw64/bin/openssl.exe`, then an
+`openssl` command on PATH. The runner removes its synthetic private key after
+checking and never uses it as a deployment certificate.
 
 The Linux `containers` CI job runs this smoke independently of the existing
 Windows/browser matrix and participates in the required `validate` gate. Fast

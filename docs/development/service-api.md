@@ -103,7 +103,9 @@ caller-supplied IDs cannot replace it.
 
 All service responses, including errors, are `Cache-Control: no-store`. Legacy
 authenticated responses retain the same explicit cache policy and existing
-response/status contracts. Discovery-only browser CORS uses exact configured
+response/status contracts. [Delivery configuration](service-delivery.md) adds
+bounded service-only IP admission, explicit proxy trust and receipt/socket
+limits, including for direct API connections. Discovery-only browser CORS uses exact configured
 website origins, GET/POST and its bounded content-type/deadline headers.
 
 Configured identity additionally admits registered Chromium and validated native

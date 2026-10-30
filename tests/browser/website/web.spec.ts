@@ -136,7 +136,7 @@ test("published store download links navigate independently of cookies and devel
   expect(metadataRequests).toBe(1);
 });
 
-for (const route of ["signin", "signup", "welcome"])
+for (const route of ["signin", "signup", "welcome", "welcome.html"])
   test(`account route /${route} ignores mock identity and preserves Back behavior`, async ({
     page,
   }) => {
@@ -161,7 +161,7 @@ for (const route of ["signin", "signup", "welcome"])
     }, "/" + route);
     await page.getByRole("link", { name: "Legacy account bookmark" }).click();
     await expect(page).toHaveURL(
-      new RegExp(`/${route === "welcome" ? "account" : route}$`),
+      new RegExp(`/${route.startsWith("welcome") ? "account" : route}$`),
     );
     await expect(page.locator("main h1")).toBeFocused();
     await expect(
@@ -179,7 +179,7 @@ for (const route of ["signin", "signup", "welcome"])
     await expect(page).toHaveURL(/\/about$/);
     await page.goForward();
     await expect(page).toHaveURL(
-      new RegExp(`/${route === "welcome" ? "account" : route}$`),
+      new RegExp(`/${route.startsWith("welcome") ? "account" : route}$`),
     );
   });
 

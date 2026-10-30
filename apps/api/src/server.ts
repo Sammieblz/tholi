@@ -104,64 +104,69 @@ export async function createServiceApi(
   };
   const allowed = (origin: string | undefined) =>
     !origin || options.origins.includes(origin) || nativeOrigin(origin);
-  return createHttpApi("service", ownedResources, async (app, lifecycle) => {
-    await app.register(cors, {
-      delegator: (request, callback) =>
-        callback(null, {
-          origin:
-            request.headers.origin && allowed(request.headers.origin)
-              ? request.headers.origin
-              : false,
-          credentials:
-            !!identity &&
-            request.headers.origin === options.identity?.webOrigin,
-          methods: identity
-            ? ["GET", "POST", ...(authorization ? ["PATCH"] : []), "DELETE"]
-            : ["GET", "POST"],
-          allowedHeaders: identity
-            ? [
-                "Content-Type",
-                "X-Tholi-Timeout-Ms",
-                "Authorization",
-                "X-Tholi-CSRF",
-              ]
-            : ["Content-Type", "X-Tholi-Timeout-Ms"],
-          exposedHeaders: ["X-Request-Id"],
-          strictPreflight: true,
-        }),
-    });
-    app.addHook("onRequest", async (request) => {
-      if (!allowed(request.headers.origin))
-        throw new ApiError(403, "FORBIDDEN", "Origin is not allowed.");
-    });
-    const { registerServiceApi } = await import("./routes/service");
-    await registerServiceApi(
-      app,
-      !!identity,
-      options.identity?.secureCookies,
-      !!authorization,
-      !!jobs,
-      !!support,
-    );
-    if (identity) {
-      const { registerIdentityApi } = await import("./routes/identity");
-      await registerIdentityApi(app, identity);
-      if (authorization) {
-        const { registerAuthorizationApi } =
-          await import("./routes/authorization");
-        await registerAuthorizationApi(app, identity, authorization);
+  return createHttpApi(
+    "service",
+    ownedResources,
+    async (app, lifecycle) => {
+      await app.register(cors, {
+        delegator: (request, callback) =>
+          callback(null, {
+            origin:
+              request.headers.origin && allowed(request.headers.origin)
+                ? request.headers.origin
+                : false,
+            credentials:
+              !!identity &&
+              request.headers.origin === options.identity?.webOrigin,
+            methods: identity
+              ? ["GET", "POST", ...(authorization ? ["PATCH"] : []), "DELETE"]
+              : ["GET", "POST"],
+            allowedHeaders: identity
+              ? [
+                  "Content-Type",
+                  "X-Tholi-Timeout-Ms",
+                  "Authorization",
+                  "X-Tholi-CSRF",
+                ]
+              : ["Content-Type", "X-Tholi-Timeout-Ms"],
+            exposedHeaders: ["X-Request-Id"],
+            strictPreflight: true,
+          }),
+      });
+      app.addHook("onRequest", async (request) => {
+        if (!allowed(request.headers.origin))
+          throw new ApiError(403, "FORBIDDEN", "Origin is not allowed.");
+      });
+      const { registerServiceApi } = await import("./routes/service");
+      await registerServiceApi(
+        app,
+        !!identity,
+        options.identity?.secureCookies,
+        !!authorization,
+        !!jobs,
+        !!support,
+      );
+      if (identity) {
+        const { registerIdentityApi } = await import("./routes/identity");
+        await registerIdentityApi(app, identity);
+        if (authorization) {
+          const { registerAuthorizationApi } =
+            await import("./routes/authorization");
+          await registerAuthorizationApi(app, identity, authorization);
+        }
+        if (jobs) {
+          const { registerJobsApi } = await import("./routes/jobs");
+          await registerJobsApi(app, identity, jobs);
+        }
+        if (support) {
+          const { registerSupportApi } = await import("./routes/support");
+          const { registerFilesApi } = await import("./routes/files");
+          await registerSupportApi(app, identity, support);
+          await registerFilesApi(app, identity, support);
+        }
       }
-      if (jobs) {
-        const { registerJobsApi } = await import("./routes/jobs");
-        await registerJobsApi(app, identity, jobs);
-      }
-      if (support) {
-        const { registerSupportApi } = await import("./routes/support");
-        const { registerFilesApi } = await import("./routes/files");
-        await registerSupportApi(app, identity, support);
-        await registerFilesApi(app, identity, support);
-      }
-    }
-    registerHealth(app, "service", lifecycle);
-  });
+      registerHealth(app, "service", lifecycle);
+    },
+    options.transport,
+  );
 }
