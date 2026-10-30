@@ -17,6 +17,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Service API contracts, discovery and request policy](development/service-api.md)
 - [Optional accounts, OIDC and cross-client session security](development/service-identity.md)
 - [Workspace authorization, tenant isolation and cloud consent](development/service-authorization.md)
+- [Durable jobs, worker isolation, scheduling and recovery](development/service-jobs.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

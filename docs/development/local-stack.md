@@ -44,14 +44,15 @@ The API uses the pinned, non-root image built by `apps/api/Dockerfile` through
 `build:api`, not the extension/model build or a release packager. The image keeps
 the existing API entrypoints and their shared chunks. Its Node/Debian base matches
 the repository engine and native CPU dependencies. It is reusable by the durable
-worker when [#32](https://github.com/Sammieblz/tholi/issues/32) adds that entrypoint;
-there is no idle worker pretending to process jobs in this stack.
+worker through `worker.js`. The [durable worker](service-jobs.md) performs scoped
+identity maintenance with separate SQL credentials and live polling health.
 
 ## Services and trust boundaries
 
 | Service             | Host access                          | Container address          | Persistence                         |
 | ------------------- | ------------------------------------ | -------------------------- | ----------------------------------- |
 | API                 | `http://127.0.0.1:8788/health/ready` | `api:8788`                 | Account/session state in PostgreSQL |
+| Durable worker      | None                                 | SQL-only process           | Job state and outbox in PostgreSQL  |
 | PostgreSQL          | None                                 | `postgres:5432`            | Named PostgreSQL volume             |
 | Local OIDC          | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL    |
 | Mail capture        | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume                |

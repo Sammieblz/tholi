@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { runDatabaseCommand } from "../../../apps/api/src/database/cli";
 import {
   parsePrivateConfig,
+  parseWorkerConfig,
   parseDatabaseConfig,
   parseServiceConfig,
   validateApiOptions,
@@ -58,6 +59,31 @@ function identityEnvironment(local = false): Record<string, string> {
 }
 
 describe("API configuration profiles", () => {
+  it("isolates worker credentials and bounds concurrency, lease, heartbeat and connection budgets", () => {
+    const env = {
+      THOLI_DATABASE_WORKER_URL:
+        "postgresql://worker:synthetic@localhost/tholi",
+    };
+    const config = parseWorkerConfig(env);
+    expect(config.database.max).toBe(4);
+    expect(config.options).toMatchObject({
+      concurrency: 2,
+      leaseMs: 30000,
+      heartbeatMs: 10000,
+    });
+    expect(() =>
+      parseWorkerConfig({ THOLI_DATABASE_URL: env.THOLI_DATABASE_WORKER_URL }),
+    ).toThrow("THOLI_DATABASE_WORKER_URL");
+    for (const invalid of [
+      { THOLI_DATABASE_POOL_MAX: "5" },
+      { THOLI_WORKER_CONCURRENCY: "3" },
+      { THOLI_WORKER_POLL_MS: "0" },
+      { THOLI_WORKER_LEASE_MS: "9999" },
+      { THOLI_WORKER_HEARTBEAT_MS: "15000" },
+      { THOLI_WORKER_SCHEDULE_MS: "NaN" },
+    ])
+      expect(() => parseWorkerConfig({ ...env, ...invalid })).toThrow();
+  });
   it("refuses synthetic database seed outside the explicit development profile", async () => {
     for (const env of [
       { NODE_ENV: "production", THOLI_ALLOW_DEV_SEED: "true" },
@@ -68,7 +94,7 @@ describe("API configuration profiles", () => {
         "development profile",
       );
     await expect(runDatabaseCommand("reset")).rejects.toThrow(
-      "migrate, verify or seed",
+      "migrate, verify, seed or retry-job",
     );
   });
   it("requires explicit PostgreSQL credentials and separates migration pool budgets", () => {

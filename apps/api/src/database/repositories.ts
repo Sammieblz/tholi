@@ -7,6 +7,12 @@ import {
 } from "../../../../packages/page-model";
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
 import { withTransaction } from "./postgres";
+import { pruneExpiredIdentityBrokers } from "./identity-retention";
+import type { JobLease, JobTransaction } from "../application/job-contracts";
+import {
+  jobResultSchema,
+  type JobResult,
+} from "../../../../packages/navigation-core/contracts-jobs";
 import {
   RepositoryError,
   type Account,
@@ -42,7 +48,13 @@ const reservationColumns = `id, request_id AS "requestId", amount::text,
   status, expires_at AS "expiresAt"`;
 const jobColumns = `id, account_id AS "accountId", request_id AS "requestId",
   kind, version, record_references AS "recordReferences", status,
-  available_at AS "availableAt", max_attempts AS "maxAttempts"`;
+  available_at AS "availableAt", max_attempts AS "maxAttempts",revision::text,attempts,
+  (cancel_requested_at IS NOT NULL) AS "cancelRequested",last_error_code AS "errorCode",
+  CASE WHEN result_count IS NULL THEN NULL ELSE jsonb_build_object('processed',result_count) END AS result,
+  created_at AS "createdAt",updated_at AS "updatedAt"`;
+type JobRow = Int8Row<Job, "revision">;
+const job = (row: JobRow): Job => ({ ...row, revision: BigInt(row.revision) });
+class JobLeaseLost extends Error {}
 
 function invalid(message: string): never {
   throw new RepositoryError("INVALID_INPUT", message);
@@ -194,6 +206,21 @@ export class PostgresRepositories {
     } catch (error) {
       if ((error as { code?: string }).code === "42501")
         throw new RepositoryError("FORBIDDEN", "The workspace is unavailable.");
+      throw error;
+    }
+  }
+
+  async runJob(
+    lease: JobLease,
+    work: (transaction: JobTransaction) => Promise<JobResult>,
+  ): Promise<boolean> {
+    lease = snapshot(lease);
+    try {
+      return await this.transaction(lease, (scoped) =>
+        scoped.runJob(lease, work),
+      );
+    } catch (error) {
+      if (error instanceof JobLeaseLost) return false;
       throw error;
     }
   }
@@ -912,6 +939,7 @@ class ScopedRepositories {
     recordReferences?: RecordReferences;
     availableAt?: Date;
     maxAttempts?: number;
+    replaySafe?: boolean;
   }): Promise<Job> {
     input = snapshot(input);
     const references = input.recordReferences || {};
@@ -924,9 +952,12 @@ class ScopedRepositories {
     )
       invalid("The job's request identifiers disagree.");
     const maxAttempts = input.maxAttempts ?? 3;
+    const replaySafe = input.replaySafe ?? false;
     if (
       !Number.isInteger(input.version) ||
       input.version < 1 ||
+      input.version > 2147483647 ||
+      typeof replaySafe !== "boolean" ||
       !Number.isInteger(maxAttempts) ||
       maxAttempts < 1 ||
       maxAttempts > 100
@@ -934,8 +965,8 @@ class ScopedRepositories {
       invalid("Use bounded job versions and attempt counts.");
     await this.client.query(
       `INSERT INTO tholi.jobs (workspace_id, account_id, id, request_id, kind,
-         version, idempotency_key, record_references, available_at, max_attempts)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), $10)
+         version, idempotency_key, record_references, available_at, max_attempts,replay_safe)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), $10,$11)
        ON CONFLICT DO NOTHING`,
       [
         ...this.parameters,
@@ -947,11 +978,12 @@ class ScopedRepositories {
         JSON.stringify(references),
         input.availableAt ? timestamp(input.availableAt) : null,
         maxAttempts,
+        replaySafe,
       ],
     );
     const row = (
-      await this.client.query<Job>(
-        `SELECT ${jobColumns} FROM tholi.jobs
+      await this.client.query<JobRow & { replaySafe: boolean }>(
+        `SELECT ${jobColumns},replay_safe AS "replaySafe" FROM tholi.jobs
        WHERE workspace_id = $1 AND account_id = $2 AND kind = $3 AND version = $4
          AND idempotency_key = $5`,
         [...this.parameters, input.kind, input.version, input.idempotencyKey],
@@ -961,22 +993,120 @@ class ScopedRepositories {
     if (
       row.requestId !== (input.requestId || null) ||
       row.maxAttempts !== maxAttempts ||
+      row.replaySafe !== replaySafe ||
       !isDeepStrictEqual(row.recordReferences, references) ||
       (input.availableAt &&
         row.availableAt.toISOString() !== timestamp(input.availableAt))
     )
       replayConflict();
-    return row;
+    const { replaySafe: _policy, ...stored } = row;
+    return job(stored);
   }
 
   async getJob(id: string): Promise<Job | undefined> {
-    return (
-      await this.client.query<Job>(
+    const row = (
+      await this.client.query<JobRow>(
         `SELECT ${jobColumns} FROM tholi.jobs
        WHERE workspace_id = $1 AND account_id = $2 AND id = $3`,
         [...this.parameters, id],
       )
     ).rows[0];
+    return row && job(row);
+  }
+
+  async listJobs(
+    options: { after?: string; limit?: number; status?: Job["status"] } = {},
+  ): Promise<Job[]> {
+    options = snapshot(options);
+    const result = await this.client.query<JobRow>(
+      `SELECT ${jobColumns} FROM tholi.jobs WHERE workspace_id=$1 AND account_id=$2
+       AND ($3::uuid IS NULL OR id>$3) AND ($4::text IS NULL OR status=$4)
+       ORDER BY id LIMIT $5`,
+      [
+        ...this.parameters,
+        options.after ?? null,
+        options.status ?? null,
+        limit(options.limit),
+      ],
+    );
+    return result.rows.map(job);
+  }
+
+  async cancelJob(input: {
+    id: string;
+    expectedRevision: bigint;
+  }): Promise<Job> {
+    input = snapshot(input);
+    integer(input.expectedRevision, 1n);
+    await this.lockWorkspace();
+    const current = await this.getJob(input.id);
+    if (!current || current.revision !== input.expectedRevision) conflict();
+    if (!["queued", "running"].includes(current.status)) return current;
+    const result = await this.client.query<JobRow>(
+      `UPDATE tholi.jobs SET
+      cancel_requested_at=clock_timestamp(),status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,
+      last_error_code=CASE WHEN status='queued' THEN 'CANCELLED' ELSE last_error_code END,
+      revision=revision+1,updated_at=clock_timestamp()
+      WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND revision=$4 RETURNING ${jobColumns}`,
+      [...this.parameters, input.id, input.expectedRevision.toString()],
+    );
+    if (!result.rows[0]) conflict();
+    return job(result.rows[0]);
+  }
+
+  async pruneExpiredBrokers(batch: number): Promise<number> {
+    return pruneExpiredIdentityBrokers(this.client, batch);
+  }
+
+  async runJob(
+    lease: JobLease,
+    work: (transaction: JobTransaction) => Promise<JobResult>,
+  ): Promise<boolean> {
+    await this.lockWorkspace();
+    const parameters = [
+      ...this.parameters,
+      lease.id,
+      lease.leaseToken,
+      lease.kind,
+      lease.version,
+    ];
+    const found = await this.client.query<{ cancelled: boolean }>(
+      `SELECT cancel_requested_at IS NOT NULL AS cancelled
+      FROM tholi.jobs WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND claim_token=$4
+        AND kind=$5 AND version=$6 AND status='running' AND lease_expires_at>clock_timestamp() FOR UPDATE`,
+      parameters,
+    );
+    if (!found.rows[0]) return false;
+    if (found.rows[0].cancelled) {
+      await this.client.query(
+        `UPDATE tholi.jobs SET status='cancelled',last_error_code='CANCELLED',claim_token=NULL,
+        lease_owner=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=clock_timestamp()
+        WHERE workspace_id=$1 AND account_id=$2 AND id=$3`,
+        parameters.slice(0, 3),
+      );
+      return false;
+    }
+    const result = jobResultSchema.parse(await work(this));
+    const completed = await this.client.query(
+      `UPDATE tholi.jobs SET status='succeeded',result_count=$7,last_error_code=NULL,
+      claim_token=NULL,lease_owner=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=clock_timestamp()
+      WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND claim_token=$4 AND kind=$5 AND version=$6
+        AND status='running' AND cancel_requested_at IS NULL AND lease_expires_at>clock_timestamp() RETURNING id`,
+      [...parameters, result.processed],
+    );
+    if (!completed.rowCount) throw new JobLeaseLost();
+    // This event is acknowledged by the database-local completion consumer. It
+    // does not claim delivery to SMTP, a broker, a webhook or another service.
+    const event = await this.appendOutbox({
+      jobId: lease.id,
+      eventKind: "job.completed",
+      idempotencyKey: `job:${lease.id}:completed`,
+    });
+    await this.client.query(
+      "UPDATE tholi.outbox SET status='published',published_at=clock_timestamp() WHERE workspace_id=$1 AND id=$2 AND job_id=$3",
+      [this.scope.workspaceId, event.id, lease.id],
+    );
+    return true;
   }
 
   async appendOutbox(input: {

@@ -38,6 +38,7 @@
     "build:api": "node scripts/build-api.mjs",
     "start:api": "node apps/api/dist/cli.js",
     "start:service": "node apps/api/dist/service.js",
+    "start:worker": "node apps/api/dist/worker.js",
     "local:init": "node scripts/local-stack.mjs init",
     "local:up": "node scripts/local-stack.mjs up",
     "local:down": "node scripts/local-stack.mjs down",

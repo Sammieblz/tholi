@@ -42,6 +42,25 @@ test("identity environment upgrades preserve existing credentials and add missin
   }
 });
 
+test("worker credential upgrade preserves existing secrets and is idempotent", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-worker-env-"));
+  const envFile = join(directory, ".env");
+  try {
+    const original =
+      "THOLI_DB_PASSWORD=keep-runtime\nTHOLI_IDENTITY_CLIENT_SECRET_KEY=keep-identity\n";
+    await writeFile(envFile, original);
+    initializeLocalEnvironment({ envFile, upgradeWorker: true });
+    const upgraded = await readFile(envFile, "utf8");
+    expect(upgraded.startsWith(original)).toBe(true);
+    expect(parseEnv(upgraded).THOLI_WORKER_PASSWORD).toMatch(/^[a-f0-9]{48}$/);
+    initializeLocalEnvironment({ envFile, upgradeWorker: true });
+    expect(await readFile(envFile, "utf8")).toBe(upgraded);
+  } finally {
+    await rm(envFile, { force: true });
+    await rmdir(directory);
+  }
+});
+
 function composeModel() {
   const image = "registry.test/local:1@sha256:" + "a".repeat(64);
   const service = () => ({
@@ -62,6 +81,19 @@ function composeModel() {
         cap_drop: ["ALL"],
         security_opt: ["no-new-privileges:true"],
       },
+      worker: {
+        ...service(),
+        build: { context: "." },
+        user: "1000:1000",
+        read_only: true,
+        cap_drop: ["ALL"],
+        security_opt: ["no-new-privileges:true"],
+        networks: { database: null } as Record<string, null>,
+        environment: {
+          THOLI_DATABASE_WORKER_URL:
+            "postgresql://tholi_worker:synthetic@postgres/tholi",
+        } as Record<string, string>,
+      },
       postgres: {
         ...service(),
         volumes: [{ type: "volume", source: "postgres" }],
@@ -71,6 +103,7 @@ function composeModel() {
       gateway: { ...service(), networks: { application: null, ingress: null } },
     },
     networks: {
+      database: { internal: true, external: false },
       application: { internal: true, external: false },
       ingress: { internal: false, external: false },
     },
@@ -99,6 +132,7 @@ test("resolved local-stack policy returns only redacted deployment evidence", ()
     "mail",
     "oidc",
     "postgres",
+    "worker",
   ]);
   expect(evidence.ports).toEqual([
     { service: "gateway", host: "127.0.0.1", published: 18788, target: 8788 },
@@ -113,6 +147,32 @@ test("resolved local-stack policy returns only redacted deployment evidence", ()
 });
 
 test.each([
+  [
+    "root worker",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.worker.user = "0:0";
+    },
+  ],
+  [
+    "worker with API credentials",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.worker.environment.THOLI_DATABASE_URL =
+        "postgresql://tholi_runtime:secret@postgres/tholi";
+    },
+  ],
+  [
+    "worker with wrong role",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.worker.environment.THOLI_DATABASE_WORKER_URL =
+        "postgresql://tholi_runtime:secret@postgres/tholi";
+    },
+  ],
+  [
+    "worker with application network",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.worker.networks.application = null;
+    },
+  ],
   [
     "root API",
     (config: ReturnType<typeof composeModel>) => {

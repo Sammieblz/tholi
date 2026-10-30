@@ -24,6 +24,27 @@ export interface AuthorizationContext {
     granted: boolean;
   }[];
 }
+export interface AuthorizationContextReader {
+  getAccount(): Promise<AuthorizationContext["account"]>;
+  getWorkspace(): Promise<NonNullable<AuthorizationContext["workspace"]>>;
+  getMembership(): Promise<AuthorizationContext["membership"]>;
+  listConsents(): Promise<NonNullable<AuthorizationContext["consents"]>>;
+}
+
+/** HTTP and fenced workers resolve the same current records on their own transaction. */
+export async function readAuthorizationContext(
+  reader: AuthorizationContextReader,
+  options: { includeConsents?: boolean } = {},
+): Promise<AuthorizationContext> {
+  return {
+    account: await reader.getAccount(),
+    workspace: await reader.getWorkspace(),
+    membership: await reader.getMembership(),
+    ...(options.includeConsents
+      ? { consents: await reader.listConsents() }
+      : {}),
+  };
+}
 export interface AuthorizationOptions {
   targetAccountId?: string;
   consentChange?: Pick<ConsentUpdate, "purpose" | "policyVersion" | "granted">;
@@ -152,6 +173,8 @@ export function evaluateAuthorization(
         : missingConsent;
     case "policies.read":
     case "consents.read":
+    case "jobs.read":
+    case "jobs.cancel":
     case "saved-data.read":
     case "saved-data.export":
     case "saved-data.delete":

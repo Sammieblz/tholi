@@ -1,13 +1,24 @@
 import { runPostgresChecks } from "./checks";
+import { runWorkerRuntimeProbe } from "./job-checks";
 
 try {
   const migrationConnection = process.env.THOLI_DATABASE_MIGRATION_URL;
   const runtimeConnection = process.env.THOLI_DATABASE_URL;
   if (!migrationConnection || !runtimeConnection)
     throw new Error("Explicit migration and runtime connections are required.");
+  const probe =
+    process.argv.length === 3 && process.argv[2] === "--worker-runtime-probe";
+  if (process.argv.length > 2 && !probe)
+    throw new Error("Unknown PostgreSQL verification mode.");
   process.stdout.write(
     JSON.stringify(
-      await runPostgresChecks({ migrationConnection, runtimeConnection }),
+      probe
+        ? await runWorkerRuntimeProbe({ runtimeConnection })
+        : await runPostgresChecks({
+            migrationConnection,
+            runtimeConnection,
+            workerConnection: process.env.THOLI_DATABASE_WORKER_URL,
+          }),
     ) + "\n",
   );
 } catch (error) {

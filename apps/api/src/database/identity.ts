@@ -13,6 +13,7 @@ import {
 import { RepositoryError } from "./contracts";
 import { setDatabaseScope, withTransaction } from "./postgres";
 import { provisionAccountOnClient } from "./repositories";
+import { cleanupExpiredIdentity as cleanup } from "./identity-retention";
 
 export class IdentityStoreError extends Error {
   readonly code = "IDENTITY_REVOKED";
@@ -89,22 +90,6 @@ async function requireGrant(
     ],
   );
   if (!result.rowCount) throw new IdentityStoreError();
-}
-
-/** Expiring, noncredential rows only. Each statement removes at most 100 rows. */
-async function cleanup(client: PoolClient, now: Date) {
-  for (const table of [
-    "identity_flows",
-    "identity_brokers",
-    "identity_logout_events",
-  ] as const)
-    await client.query(
-      `DELETE FROM tholi.${table} WHERE ctid IN (
-        SELECT ctid FROM tholi.${table} WHERE expires_at <= $1
-        ORDER BY expires_at LIMIT 100
-      )`,
-      [date(now)],
-    );
 }
 
 type SessionRow = Omit<IdentitySession, "providerSessionId"> & {

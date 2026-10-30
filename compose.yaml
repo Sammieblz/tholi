@@ -98,6 +98,35 @@ services:
       database-migrate: { condition: service_completed_successfully }
       identity-configure: { condition: service_completed_successfully }
 
+  worker:
+    <<: *api-image
+    user: "1000:1000"
+    command: [node, apps/api/dist/worker.js]
+    environment:
+      NODE_ENV: development
+      NODE_OPTIONS: --max-old-space-size=192
+      THOLI_DATABASE_WORKER_URL: postgresql://tholi_worker:${THOLI_WORKER_PASSWORD:?Upgrade the local environment for worker credentials}@postgres:5432/tholi
+      THOLI_WORKER_HEALTH_FILE: /tmp/tholi-worker-health.json
+    networks: [database]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 1
+    stop_grace_period: 10s
+    healthcheck:
+      test: [CMD, node, apps/api/dist/worker.js, --health]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      postgres: { condition: service_healthy }
+      database-migrate: { condition: service_completed_successfully }
+
   # Local operator-owned initialization, never performed by an HTTP replica.
   database-migrate:
     <<: *api-image
@@ -106,6 +135,7 @@ services:
     environment:
       THOLI_DATABASE_MIGRATION_URL: postgresql://tholi_migrator:${THOLI_MIGRATION_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
       THOLI_DATABASE_RUNTIME_ROLE: tholi_runtime
+      THOLI_DATABASE_WORKER_ROLE: tholi_worker
     networks: [database]
     read_only: true
     tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
@@ -155,6 +185,7 @@ services:
       THOLI_DATABASE_URL: postgresql://tholi_runtime:${THOLI_DB_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
       THOLI_DATABASE_MIGRATION_URL: postgresql://tholi_migrator:${THOLI_MIGRATION_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
       THOLI_DATABASE_RUNTIME_ROLE: tholi_runtime
+      THOLI_DATABASE_WORKER_ROLE: tholi_worker
     networks: [database]
     read_only: true
     tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
@@ -183,6 +214,7 @@ services:
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
       PGDATA: /var/lib/postgresql/18/docker
       THOLI_DB_PASSWORD: ${THOLI_DB_PASSWORD:?Initialize the local environment first}
+      THOLI_WORKER_PASSWORD: ${THOLI_WORKER_PASSWORD:?Upgrade the local environment for worker credentials}
       THOLI_MIGRATION_PASSWORD: ${THOLI_MIGRATION_PASSWORD:?Initialize the local environment first}
       OIDC_DB_PASSWORD: ${OIDC_DB_PASSWORD:?Initialize the local environment first}
     volumes:

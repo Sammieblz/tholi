@@ -30,6 +30,8 @@ checks and redacted evidence. Ordinary unit runs do not need a Docker daemon.
 The same job runs [service database checks](../service-database.md) against actual
 PostgreSQL: upgrades, runtime privileges, scoped transactions, revision/credit
 concurrency, backup/restore and reset. Its test image is separate from production.
+The same suite covers [durable jobs](../service-jobs.md), separate worker
+permissions, competing claims, expired fences, cancellation and atomic results.
 
 Real [portable identity](../service-identity.md) checks are separate opt-in local
 cohorts: `npm run test:identity` exercises native Chrome and Firefox, while

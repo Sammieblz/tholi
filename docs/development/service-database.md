@@ -82,7 +82,8 @@ The balance foundation conservatively subtracts historical settlements from
 unexpired grants and retains active/uncertain holds after their deadlines.
 Grant allocation, expiry reconciliation, refunds, pricing and provider uncertainty
 policy remain [#44](https://github.com/Sammieblz/tholi/issues/44). This is not a
-completed billing system. Job claiming/execution remains #32.
+completed billing system. [Durable job claiming and execution](service-jobs.md)
+use the same scoped repository owner with worker-only dispatch permissions.
 
 Row-level policies and role-specific application authorization extend the same
 repository owner in [#31](service-authorization.md). Missing transaction scope

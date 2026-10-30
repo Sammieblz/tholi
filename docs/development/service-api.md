@@ -47,6 +47,11 @@ decisions, jobs/support, usage/plans/credits, saved-data CRUD/search/export/dele
 revisioned synchronization, approved returns and billing. Planned entries are
 not executable paths or a commitment that the feature is available.
 
+Configured services also expose actor-private [job status and cancellation](service-jobs.md).
+The `durable-jobs` capability indicates these registered routes. Dispatch and
+operator recovery run independently of HTTP; no public enqueue or retry endpoint
+is available. Inference and billing availability remain false.
+
 ## Validation, errors and privacy
 
 [`contracts-service.ts`](../../packages/navigation-core/contracts-service.ts)

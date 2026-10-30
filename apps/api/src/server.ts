@@ -9,6 +9,7 @@ import {
 import type { PrivateCapabilities, RuntimeResource } from "./capabilities";
 import type { IdentityService } from "./application/identity";
 import type { AuthorizationService } from "./application/authorization";
+import type { JobService } from "./application/jobs";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
 
@@ -16,6 +17,7 @@ export type { ApiOptions, ServiceApiOptions } from "./config";
 export interface ServiceApiServices {
   identity?: IdentityService;
   authorization?: AuthorizationService;
+  jobs?: JobService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -48,8 +50,9 @@ export async function createServiceApi(
   const options = validateServiceOptions(input);
   let identity = injected.identity;
   let authorization = injected.authorization;
+  let jobs = injected.jobs;
   const ownedResources = [...resources];
-  if (authorization && !identity)
+  if ((authorization || jobs) && !identity)
     throw new Error("Authorization requires the composed identity service.");
   if (identity && !options.identity)
     throw new Error(
@@ -64,6 +67,7 @@ export async function createServiceApi(
     );
     identity = runtime.service;
     authorization = runtime.authorization;
+    jobs = runtime.jobs;
     ownedResources.push(runtime.resource);
   }
   // Extension origins are transport admission, never account identity. Firefox's
@@ -131,6 +135,7 @@ export async function createServiceApi(
       !!identity,
       options.identity?.secureCookies,
       !!authorization,
+      !!jobs,
     );
     if (identity) {
       const { registerIdentityApi } = await import("./routes/identity");
@@ -139,6 +144,10 @@ export async function createServiceApi(
         const { registerAuthorizationApi } =
           await import("./routes/authorization");
         await registerAuthorizationApi(app, identity, authorization);
+      }
+      if (jobs) {
+        const { registerJobsApi } = await import("./routes/jobs");
+        await registerJobsApi(app, identity, jobs);
       }
     }
     registerHealth(app, "service", lifecycle);

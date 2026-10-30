@@ -24,7 +24,9 @@ import type {
 import {
   authorizationPolicyCatalog,
   evaluateAuthorization,
+  readAuthorizationContext,
   type AuthorizationContext,
+  type AuthorizationContextReader,
   type AuthorizationOptions,
 } from "./authorization-policy";
 import type { IdentitySession } from "./identity-contracts";
@@ -33,7 +35,7 @@ type PageQuery = { after?: string; limit?: number };
 type Principal = Pick<IdentitySession, "accountId">;
 
 /** Existing scoped repository owner implements this application-facing port. */
-export interface AuthorizationTransaction {
+export interface AuthorizationTransaction extends AuthorizationContextReader {
   getAccount(): Promise<Account>;
   getWorkspace(): Promise<Workspace>;
   getMembership(accountId?: string): Promise<Membership | undefined>;
@@ -52,12 +54,16 @@ export interface AuthorizationTransaction {
     expectedRevision: bigint;
   }): Promise<Consent>;
 }
-export interface AuthorizationRepositories {
+export interface AuthorizationRepositories extends AuthorizedRepositories<AuthorizationTransaction> {
   /** Rechecks the active account and memberships under its own account scope. */
   listWorkspaces(accountId: string, query?: PageQuery): Promise<Workspace[]>;
+}
+
+/** Shared transaction owner for the demonstrated account and durable-job services. */
+export interface AuthorizedRepositories<R extends AuthorizationContextReader> {
   transaction<T>(
     scope: RepositoryScope,
-    work: (repository: AuthorizationTransaction) => Promise<T>,
+    work: (repository: R) => Promise<T>,
   ): Promise<T>;
 }
 
@@ -78,7 +84,7 @@ const forbidden = () =>
 function revision<T extends { revision: bigint }>(row: T) {
   return { ...row, revision: row.revision.toString() };
 }
-function repositoryFailure(error: unknown): never {
+export function authorizationRepositoryFailure(error: unknown): never {
   if (error instanceof RepositoryError) {
     if (error.code === "FORBIDDEN") throw forbidden();
     if (error.code === "INVALID_INPUT")
@@ -97,6 +103,47 @@ function repositoryFailure(error: unknown): never {
   throw error;
 }
 
+export async function withAuthorization<
+  R extends AuthorizationContextReader,
+  T,
+>(
+  repositories: AuthorizedRepositories<R>,
+  principal: Principal,
+  workspaceId: string,
+  action: AuthorizationAction,
+  work: (repository: R, authorization: AuthorizationContext) => Promise<T>,
+  context: ServiceRequestContext,
+  options?: AuthorizationOptions,
+) {
+  const scope = Object.freeze({
+    accountId: identifier.parse(principal.accountId),
+    workspaceId: identifier.parse(workspaceId),
+  });
+  context.signal.throwIfAborted();
+  try {
+    return await repositories.transaction(scope, async (repository) => {
+      context.signal.throwIfAborted();
+      const authorization = await readAuthorizationContext(repository, {
+        includeConsents:
+          action === "policies.read" || action === "consents.write",
+      });
+      context.signal.throwIfAborted();
+      if (
+        authorization.account.id !== scope.accountId ||
+        authorization.workspace?.id !== scope.workspaceId ||
+        !evaluateAuthorization(authorization, action, options).allowed
+      )
+        throw forbidden();
+      const result = await work(repository, authorization);
+      // An observed deadline during SQL work must throw into the same rollback.
+      context.signal.throwIfAborted();
+      return result;
+    });
+  } catch (error) {
+    return authorizationRepositoryFailure(error);
+  }
+}
+
 /** Identity supplies the actor; current repository records supply workspace authority. */
 export class AuthorizationService {
   constructor(private readonly repositories: AuthorizationRepositories) {}
@@ -112,42 +159,15 @@ export class AuthorizationService {
     context: ServiceRequestContext,
     options?: AuthorizationOptions,
   ) {
-    const scope = Object.freeze({
-      accountId: identifier.parse(principal.accountId),
-      workspaceId: identifier.parse(workspaceId),
-    });
-    context.signal.throwIfAborted();
-    try {
-      return await this.repositories.transaction(scope, async (repository) => {
-        context.signal.throwIfAborted();
-        const account = await repository.getAccount();
-        const workspace = await repository.getWorkspace();
-        const membership = await repository.getMembership();
-        const consents =
-          action === "policies.read" || action === "consents.write"
-            ? await repository.listConsents()
-            : undefined;
-        context.signal.throwIfAborted();
-        const authorization: AuthorizationContext = {
-          account,
-          workspace,
-          membership,
-          consents,
-        };
-        if (
-          account.id !== scope.accountId ||
-          workspace.id !== scope.workspaceId ||
-          !evaluateAuthorization(authorization, action, options).allowed
-        )
-          throw forbidden();
-        const result = await work(repository, authorization);
-        // A deadline that expired during SQL work must roll back its mutation.
-        context.signal.throwIfAborted();
-        return result;
-      });
-    } catch (error) {
-      return repositoryFailure(error);
-    }
+    return withAuthorization(
+      this.repositories,
+      principal,
+      workspaceId,
+      action,
+      work,
+      context,
+      options,
+    );
   }
 
   async listWorkspaces(
@@ -170,7 +190,7 @@ export class AuthorizationService {
           : {}),
       });
     } catch (error) {
-      return repositoryFailure(error);
+      return authorizationRepositoryFailure(error);
     }
   }
 
