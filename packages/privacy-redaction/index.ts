@@ -39,6 +39,12 @@ export function isSensitiveElement(element: Element): boolean {
     element.closest('[data-sensitive="true"]') !== null
   );
 }
+/** Pixel privacy is broader than semantic discovery: ordinary fields keep labels. */
+export function isPixelPrivateElement(element: Element): boolean {
+  return element.matches(
+    'input,select,textarea,iframe,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="searchbox"],[role="combobox"],[role="spinbutton"],[data-sensitive="true"]',
+  );
+}
 export function sanitizeText(value: string): string {
   return value
     .replace(/(?:Bearer\s+)?[A-Za-z0-9_-]{24,}/g, "[redacted]")

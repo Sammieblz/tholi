@@ -1,5 +1,19 @@
 import { z } from "zod";
 import { hasPngSignature, readPngDimensions } from "./png";
+import {
+  navigationDomViewportSchema,
+  navigationImagePixelsObjectSchema,
+  refineNavigationImagePixels,
+  navigationViewportExtent,
+} from "../navigation-core/contracts-navigation";
+
+export const VISION_CAPTURE_LIMITS = Object.freeze({
+  maxSourcePixels: 16000000,
+  maxSourceBytes: 16 * 1024 * 1024,
+  maxMasks: 5000,
+  maxOcrPixels: 4000000,
+  maxOcrBytes: 4 * 1024 * 1024,
+});
 export const visualStampSchema = z
   .object({
     requestId: z.string().uuid(),
@@ -19,6 +33,55 @@ export const boxSchema = z
     height: z.number().finite().positive(),
   })
   .strict();
+/** Ephemeral DOM evidence. Native identity and browser zoom belong to background. */
+export const captureMetadataSchema = z
+  .object({
+    version: z.literal(1),
+    captureId: z.string().uuid(),
+    scanId: z.string().uuid(),
+    observationRevision: z.number().int().nonnegative().safe(),
+    viewportRevision: z.number().int().nonnegative().safe(),
+    at: z.number().finite().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    viewport: navigationDomViewportSchema,
+    masks: z.array(boxSchema).max(VISION_CAPTURE_LIMITS.maxMasks),
+    focusRegions: z.array(boxSchema).max(1).optional(),
+    masking: z
+      .object({ version: z.literal(1), complete: z.literal(true) })
+      .strict(),
+  })
+  .strict()
+  .superRefine((metadata, context) => {
+    const extent = navigationViewportExtent(metadata.viewport);
+    if (
+      [...metadata.masks, ...(metadata.focusRegions || [])].some(
+        (box) =>
+          box.x + box.width > extent.width ||
+          box.y + box.height > extent.height,
+      )
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Capture region exceeds the observed viewport extent.",
+      });
+  });
+export type CaptureMetadata = z.infer<typeof captureMetadataSchema>;
+export const navigationPreparationSchema = z
+  .object({ crop: boxSchema.optional() })
+  .strict();
+/** Pixel preparation supplies no invented native identity or request generations. */
+export const preparedNavigationPixelsSchema = navigationImagePixelsObjectSchema
+  .extend({
+    captureId: captureMetadataSchema.innerType().shape.captureId,
+    scanId: captureMetadataSchema.innerType().shape.scanId,
+    observationRevision:
+      captureMetadataSchema.innerType().shape.observationRevision,
+    viewportRevision: captureMetadataSchema.innerType().shape.viewportRevision,
+  })
+  .strict()
+  .superRefine(refineNavigationImagePixels);
+export type PreparedNavigationPixels = z.infer<
+  typeof preparedNavigationPixelsSchema
+>;
 export const recognitionInputSchema = visualStampSchema
   .extend({
     image: z.string().min(1).max(5592500),
@@ -29,7 +92,10 @@ export const recognitionInputSchema = visualStampSchema
     focusRegions: z.array(boxSchema).max(1).optional(),
   })
   .strict()
-  .refine((v) => v.width * v.height <= 4000000, "Image exceeds four megapixels")
+  .refine(
+    (v) => v.width * v.height <= VISION_CAPTURE_LIMITS.maxOcrPixels,
+    "Image exceeds four megapixels",
+  )
   .refine(
     (v) =>
       !v.focusRegions?.some(
@@ -80,13 +146,17 @@ export function validatePng(input: RecognitionInput) {
     typeof Buffer !== "undefined"
       ? Buffer.from(input.image, "base64")
       : Uint8Array.from(atob(input.image), (c) => c.charCodeAt(0));
-  if (binary.length > 4194304 || binary.length < 24 || !hasPngSignature(binary))
+  if (
+    binary.length > VISION_CAPTURE_LIMITS.maxOcrBytes ||
+    binary.length < 24 ||
+    !hasPngSignature(binary)
+  )
     throw new Error("Expected a PNG of at most four MB");
   const { width, height } = readPngDimensions(binary);
   if (
     width !== input.width ||
     height !== input.height ||
-    input.width * input.height > 4000000
+    input.width * input.height > VISION_CAPTURE_LIMITS.maxOcrPixels
   )
     throw new Error("PNG dimensions do not match capture metadata");
   return binary;

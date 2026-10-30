@@ -1,6 +1,7 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
 import { readFile } from "node:fs/promises";
+import { imageCaptureFixture } from "../../../support/image-capture-fixture";
 test("production extension OCR recognizes packaged assets offline and masks sensitive regions", async () => {
   const app = await openNavigatorExtension();
   try {
@@ -26,17 +27,13 @@ test("production extension OCR recognizes packaged assets offline and masks sens
           "base64",
         );
       const result = await app.panel.evaluate(
-        async (image) =>
+        async ({ image, capture }) =>
           chrome.runtime.sendMessage({
             target: "offscreen",
             type: "OCR_REQUEST",
             id: crypto.randomUUID(),
             image,
-            metadata: {
-              width: 640,
-              height: 180,
-              masks: [{ x: 0, y: 100, width: 640, height: 80 }],
-            },
+            ...capture,
             stamp: {
               requestId: crypto.randomUUID(),
               journeyId: crypto.randomUUID(),
@@ -44,10 +41,15 @@ test("production extension OCR recognizes packaged assets offline and masks sens
               documentId: "offline",
               observationRevision: 1,
               viewportRevision: 1,
-              captureId: crypto.randomUUID(),
+              captureId: capture.metadata.captureId,
             },
           }),
-        image,
+        {
+          image,
+          capture: imageCaptureFixture(640, 180, [
+            { x: 0, y: 100, width: 640, height: 80 },
+          ]),
+        },
       );
       expect(result.error, JSON.stringify(result)).toBeUndefined();
       expect(
@@ -67,17 +69,24 @@ test("production extension OCR recognizes packaged assets offline and masks sens
         (await readFile("tests/fixtures/vision/dark.png")).toString("base64");
     const compare = async (image: string) =>
       app.panel.evaluate(
-        async ({ image, referenceImage }) =>
+        async ({ image, referenceImage, capture }) =>
           chrome.runtime.sendMessage({
             target: "offscreen",
             type: "OCR_REQUEST",
             id: crypto.randomUUID(),
             image,
             referenceImage,
-            metadata: { width: 640, height: 180 },
+            ...capture,
+            referenceMetadata: capture.metadata,
+            referenceCaptureCssBounds: capture.captureCssBounds,
+            referenceBrowserZoom: capture.browserZoom,
             compareRegion: { x: 35, y: 40, width: 350, height: 45 },
           }),
-        { image, referenceImage: light },
+        {
+          image,
+          referenceImage: light,
+          capture: imageCaptureFixture(640, 180),
+        },
       );
     expect((await compare(light)).value.matches).toBe(true);
     expect((await compare(dark)).value.matches).toBe(false);

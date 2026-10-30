@@ -1,5 +1,6 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
+import { captureMetadataSchema } from "../../../../packages/vision/contracts";
 async function fixture(holdHydration = false) {
   const app = await openNavigatorExtension(undefined, []);
   if (holdHydration) {
@@ -347,29 +348,44 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
       input.value = "PRIVATE_FIXTURE_VALUE";
       document.body.append(input);
     });
-    const capture = await app.panel.evaluate(async () => {
+    const captureOwner = await app.panel.evaluate(async () => {
       const session = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
-      return chrome.tabs.sendMessage(
-        session.tabId,
-        { type: "PREPARE_CAPTURE", sessionId: session.sessionId },
-        { frameId: 0 },
-      );
+      return {
+        tabId: session.tabId,
+        sessionId: session.sessionId,
+        captureId: crypto.randomUUID(),
+      };
     });
-    expect(capture.masks.length).toBeGreaterThan(0);
-    expect(JSON.stringify(capture)).not.toContain("PRIVATE_FIXTURE_VALUE");
-    expect(
-      await app.page
-        .locator("#tholi-widget")
-        .evaluate((e) => getComputedStyle(e).visibility),
-    ).toBe("hidden");
-    await app.panel.evaluate(async () => {
-      const session = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
-      await chrome.tabs.sendMessage(
-        session.tabId,
-        { type: "RESTORE_CAPTURE", sessionId: session.sessionId },
-        { frameId: 0 },
+    try {
+      const capture = await app.panel.evaluate(
+        async ({ tabId, sessionId, captureId }) =>
+          chrome.tabs.sendMessage(
+            tabId,
+            { type: "PREPARE_CAPTURE", sessionId, captureId },
+            { frameId: 0 },
+          ),
+        captureOwner,
       );
-    });
+      const metadata = captureMetadataSchema.parse(capture.metadata);
+      expect(metadata.captureId).toBe(captureOwner.captureId);
+      expect(metadata.masks.length).toBeGreaterThan(0);
+      expect(JSON.stringify(capture)).not.toContain("PRIVATE_FIXTURE_VALUE");
+      expect(
+        await app.page
+          .locator("#tholi-widget")
+          .evaluate((e) => getComputedStyle(e).visibility),
+      ).toBe("hidden");
+    } finally {
+      await app.panel.evaluate(
+        async ({ tabId, sessionId, captureId }) =>
+          chrome.tabs.sendMessage(
+            tabId,
+            { type: "RESTORE_CAPTURE", sessionId, captureId },
+            { frameId: 0 },
+          ),
+        captureOwner,
+      );
+    }
     const stranger = await app.context.newPage();
     await stranger.goto(expanded.url());
     await expect(stranger.locator("body")).toContainText("Reconnecting");

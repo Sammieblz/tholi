@@ -198,8 +198,14 @@ test("a missing qualifier or committing request cannot become menu exploration",
 });
 
 test("an older connected backend falls back locally before processing settings context", async () => {
+  const contains = vi.fn(
+    async (permission: { origins?: string[] }) =>
+      permission.origins?.length === 1 &&
+      permission.origins[0] === "http://127.0.0.1/*",
+  );
   vi.stubGlobal("chrome", {
     runtime: { getURL: (path: string) => "chrome-extension://test/" + path },
+    permissions: { contains },
     storage: {
       local: {
         setAccessLevel: async () => {},
@@ -228,6 +234,9 @@ test("an older connected backend falls back locally before processing settings c
         false,
       ),
     ).toBeUndefined();
+    expect(contains).toHaveBeenCalledExactlyOnceWith({
+      origins: ["http://127.0.0.1/*"],
+    });
     expect(fetch).toHaveBeenCalledTimes(1);
   } finally {
     vi.unstubAllGlobals();

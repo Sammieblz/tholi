@@ -18,6 +18,14 @@ Chromium preserves existing keys and protects `storage.local` with `TRUSTED_CONT
 
 Host permission requests use visible origin intent in a genuine user action, then revalidate the active tab/origin after approval. Selective grants, frame ownership, nonce-bound widget registration, masked capture and independent outcomes keep their existing owners.
 
+## Native capture and coordinate compatibility
+
+The existing background vision service owns native capture and its cancellation span. Content supplies a capture-ID lease, paired scan/page revisions, current DOM viewport and complete privacy masks. It cannot assert native document identity or browser zoom. Native shadow access stays in the typed platform adapter and serves privacy geometry only. Both targets use the same worker, native-size masking stage, OCR settings, bounded queue and prepared-input fallback.
+
+The measured source profile uses the original bitmap's layout/inner CSS extent, including a Chrome classic scrollbar gutter. Pixel scales come from that bitmap and the declared CSS extent, independently of zoom and DPR. Optional navigation color output records this plane as `source.captureCssBounds`, then identifies its visual viewport or bounded crop in original native pixels. Legacy OCR stays layout-aligned. Pinch/panned viewports and captures over the source budget are unsupported. Firefox currently refuses differing layout/visual extents because its positive classic-gutter plane has not been measured; overlay-scrollbar evidence does not establish that case.
+
+Existing Nav1 images without `captureCssBounds` retain their original visual-plane validation. The declared layout profile is explicit: older strict receivers reject its new field. A later transport must negotiate support before using it. The internal masked-color callback supplies actual native scope, viewport and pixel provenance without inventing a full navigation request stamp, enabling a provider route or uploading an image. See [navigation contracts](navigation-contracts.md) and the [fresh capture evidence](../development/testing/masked-capture-validation.md).
+
 ## Builds and evidence
 
 `config/extension-targets.mjs` derives manifests from the common definition. Chromium output stays `dist/extension`; Firefox output is `dist/extension-firefox`, with event-page scripts, `sidebar_action` and ID `tholi@ilunonsen.com`. Entrypoint filenames remain stable.

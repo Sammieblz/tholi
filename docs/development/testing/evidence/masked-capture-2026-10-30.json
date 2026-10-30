@@ -1,0 +1,1090 @@
+{
+  "schemaVersion": 1,
+  "issue": 38,
+  "status": "implementation-evidence",
+  "releaseCertified": false,
+  "providerInferenceEnabled": false,
+  "source": {
+    "baseCommit": "fa90dd548f3b28cab1bdac630964b66a885b4d83",
+    "workingTreeDirty": true,
+    "scope": "exact built code bytes from an uncommitted working tree"
+  },
+  "versions": {
+    "extensionApi": "0.11.0",
+    "website": "0.1.1"
+  },
+  "testedBuild": {
+    "manifestSha256": "4a7dd41d2deca8710fefca4550b2e6a2d32634f7de0d88619cc0a5fc5531faa8",
+    "chromium": "37ad54bae5920918b12f3297258f440b911b8b056fe47c974b8c877a67157561",
+    "firefox": "2ef17caf2069fb9dc9bacc8aff8ffedec207be93310feac55731347e768c4a4c",
+    "manifestsVerifiedBeforeAndAfter": true,
+    "chromePermissionVariant": "disposable all-URLs capture pregrant; original manifest human activation not certified",
+    "firefoxPermissionProfile": "original manifest with automated toolbar activation"
+  },
+  "focused": {
+    "runId": "c72f9f8a-92f4-4910-bb4d-ad666d91bbe8",
+    "passed": true,
+    "total": 114,
+    "fileCount": 8,
+    "report": {
+      "path": "output/qa/vision-38-focused/c72f9f8a-92f4-4910-bb4d-ad666d91bbe8/unit.json",
+      "sha256": "27db85b8fb4db76a7df31dfd85cef95fede69808f32f57a2ff960fd9b66545aa"
+    },
+    "wholeProjectTypes": "passed on precision-corrected working tree",
+    "productionBuild": "passed"
+  },
+  "nativePixels": {
+    "runId": "37b18517-c49d-436b-a116-c2b27b966cae",
+    "passed": true,
+    "counts": {
+      "cases": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "observationCount": 6,
+    "report": {
+      "path": "output/qa/vision38-private-pixels/37b18517-c49d-436b-a116-c2b27b966cae/browser-performance.json",
+      "sha256": "0cf306b30ab90ecb9ae35ddae7eaa2896aa86acab990507b9c252a8682831066"
+    },
+    "targets": [
+      {
+        "target": "chromium",
+        "browserVersion": "155.0.8059.40",
+        "permissionProfile": "disposable all-URLs capture pregrant",
+        "humanActivation": "pending",
+        "firefoxClassicGutter": "unmeasured and rejected by production",
+        "imagesPersisted": false,
+        "zooms": [0.8, 1.25, 2],
+        "independentPrivateRectanglesPerObservation": [19, 19, 19],
+        "outputs": {
+          "color": {
+            "checkedPrivatePixelsPerZoom": [80676, 125366, 174294],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          },
+          "crop": {
+            "checkedPrivatePixelsPerZoom": [4720, 7037, 10437],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          },
+          "ocr": {
+            "checkedPrivatePixelsPerZoom": [80914, 125296, 174294],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          }
+        },
+        "fullColorBottomRowSamplesPerZoom": [29, 46, 72],
+        "fullColorBottomRowFailures": 0,
+        "fullColorFractionalBandSamplesPerZoom": [13, 21, 0],
+        "fullColorFractionalBandFailures": 0,
+        "fullColorPublicControlRetained": true,
+        "fullColorOwnedUiAbsent": true,
+        "identityMatched": true,
+        "bounded": true,
+        "exactStylesRestored": true,
+        "privateComparison": [
+          {
+            "zoom": 1.25,
+            "matched": true
+          }
+        ],
+        "lease": {
+          "staleKeptHidden": true,
+          "exactStylesRestored": true
+        },
+        "animationRejected": true
+      },
+      {
+        "target": "firefox",
+        "browserVersion": "159.0",
+        "permissionProfile": "original manifest with automated native toolbar activation",
+        "humanActivation": "pending",
+        "firefoxClassicGutter": "unmeasured and rejected by production",
+        "imagesPersisted": false,
+        "zooms": [0.8, 1.25, 2],
+        "independentPrivateRectanglesPerObservation": [19, 19, 19],
+        "outputs": {
+          "color": {
+            "checkedPrivatePixelsPerZoom": [96523, 147742, 233212],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          },
+          "crop": {
+            "checkedPrivatePixelsPerZoom": [5680, 8556, 12528],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          },
+          "ocr": {
+            "checkedPrivatePixelsPerZoom": [96541, 147742, 233212],
+            "privateFailures": 0,
+            "paddingFailures": 0
+          }
+        },
+        "fullColorBottomRowSamplesPerZoom": [29, 45, 72],
+        "fullColorBottomRowFailures": 0,
+        "fullColorFractionalBandSamplesPerZoom": [0, 0, 0],
+        "fullColorFractionalBandFailures": 0,
+        "fullColorPublicControlRetained": true,
+        "fullColorOwnedUiAbsent": true,
+        "identityMatched": true,
+        "bounded": true,
+        "exactStylesRestored": true,
+        "privateComparison": [
+          {
+            "zoom": 1.25,
+            "matched": true
+          }
+        ],
+        "lease": {
+          "staleKeptHidden": true,
+          "exactStylesRestored": true
+        },
+        "animationRejected": true
+      }
+    ]
+  },
+  "nativeEgress": {
+    "runId": "eaf51e22-94f5-48e7-8246-bc9483d56372",
+    "passed": true,
+    "counts": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "report": {
+      "path": "output/qa/vision38-egress/eaf51e22-94f5-48e7-8246-bc9483d56372/browser-performance.json",
+      "sha256": "e46e2b19326bcbb5e1edf02d80f41d1fe503c5a4f74fbb0624c524dd6799c070"
+    },
+    "observation": {
+      "target": "chromium",
+      "version": "155.0.8059.40",
+      "permissionProfile": "disposable all-URLs capture pregrant",
+      "humanActivation": "pending",
+      "actualVisionRecovery": true,
+      "heldHealthRequests": 1,
+      "geometryChangedBeforeHealthRelease": true,
+      "actualPreparedRequests": 2,
+      "preparePrecededHeldHealth": true,
+      "negativeOcrPosts": 0,
+      "positiveOcrPosts": 1,
+      "positiveInputValid": true,
+      "positiveCaptureMatched": true,
+      "otherPosts": 0,
+      "imagesPersisted": false
+    },
+    "positiveResponseStatus": 503,
+    "transport": "loopback memory only",
+    "imageOrBodyArtifacts": false
+  },
+  "publicCaptureExtent": {
+    "runId": "f3ce0c05-1791-4f11-9880-0f5d6a9232da",
+    "source": "fa90dd548f3b28cab1bdac630964b66a885b4d83",
+    "observations": 8,
+    "report": {
+      "path": "output/qa/vision38-capture-plane/f3ce0c05-1791-4f11-9880-0f5d6a9232da/public-capture-extent.json",
+      "sha256": "c331ffb6b33403cadbba187e2c6d08e0ebd65dbbdb9d2c81520f98332116a1ce"
+    }
+  },
+  "fractionalExtentDiagnostic": {
+    "runId": "fa607d7b-5574-4d29-b774-b977a5d4c3cb",
+    "source": "working tree before precision correction",
+    "publicFixture": true,
+    "zoom": 0.8,
+    "layout": {
+      "width": 955,
+      "height": 536
+    },
+    "visual": {
+      "width": 936.25,
+      "height": 536.25
+    },
+    "actualBitmap": {
+      "width": 764,
+      "height": 429
+    },
+    "report": {
+      "path": "output/qa/vision38-capture-plane/fa607d7b-5574-4d29-b774-b977a5d4c3cb/browser-performance.json",
+      "sha256": "32244fb5701f4084cdef76c1a9b7f3fc2d992ed7e275e8507bca2bb9899a8fb9"
+    }
+  },
+  "priorEvidence": {
+    "notes": [
+      "Prior failed probes, fixture corrections and sample-only evidence remain separate.",
+      "No earlier build certifies the precision-corrected artifacts.",
+      "Cases without a recorded comparison were not counted as comparison successes."
+    ],
+    "pixelAttempts": [
+      {
+        "runId": "19947355-b5b5-4105-901d-69972fd21df0",
+        "passed": false,
+        "counts": {
+          "cases": 2,
+          "passed": 0,
+          "failed": 2
+        },
+        "report": {
+          "path": "output/qa/vision38-private-pixels/19947355-b5b5-4105-901d-69972fd21df0/browser-performance.json",
+          "sha256": "d5e4a1767ef95526cfeb5d2475619c3b2c531fd82cac2c9d97d2f93c0284e163"
+        }
+      },
+      {
+        "runId": "0909fd07-8b56-4310-88cc-c0337aaf49d3",
+        "passed": false,
+        "counts": {
+          "cases": 2,
+          "passed": 1,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision38-private-pixels/0909fd07-8b56-4310-88cc-c0337aaf49d3/browser-performance.json",
+          "sha256": "c71c085296cb525a1ac9038d1644990f20b558b00f65e742474cb57736df8618"
+        }
+      },
+      {
+        "runId": "6adad80c-9f2c-4bd9-bf98-2e122e2a9386",
+        "passed": false,
+        "counts": {
+          "cases": 1,
+          "passed": 0,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision38-private-pixels/6adad80c-9f2c-4bd9-bf98-2e122e2a9386/browser-performance.json",
+          "sha256": "050f5d1cb18eef70f5b763886fc69aae5af8d84cd1ab29f81f57eecce8bb887e"
+        }
+      }
+    ],
+    "prePrecisionFirefoxSample": {
+      "runId": "0909fd07-8b56-4310-88cc-c0337aaf49d3",
+      "manifestSha256": "86db70b25af7828402979626781f805a7d862c9bf333eb9e70539913334382f3",
+      "firefoxCasePassed": true,
+      "chromiumCasePassed": false,
+      "sampledPrivatePixelsPerZoom": [51, 51, 51],
+      "exhaustive": false
+    },
+    "invalidQaAttempt": {
+      "runId": "447e6110-4da6-4488-a003-3f7e17b1be47",
+      "usableNativeEvidence": false,
+      "artifact": {
+        "path": "output/qa/vision38-private-pixels/447e6110-4da6-4488-a003-3f7e17b1be47/failure-summary.json",
+        "sha256": "4c9d07cfcad5d2bc189da40cf50854e254cf799e82237bf11e6bf75f5db787ee"
+      }
+    },
+    "captureAttempts": [
+      {
+        "runId": "604b6228-0c2d-4e7e-bab1-8c8eb23f7d7d",
+        "passed": false,
+        "counts": {
+          "cases": 1,
+          "passed": 0,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision38-capture-plane/604b6228-0c2d-4e7e-bab1-8c8eb23f7d7d/browser-performance.json",
+          "sha256": "16924bbc04436f643343c80bc99dd88f183c9216dcbdc0e67e55cb8a43449dc0"
+        }
+      },
+      {
+        "runId": "704c7b67-2531-49e0-b7ae-3cd0dbef6383",
+        "passed": false,
+        "counts": {
+          "cases": 1,
+          "passed": 0,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision38-capture-plane/704c7b67-2531-49e0-b7ae-3cd0dbef6383/browser-performance.json",
+          "sha256": "86a1955c14e91f1e5b1421b64fb8b285e9bdaa186fdf47a03285502c635638dd"
+        }
+      },
+      {
+        "runId": "177d4d06-f7f9-4a32-996f-67863e4719d2",
+        "passed": false,
+        "counts": {
+          "cases": 1,
+          "passed": 0,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision38-capture-plane/177d4d06-f7f9-4a32-996f-67863e4719d2/browser-performance.json",
+          "sha256": "bace3c5e1c7e0efb11072373af6666873aaa79722094fc842e5ef878b28d17c6"
+        }
+      }
+    ],
+    "focusedAttempts": [
+      {
+        "runId": "a72f7bec-c8bb-4453-a7da-5b1092f943b6",
+        "passed": true,
+        "counts": {
+          "cases": 27,
+          "passed": 27,
+          "failed": 0
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/a72f7bec-c8bb-4453-a7da-5b1092f943b6/unit.json",
+          "sha256": "d411e7c442f4ffad2258123fffbfb99c7f9a7cd0b04d121ee435195443b4bf6e"
+        }
+      },
+      {
+        "runId": "ef6eb674-78bb-484c-be4b-7d82a619a2a9",
+        "passed": false,
+        "counts": {
+          "cases": 85,
+          "passed": 84,
+          "failed": 1
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/ef6eb674-78bb-484c-be4b-7d82a619a2a9/unit.json",
+          "sha256": "4e7f263805582b438896770b9cee51eb36dc82e7978a07a33954ce5b3ab5c68a"
+        }
+      },
+      {
+        "runId": "973247ce-ea0a-4f86-8c90-29566b9ef8e3",
+        "passed": true,
+        "counts": {
+          "cases": 19,
+          "passed": 19,
+          "failed": 0
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/973247ce-ea0a-4f86-8c90-29566b9ef8e3/unit.json",
+          "sha256": "e6ace794cad71ae07e9d22fa8a8927938a840a98d59706caca31aa61cf3646e3"
+        }
+      },
+      {
+        "runId": "3e337f39-affa-4d8c-b277-f9169f9a27ea",
+        "passed": true,
+        "counts": {
+          "cases": 108,
+          "passed": 108,
+          "failed": 0
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/3e337f39-affa-4d8c-b277-f9169f9a27ea/unit.json",
+          "sha256": "583aeb90c1268e83e7962587d26e1d87d3c16a6dee581d66386b16f12afe56ac"
+        }
+      }
+    ]
+  },
+  "remaining": [
+    "human capture-permission recovery",
+    "Firefox positive classic-gutter verification",
+    "screen-reader and signed-in checks"
+  ],
+  "limits": [
+    "No arbitrary-pixel privacy or atomic DOM/screenshot guarantee.",
+    "Pinch/pan, unsupported private paint and source-budget overflow refuse capture.",
+    "Fixture pixel checks do not establish provider quality, website completion or signed-in coverage.",
+    "Raw screenshots, payload bodies, field text and private rectangle coordinates are excluded from this evidence."
+  ],
+  "latestValidatedPhase": "assignedSlotCorrection",
+  "assignedSlotCorrection": {
+    "status": "native-validated-working-tree",
+    "source": {
+      "baseCommit": "fa90dd548f3b28cab1bdac630964b66a885b4d83",
+      "workingTreeDirty": true
+    },
+    "correction": {
+      "owner": "complete privacy traversal only",
+      "category": "private assigned-slot ancestry",
+      "semanticDiscoveryChanged": false,
+      "observedMasksInFailingRegression": 0,
+      "confirmedFailure": {
+        "runId": "7c983321-4821-47d5-ac29-c2aa88e6e74b",
+        "passed": false,
+        "declaredTests": 14,
+        "passedTests": 0,
+        "failedTests": 1,
+        "skippedTests": 13,
+        "report": {
+          "path": "output/qa/vision-38-focused/7c983321-4821-47d5-ac29-c2aa88e6e74b/unit.json",
+          "sha256": "92ce0e401cbb41e924bf7f9143a79352b29b075f9b510073d89faa1043259b32"
+        }
+      },
+      "focusedCorrection": {
+        "runId": "815ecace-7033-41c6-806e-2d46caa1a0e4",
+        "passed": true,
+        "declaredTests": 14,
+        "passedTests": 14,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "report": {
+          "path": "output/qa/vision-38-focused/815ecace-7033-41c6-806e-2d46caa1a0e4/unit.json",
+          "sha256": "00a5be628d3289fc4e0957943758ea64c25c980b633fd75189cb4b675889e92f"
+        }
+      }
+    },
+    "focused": {
+      "runId": "263aebc6-6c7b-440b-ba8b-5b266c7a4784",
+      "passed": true,
+      "declaredTests": 115,
+      "passedTests": 115,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "report": {
+        "path": "output/qa/vision-38-focused/263aebc6-6c7b-440b-ba8b-5b266c7a4784/unit.json",
+        "sha256": "8a020f5ae997e7d8661b25630216ff9d8a64bbad0f9f3959d48d9610e7ec3249"
+      }
+    },
+    "testedBuild": {
+      "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+      "chromium": "d684b89d75f745a3d5cec1ac0a985e879976d0b752e653442f814fb09d3d8ab1",
+      "firefox": "bed4897e1ef84dd4ddea2c322c8c251c11ffc28e4c8beaf48e2bf5e2ab20a5ec",
+      "manifestsVerifiedBeforeAndAfter": true,
+      "wholeProjectTypes": "passed",
+      "productionBuild": "passed"
+    },
+    "native": {
+      "runId": "0d3606b5-773d-4266-b25b-13289de80cf8",
+      "passed": true,
+      "counts": {
+        "cases": 4,
+        "passed": 4,
+        "failed": 0
+      },
+      "report": {
+        "path": "output/qa/vision38-final-browser/0d3606b5-773d-4266-b25b-13289de80cf8/browser-performance.json",
+        "sha256": "f8c2d604f8d2e1e9e3fd343be7b24219e0f4c8d3e7dabd2edb4b540bfeea72c8"
+      },
+      "nativePixelCases": 2,
+      "nativePixelObservations": 6,
+      "targets": [
+        {
+          "target": "chromium",
+          "browserVersion": "155.0.8059.40",
+          "permissionProfile": "disposable all-URLs capture pregrant",
+          "humanActivation": "pending",
+          "firefoxClassicGutter": "unmeasured and rejected by production",
+          "imagesPersisted": false,
+          "zooms": [0.8, 1.25, 2],
+          "independentPrivateRectanglesPerObservation": [21, 21, 21],
+          "outputs": {
+            "color": {
+              "checkedPrivatePixelsPerZoom": [81916, 128201, 181410],
+              "privateSlotPixelsPerZoom": [832, 1863, 4736],
+              "privateSlotOverflowPixelsPerZoom": [408, 972, 2380],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            },
+            "crop": {
+              "checkedPrivatePixelsPerZoom": [4720, 7037, 10437],
+              "privateSlotPixelsPerZoom": [0, 0, 0],
+              "privateSlotOverflowPixelsPerZoom": [0, 0, 0],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            },
+            "ocr": {
+              "checkedPrivatePixelsPerZoom": [82154, 128212, 181410],
+              "privateSlotPixelsPerZoom": [832, 1944, 4736],
+              "privateSlotOverflowPixelsPerZoom": [408, 972, 2380],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            }
+          },
+          "fullColorBottomRowSamplesPerZoom": [29, 46, 72],
+          "fullColorBottomRowFailures": 0,
+          "fullColorFractionalBandSamplesPerZoom": [13, 21, 0],
+          "fullColorFractionalBandFailures": 0,
+          "fullColorPublicSlotOutsidePrivateText": true,
+          "fullColorPublicSlotRetained": true,
+          "fullColorPublicControlRetained": true,
+          "fullColorOwnedUiAbsent": true,
+          "identityMatched": true,
+          "bounded": true,
+          "exactStylesRestored": true,
+          "privateComparison": [
+            {
+              "zoom": 1.25,
+              "matched": true
+            }
+          ],
+          "lease": {
+            "staleKeptHidden": true,
+            "exactStylesRestored": true
+          },
+          "animationRejected": true
+        },
+        {
+          "target": "firefox",
+          "browserVersion": "159.0",
+          "permissionProfile": "original manifest with automated native toolbar activation",
+          "humanActivation": "pending",
+          "firefoxClassicGutter": "unmeasured and rejected by production",
+          "imagesPersisted": false,
+          "zooms": [0.8, 1.25, 2],
+          "independentPrivateRectanglesPerObservation": [21, 21, 21],
+          "outputs": {
+            "color": {
+              "checkedPrivatePixelsPerZoom": [97763, 150559, 240172],
+              "privateSlotPixelsPerZoom": [832, 1863, 4608],
+              "privateSlotOverflowPixelsPerZoom": [408, 954, 2352],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            },
+            "crop": {
+              "checkedPrivatePixelsPerZoom": [5680, 8556, 12528],
+              "privateSlotPixelsPerZoom": [0, 0, 0],
+              "privateSlotOverflowPixelsPerZoom": [0, 0, 0],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            },
+            "ocr": {
+              "checkedPrivatePixelsPerZoom": [97797, 150559, 240172],
+              "privateSlotPixelsPerZoom": [848, 1863, 4608],
+              "privateSlotOverflowPixelsPerZoom": [408, 954, 2352],
+              "privateFailures": 0,
+              "paddingFailures": 0
+            }
+          },
+          "fullColorBottomRowSamplesPerZoom": [29, 45, 72],
+          "fullColorBottomRowFailures": 0,
+          "fullColorFractionalBandSamplesPerZoom": [0, 0, 0],
+          "fullColorFractionalBandFailures": 0,
+          "fullColorPublicSlotOutsidePrivateText": true,
+          "fullColorPublicSlotRetained": true,
+          "fullColorPublicControlRetained": true,
+          "fullColorOwnedUiAbsent": true,
+          "identityMatched": true,
+          "bounded": true,
+          "exactStylesRestored": true,
+          "privateComparison": [
+            {
+              "zoom": 1.25,
+              "matched": true
+            }
+          ],
+          "lease": {
+            "staleKeptHidden": true,
+            "exactStylesRestored": true
+          },
+          "animationRejected": true
+        }
+      ],
+      "egress": {
+        "target": "chromium",
+        "version": "155.0.8059.40",
+        "permissionProfile": "disposable all-URLs capture pregrant",
+        "humanActivation": "pending",
+        "actualVisionRecovery": true,
+        "heldHealthRequests": 1,
+        "geometryChangedBeforeHealthRelease": true,
+        "actualPreparedRequests": 2,
+        "preparePrecededHeldHealth": true,
+        "negativeOcrPosts": 0,
+        "positiveOcrPosts": 1,
+        "positiveInputValid": true,
+        "positiveCaptureMatched": true,
+        "otherPosts": 0,
+        "imagesPersisted": false
+      },
+      "pairedPerformance": {
+        "measurements": [
+          {
+            "target": "chromium",
+            "browserVersion": "155.0.8059.40",
+            "planning": {
+              "coldMs": 1338.2999999523163,
+              "warmP95Ms": 129.39999985694885,
+              "samples": 20
+            },
+            "ocr": {
+              "coldMs": 947,
+              "warmP95Ms": 722,
+              "samples": 10
+            },
+            "pauseMs": 14.5,
+            "stopMs": 7.200000047683716,
+            "busyFrameP95Ms": 229.79999999999927,
+            "stoppedFrameP95Ms": 213.39999999999782,
+            "busyNodes": 50000,
+            "highlightStable": true
+          },
+          {
+            "target": "firefox",
+            "browserVersion": "159.0",
+            "planning": {
+              "coldMs": 1280,
+              "warmP95Ms": 171,
+              "samples": 20
+            },
+            "ocr": {
+              "coldMs": 1060,
+              "warmP95Ms": 682,
+              "samples": 10
+            },
+            "pauseMs": 10,
+            "stopMs": 14,
+            "busyFrameP95Ms": 170.17999999999665,
+            "stoppedFrameP95Ms": 123.02000000000044,
+            "busyNodes": 50000,
+            "highlightStable": true
+          }
+        ],
+        "sixtyFpsClaim": false
+      }
+    },
+    "failedCombinedAttempt": {
+      "runId": "63f8af01-006d-4ea4-bc11-abfb1c861637",
+      "passed": false,
+      "counts": {
+        "cases": 4,
+        "passed": 2,
+        "failed": 2
+      },
+      "report": {
+        "path": "output/qa/vision38-final-browser/63f8af01-006d-4ea4-bc11-abfb1c861637/browser-performance.json",
+        "sha256": "2f8480a5e89c86ebe83774ec16a8e0eec39424387025d18b3f1e35bac166b36a"
+      },
+      "diagnosis": "fixture public-color control overlapped private painted text overflow",
+      "productionChangedForFixtureCorrection": false,
+      "diagnostic": {
+        "path": "output/qa/vision38-slot-geometry/ee6727c5-f42d-4100-9e0f-d4bcdb29571b/browser-performance.json",
+        "sha256": "46b738b7292b393b072bd5e6236247b29dba1e3cf6f94640e9966bc19e3248ad"
+      }
+    },
+    "fixtureCorrection": {
+      "productionChanged": false,
+      "reason": "public color control overlapped private rendered text",
+      "overflowRectangleAdded": true,
+      "publicControlSeparatedFromPrivatePaint": true,
+      "independentPrivateRectanglesPerObservation": 21
+    },
+    "beforeSlotPerformance": {
+      "runId": "00596ba2-9d81-46c0-b6ce-0cdf8491cf34",
+      "passed": true,
+      "report": {
+        "path": "output/qa/vision38-performance/00596ba2-9d81-46c0-b6ce-0cdf8491cf34/browser-performance.json",
+        "sha256": "d3481c36e5ccb8f4341b9acf3bf86abfd7af9eec057d1c7415a8ed255f3fbfc6"
+      },
+      "measurements": [
+        {
+          "target": "chromium",
+          "browserVersion": "155.0.8059.40",
+          "planningWarmP95Ms": 132,
+          "ocrWarmP95Ms": 708.2999999523163,
+          "pauseMs": 17.899999856948853,
+          "stopMs": 9,
+          "busyFrameP95Ms": 230.3000000000029,
+          "stoppedFrameP95Ms": 195
+        },
+        {
+          "target": "firefox",
+          "browserVersion": "159.0",
+          "planningWarmP95Ms": 183,
+          "ocrWarmP95Ms": 784,
+          "pauseMs": 10,
+          "stopMs": 16,
+          "busyFrameP95Ms": 169.62000000000262,
+          "stoppedFrameP95Ms": 202.8199999999997
+        }
+      ],
+      "sixtyFpsClaim": false
+    },
+    "notes": [
+      "The earlier4a7d phase remains unchanged and did not test assigned-slot ancestry.",
+      "Crop selection did not include the slot fixture; zero crop slot samples are not slot-masking successes.",
+      "The native cohort and paired timings are focused evidence, not full release certification."
+    ]
+  },
+  "localCiAttempts": [
+    {
+      "runId": "55ec14af-dba8-428a-9aa8-781227856539",
+      "sourceHead": "e45f71fc9baede24a14d40da706695d460965ae1",
+      "sourceDirty": false,
+      "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+      "manifestUnchanged": true,
+      "passed": false,
+      "stages": [
+        {
+          "name": "verify-before",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 503
+        },
+        {
+          "name": "typecheck",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 20653
+        },
+        {
+          "name": "test-ci",
+          "exitCode": 1,
+          "signal": null,
+          "elapsedMs": 112291
+        },
+        {
+          "name": "verify-after",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 360
+        }
+      ],
+      "unit": {
+        "total": 723,
+        "passed": 722,
+        "failed": 1,
+        "fileCount": 68,
+        "report": {
+          "path": "output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/output/qa/unit.json",
+          "sha256": "4822ef7aad10c745ea85195d953ee40fe39c953b223b86ee6fae201d3bcdb2ba"
+        }
+      },
+      "browsersExecuted": false,
+      "excludedUnrelatedReports": [
+        {
+          "path": "output/acceptance/e2e-regressions.json",
+          "originalRunId": "57b74697-c67b-43cc-9fda-4c34f05dc634"
+        },
+        {
+          "path": "output/nlp/browser-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/multi-app/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/vision/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/reliability/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/qa/firefox-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/qa/ui-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        }
+      ],
+      "summary": {
+        "path": "output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/summary.json",
+        "sha256": "17e68bec19561f7d18f2dff36136e94105eb6fc095d2673e8ebf45ac8426aabb"
+      },
+      "failureCategory": "connected-backend unit fixture lacked explicit Chromium host-permission API",
+      "correction": {
+        "productionChanged": false,
+        "scope": "test fixture supplies explicit origin grant and verifies current permission check",
+        "runId": "85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107",
+        "passed": true,
+        "total": 16,
+        "groups": {
+          "dashboard": 9,
+          "backendConsent": 7
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107/unit.json",
+          "sha256": "49e588fcacb765d4b0acc8454aeb6b4d2249f9e98c22fbed9667fd300880dade"
+        },
+        "completeCiPassed": false
+      }
+    },
+    {
+      "runId": "0b6a884d-4ac2-46a9-9678-5b27b3dab468",
+      "sourceHead": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+      "sourceDirty": false,
+      "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+      "manifestUnchanged": true,
+      "passed": false,
+      "stages": [
+        {
+          "name": "verify-before",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 384
+        },
+        {
+          "name": "typecheck",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 19783
+        },
+        {
+          "name": "test-ci",
+          "exitCode": 1,
+          "signal": null,
+          "elapsedMs": 748640
+        },
+        {
+          "name": "verify-after",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 399
+        }
+      ],
+      "groups": {
+        "unit": {
+          "passed": 723,
+          "total": 723
+        },
+        "core": {
+          "passed": 47,
+          "total": 47
+        },
+        "integration": {
+          "passed": 20,
+          "total": 20
+        },
+        "firefox": {
+          "passed": 2,
+          "total": 2
+        },
+        "ui": {
+          "passed": 66,
+          "total": 67
+        }
+      },
+      "totalTests": 859,
+      "passedTests": 858,
+      "failedTests": 1,
+      "browsersExecuted": true,
+      "collectedReports": [
+        {
+          "path": "output/qa/timing-ci-all.json",
+          "state": "collected",
+          "sha256": "636a792d3c891b90dc3af590f8a53645e852773240a5e6f8fc044b8e5c3d5e43",
+          "passed": null,
+          "cases": null
+        },
+        {
+          "path": "output/qa/unit.json",
+          "state": "collected",
+          "sha256": "bac48c087ec4efd7ff10d0c87ec4c81a40e68e7962e9dffe612dea18efd183cd",
+          "passed": true,
+          "cases": 723
+        },
+        {
+          "path": "output/acceptance/e2e-regressions.json",
+          "state": "collected",
+          "sha256": "1b8af229ef54a5e62974c9f37df133e08376e2df44d46b78c9e9f1b4292a4e73",
+          "passed": true,
+          "cases": 47
+        },
+        {
+          "path": "output/nlp/browser-build.json",
+          "state": "collected",
+          "sha256": "542e08e9c3796ed331b6a3dc150b1b1360b797f618926a160d4709fc90107938",
+          "passed": true,
+          "cases": 8
+        },
+        {
+          "path": "output/multi-app/browser.json",
+          "state": "collected",
+          "sha256": "d5b127b9e7a06d5aea716e64e87c2b17d26501ae178924af3f23b613eb289591",
+          "passed": true,
+          "cases": 8
+        },
+        {
+          "path": "output/vision/browser.json",
+          "state": "collected",
+          "sha256": "bfe7641e04fa92ad1df934fbb02537a9dcb480626768cff193ef657358e3ef7d",
+          "passed": true,
+          "cases": 3
+        },
+        {
+          "path": "output/reliability/browser.json",
+          "state": "collected",
+          "sha256": "14c2c0f5c13b5d5beda77c8691b0e8be85382134578b10e11f1dcddf90ed6bb6",
+          "passed": true,
+          "cases": 1
+        },
+        {
+          "path": "output/qa/firefox-build.json",
+          "state": "collected",
+          "sha256": "49486c4cb3fae992428860db3667b9f168339a81d998499fac2550245ffabba6",
+          "passed": true,
+          "cases": 2
+        },
+        {
+          "path": "output/qa/ui-build.json",
+          "state": "collected",
+          "sha256": "d59f96c038d412fa5f4767e64a81cac54d19fd2376c8db0f49322ad763b81bbc",
+          "passed": false,
+          "cases": 67
+        }
+      ],
+      "summary": {
+        "path": "output/qa/vision38-ci/0b6a884d-4ac2-46a9-9678-5b27b3dab468/summary.json",
+        "sha256": "49edb24102f1ca8ad9d9b46afc929d82b2eeb748e30780f4695da1aeda459d6b"
+      },
+      "failureCategory": "obsolete UI capture-test protocol: capture UUID omitted and metadata envelope not read",
+      "productionChangeRequired": false,
+      "correction": {
+        "runId": "2449aaae-6637-4b7f-8035-68fb5bf3ef9e",
+        "passed": true,
+        "cases": 1,
+        "buildDigest": "d684b89d75f745a3d5cec1ac0a985e879976d0b752e653442f814fb09d3d8ab1",
+        "productManifestUnchanged": true,
+        "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+        "report": {
+          "path": "output/qa/vision38-widget-correction/2449aaae-6637-4b7f-8035-68fb5bf3ef9e/ui-build.json",
+          "sha256": "36b90743a48382adee7cba5c3b0532f8c5110ad9d73d43144a526a52bf6c09e3"
+        },
+        "productionChanged": false,
+        "scope": "test uses capture UUID and metadata envelope, retaining whole-reply secrecy and hide/restore assertions",
+        "afterFocusedTestOnlyEdit": "removed redundant metadata-only secrecy assertion because the retained whole-reply assertion covers it",
+        "completeCiRequiredForFinalForm": true
+      }
+    }
+  ],
+  "hostedCiAttempts": [
+    {
+      "workflowRunId": 41143728361,
+      "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361",
+      "sourceHead": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+      "mergeCommit": "75b1633685565c6c54fb9540dff88cc02207a0c9",
+      "mergeParents": [
+        "fa90dd548f3b28cab1bdac630964b66a885b4d83",
+        "ddffbea767cd82f7c9f9f3d428637c0e59420268"
+      ],
+      "sourceDirty": false,
+      "passed": false,
+      "workflowChecks": [
+        {
+          "id": 124367010693,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "failure",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124367010693"
+        },
+        {
+          "id": 124364606174,
+          "name": "tests (ui)",
+          "status": "completed",
+          "conclusion": "failure",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606174"
+        },
+        {
+          "id": 124364606106,
+          "name": "tests (integration)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606106"
+        },
+        {
+          "id": 124364606089,
+          "name": "tests (core)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606089"
+        },
+        {
+          "id": 124364606074,
+          "name": "tests (unit)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606074"
+        },
+        {
+          "id": 124364606060,
+          "name": "tests (firefox)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606060"
+        },
+        {
+          "id": 124364192237,
+          "name": "containers",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364192237"
+        },
+        {
+          "id": 124364191737,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364191737"
+        }
+      ],
+      "externalChecks": [
+        {
+          "id": 124364100777,
+          "name": "Cloudflare Pages",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268"
+        }
+      ],
+      "checksSnapshot": {
+        "path": "output\\qa\\hosted-vision38-ddffbea\\checks.snapshot.json",
+        "sha256": "e76195bf4130924e70f44d9fb9e06ad5ba23acd05af1321eb13f77d99c904a97"
+      },
+      "containers": {
+        "passed": true,
+        "artifactId": 13019779172,
+        "archive": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\containers-13019779172.zip",
+          "sha256": "14f8f66292881d8daaa89a364e5045fb35dc9e9e43e0673a948cd2a307ef80c1"
+        },
+        "report": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\smoke.json",
+          "sha256": "31bba5cd181758a47cf47c9b61e57f389487dcd6b94626cc067b503f7ae0c593"
+        },
+        "sourceSha": "75b1633685565c6c54fb9540dff88cc02207a0c9",
+        "postgresGroups": 58,
+        "stackChecks": 28,
+        "allChecksPassed": true,
+        "actualPrivateTelemetry": {
+          "name": "actual-correlated-private-safe-telemetry",
+          "passed": true,
+          "actualFailedProvider": true,
+          "actualRetriedWorker": true,
+          "attempts": 2,
+          "inspectedRecords": 49,
+          "privacySentinelAbsent": true,
+          "collectorSha256": "c58181cb28997591cd6286b23f9db1c099dc3fd4e460292c517fa550cf2cf7d9",
+          "metricsSha256": "f9b31b2ddfd28cf7a038b9e2f4db9d457e35fe523b3db864fbf8547412518e51",
+          "noRawRecordsRetained": true
+        },
+        "cleanup": "owned project and volumes removed"
+      },
+      "ui": {
+        "passed": false,
+        "passedCases": 66,
+        "totalCases": 67,
+        "artifactId": 13019379979,
+        "archive": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\ui-13019379979.zip",
+          "sha256": "68cdd07c5191e436a7c11538120172c5b7a1c0ab9a821080243070504d0d0d39"
+        },
+        "report": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\ui-build.json",
+          "sha256": "41505c95df23514b4243312bcecae88e0a29d39c35109ed936cc4bde1d8723b6"
+        },
+        "buildDigest": "4392af585352b2bede01ba6ef0ab23ce441b79d1bf1a7ab9e60c08e6abadcb44",
+        "caseId": "da119938d3268322a91b-6c3dc9c2395a6d776e23",
+        "case": "widget uses fresh frame binding, blocks secrets, moves and resizes",
+        "path": "tests/browser/extension/ui/extension.spec.ts",
+        "line": 358,
+        "error": "TypeError: Cannot read properties of undefined (reading length)",
+        "failureCategory": "obsolete UI capture-test protocol: capture UUID omitted and metadata envelope not read",
+        "productionChangeRequired": false,
+        "correctionEvidenceRef": "localCiAttempts[1].correction"
+      }
+    }
+  ],
+  "mergeGateEvidence": {
+    "url": "https://github.com/Sammieblz/tholi/pull/77",
+    "required": [
+      "complete local CI on immutable source",
+      "all final-head hosted workflow gates",
+      "final review"
+    ],
+    "allMustPassBeforeMerge": true,
+    "releaseCertified": false,
+    "finalResultsDestination": "PR77 body and issue acceptance record after immutable-source checks"
+  }
+}

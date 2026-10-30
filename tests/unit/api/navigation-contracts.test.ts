@@ -7,6 +7,10 @@ import {
 import type { PageSnapshot } from "../../../packages/page-model";
 import type { BrowserPerception } from "../../../packages/page-discovery/perception";
 import {
+  captureMetadataSchema,
+  preparedNavigationPixelsSchema,
+} from "../../../packages/vision/contracts";
+import {
   NAVIGATION_CONTRACT_VERSION,
   NAVIGATION_LIMITS,
   NAVIGATION_PROTOCOL,
@@ -15,6 +19,10 @@ import {
   navigationContextSchema,
   navigationDecisionSchema,
   navigationObservationSchema,
+  navigationImageMatchesViewport,
+  navigationViewportSchema,
+  navigationDomViewportSchema,
+  navigationViewportExtent,
   nativeBrowserReferenceSchema,
   navigationProjectionBytes,
   type NavigationDecision,
@@ -24,6 +32,65 @@ import {
 
 const png = readFileSync("tests/fixtures/vision/light.png").toString("base64");
 afterEach(() => vi.unstubAllGlobals());
+
+test("bounded integer CSSOM rounding retains raw viewport metrics and the entire visible mask band", () => {
+  const viewport = {
+    width: 955,
+    height: 536,
+    scrollX: 0,
+    scrollY: 0,
+    devicePixelRatio: 0.800000011920929,
+    visualViewport: {
+      offsetLeft: 0,
+      offsetTop: 0,
+      pageLeft: 0,
+      pageTop: 0,
+      width: 936.25,
+      height: 536.25,
+      scale: 1,
+    },
+  };
+  expect(navigationDomViewportSchema.parse(viewport)).toEqual(viewport);
+  expect(
+    navigationViewportSchema.parse({ ...viewport, browserZoom: 0.8 }),
+  ).toEqual({ ...viewport, browserZoom: 0.8 });
+  expect(navigationViewportExtent(viewport)).toEqual({
+    width: 955,
+    height: 536.25,
+  });
+  const metadata = {
+    version: 1,
+    captureId: "10000000-0000-4000-8000-000000000001",
+    scanId: "10000000-0000-4000-8000-000000000002",
+    observationRevision: 3,
+    viewportRevision: 4,
+    at: 100,
+    viewport,
+    masks: [{ x: 10, y: 536.05, width: 1, height: 0.15 }],
+    masking: { version: 1, complete: true },
+  };
+  expect(captureMetadataSchema.parse(metadata)).toEqual(metadata);
+  expect(
+    captureMetadataSchema.safeParse({
+      ...metadata,
+      masks: [{ x: 10, y: 536.05, width: 1, height: 0.3 }],
+    }).success,
+  ).toBe(false);
+  for (const [layout, visual] of [
+    [536, 536.5],
+    [536, 536.500001],
+    [536.1, 536.25],
+  ]) {
+    const changed = {
+      ...viewport,
+      height: layout,
+      visualViewport: { ...viewport.visualViewport, height: visual },
+    };
+    expect(navigationDomViewportSchema.safeParse(changed).success).toBe(
+      layout === 536 && visual === 536.5,
+    );
+  }
+});
 
 function producerFixture() {
   const observed = observation();
@@ -588,6 +655,75 @@ function capture(observed: NavigationObservation) {
   ];
   return observed.images[0];
 }
+
+test("native layout capture provenance preserves the original bitmap and rejects stretched gutter coordinates", () => {
+  const oldProfile = observation();
+  capture(oldProfile);
+  expect(navigationObservationSchema.safeParse(oldProfile).success).toBe(true);
+  const layout = structuredClone(oldProfile);
+  layout.frames[0].viewport.width = 327.5;
+  const source = layout.images[0].source;
+  source.bitmapWidth = 655;
+  source.captureCssBounds = { x: 0, y: 0, width: 327.5, height: 90 };
+  // The output remains the 640-pixel visual crop of a 655-pixel original.
+  expect(navigationObservationSchema.safeParse(layout).success).toBe(true);
+  const { stamp, native, capturedAtMs, ...pixels } = layout.images[0];
+  const prepared = {
+    ...pixels,
+    scanId: pixels.captureId,
+    observationRevision: 3,
+    viewportRevision: 4,
+  };
+  expect(preparedNavigationPixelsSchema.parse(prepared)).toEqual(prepared);
+  expect(
+    navigationImageMatchesViewport(prepared, layout.frames[0].viewport),
+  ).toBe(true);
+  expect(
+    preparedNavigationPixelsSchema.safeParse({ ...prepared, stamp }).success,
+  ).toBe(false);
+  expect(
+    preparedNavigationPixelsSchema.safeParse({ ...prepared, width: 639 })
+      .success,
+  ).toBe(false);
+  expect(
+    preparedNavigationPixelsSchema.safeParse({ ...prepared, image: "AAAA" })
+      .success,
+  ).toBe(false);
+  const invalid: ((value: NavigationObservation) => void)[] = [
+    (value) => {
+      value.images[0].source.captureCssBounds = undefined;
+    },
+    (value) => {
+      value.images[0].source.captureCssBounds!.x = 1;
+    },
+    (value) => {
+      value.images[0].source.captureCssBounds!.y = 1;
+    },
+    (value) => {
+      value.images[0].source.captureCssBounds!.width = 320;
+    },
+    (value) => {
+      value.images[0].source.captureCssBounds!.height = 89;
+    },
+    (value) => {
+      value.images[0].source.scaleX = 655 / 320;
+    },
+    (value) => {
+      value.images[0].source.pixelBounds.x = 10;
+    },
+    (value) => {
+      value.images[0].source.cssBounds.width = 327.5;
+    },
+  ];
+  for (const change of invalid) {
+    const value = structuredClone(layout);
+    change(value);
+    expect(navigationObservationSchema.safeParse(value).success).toBe(false);
+    expect(
+      navigationImageMatchesViewport(value.images[0], value.frames[0].viewport),
+    ).toBe(false);
+  }
+});
 const kinds = [
   "guide",
   "request-observation",

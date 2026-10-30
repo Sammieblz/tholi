@@ -14,7 +14,17 @@ type Area = Omit<browser.Storage.StorageArea, "get"> & {
     keys?: string | string[] | Record<string, unknown> | null,
   ): Promise<Record<string, any>>;
 };
-type WebExtensionApi = Omit<typeof browser, "runtime" | "tabs" | "storage"> & {
+type WebExtensionApi = Omit<
+  typeof browser,
+  "runtime" | "tabs" | "storage" | "windows"
+> & {
+  windows: typeof browser.windows & {
+    // Chrome exposes this event; Firefox also rechecks content resize/viewport
+    // evidence rather than pretending an unavailable native event exists.
+    onBoundsChanged?: {
+      addListener(listener: (window: browser.Windows.Window) => void): void;
+    };
+  };
   runtime: Omit<typeof browser.runtime, "sendMessage" | "onMessage"> & {
     sendMessage<T = any>(message: unknown): Promise<T>;
     onMessage: MessageEvent;
@@ -47,4 +57,24 @@ export function browserTarget(): "chromium" | "firefox" {
 /** Chrome-only APIs stay in platform adapters, never in the shared engine. */
 export function chromiumApi() {
   return globalThis.chrome;
+}
+/** Native shadow access is used only for complete pixel masking, never discovery. */
+export function privacyShadowRoot(element: HTMLElement): ShadowRoot | null {
+  let root: ShadowRoot | null | undefined;
+  if (browserTarget() === "chromium") {
+    const getRoot = chromiumApi()?.dom?.openOrClosedShadowRoot;
+    if (typeof getRoot !== "function")
+      throw Error("Native shadow privacy access is unavailable.");
+    root = getRoot(element);
+  } else {
+    const host = element as HTMLElement & {
+      readonly openOrClosedShadowRoot?: ShadowRoot | null;
+    };
+    if (!("openOrClosedShadowRoot" in host))
+      throw Error("Native shadow privacy access is unavailable.");
+    root = host.openOrClosedShadowRoot;
+  }
+  if (root !== null && !(root instanceof ShadowRoot))
+    throw Error("Native shadow privacy evidence is unavailable.");
+  return root;
 }

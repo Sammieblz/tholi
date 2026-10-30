@@ -213,6 +213,14 @@ export function registerMessages(context: Context) {
     }
 
     if (raw?.target === "offscreen") return;
+    if (
+      ["SET_BACKEND", "SET_VISION"].includes(raw?.type) &&
+      sender.id === api.runtime.id &&
+      isPanel(sender) &&
+      messageSchema.safeParse(raw).success
+    )
+      // Fence capture immediately, before settings writes enter the journey queue.
+      context.cancelVision();
     if (raw?.type === "FRAME_VISIBILITY") {
       void context
         .enqueue(() => frameVisibilityMessage(raw, sender, context.session))

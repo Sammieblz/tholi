@@ -1,8 +1,40 @@
 import { expect } from "@playwright/test";
 import firefox from "selenium-webdriver/firefox.js";
-import { By, until } from "selenium-webdriver";
+import { By, until, type WebDriver } from "selenium-webdriver";
 import type { attachWebDriverExtension } from "./webdriver-extension";
 type App = Awaited<ReturnType<typeof attachWebDriverExtension>>;
+/** Exercise the real Firefox toolbar gesture in a disposable test profile. */
+export async function activateFirefoxToolbar(driver: WebDriver) {
+  const gecko = driver as firefox.Driver;
+  await gecko.setContext(firefox.Context.CHROME);
+  try {
+    await gecko.executeScript(() => {
+      const scope = globalThis as any;
+      let CustomizableUI = scope.CustomizableUI;
+      if (!CustomizableUI) {
+        try {
+          CustomizableUI = scope.ChromeUtils.importESModule(
+            "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
+          ).CustomizableUI;
+        } catch {
+          CustomizableUI = scope.ChromeUtils.importESModule(
+            "resource:///modules/CustomizableUI.sys.mjs",
+          ).CustomizableUI;
+        }
+      }
+      CustomizableUI.addWidgetToArea(
+        "tholi_ilunonsen_com-browser-action",
+        "nav-bar",
+      );
+    });
+    const toolbar = await gecko.findElement(
+      By.id("tholi_ilunonsen_com-browser-action"),
+    );
+    await gecko.actions().move({ origin: toolbar }).click().perform();
+  } finally {
+    await gecko.setContext(firefox.Context.CONTENT);
+  }
+}
 /** Native surface contract shared by the four installed browser checks. */
 export async function verifyWebDriverSurfaces(
   app: App,
@@ -135,32 +167,7 @@ export async function verifyWebDriverSurfaces(
     expect(
       await app.site(() => !!document.getElementById("tholi-widget")),
     ).toBe(true);
-    const gecko = app.driver as firefox.Driver;
-    await gecko.setContext(firefox.Context.CHROME);
-    await gecko.executeScript(() => {
-      const scope = globalThis as any;
-      let CustomizableUI = scope.CustomizableUI;
-      if (!CustomizableUI) {
-        try {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        } catch {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "resource:///modules/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        }
-      }
-      CustomizableUI.addWidgetToArea(
-        "tholi_ilunonsen_com-browser-action",
-        "nav-bar",
-      );
-    });
-    const toolbar = await gecko.findElement(
-      By.id("tholi_ilunonsen_com-browser-action"),
-    );
-    await gecko.actions().move({ origin: toolbar }).click().perform();
-    await gecko.setContext(firefox.Context.CONTENT);
+    await activateFirefoxToolbar(app.driver);
   }
   try {
     await app.waitFor(

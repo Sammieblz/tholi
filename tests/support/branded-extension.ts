@@ -10,10 +10,12 @@ import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
+import { permissionVariant } from "./permission-variant";
 
 export async function openBrandedExtension(
   name: "chrome" | "edge" | "brave",
   url: string,
+  fixturePermissions: string[] = [],
 ) {
   assertFixtureUrl(url);
   const options = name === "edge" ? new edge.Options() : new chrome.Options();
@@ -72,7 +74,7 @@ export async function openBrandedExtension(
       driver as typeof driver & {
         installWebExtension(path: string): Promise<{ id: string }>;
       }
-    ).installWebExtension(resolve("dist/extension"));
+    ).installWebExtension(await permissionVariant(fixturePermissions));
     await driver.get(url);
     const website = await driver.getWindowHandle();
     await driver.switchTo().newWindow("tab");

@@ -81,7 +81,7 @@ let lastCapture = 0;
 let lastVisionKey = "";
 
 type ContextForcreateVisionService = Parameters<typeof createVisionService>[0];
-const { cancelVision, attemptVision } = createVisionService({
+const { cancelVision, attemptVision, captureWindowId } = createVisionService({
   get visionJob() {
     return visionJob;
   },
@@ -105,9 +105,6 @@ const { cancelVision, attemptVision } = createVisionService({
   },
   set goalGeneration(value: ContextForcreateVisionService["goalGeneration"]) {
     goalGeneration = value;
-  },
-  get activeTab() {
-    return activeTab;
   },
   get originOf() {
     return originOf;
@@ -458,6 +455,9 @@ registerNavigationEvents({
   },
   get cancelVision() {
     return cancelVision;
+  },
+  get captureWindowId() {
+    return captureWindowId;
   },
 });
 

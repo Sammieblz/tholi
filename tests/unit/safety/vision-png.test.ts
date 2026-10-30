@@ -4,8 +4,16 @@ import { afterEach, expect, it, vi } from "vitest";
 import { inspectPngData } from "../../../packages/vision/png";
 import {
   validatePng,
+  VISION_CAPTURE_LIMITS,
+  type CaptureMetadata,
   type RecognitionInput,
 } from "../../../packages/vision/contracts";
+import {
+  compareCaptureRegions,
+  prepareNavigationCapture,
+  prepareRecognitionCapture,
+  type PixelCaptureRequest,
+} from "../../../packages/vision/processing";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -54,6 +62,325 @@ const iend = chunk("IEND");
 const png = (...chunks: Uint8Array[]) => Buffer.concat([signature, ...chunks]);
 const inspect = (bytes: Uint8Array, options = limits) =>
   inspectPngData(Buffer.from(bytes).toString("base64"), options);
+
+function capture(width = 10, height = 8): PixelCaptureRequest {
+  const metadata: CaptureMetadata = {
+    version: 1,
+    captureId: "10000000-0000-4000-8000-000000000001",
+    scanId: "10000000-0000-4000-8000-000000000002",
+    observationRevision: 3,
+    viewportRevision: 4,
+    at: 100,
+    viewport: {
+      width,
+      height,
+      scrollX: 0,
+      scrollY: 0,
+      devicePixelRatio: 2,
+      visualViewport: {
+        offsetLeft: 0,
+        offsetTop: 0,
+        pageLeft: 0,
+        pageTop: 0,
+        width,
+        height,
+        scale: 1,
+      },
+    },
+    masks: [{ x: 4.2, y: 3.1, width: 1.2, height: 0.8 }],
+    masking: { version: 1, complete: true },
+  };
+  return {
+    image: `data:image/png;base64,${png(header({ width: width * 2, height: height * 2 }), idat, iend).toString("base64")}`,
+    metadata,
+    captureCssBounds: { x: 0, y: 0, width, height },
+    browserZoom: 1,
+  };
+}
+function captureStamp(request: PixelCaptureRequest) {
+  return {
+    requestId: request.metadata.scanId,
+    journeyId: request.metadata.scanId,
+    contextRevision: 1,
+    documentId: "native:document",
+    observationRevision: request.metadata.observationRevision,
+    viewportRevision: request.metadata.viewportRevision,
+    captureId: request.metadata.captureId,
+  };
+}
+
+it("rejects untrusted or over-budget raw captures before bitmap allocation or remote fetching", async () => {
+  const decode = vi.fn(),
+    fetch = vi.fn();
+  vi.stubGlobal("createImageBitmap", decode);
+  vi.stubGlobal("fetch", fetch);
+  const valid = capture();
+  const cases = [
+    { ...valid, image: "https://private.example/capture.png" },
+    { ...valid, image: "data:image/png;base64,AAAA" },
+    {
+      ...valid,
+      image: `data:image/png;base64,${"A".repeat(Math.ceil(VISION_CAPTURE_LIMITS.maxSourceBytes / 3) * 4 + 4)}`,
+    },
+    {
+      ...valid,
+      image: `data:image/png;base64,${png(header({ width: 4001, height: 4000 }), idat, iend).toString("base64")}`,
+    },
+    {
+      ...valid,
+      image: `data:image/png;base64,${png(header({ width: 24, height: 16 }), idat, iend).toString("base64")}`,
+    },
+    {
+      ...valid,
+      metadata: { ...valid.metadata, masking: { version: 1, complete: false } },
+    },
+    { ...valid, captureCssBounds: { ...valid.captureCssBounds, width: 9 } },
+  ];
+  for (const request of cases)
+    await expect(
+      prepareNavigationCapture(
+        { ...request, prepareNavigation: {} } as Parameters<
+          typeof prepareNavigationCapture
+        >[0],
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow();
+  expect(decode).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+function pixelCanvasHarness(width = 20, height = 16, mask = [4, 2, 11, 10]) {
+  const events: string[] = [],
+    canvases: { width: number; height: number }[] = [];
+  const close = vi.fn(() => events.push("bitmap-close"));
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => ({ width, height, close })),
+  );
+  class Canvas {
+    constructor(
+      public width: number,
+      public height: number,
+    ) {
+      canvases.push(this);
+    }
+    getContext() {
+      const canvas = this;
+      return {
+        globalAlpha: 0,
+        globalCompositeOperation: "",
+        fillStyle: "",
+        drawImage(...args: unknown[]) {
+          if (args.length === 3) events.push("native-draw");
+          else {
+            expect(events.at(-1)).toBe("opaque-mask");
+            events.push("transform");
+          }
+        },
+        fillRect(
+          this: {
+            globalAlpha: number;
+            globalCompositeOperation: string;
+            fillStyle: string;
+          },
+          ...bounds: number[]
+        ) {
+          expect(this).toMatchObject({
+            globalAlpha: 1,
+            globalCompositeOperation: "source-over",
+            fillStyle: "#888888",
+          });
+          expect(bounds).toEqual(mask);
+          events.push("opaque-mask");
+        },
+        getImageData() {
+          events.push("read-masked");
+          return {
+            data: new Uint8ClampedArray(canvas.width * canvas.height * 4),
+          };
+        },
+        putImageData() {
+          events.push("grayscale");
+        },
+      };
+    }
+    async convertToBlob() {
+      events.push("encode");
+      return new Blob([
+        new Uint8Array(
+          png(header({ width: this.width, height: this.height }), idat, iend),
+        ).buffer,
+      ]);
+    }
+  }
+  vi.stubGlobal("OffscreenCanvas", Canvas);
+  return { events, canvases, close };
+}
+
+it("orders opaque native masking before OCR, color crops and both region-comparison transforms, releasing native surfaces", async () => {
+  const { events, canvases, close } = pixelCanvasHarness();
+  const request = capture(),
+    signal = new AbortController().signal;
+  await prepareRecognitionCapture(
+    { ...request, stamp: captureStamp(request) },
+    signal,
+  );
+  expect(events).toEqual([
+    "native-draw",
+    "bitmap-close",
+    "opaque-mask",
+    "transform",
+    "read-masked",
+    "grayscale",
+    "encode",
+  ]);
+  events.length = 0;
+  await prepareNavigationCapture(
+    {
+      ...request,
+      prepareNavigation: { crop: { x: 3, y: 2, width: 4, height: 4 } },
+    },
+    signal,
+  );
+  expect(events).toEqual([
+    "native-draw",
+    "bitmap-close",
+    "opaque-mask",
+    "transform",
+    "encode",
+  ]);
+  events.length = 0;
+  expect(
+    await compareCaptureRegions(
+      {
+        ...request,
+        referenceImage: request.image,
+        referenceMetadata: request.metadata,
+        referenceCaptureCssBounds: request.captureCssBounds,
+        referenceBrowserZoom: request.browserZoom,
+        compareRegion: { x: 3, y: 2, width: 4, height: 4 },
+      },
+      signal,
+    ),
+  ).toEqual({ matches: true });
+  expect(events).toEqual([
+    "native-draw",
+    "bitmap-close",
+    "opaque-mask",
+    "transform",
+    "read-masked",
+    "native-draw",
+    "bitmap-close",
+    "opaque-mask",
+    "transform",
+    "read-masked",
+  ]);
+  expect(close).toHaveBeenCalledTimes(4);
+  expect(
+    canvases.every((canvas) => canvas.width === 0 && canvas.height === 0),
+  ).toBe(true);
+});
+
+it("retains measured fractional viewport geometry and masks its bottom band without inventing crop pixels", async () => {
+  const { canvases } = pixelCanvasHarness(764, 429, [6, 427, 5, 2]);
+  const request = capture(955, 536),
+    signal = new AbortController().signal;
+  request.browserZoom = 0.8;
+  request.image = `data:image/png;base64,${png(header({ width: 764, height: 429 }), idat, iend).toString("base64")}`;
+  request.metadata.viewport.devicePixelRatio = 0.800000011920929;
+  request.metadata.viewport.visualViewport.width = 936.25;
+  request.metadata.viewport.visualViewport.height = 536.25;
+  request.metadata.masks = [{ x: 10, y: 536.05, width: 1, height: 0.15 }];
+  request.metadata.focusRegions = [{ x: 0, y: 536, width: 10, height: 0.25 }];
+  const original = structuredClone(request.metadata);
+  const prepared = await prepareNavigationCapture(
+    { ...request, prepareNavigation: {} },
+    signal,
+  );
+  expect(prepared).toMatchObject({
+    width: 749,
+    height: 429,
+    source: {
+      bitmapWidth: 764,
+      bitmapHeight: 429,
+      captureCssBounds: { x: 0, y: 0, width: 955, height: 536 },
+      cssBounds: { x: 0, y: 0, width: 936.25, height: 536.25 },
+      pixelBounds: { x: 0, y: 0, width: 749, height: 429 },
+      scaleX: 764 / 955,
+      scaleY: 429 / 536,
+    },
+  });
+  const ocr = await prepareRecognitionCapture(
+    { ...request, stamp: captureStamp(request) },
+    signal,
+  );
+  expect(ocr).toMatchObject({
+    width: 764,
+    height: 429,
+    cssWidth: 955,
+    cssHeight: 536,
+    focusRegions: [],
+  });
+  await expect(
+    prepareNavigationCapture(
+      {
+        ...request,
+        prepareNavigation: {
+          crop: { x: 10, y: 536.05, width: 1, height: 0.15 },
+        },
+      },
+      signal,
+    ),
+  ).rejects.toThrow("no complete visible pixels");
+  expect(request.metadata).toEqual(original);
+  expect(
+    canvases.every((canvas) => canvas.width === 0 && canvas.height === 0),
+  ).toBe(true);
+
+  // A synthetic integer-roundup counterpart exercises the opposite precision
+  // direction. It is a unit contract, not an additional native measurement.
+  pixelCanvasHarness(764, 429, [6, 426, 5, 3]);
+  const roundedUp = structuredClone(request);
+  roundedUp.metadata.viewport.height = 537;
+  roundedUp.metadata.viewport.visualViewport.height = 536.5;
+  roundedUp.captureCssBounds.height = 537;
+  expect(
+    (
+      await prepareNavigationCapture(
+        { ...roundedUp, prepareNavigation: {} },
+        signal,
+      )
+    ).source,
+  ).toMatchObject({
+    captureCssBounds: { height: 537 },
+    cssBounds: { height: 536.5 },
+    bitmapHeight: 429,
+    pixelBounds: { height: 429 },
+    scaleY: 429 / 537,
+  });
+});
+
+it("closes a decoded native bitmap when cancellation arrives during decoding", async () => {
+  const controller = new AbortController(),
+    close = vi.fn(),
+    canvas = vi.fn();
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => {
+      controller.abort();
+      return { width: 20, height: 16, close };
+    }),
+  );
+  vi.stubGlobal("OffscreenCanvas", canvas);
+  await expect(
+    prepareNavigationCapture(
+      { ...capture(), prepareNavigation: {} },
+      controller.signal,
+    ),
+  ).rejects.toThrow();
+  expect(close).toHaveBeenCalledOnce();
+  expect(canvas).not.toHaveBeenCalled();
+});
 
 it("admits existing static PNG fixtures using browser primitives without Buffer", async () => {
   const fixtures = await Promise.all(

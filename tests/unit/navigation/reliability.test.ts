@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { expect, test, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   authenticationStage,
   discoverScreen,
@@ -50,43 +51,376 @@ test("fresh target scrolling centers the target and yields to user scrolling", (
   }
 });
 
-test("capture masks editable fields and frames even when frame DOM access is granted", async () => {
-  document.body.innerHTML =
-    '<input><iframe src="https://example.com"></iframe>';
-  for (const element of document.querySelectorAll("input,iframe"))
-    element.getBoundingClientRect = () => ({
-      x: 10,
-      y: 20,
-      width: 100,
-      height: 30,
-      right: 110,
-      bottom: 50,
-      top: 20,
-      left: 10,
-      toJSON() {},
-    });
-  // Capture masking is independent of the document-lifetime mutation observer.
-  vi.stubGlobal(
-    "MutationObserver",
-    class {
-      observe() {}
-      disconnect() {}
+const captureIdentity = {
+  captureId: "00000000-0000-4000-8000-000000000038",
+  scanId: "00000000-0000-4000-8000-000000000037",
+  observationRevision: 4,
+};
+async function withCaptureFixture(
+  html: string,
+  run: (fixture: {
+    visual: typeof import("../../../apps/extension/src/content/visual-guidance");
+    rectangles: WeakMap<Node, DOMRect[]>;
+    roots: WeakMap<HTMLElement, ShadowRoot>;
+    animations: WeakMap<Element, Animation[]>;
+  }) => Promise<void>,
+) {
+  document.body.innerHTML = html;
+  const rectangles = new WeakMap<Node, DOMRect[]>(),
+    roots = new WeakMap<HTMLElement, ShadowRoot>(),
+    animations = new WeakMap<Element, Animation[]>();
+  const viewport = Object.assign(new EventTarget(), {
+    offsetLeft: 0,
+    offsetTop: 0,
+    pageLeft: 0,
+    pageTop: 0,
+    width: innerWidth,
+    height: innerHeight,
+    scale: 1,
+  });
+  const animationDescriptor = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "getAnimations",
+    ),
+    rangeDescriptor = Object.getOwnPropertyDescriptor(
+      Range.prototype,
+      "getClientRects",
+    );
+  vi.stubGlobal("visualViewport", viewport);
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: () => "chrome-extension://test/" },
+    dom: {
+      openOrClosedShadowRoot: (host: HTMLElement) =>
+        roots.get(host) || host.shadowRoot,
     },
+  });
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
+    window.setTimeout(() => callback(performance.now()), 0),
   );
+  vi.stubGlobal("cancelAnimationFrame", (handle: number) =>
+    window.clearTimeout(handle),
+  );
+  vi.spyOn(Element.prototype, "getClientRects").mockImplementation(function (
+    this: Element,
+  ) {
+    return (rectangles.get(this) || []) as unknown as DOMRectList;
+  });
+  Object.defineProperty(Element.prototype, "getAnimations", {
+    configurable: true,
+    value: function (this: Element) {
+      return animations.get(this) || [];
+    },
+  });
+  Object.defineProperty(Range.prototype, "getClientRects", {
+    configurable: true,
+    value: function (this: Range) {
+      return rectangles.get(this.startContainer) || [];
+    },
+  });
+  const visual =
+    await import("../../../apps/extension/src/content/visual-guidance");
+  const stop = visual.onVisualInvalidation(() => {});
   try {
-    const { captureMetadata, onVisualInvalidation } =
-      await import("../../../apps/extension/src/content/visual-guidance");
-    expect(captureMetadata().masks).toHaveLength(2);
-    const invalidated = vi.fn();
-    const stop = onVisualInvalidation(invalidated);
-    window.dispatchEvent(new Event("resize"));
-    expect(invalidated).toHaveBeenCalledTimes(1);
-    stop();
-    window.dispatchEvent(new Event("resize"));
-    expect(invalidated).toHaveBeenCalledTimes(1);
+    await run({ visual, rectangles, roots, animations });
   } finally {
+    stop();
+    if (animationDescriptor)
+      Object.defineProperty(
+        Element.prototype,
+        "getAnimations",
+        animationDescriptor,
+      );
+    else delete (Element.prototype as Partial<Element>).getAnimations;
+    if (rangeDescriptor)
+      Object.defineProperty(Range.prototype, "getClientRects", rangeDescriptor);
+    else delete (Range.prototype as Partial<Range>).getClientRects;
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   }
+}
+
+test("complete capture masks all fields, frames and inherited closed-root text without reading values", async () => {
+  await withCaptureFixture(
+    '<input type="search"><select></select><textarea></textarea><div role="combobox"></div><iframe></iframe><div data-sensitive="true"><div id="host"></div></div>',
+    async ({ visual, rectangles, roots }) => {
+      const fields = [
+        ...document.querySelectorAll(
+          "input,select,textarea,[role=combobox],iframe",
+        ),
+      ];
+      fields.forEach((field, index) =>
+        rectangles.set(field, [new DOMRect(index * 40, 10, 30, 20)]),
+      );
+      const field = document.querySelector("input")!;
+      const value = vi.spyOn(field, "value", "get").mockImplementation(() => {
+        throw Error("Private value read");
+      });
+      const host = document.querySelector<HTMLElement>("#host")!,
+        root = host.attachShadow({ mode: "closed" });
+      roots.set(host, root);
+      const text = document.createTextNode("SYNTHETIC_PRIVATE_GLYPHS");
+      root.append(text);
+      const textRead = vi
+        .spyOn(text, "textContent", "get")
+        .mockImplementation(() => {
+          throw Error("Private text read");
+        });
+      rectangles.set(text, [new DOMRect(200, 30, 80, 16)]);
+      const metadata = await visual.captureMetadata(
+        captureIdentity,
+        () => true,
+      );
+      expect(metadata.masks).toHaveLength(6);
+      expect(metadata.masks).toContainEqual({
+        x: 200,
+        y: 30,
+        width: 80,
+        height: 16,
+      });
+      expect(JSON.stringify(metadata)).not.toContain("SYNTHETIC_PRIVATE");
+      expect(value).not.toHaveBeenCalled();
+      expect(textRead).not.toHaveBeenCalled();
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(true);
+      root.append(document.createElement("input"));
+      await Promise.resolve();
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(false);
+    },
+  );
+});
+
+test("capture inherits private shadow scope through assigned nodes without masking public siblings", async () => {
+  await withCaptureFixture(
+    '<div id="host">SYNTHETIC_PRIVATE_SLOT<span slot="public">Public sibling</span><span slot="private">SYNTHETIC_PRIVATE_NAMED</span><span slot="unmatched">Public unassigned</span></div>',
+    async ({ visual, rectangles, roots }) => {
+      const host = document.querySelector<HTMLElement>("#host")!,
+        root = host.attachShadow({ mode: "closed" });
+      root.innerHTML =
+        '<div data-sensitive="true" style="width:0;height:0;overflow:visible"><slot></slot><slot name="private"></slot></div><slot name="public"></slot>';
+      roots.set(host, root);
+      const direct = host.firstChild!,
+        named = host.querySelector('[slot="private"]')!,
+        publicSibling = host.querySelector('[slot="public"]')!,
+        unassigned = host.querySelector('[slot="unmatched"]')!;
+      const readers = [direct, named.firstChild!].map((text) =>
+        vi.spyOn(text, "textContent", "get").mockImplementation(() => {
+          throw Error("Private slotted text read");
+        }),
+      );
+      rectangles.set(direct, [new DOMRect(10, 10, 40, 10)]);
+      rectangles.set(named, [new DOMRect(80, 10, 40, 10)]);
+      rectangles.set(named.firstChild!, [new DOMRect(80, 10, 40, 10)]);
+      rectangles.set(publicSibling, [new DOMRect(160, 10, 40, 10)]);
+      rectangles.set(publicSibling.firstChild!, [new DOMRect(160, 10, 40, 10)]);
+      rectangles.set(unassigned, [new DOMRect(240, 10, 40, 10)]);
+      rectangles.set(unassigned.firstChild!, [new DOMRect(240, 10, 40, 10)]);
+      // Finish initial distribution before the capture lease observes roots.
+      await Promise.resolve();
+      const metadata = await visual.captureMetadata(
+        captureIdentity,
+        () => true,
+      );
+      expect(metadata.masks).toEqual([
+        { x: 10, y: 10, width: 40, height: 10 },
+        { x: 80, y: 10, width: 40, height: 10 },
+      ]);
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(true);
+      for (const reader of readers) expect(reader).not.toHaveBeenCalled();
+      expect(JSON.stringify(metadata)).not.toContain("SYNTHETIC_PRIVATE");
+      expect(host.shadowRoot).toBeNull();
+      const revision = visual.viewportRevision();
+      root
+        .querySelector("slot")!
+        .dispatchEvent(new Event("slotchange", { bubbles: true }));
+      expect(visual.viewportRevision()).toBeGreaterThan(revision);
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(false);
+    },
+  );
+});
+
+test("capture preserves fractional visible-edge private text without rounding viewport evidence", async () => {
+  await withCaptureFixture(
+    '<div data-sensitive="true" style="width:0;height:0;overflow:visible">SYNTHETIC_PRIVATE_EDGE</div>',
+    async ({ visual, rectangles }) => {
+      vi.stubGlobal("innerWidth", 955);
+      vi.stubGlobal("innerHeight", 536);
+      vi.stubGlobal("devicePixelRatio", 0.800000011920929);
+      vi.stubGlobal(
+        "visualViewport",
+        Object.assign(new EventTarget(), {
+          offsetLeft: 0,
+          offsetTop: 0,
+          pageLeft: 0,
+          pageTop: 0,
+          width: 936.25,
+          height: 536.25,
+          scale: 1,
+        }),
+      );
+      const text = document.querySelector("[data-sensitive]")!.firstChild!;
+      const read = vi
+        .spyOn(text, "textContent", "get")
+        .mockImplementation(() => {
+          throw Error("Private text read");
+        });
+      rectangles.set(text, [new DOMRect(10, 536.05, 40, 0.15)]);
+      const metadata = await visual.captureMetadata(
+        captureIdentity,
+        () => true,
+      );
+      expect(metadata.viewport).toMatchObject({
+        width: 955,
+        height: 536,
+        devicePixelRatio: 0.800000011920929,
+        visualViewport: { width: 936.25, height: 536.25 },
+      });
+      expect(metadata.masks).toHaveLength(1);
+      expect(metadata.masks[0]).toMatchObject({ x: 10, y: 536.05, width: 40 });
+      expect(metadata.masks[0].height).toBeCloseTo(0.15);
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(true);
+      expect(read).not.toHaveBeenCalled();
+      expect(JSON.stringify(metadata)).not.toContain("SYNTHETIC_PRIVATE_EDGE");
+    },
+  );
+});
+
+test("capture suppression restores exact style priorities, retains proof and rejects foreign tokens", async () => {
+  await withCaptureFixture(
+    '<div data-tholi-ui style="opacity: .7 !important; visibility: visible; transition-duration: 3s !important; animation-duration: 2s !important">UI</div>',
+    async ({ visual }) => {
+      const overlay = document.querySelector<HTMLElement>("[data-tholi-ui]")!,
+        original = overlay.style.cssText;
+      await visual.captureMetadata(captureIdentity, () => true);
+      overlay.style.outlineWidth = "2px";
+      const expected = document.createElement("div");
+      expected.style.cssText = original;
+      expected.style.outlineWidth = "2px";
+      expect(overlay.style.getPropertyValue("opacity")).toBe("0");
+      visual.restoreOverlay("00000000-0000-4000-8000-000000000099");
+      expect(overlay.style.getPropertyValue("opacity")).toBe("0");
+      visual.restoreOverlay(captureIdentity.captureId);
+      expect(overlay.style.cssText).toBe(expected.style.cssText);
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(true);
+      document.body.append(
+        Object.assign(document.createElement("div"), {
+          id: "navigator-visual-suggestion",
+        }),
+      );
+      await Promise.resolve();
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(false);
+      expect(overlay.style.cssText).toBe(expected.style.cssText);
+    },
+  );
+});
+
+test("capture proof rejects geometric changes, animation, painted overflow and excessive masks", async () => {
+  await withCaptureFixture(
+    '<input><div id="moving"></div>',
+    async ({ visual, rectangles, animations }) => {
+      const input = document.querySelector("input")!,
+        moving = document.querySelector("#moving")!;
+      rectangles.set(input, [new DOMRect(10, 10, 100, 30)]);
+      await visual.captureMetadata(captureIdentity, () => true);
+      rectangles.set(input, [new DOMRect(15, 10, 100, 30)]);
+      expect(
+        (await visual.checkCapture(captureIdentity.captureId)).current,
+      ).toBe(false);
+      animations.set(moving, [
+        { playState: "running", pending: false } as Animation,
+      ]);
+      await expect(
+        visual.captureMetadata(captureIdentity, () => true),
+      ).rejects.toThrow("Complete private capture evidence");
+      animations.delete(moving);
+      input.style.textShadow = "none";
+      rectangles.set(
+        input,
+        Array.from(
+          { length: 5001 },
+          (_, index) => new DOMRect(index % 100, Math.floor(index / 100), 1, 1),
+        ),
+      );
+      await Promise.resolve();
+      await expect(
+        visual.captureMetadata(captureIdentity, () => true),
+      ).rejects.toThrow("Complete private capture evidence");
+      input.style.textShadow = "0 0 8px black";
+      rectangles.set(input, [new DOMRect(10, 10, 100, 30)]);
+      await Promise.resolve();
+      await expect(
+        visual.captureMetadata(captureIdentity, () => true),
+      ).rejects.toThrow("Complete private capture evidence");
+      input.style.textShadow = "none";
+      await Promise.resolve();
+      // jsdom omits backdrop-filter from computed styles. Model the native
+      // computed value here; browser pixel fixtures exercise actual CSS paint.
+      const nativeStyle = getComputedStyle;
+      vi.stubGlobal("getComputedStyle", (element: Element) => {
+        const style = nativeStyle(element);
+        if (element === moving)
+          Object.defineProperty(style, "backdropFilter", {
+            value: "blur(8px)",
+          });
+        return style;
+      });
+      await expect(
+        visual.captureMetadata(captureIdentity, () => true),
+      ).rejects.toThrow("Complete private capture evidence");
+    },
+  );
+});
+
+test("capture cancellation and the short suppression watchdog restore UI even before paint acknowledgment", async () => {
+  await withCaptureFixture(
+    '<div data-tholi-ui style="opacity: .8 !important">UI</div>',
+    async ({ visual }) => {
+      const overlay = document.querySelector<HTMLElement>("[data-tholi-ui]")!,
+        original = overlay.style.cssText;
+      vi.useFakeTimers();
+      vi.stubGlobal("requestAnimationFrame", () => 1);
+      try {
+        const pending = visual.captureMetadata(captureIdentity, () => true);
+        const failed = expect(pending).rejects.toThrow(
+          "Complete private capture evidence",
+        );
+        await vi.advanceTimersByTimeAsync(1000);
+        await failed;
+        expect(overlay.style.cssText).toBe(original);
+        expect(
+          (await visual.checkCapture(captureIdentity.captureId)).current,
+        ).toBe(false);
+        const cancelled = visual.captureMetadata(captureIdentity, () => true);
+        const cancelledResult = expect(cancelled).rejects.toThrow(
+          "Complete private capture evidence",
+        );
+        await Promise.resolve();
+        const { setGuidanceVisible } =
+          await import("../../../packages/overlay-ui/presentation-gate");
+        setGuidanceVisible(false);
+        await cancelledResult;
+        setGuidanceVisible(true);
+        expect(overlay.style.cssText).toBe(original);
+      } finally {
+        const { setGuidanceVisible } =
+          await import("../../../packages/overlay-ui/presentation-gate");
+        setGuidanceVisible(true);
+        vi.useRealTimers();
+      }
+    },
+  );
 });
 
 test("OTP metadata and split verification widgets never read credentials", () => {
@@ -199,31 +533,57 @@ test("adapted accessibility handles role fallback, icon names and no editable re
   );
 });
 test("OCR backend failure falls back locally and cancellation prevents a fallback", async () => {
-  const calls: boolean[] = [],
+  const calls: Record<string, unknown>[] = [],
     local = { engine: "tesseract-6.0.1-eng-fast" } as any;
+  const prepared = {
+    requestId: crypto.randomUUID(),
+    journeyId: crypto.randomUUID(),
+    contextRevision: 1,
+    documentId: "native-document",
+    observationRevision: 2,
+    viewportRevision: 3,
+    captureId: crypto.randomUUID(),
+    image: readFileSync("tests/fixtures/vision/light.png").toString("base64"),
+    width: 640,
+    height: 180,
+    cssWidth: 640,
+    cssHeight: 180,
+  };
+  const backend = vi.fn(async (input: unknown) => {
+    expect(input).toEqual(prepared);
+    throw Error("Service down");
+  });
   const services = {
     browser: async (message: Record<string, unknown>) => {
-      calls.push(!!message.prepareOnly);
-      return local;
+      calls.push(message);
+      return message.prepareOnly ? prepared : local;
     },
-    backend: async () => {
-      throw Error("Service down");
-    },
+    backend,
+  };
+  const capture = {
+    image: "RAW_CAPTURE_SENTINEL",
+    metadata: { source: "private-device-only" },
+    engine: "tesseract",
   };
   expect(
     await recognizeWithFallback(
-      {},
+      capture,
       services,
       true,
       new AbortController().signal,
     ),
   ).toBe(local);
-  expect(calls).toEqual([true, false]);
+  expect(calls).toHaveLength(2);
+  expect(calls[0]).toEqual({ ...capture, prepareOnly: true });
+  expect(calls[1]).toEqual({ prepared, engine: capture.engine });
+  expect(calls[1]).not.toHaveProperty("image");
+  expect(calls[1]).not.toHaveProperty("metadata");
+  expect(backend).toHaveBeenCalledTimes(1);
   const controller = new AbortController();
   calls.length = 0;
   await expect(
     recognizeWithFallback(
-      {},
+      capture,
       {
         ...services,
         backend: async () => {
@@ -235,7 +595,20 @@ test("OCR backend failure falls back locally and cancellation prevents a fallbac
       controller.signal,
     ),
   ).rejects.toThrow();
-  expect(calls).toEqual([true]);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].prepareOnly).toBe(true);
+  calls.length = 0;
+  backend.mockClear();
+  expect(
+    await recognizeWithFallback(
+      capture,
+      services,
+      false,
+      new AbortController().signal,
+    ),
+  ).toBe(local);
+  expect(calls).toEqual([capture]);
+  expect(backend).not.toHaveBeenCalled();
 });
 
 test("only explicit current Prime status can establish an already canceled membership", async () => {

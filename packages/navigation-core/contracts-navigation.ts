@@ -100,11 +100,13 @@ function refineViewport(
   context: z.RefinementCtx,
 ) {
   const visual = viewport.visualViewport;
+  const fits = (edge: number, layout: number) =>
+    edge <= layout || (Number.isInteger(layout) && edge - layout <= 0.5);
   if (
     visual.offsetLeft < 0 ||
     visual.offsetTop < 0 ||
-    visual.offsetLeft + visual.width > viewport.width ||
-    visual.offsetTop + visual.height > viewport.height ||
+    !fits(visual.offsetLeft + visual.width, viewport.width) ||
+    !fits(visual.offsetTop + visual.height, viewport.height) ||
     !close(visual.pageLeft, viewport.scrollX + visual.offsetLeft) ||
     !close(visual.pageTop, viewport.scrollY + visual.offsetTop)
   )
@@ -214,7 +216,7 @@ export const navigationControlSchema = z
   })
   .strict();
 
-const captureSourceSchema = z
+export const navigationCaptureSourceSchema = z
   .object({
     kind: z.enum(["viewport", "crop"]),
     cssBounds: navigationBoundsSchema,
@@ -232,16 +234,13 @@ const captureSourceSchema = z
     scaleY: scale,
     devicePixelRatio: scale,
     browserZoom: scale,
+    captureCssBounds: navigationBoundsSchema.optional(),
   })
   .strict();
-const imageSchema = z
+export const navigationImagePixelsObjectSchema = z
   .object({
-    captureId: z.string().uuid(),
-    stamp: navigationStampSchema,
-    native: nativeBrowserReferenceSchema,
-    capturedAtMs: clock,
     maskedAtMs: clock,
-    source: captureSourceSchema,
+    source: navigationCaptureSourceSchema,
     width: z.number().int().positive().max(NAVIGATION_LIMITS.maxImageDimension),
     height: z
       .number()
@@ -261,25 +260,38 @@ const imageSchema = z
       })
       .strict(),
   })
-  .strict()
-  .superRefine((image, context) => {
-    try {
-      const inspected = inspectPngData(image.image, {
-        maxBytes: NAVIGATION_LIMITS.maxImageBytes,
-        maxPixels: NAVIGATION_LIMITS.maxImagePixels,
-      });
-      if (inspected.width !== image.width || inspected.height !== image.height)
-        context.addIssue({
-          code: "custom",
-          message: "PNG dimensions mismatch.",
-        });
-    } catch {
+  .strict();
+/** Shared PNG admission for prepared pixels and complete stamped images. */
+export function refineNavigationImagePixels(
+  image: z.infer<typeof navigationImagePixelsObjectSchema>,
+  context: z.RefinementCtx,
+) {
+  try {
+    const inspected = inspectPngData(image.image, {
+      maxBytes: NAVIGATION_LIMITS.maxImageBytes,
+      maxPixels: NAVIGATION_LIMITS.maxImagePixels,
+    });
+    if (inspected.width !== image.width || inspected.height !== image.height)
       context.addIssue({
         code: "custom",
-        message: "Invalid bounded PNG capture.",
+        message: "PNG dimensions mismatch.",
       });
-    }
-  });
+  } catch {
+    context.addIssue({
+      code: "custom",
+      message: "Invalid bounded PNG capture.",
+    });
+  }
+}
+const imageSchema = navigationImagePixelsObjectSchema
+  .extend({
+    captureId: z.string().uuid(),
+    stamp: navigationStampSchema,
+    native: nativeBrowserReferenceSchema,
+    capturedAtMs: clock,
+  })
+  .strict()
+  .superRefine(refineNavigationImagePixels);
 
 const encoder = new TextEncoder();
 export const serializedUtf8Bytes = (value: unknown) =>
@@ -302,12 +314,76 @@ export function navigationProjectionBytes(value: {
     images: value.images.map((image) => ({ ...image, image: "" })),
   });
 }
+/** Union of observed CSS extents, without replacing either raw measurement. */
+export function navigationViewportExtent(
+  viewport: Pick<NavigationViewport, "width" | "height" | "visualViewport">,
+) {
+  return {
+    width: Math.max(
+      viewport.width,
+      viewport.visualViewport.offsetLeft + viewport.visualViewport.width,
+    ),
+    height: Math.max(
+      viewport.height,
+      viewport.visualViewport.offsetTop + viewport.visualViewport.height,
+    ),
+  };
+}
 const sameStamp = (a: NavigationStamp, b: NavigationStamp) =>
   (Object.keys(navigationStampSchema.shape) as (keyof NavigationStamp)[]).every(
     (key) => a[key] === b[key],
   );
 const close = (a: number, b: number) =>
   Math.abs(a - b) <= Math.max(0.000001, Math.abs(b) * 0.000001);
+
+/** The same source-plane check applies before stamping and at Nav1 admission. */
+export function navigationImageMatchesViewport(
+  image: z.infer<typeof navigationImagePixelsObjectSchema>,
+  viewport: NavigationViewport,
+): boolean {
+  const visual = viewport.visualViewport,
+    source = image.source;
+  const css = source.cssBounds,
+    pixels = source.pixelBounds;
+  const plane = source.captureCssBounds || {
+    x: visual.offsetLeft,
+    y: visual.offsetTop,
+    width: visual.width,
+    height: visual.height,
+  };
+  return (
+    (!source.captureCssBounds ||
+      (plane.x === 0 &&
+        plane.y === 0 &&
+        plane.width === viewport.width &&
+        plane.height === viewport.height)) &&
+    css.x >= visual.offsetLeft &&
+    css.y >= visual.offsetTop &&
+    css.x + css.width <= visual.offsetLeft + visual.width &&
+    css.y + css.height <= visual.offsetTop + visual.height &&
+    pixels.x + pixels.width <= source.bitmapWidth &&
+    pixels.y + pixels.height <= source.bitmapHeight &&
+    close(source.scaleX, source.bitmapWidth / plane.width) &&
+    close(source.scaleY, source.bitmapHeight / plane.height) &&
+    close(source.devicePixelRatio, viewport.devicePixelRatio) &&
+    close(source.browserZoom, viewport.browserZoom) &&
+    Math.abs(pixels.x - (css.x - plane.x) * source.scaleX) <= 1 &&
+    Math.abs(pixels.y - (css.y - plane.y) * source.scaleY) <= 1 &&
+    Math.abs(pixels.width - css.width * source.scaleX) <= 1 &&
+    Math.abs(pixels.height - css.height * source.scaleY) <= 1 &&
+    image.width <= pixels.width &&
+    image.height <= pixels.height &&
+    Math.abs(image.height - (image.width * pixels.height) / pixels.width) <=
+      2 &&
+    Math.abs(image.width - (image.height * pixels.width) / pixels.height) <=
+      2 &&
+    (source.kind !== "viewport" ||
+      (css.x === visual.offsetLeft &&
+        css.y === visual.offsetTop &&
+        css.width === visual.width &&
+        css.height === visual.height))
+  );
+}
 
 /** Geometry and captures are ephemeral; this is not a persisted page schema. */
 export const navigationObservationSchema = z
@@ -485,44 +561,10 @@ export const navigationObservationSchema = z
       )
         fail("Invalid client capture timestamps.");
       if (!root) continue;
-      const viewport = root.viewport;
-      const visual = viewport.visualViewport;
-      const source = image.source;
-      const css = source.cssBounds;
-      const pixels = source.pixelBounds;
-      if (
-        css.x < visual.offsetLeft ||
-        css.y < visual.offsetTop ||
-        css.x + css.width > visual.offsetLeft + visual.width ||
-        css.y + css.height > visual.offsetTop + visual.height ||
-        pixels.x + pixels.width > source.bitmapWidth ||
-        pixels.y + pixels.height > source.bitmapHeight ||
-        !close(source.scaleX, source.bitmapWidth / visual.width) ||
-        !close(source.scaleY, source.bitmapHeight / visual.height) ||
-        !close(source.devicePixelRatio, viewport.devicePixelRatio) ||
-        !close(source.browserZoom, viewport.browserZoom) ||
-        Math.abs(pixels.x - (css.x - visual.offsetLeft) * source.scaleX) > 1 ||
-        Math.abs(pixels.y - (css.y - visual.offsetTop) * source.scaleY) > 1 ||
-        Math.abs(pixels.width - css.width * source.scaleX) > 1 ||
-        Math.abs(pixels.height - css.height * source.scaleY) > 1 ||
-        image.width > pixels.width ||
-        image.height > pixels.height ||
-        Math.abs(image.height - (image.width * pixels.height) / pixels.width) >
-          2 ||
-        Math.abs(image.width - (image.height * pixels.width) / pixels.height) >
-          2
-      )
+      if (!navigationImageMatchesViewport(image, root.viewport))
         fail(
           "Capture pixel and CSS geometry must match the observed viewport.",
         );
-      if (
-        source.kind === "viewport" &&
-        (css.x !== visual.offsetLeft ||
-          css.y !== visual.offsetTop ||
-          css.width !== visual.width ||
-          css.height !== visual.height)
-      )
-        fail("Viewport captures must cover the complete CSS viewport.");
     }
     if (
       navigationProjectionBytes(observation) >
