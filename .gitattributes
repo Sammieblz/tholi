@@ -6,6 +6,9 @@ apps/public/media/video/*.txt text eol=lf
 tests/fixtures/*/corpus.json text eol=lf
 tests/fixtures/*/corpus.sha256 text eol=lf
 
+# The comparison records the collector's physical bytes as well as its source.
+tests/browser/live/navigation-baseline.spec.ts text eol=lf
+
 .codex/skills/** -text
 
 # The acceptance declaration is also a byte-frozen input.
