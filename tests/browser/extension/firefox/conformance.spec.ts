@@ -23,6 +23,31 @@ test("Firefox uses native document identity, local planning and independently ve
     });
     const started = await app.start();
     expect(started.documentId).toBeTruthy();
+    const observation = await app.extension(async () => {
+      const api = (globalThis as any).browser;
+      const result = await api.runtime.sendMessage({ type: "GET_PAGE" });
+      const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
+      return {
+        result,
+        session,
+        tab: await api.tabs.get(session.tabId),
+        zoom: await api.tabs.getZoom(session.tabId),
+      };
+    });
+    expect(observation.result.error).toBeUndefined();
+    expect(observation.result.perception.native).toMatchObject({
+      frameId: 0,
+      tabId: observation.session.tabId,
+      documentId: started.documentId,
+      windowId: observation.tab.windowId,
+    });
+    expect(observation.result.perception.pageRevision).toBe(
+      observation.result.page.revision,
+    );
+    expect(observation.result.perception.frames[0].viewport.browserZoom).toBe(
+      observation.zoom,
+    );
+    expect(observation.session.view).not.toHaveProperty("perception");
     const first = await app.goal("Make text larger");
     expect(first.view.goalPlan.status).toBe("guiding");
     expect(

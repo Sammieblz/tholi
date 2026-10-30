@@ -7,7 +7,7 @@ test("authorized frame controls bind to their own document and hide behind paren
     await app.context.route("**/frame-host", (route) =>
       route.fulfill({
         contentType: "text/html",
-        body: '<h1>Workspace</h1><iframe title="Embedded application" src="http://localhost:5173/embedded-controls" style="width:650px;height:300px;border:0"></iframe>',
+        body: '<main aria-label="Workspace"><h1>Workspace</h1><iframe title="Embedded application" src="http://localhost:5173/embedded-controls" style="width:650px;height:300px;border:0"></iframe></main>',
       }),
     );
     await app.context.route("**/embedded-controls", (route) =>
@@ -28,6 +28,71 @@ test("authorized frame controls bind to their own document and hide behind paren
     const page = await app.panel.evaluate(
       async () => await chrome.runtime.sendMessage({ type: "GET_PAGE" }),
     );
+    expect(page.error).toBeUndefined();
+    expect(page.perception?.frames).toHaveLength(2);
+    const pinned = await app.panel.evaluate(async () => {
+      const session = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+      return {
+        session,
+        tab: await chrome.tabs.get(session.tabId),
+        zoom: await chrome.tabs.getZoom(session.tabId),
+      };
+    });
+    expect(page.perception.native).toMatchObject({
+      windowId: pinned.tab.windowId,
+      tabId: pinned.session.tabId,
+      documentId: pinned.session.documentId,
+      frameId: 0,
+    });
+    expect(
+      page.perception.frames.every(
+        (frame: any) => frame.viewport.browserZoom === pinned.zoom,
+      ),
+    ).toBe(true);
+    expect(
+      page.perception.frames.find((frame: any) => frame.native.frameId !== 0)
+        .parentFrameId,
+    ).toBe(0);
+    const root = page.perception.frames.find(
+      (frame: any) => frame.native.frameId === 0,
+    );
+    const region = page.perception.regions.find(
+      (item: any) => item.frameId === 0 && item.role === "main",
+    );
+    expect(region).toBeDefined();
+    const regionRequest = {
+      native: page.perception.native,
+      scanId: root.scanId,
+      pageRevision: root.pageRevision,
+      regionId: region.id,
+    };
+    const refreshed = await app.panel.evaluate(
+      async (request) =>
+        chrome.runtime.sendMessage({
+          type: "GET_PAGE",
+          regionObservation: request,
+        }),
+      regionRequest,
+    );
+    expect(refreshed.error).toBeUndefined();
+    expect(refreshed.perception.pageRevision).toBe(refreshed.page.revision);
+    expect(
+      refreshed.perception.frames.find(
+        (frame: any) => frame.native.frameId === 0,
+      ).scanId,
+    ).not.toBe(root.scanId);
+    const stale = await app.panel.evaluate(
+      async (request) =>
+        chrome.runtime.sendMessage({
+          type: "GET_PAGE",
+          regionObservation: request,
+        }),
+      regionRequest,
+    );
+    expect(stale.error).toContain("unavailable");
+    expect(await app.page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual(
+      { x: 0, y: 0 },
+    );
     const reply = await app.panel.evaluate(
       async (revision) =>
         await chrome.runtime.sendMessage({
@@ -35,7 +100,7 @@ test("authorized frame controls bind to their own document and hide behind paren
           goal: "Find embedded search",
           revision,
         }),
-      page.page.revision,
+      refreshed.page.revision,
     );
     expect(reply.error).toBeUndefined();
     await expect

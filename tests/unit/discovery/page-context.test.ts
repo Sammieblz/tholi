@@ -2,7 +2,12 @@
 import { it, expect, vi, afterEach } from "vitest";
 import { PageDiscovery } from "../../../packages/page-discovery/index";
 import { planGoal, inspectGoal } from "../../../packages/goal-planner/index";
-import { modelContext } from "../../../packages/goal-planner/model-context";
+import {
+  buildModelProjection,
+  controlDependencies,
+  modelContext,
+  unambiguousControls,
+} from "../../../packages/goal-planner/model-context";
 import { mergeObservation } from "../../../packages/site-memory/index";
 import { pageSnapshotSchema } from "../../../packages/page-model/index";
 function fixture(html: string) {
@@ -100,7 +105,9 @@ it("retrieves a late control and its opener under a bounded context rather than 
   const page = new PageDiscovery().snapshot(),
     input = modelContext(page, "French language");
   expect(input.controls.length).toBeLessThanOrEqual(96);
-  expect(JSON.stringify(input).length).toBeLessThan(25000);
+  expect(
+    new TextEncoder().encode(JSON.stringify(input)).length,
+  ).toBeLessThanOrEqual(24000);
   const target = input.controls.find((c) => c.label === "French language")!;
   expect(target).toBeTruthy();
   expect(target.revealIds).toHaveLength(1);
@@ -110,6 +117,88 @@ it("retrieves a late control and its opener under a bounded context rather than 
   expect(target.destination).toEqual({ sameOrigin: true, path: "/fr" });
   expect(input.page.omittedControls).toBeGreaterThan(0);
   expect(JSON.stringify(input)).not.toContain("SENTINEL_QUERY");
+});
+it("admits complete transitive opener bundles inside the whole UTF-8 context budget", () => {
+  fixture(
+    `${Array.from({ length: 180 }, (_, index) => `<button>${"選択項目".repeat(25)} ${index}</button>`).join("")}<button>Open tools</button><button>Open preferences</button><button>French language</button>`,
+  );
+  const page = new PageDiscovery().snapshot();
+  const outer = page.controls.find(
+    (control) => control.label === "Open tools",
+  )!;
+  const middle = page.controls.find(
+    (control) => control.label === "Open preferences",
+  )!;
+  const target = page.controls.find(
+    (control) => control.label === "French language",
+  )!;
+  middle.revealIds = [outer.id];
+  target.revealIds = [middle.id];
+  const { context, report } = buildModelProjection(page, "French language");
+  const retained = new Set(context.controls.map((control) => control.id));
+  expect(retained.has(target.id)).toBe(true);
+  expect(retained.has(middle.id)).toBe(true);
+  expect(retained.has(outer.id)).toBe(true);
+  expect(
+    context.controls.every((control) =>
+      control.revealIds.every((id) => retained.has(id)),
+    ),
+  ).toBe(true);
+  const bytes = new TextEncoder().encode(JSON.stringify(context)).length;
+  expect(bytes).toBeLessThanOrEqual(24000);
+  expect(report.projectionBytes).toBe(bytes);
+  expect(report.counts.modelOmittedControls).toBe(
+    page.controls.length - context.controls.length,
+  );
+  expect(report.reasons).toContain("budget");
+  expect(JSON.stringify(context)).not.toContain('"projectionBytes"');
+});
+it("omits every ambiguous ID group and transitive dependent instead of choosing a frame", () => {
+  fixture(
+    "<button>Open</button><button>Preferences</button><button>Language</button><button>Help</button>",
+  );
+  const [opener, middle, target, safe] = new PageDiscovery().snapshot()
+    .controls;
+  middle.revealIds = [opener.id];
+  target.revealIds = [middle.id];
+  const duplicate = {
+    ...opener,
+    reference: {
+      tabId: 3,
+      frameId: 9,
+      documentId: "different-native-document",
+      controlId: opener.id,
+    },
+  };
+  const result = unambiguousControls([opener, duplicate, middle, target, safe]);
+  expect(result.controls.map((control) => control.id)).toEqual([safe.id]);
+  expect(result.ambiguousControls).toBe(2);
+  expect(result.dependentControls).toBe(2);
+  expect(opener.id).toBe(duplicate.id);
+});
+it("rejects cyclic, missing and cross-frame opener closure without rewriting references", () => {
+  fixture(
+    "<button>Open</button><button>Preferences</button><button>Help</button>",
+  );
+  const [opener, target, safe] = new PageDiscovery().snapshot().controls;
+  const byId = new Map(
+    [opener, target, safe].map((control) => [control.id, control]),
+  );
+  target.revealIds = [opener.id];
+  opener.revealIds = [target.id];
+  expect(controlDependencies(target, byId)).toBeUndefined();
+  opener.revealIds = [];
+  target.revealIds = ["w0000000000000000-999"];
+  expect(controlDependencies(target, byId)).toBeUndefined();
+  target.revealIds = [opener.id];
+  target.reference = {
+    tabId: 4,
+    frameId: 7,
+    documentId: "native-child",
+    controlId: target.id,
+  };
+  expect(controlDependencies(target, byId)).toBeUndefined();
+  expect(controlDependencies(safe, byId)).toEqual([safe]);
 });
 it.each([{ ids: [] }, { ids: ["w0000000000000000-999"] }])(
   "falls back to a clear semantic route after invalid model IDs %j",

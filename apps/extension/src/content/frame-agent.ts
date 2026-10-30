@@ -29,8 +29,8 @@ if (!(globalThis as any)[marker]) {
       .sendMessage({ type, sessionId, nonce, frameId, documentId, ...extra })
       .catch(() => {});
   const snapshot = () => {
-    const page = discovery.snapshot();
-    void send("FRAME_OBSERVATION", { page });
+    const { page, perception } = discovery.snapshotWithPerception();
+    void send("FRAME_OBSERVATION", { page, perception });
     return page;
   };
   const event = (event: Event) => {
@@ -124,8 +124,22 @@ if (!(globalThis as any)[marker]) {
       return;
     }
     if (raw.type === "FRAME_SCAN") {
-      discovery.setQuery(raw.query || "");
-      respond({ page: snapshot() });
+      if (raw.regionObservation) {
+        const request = raw.regionObservation;
+        const pair = discovery.observeRegion(
+          request.regionId,
+          request.scanId,
+          request.pageRevision,
+        );
+        if (!pair) {
+          respond({ error: "This region is unavailable in the current scan." });
+          return;
+        }
+        respond(pair);
+        return;
+      }
+      if (typeof raw.query === "string") discovery.setQuery(raw.query);
+      respond(discovery.snapshotWithPerception());
       return;
     }
     if (raw.type === "FRAME_PRESENTATION") {

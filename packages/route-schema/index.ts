@@ -6,6 +6,11 @@ import {
 } from "../navigation-core/contracts";
 import { liveDiagnosticsSchema } from "../live-diagnostics";
 import {
+  discoveryPerceptionSchema,
+  perceptionOmissionsSchema,
+  regionObservationRequestSchema,
+} from "../page-discovery/perception";
+import {
   controlSchema,
   pageSnapshotSchema,
   goalPlanSchema,
@@ -214,7 +219,12 @@ export const messageSchema = z.discriminatedUnion("type", [
       enabled: z.boolean(),
     })
     .strict(),
-  z.object({ type: z.literal("GET_PAGE") }).strict(),
+  z
+    .object({
+      type: z.literal("GET_PAGE"),
+      regionObservation: regionObservationRequestSchema.optional(),
+    })
+    .strict(),
   z.object({ type: z.literal("GET_MEMORY") }).strict(),
   z.object({ type: z.literal("FORGET_SITE") }).strict(),
   z.object({ type: z.literal("CLEAR_MEMORY") }).strict(),
@@ -288,6 +298,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       origins: z.array(z.string().url()).max(16),
       limit: z.number().int().min(1).max(5000),
       nonce: z.string().uuid(),
+      omissions: perceptionOmissionsSchema.optional(),
     })
     .strict(),
   z
@@ -308,7 +319,10 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       frameId: z.number().int(),
       documentId: z.string(),
       tabId: z.number().int(),
+      parentFrameId: z.number().int().nonnegative(),
       page: pageSnapshotSchema,
+      perception: discoveryPerceptionSchema.optional(),
+      deferRefresh: z.boolean().optional(),
     })
     .strict(),
   z
@@ -376,6 +390,7 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("GET_PAGE"),
       sessionId: z.string().uuid(),
+      regionObservation: regionObservationRequestSchema.optional(),
       query: z.string().max(1000).optional(),
       planningIntent: z
         .object({ id: z.string().uuid(), phase: z.enum(["begin", "end"]) })

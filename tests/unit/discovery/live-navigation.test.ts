@@ -17,6 +17,7 @@ import {
 import { modelProposalSchema } from "../../../packages/page-model/index";
 import { visible } from "../../../packages/browser-adapter/index";
 import { clippedRect } from "../../../packages/browser-adapter/geometry";
+import { discoveryPerceptionSchema } from "../../../packages/page-discovery/perception";
 function fixture(html: string) {
   document.body.innerHTML = html;
   const rect = {
@@ -39,7 +40,195 @@ function fixture(html: string) {
     rect,
   );
 }
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+function actualViewport() {
+  vi.stubGlobal("visualViewport", {
+    offsetLeft: 0,
+    offsetTop: 0,
+    pageLeft: scrollX,
+    pageTop: scrollY,
+    width: innerWidth,
+    height: innerHeight,
+    scale: 1,
+  });
+}
+it("pairs current region hierarchy and actual scrollers without exporting field values or closed roots", () => {
+  fixture(
+    '<main aria-label="Workspace"><div id="scroll" style="overflow:auto"><div role="menu" aria-label="Preferences">' +
+      "<div>".repeat(20) +
+      '<button>Open preferences</button><input aria-label="Search" value="private editable sentinel"><input type="password" value="secret password sentinel">' +
+      "</div>".repeat(20) +
+      '</div></div><div id="closed-host"></div></main>',
+  );
+  actualViewport();
+  const scroller = document.getElementById("scroll")!;
+  for (const [key, value] of Object.entries({
+    clientWidth: 100,
+    clientHeight: 30,
+    scrollWidth: 100,
+    scrollHeight: 300,
+  }))
+    Object.defineProperty(scroller, key, { configurable: true, value });
+  document
+    .getElementById("closed-host")!
+    .attachShadow({ mode: "closed" }).innerHTML =
+    "<button>Closed application secret</button>";
+  const discovery = new PageDiscovery(),
+    pair = discovery.snapshotWithPerception(),
+    perception = discoveryPerceptionSchema.parse(pair.perception),
+    menu = perception.regions.find((region) => region.role === "menu")!,
+    scroll = perception.regions.find((region) => region.scroll)!,
+    main = perception.regions.find((region) => region.role === "main")!;
+  expect(scroll).toMatchObject({
+    parentId: main.id,
+    role: "scroll-container",
+    scroll: {
+      horizontal: false,
+      vertical: true,
+      clientHeight: 30,
+      scrollHeight: 300,
+    },
+  });
+  expect(menu).toMatchObject({ parentId: scroll.id, label: "Preferences" });
+  const control = pair.page.controls.find(
+    (control) => control.label === "Open preferences",
+  )!;
+  expect(
+    perception.controls.find((reference) => reference.controlId === control.id),
+  ).toMatchObject({
+    regionId: menu.id,
+    bounds: { x: 10, y: 10, width: 100, height: 30 },
+  });
+  expect(JSON.stringify(pair)).not.toMatch(
+    /private editable sentinel|secret password sentinel|Closed application secret/,
+  );
+  expect(JSON.stringify(pair.page)).not.toMatch(
+    /scanId|browserZoom|parentId|scrollHeight/,
+  );
+  expect(pair.page).not.toHaveProperty("viewport");
+  expect(perception.viewport).not.toHaveProperty("browserZoom");
+  expect(perception.omissions.hierarchyTruncated).toBe(false);
+  expect(discovery.getPerception(pair.page)).toBe(pair.perception);
+  expect(
+    discovery.observeRegion(menu.id, perception.scanId, pair.page.revision),
+  ).toBeUndefined();
+});
+it("keeps region refresh read-only and rejects old scans, detached regions and unavailable viewport evidence", () => {
+  fixture(
+    '<main aria-label="Workspace"><div role="menu" aria-label="Preferences"><button>Choose appearance</button></div></main>',
+  );
+  actualViewport();
+  const discovery = new PageDiscovery(),
+    stop = discovery.observe(() => {}),
+    click = vi.fn();
+  document.querySelector("button")!.addEventListener("click", click);
+  try {
+    const first = discovery.snapshotWithPerception(),
+      second = discovery.snapshotWithPerception();
+    expect(second.page.revision).toBe(first.page.revision);
+    expect(second.perception!.scanId).not.toBe(first.perception!.scanId);
+    expect(discovery.getPerception(first.page)).toBeUndefined();
+    const menu = second.perception!.regions.find(
+      (region) => region.role === "menu",
+    )!;
+    expect(
+      discovery.observeRegion(
+        menu.id,
+        first.perception!.scanId,
+        first.page.revision,
+      ),
+    ).toBeUndefined();
+    expect(
+      discovery.observeRegion(
+        "unknown-region",
+        second.perception!.scanId,
+        second.page.revision,
+      ),
+    ).toBeUndefined();
+    const fresh = discovery.observeRegion(
+      menu.id,
+      second.perception!.scanId,
+      second.page.revision,
+    )!;
+    expect(fresh.perception!.scanId).not.toBe(second.perception!.scanId);
+    expect(click).not.toHaveBeenCalled();
+    document.querySelector('[role="menu"]')!.remove();
+    expect(
+      discovery.observeRegion(
+        menu.id,
+        fresh.perception!.scanId,
+        fresh.page.revision,
+      ),
+    ).toBeUndefined();
+    vi.stubGlobal("visualViewport", undefined);
+    expect(discovery.snapshotWithPerception().perception).toBeUndefined();
+    expect(discovery.snapshot().controls).toBeInstanceOf(Array);
+  } finally {
+    stop();
+  }
+});
+it("reports bounded region omissions without dangling parents or inventing a clipped element as a scroller", () => {
+  fixture(
+    '<main aria-label="Workspace">' +
+      Array.from(
+        { length: 110 },
+        (_, index) =>
+          `<section aria-label="Group ${index}"><button>Item ${index}</button></section>`,
+      ).join("") +
+      '<div id="clip" style="overflow:hidden"><button>Clipped action</button></div></main>',
+  );
+  actualViewport();
+  const clip = document.getElementById("clip")!;
+  for (const [key, value] of Object.entries({
+    clientWidth: 100,
+    clientHeight: 30,
+    scrollWidth: 100,
+    scrollHeight: 300,
+  }))
+    Object.defineProperty(clip, key, { configurable: true, value });
+  const perception = discoveryPerceptionSchema.parse(
+    new PageDiscovery().snapshotWithPerception().perception,
+  );
+  expect(perception.regions).toHaveLength(100);
+  expect(perception.omissions).toMatchObject({
+    partial: true,
+    regions: 11,
+    controlRegions: 11,
+  });
+  expect(perception.omissions.reasons).toContain("budget");
+  const ids = new Set(perception.regions.map((region) => region.id));
+  expect(
+    perception.regions.every(
+      (region) => !region.parentId || ids.has(region.parentId),
+    ),
+  ).toBe(true);
+  expect(perception.regions.some((region) => region.scroll)).toBe(false);
+});
+it("reports unknown ancestry beyond the DOM or region-depth budget without inventing a root", () => {
+  actualViewport();
+  for (const [tag, depth] of [
+    ["div", 65],
+    ["section", 17],
+  ] as const) {
+    fixture(
+      `<main aria-label="Workspace">${`<${tag}>`.repeat(depth)}<button>Choose appearance</button>${`</${tag}>`.repeat(depth)}</main>`,
+    );
+    const pair = new PageDiscovery().snapshotWithPerception(),
+      perception = discoveryPerceptionSchema.parse(pair.perception);
+    expect(pair.page.controls).toHaveLength(1);
+    expect(perception.omissions).toMatchObject({
+      hierarchyTruncated: true,
+      partial: true,
+      controlRegions: 1,
+    });
+    expect(perception.omissions.reasons).toContain("unsupported");
+    expect(perception.regions).toEqual([]);
+    expect(perception.controls[0].regionId).toBeUndefined();
+  }
+});
 it("ignores Tholi's own roots and unrelated text churn without missing website controls or receipts", async () => {
   vi.useFakeTimers();
   fixture(

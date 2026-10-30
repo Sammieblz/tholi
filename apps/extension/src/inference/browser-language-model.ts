@@ -1,4 +1,5 @@
 import { modelContext } from "../../../../packages/goal-planner/model-context";
+import type { BrowserPerception } from "../../../../packages/page-discovery/perception";
 import {
   modelProposalSchema,
   type ModelProposal,
@@ -70,9 +71,10 @@ export class LocalModel {
     goal: string,
     signal: AbortSignal,
     task?: TaskJourney,
+    perception?: BrowserPerception,
   ): Promise<ModelProposal> {
     if (!this.session) throw new Error("Enable on-device AI first.");
-    const input = modelContext(page, goal, task);
+    const input = modelContext(page, goal, task, perception);
     const allowed = input.controls
       .filter(
         (c) =>

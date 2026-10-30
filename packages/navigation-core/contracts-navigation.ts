@@ -71,7 +71,7 @@ export const navigationControlReferenceSchema = nativeBrowserReferenceSchema
 export const navigationBoundsSchema = z
   .object({ x: coordinate, y: coordinate, width: positive, height: positive })
   .strict();
-export const navigationViewportSchema = z
+export const navigationViewportObjectSchema = z
   .object({
     width: positive,
     height: positive,
@@ -91,22 +91,34 @@ export const navigationViewportSchema = z
       })
       .strict(),
   })
-  .strict()
-  .superRefine((viewport, context) => {
-    const visual = viewport.visualViewport;
-    if (
-      visual.offsetLeft < 0 ||
-      visual.offsetTop < 0 ||
-      visual.offsetLeft + visual.width > viewport.width ||
-      visual.offsetTop + visual.height > viewport.height ||
-      !close(visual.pageLeft, viewport.scrollX + visual.offsetLeft) ||
-      !close(visual.pageTop, viewport.scrollY + visual.offsetTop)
-    )
-      context.addIssue({
-        code: "custom",
-        message: "Visual viewport must match layout and document coordinates.",
-      });
-  });
+  .strict();
+function refineViewport(
+  viewport: Pick<
+    z.infer<typeof navigationViewportObjectSchema>,
+    "width" | "height" | "scrollX" | "scrollY" | "visualViewport"
+  >,
+  context: z.RefinementCtx,
+) {
+  const visual = viewport.visualViewport;
+  if (
+    visual.offsetLeft < 0 ||
+    visual.offsetTop < 0 ||
+    visual.offsetLeft + visual.width > viewport.width ||
+    visual.offsetTop + visual.height > viewport.height ||
+    !close(visual.pageLeft, viewport.scrollX + visual.offsetLeft) ||
+    !close(visual.pageTop, viewport.scrollY + visual.offsetTop)
+  )
+    context.addIssue({
+      code: "custom",
+      message: "Visual viewport must match layout and document coordinates.",
+    });
+}
+export const navigationViewportSchema =
+  navigationViewportObjectSchema.superRefine(refineViewport);
+/** DOM observations cannot assert privileged browser zoom. */
+export const navigationDomViewportSchema = navigationViewportObjectSchema
+  .omit({ browserZoom: true })
+  .superRefine(refineViewport);
 export const navigationContextSchema = z
   .object({
     goal: z
@@ -123,14 +135,33 @@ export const navigationContextSchema = z
   })
   .strict();
 
-const frameSchema = z
+export const navigationFrameSchema = z
   .object({
     native: nativeBrowserReferenceSchema,
     parentFrameId: generation.optional(),
     viewport: navigationViewportSchema,
   })
   .strict();
-const regionSchema = z
+export const navigationScrollSchema = z
+  .object({
+    horizontal: z.boolean(),
+    vertical: z.boolean(),
+    left: coordinate,
+    top: coordinate,
+    clientWidth: positive,
+    clientHeight: positive,
+    scrollWidth: positive,
+    scrollHeight: positive,
+  })
+  .strict()
+  .refine(
+    (value) =>
+      (value.horizontal || value.vertical) &&
+      (!value.horizontal || value.scrollWidth > value.clientWidth) &&
+      (!value.vertical || value.scrollHeight > value.clientHeight),
+    "Scroll evidence requires an observed overflowing axis.",
+  );
+export const navigationRegionSchema = z
   .object({
     id: opaqueId,
     frameId: generation,
@@ -140,11 +171,12 @@ const regionSchema = z
       .min(1)
       .max(40)
       .regex(/^[a-z][a-z0-9-]*$/),
-    label,
+    label: label.optional(),
     bounds: navigationBoundsSchema.optional(),
+    scroll: navigationScrollSchema.optional(),
   })
   .strict();
-const controlSchemaNavigation = z
+export const navigationControlSchema = z
   .object({
     reference: navigationControlReferenceSchema,
     role: z
@@ -163,6 +195,22 @@ const controlSchemaNavigation = z
     regionId: opaqueId.optional(),
     bounds: navigationBoundsSchema.optional(),
     revealIds: z.array(controlId.max(100)).max(10),
+    description: label.optional(),
+    context: label.optional(),
+    scope: controlSchema.shape.scope,
+    popup: controlSchema.shape.popup,
+    placement: controlSchema.shape.placement,
+    checked: controlSchema.shape.checked,
+    selected: controlSchema.shape.selected,
+    expanded: controlSchema.shape.expanded,
+    options: z
+      .array(
+        z
+          .object({ label, selected: z.boolean(), enabled: z.boolean() })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
   })
   .strict();
 
@@ -234,16 +282,26 @@ const imageSchema = z
   });
 
 const encoder = new TextEncoder();
-const bytes = (value: unknown) => encoder.encode(JSON.stringify(value)).length;
-const nativeKey = (reference: NativeBrowserReference) =>
+export const serializedUtf8Bytes = (value: unknown) =>
+  encoder.encode(JSON.stringify(value)).length;
+export const nativeReferenceKey = (reference: NativeBrowserReference) =>
   JSON.stringify([
     reference.windowId,
     reference.tabId,
     reference.frameId,
     reference.documentId,
   ]);
-const controlKey = (reference: NavigationControlReference) =>
-  JSON.stringify([nativeKey(reference), reference.controlId]);
+export const navigationControlKey = (reference: NavigationControlReference) =>
+  JSON.stringify([nativeReferenceKey(reference), reference.controlId]);
+/** Image provenance remains structural input; only PNG bytes are separate. */
+export function navigationProjectionBytes(value: {
+  images: readonly { image: string }[];
+}) {
+  return serializedUtf8Bytes({
+    ...value,
+    images: value.images.map((image) => ({ ...image, image: "" })),
+  });
+}
 const sameStamp = (a: NavigationStamp, b: NavigationStamp) =>
   (Object.keys(navigationStampSchema.shape) as (keyof NavigationStamp)[]).every(
     (key) => a[key] === b[key],
@@ -260,10 +318,13 @@ export const navigationObservationSchema = z
     native: nativeBrowserReferenceSchema,
     observedAtMs: clock,
     deadlineAtMs: clock,
-    frames: z.array(frameSchema).min(1).max(NAVIGATION_LIMITS.maxFrames),
-    regions: z.array(regionSchema).max(NAVIGATION_LIMITS.maxRegions),
+    frames: z
+      .array(navigationFrameSchema)
+      .min(1)
+      .max(NAVIGATION_LIMITS.maxFrames),
+    regions: z.array(navigationRegionSchema).max(NAVIGATION_LIMITS.maxRegions),
     controls: z
-      .array(controlSchemaNavigation)
+      .array(navigationControlSchema)
       .max(NAVIGATION_LIMITS.maxControls),
     omissions: z
       .object({
@@ -305,7 +366,8 @@ export const navigationObservationSchema = z
     if (
       observation.native.frameId !== 0 ||
       !root ||
-      nativeKey(root.native) !== nativeKey(observation.native) ||
+      nativeReferenceKey(root.native) !==
+        nativeReferenceKey(observation.native) ||
       root.parentFrameId !== undefined
     )
       fail("The observed native root must be present.");
@@ -356,7 +418,7 @@ export const navigationObservationSchema = z
     }
     const controls = new Map(
       observation.controls.map((control) => [
-        controlKey(control.reference),
+        navigationControlKey(control.reference),
         control,
       ]),
     );
@@ -364,7 +426,11 @@ export const navigationObservationSchema = z
       fail("Duplicate control.");
     for (const control of observation.controls) {
       const frame = frames.get(control.reference.frameId);
-      if (!frame || nativeKey(frame.native) !== nativeKey(control.reference))
+      if (
+        !frame ||
+        nativeReferenceKey(frame.native) !==
+          nativeReferenceKey(control.reference)
+      )
         fail("Control native identity must match its observed frame.");
       if (control.regionId) {
         const region = regions.get(control.regionId);
@@ -376,7 +442,9 @@ export const navigationObservationSchema = z
       for (const id of control.revealIds)
         if (
           id === control.reference.controlId ||
-          !controls.has(controlKey({ ...control.reference, controlId: id }))
+          !controls.has(
+            navigationControlKey({ ...control.reference, controlId: id }),
+          )
         )
           fail("Opener references must resolve in the same observed frame.");
     }
@@ -392,7 +460,7 @@ export const navigationObservationSchema = z
       if (!control) return;
       pending.add(key);
       for (const id of control.revealIds)
-        visit(controlKey({ ...control.reference, controlId: id }));
+        visit(navigationControlKey({ ...control.reference, controlId: id }));
       pending.delete(key);
       opened.add(key);
     };
@@ -405,7 +473,8 @@ export const navigationObservationSchema = z
     for (const image of observation.images) {
       if (
         !sameStamp(image.stamp, observation.stamp) ||
-        nativeKey(image.native) !== nativeKey(observation.native)
+        nativeReferenceKey(image.native) !==
+          nativeReferenceKey(observation.native)
       )
         fail("Capture must match the complete current observation stamp.");
       if (
@@ -455,13 +524,12 @@ export const navigationObservationSchema = z
       )
         fail("Viewport captures must cover the complete CSS viewport.");
     }
-    const structure = {
-      ...observation,
-      images: observation.images.map((image) => ({ ...image, image: "" })),
-    };
-    if (bytes(structure) > NAVIGATION_LIMITS.maxProjectionBytes)
+    if (
+      navigationProjectionBytes(observation) >
+      NAVIGATION_LIMITS.maxProjectionBytes
+    )
       fail("Model projection exceeds its UTF-8 byte budget.");
-    if (bytes(observation) > NAVIGATION_LIMITS.maxEnvelopeBytes)
+    if (serializedUtf8Bytes(observation) > NAVIGATION_LIMITS.maxEnvelopeBytes)
       fail("Observation exceeds its encoded envelope budget.");
   });
 
@@ -596,8 +664,10 @@ export function joinNavigationDecision(
   if (
     !sameStamp(observation.stamp, context.currentStamp) ||
     !sameStamp(response.stamp, context.currentStamp) ||
-    nativeKey(observation.native) !== nativeKey(context.currentNative) ||
-    nativeKey(response.native) !== nativeKey(context.currentNative)
+    nativeReferenceKey(observation.native) !==
+      nativeReferenceKey(context.currentNative) ||
+    nativeReferenceKey(response.native) !==
+      nativeReferenceKey(context.currentNative)
   )
     return { accepted: false, reason: "STALE_CONTEXT" };
   const timing = response.serverTiming;
@@ -620,7 +690,8 @@ export function joinNavigationDecision(
   if (decision.kind === "guide") {
     const control = observation.controls.find(
       (candidate) =>
-        controlKey(candidate.reference) === controlKey(decision.reference),
+        navigationControlKey(candidate.reference) ===
+        navigationControlKey(decision.reference),
     );
     if (!control) return { accepted: false, reason: "UNKNOWN_REFERENCE" };
     if (

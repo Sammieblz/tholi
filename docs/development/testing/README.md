@@ -23,6 +23,10 @@ The [ephemeral navigation-contract validation record](navigation-contracts-valid
 tracks #36 schema, identity/freshness, encoded-budget and OpenAPI checks. Contract
 admission does not establish live model quality or pixel-level privacy masking.
 
+The [page perception validation record](page-perception-validation.md) tracks
+#37 discovery, native-bound ephemeral context, omission accounting and the frozen
+before/after comparison. Collection success is separate from navigation success.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`
