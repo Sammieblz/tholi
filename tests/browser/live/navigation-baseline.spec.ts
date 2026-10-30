@@ -11,8 +11,57 @@ import {
   sample,
   settlePageTop,
 } from "../../support/acceptance-runner";
-import { modelContext } from "../../../packages/goal-planner/model-context";
-import type { PageControl } from "../../../packages/page-model";
+import * as modelProjection from "../../../packages/goal-planner/model-context";
+import { NAVIGATION_LIMITS } from "../../../packages/navigation-core/contracts-navigation";
+import {
+  journeySchema,
+  pageSnapshotSchema,
+  type PageControl,
+} from "../../../packages/page-model";
+import { z } from "zod";
+
+// Keep this content-free QA boundary runnable on the unchanged product before
+// the projection-report producer is introduced. It never enters model input.
+const count = z.number().int().nonnegative().nullable();
+const projectionReportSchema = z
+  .object({
+    version: z.literal(1),
+    format: z.literal("legacy"),
+    status: z.literal("ready"),
+    counts: z
+      .object({
+        indexedCandidates: count,
+        snapshotControls: count,
+        composedControls: z.number().int().nonnegative(),
+        rankedControls: count,
+        projectedControls: count,
+        composedRegions: count,
+        projectedRegions: count,
+        composedFrames: count,
+        projectedFrames: count,
+        compositionOmittedControls: count,
+        modelOmittedControls: count,
+      })
+      .strict(),
+    projectionBytes: count,
+    partial: z.boolean(),
+    reasons: z.array(
+      z.enum([
+        "budget",
+        "inaccessible-frame",
+        "privacy",
+        "unsupported",
+        "not-eligible",
+        "partial-scan",
+        "hierarchy-truncated",
+        "ambiguous-control",
+        "missing-perception",
+        "stale-perception",
+        "invalid-perception",
+      ]),
+    ),
+  })
+  .strict();
 
 // Collection success means a measurement was acquired, not that Tholi succeeded.
 // This opt-in project never participates in release certification.
@@ -44,6 +93,7 @@ for (const task of corpus.cases) {
     );
     const observations: Record<string, unknown>[] = [];
     let phase = "setup";
+    let collectorFailure = false;
     let failure: string | undefined;
     let outcome: (() => Promise<boolean>) | undefined;
     const started = performance.now();
@@ -52,6 +102,7 @@ for (const task of corpus.cases) {
       split: task.split,
       goal: task.goal,
       mode: "local",
+      observationProtocol: "get-page-pair-v1",
       pregrantedOrigins,
       url,
       initialState: corpus.initialState,
@@ -225,13 +276,120 @@ for (const task of corpus.cases) {
       await app.page.evaluate(settlePageTop);
       await app.start();
       const probe = chromiumProbe(app);
-      const observe = (view: any) => {
+      const observe = async (view: any) => {
         if (!view?.page) return;
         const matching = view.page.controls.filter(
           (c: PageControl) =>
             label.test(c.label) && (!matchesTarget || matchesTarget(c)),
         );
-        const projection = modelContext(view.page, task.goal, view.journey);
+        let projection: ReturnType<typeof modelProjection.modelContext>;
+        let report: z.infer<typeof projectionReportSchema> | null = null;
+        let pair: any;
+        let matchingPair: PageControl[];
+        let serialized: string;
+        let projectionBytes: number;
+        let referenceIntegrity: {
+          openerReferences: number;
+          missingOpeners: number;
+          regionReferences: number | null;
+          missingRegions: number | null;
+          parentReferences: number | null;
+          missingParents: number | null;
+        };
+        try {
+          pair = await app.panel.evaluate(() =>
+            chrome.runtime.sendMessage({ type: "GET_PAGE" }),
+          );
+          if (!pair || pair.error) throw Error("Fresh page unavailable");
+          pair.page = pageSnapshotSchema.parse(pair.page);
+          pair.journey = pair.journey
+            ? journeySchema.parse(pair.journey)
+            : undefined;
+          const args = [pair.page, task.goal, pair.journey, pair.perception];
+          const builder = Reflect.get(modelProjection, "buildModelProjection");
+          if (typeof builder === "function") {
+            const built = Reflect.apply(builder, undefined, args);
+            if (!built || typeof built !== "object")
+              throw Error("Malformed projection result");
+            projection = Reflect.get(built, "context");
+            report = projectionReportSchema.parse(Reflect.get(built, "report"));
+          } else {
+            projection = Reflect.apply(
+              modelProjection.modelContext,
+              undefined,
+              args,
+            );
+          }
+          if (
+            !projection ||
+            !Array.isArray(projection.controls) ||
+            projection.controls.some(
+              (control) =>
+                typeof control.id !== "string" ||
+                !Array.isArray(control.revealIds) ||
+                control.revealIds.some((id) => typeof id !== "string"),
+            )
+          )
+            throw Error("Malformed projection");
+          serialized = JSON.stringify(projection);
+          projectionBytes = new TextEncoder().encode(serialized).length;
+          if (
+            report &&
+            (report.projectionBytes !== projectionBytes ||
+              report.counts.projectedControls !== projection.controls.length)
+          )
+            throw Error("Projection report does not match its payload");
+          matchingPair = pair.page.controls.filter(
+            (control: PageControl) =>
+              label.test(control.label) &&
+              (!matchesTarget || matchesTarget(control)),
+          );
+          const ids = new Set(projection.controls.map((control) => control.id));
+          const openers = projection.controls.flatMap(
+            (control) => control.revealIds,
+          );
+          const rawRegions: unknown = Reflect.get(projection, "regions");
+          if (
+            rawRegions !== undefined &&
+            (!Array.isArray(rawRegions) ||
+              rawRegions.some(
+                (region) =>
+                  !region ||
+                  typeof region.id !== "string" ||
+                  (region.parentId !== undefined &&
+                    typeof region.parentId !== "string"),
+              ))
+          )
+            throw Error("Malformed projected regions");
+          const regions = rawRegions as
+            { id: string; parentId?: string }[] | undefined;
+          const regionIds =
+            regions && new Set(regions.map((region) => region.id));
+          const regionReferences = projection.controls.flatMap((control) => {
+            const regionId = Reflect.get(control, "regionId");
+            return typeof regionId === "string" ? [regionId] : [];
+          });
+          const parents = regions?.flatMap((region) =>
+            region.parentId ? [region.parentId] : [],
+          );
+          referenceIntegrity = {
+            openerReferences: openers.length,
+            missingOpeners: openers.filter((id) => !ids.has(id)).length,
+            regionReferences: regionIds ? regionReferences.length : null,
+            missingRegions: regionIds
+              ? regionReferences.filter((id) => !regionIds.has(id)).length
+              : null,
+            parentReferences: parents?.length ?? null,
+            missingParents: regionIds
+              ? parents!.filter((id) => !regionIds.has(id)).length
+              : null,
+          };
+        } catch {
+          collectorFailure = true;
+          throw Error(
+            "Fresh page projection measurement unavailable or malformed.",
+          );
+        }
         const selected = view.page.controls.find(
           (c: PageControl) => c.id === view.selectedControlId,
         );
@@ -247,10 +405,28 @@ for (const task of corpus.cases) {
           coverage: view.page.coverage,
           expectedInSnapshot: matching.length,
           expectedInModelContext: projection.controls.filter((c) =>
-            matching.some((m: PageControl) => m.id === c.id),
+            matchingPair.some((m) => m.id === c.id),
           ).length,
           modelContextControls: projection.controls.length,
-          modelContextCharacters: JSON.stringify(projection).length,
+          modelContextCharacters: serialized.length,
+          modelContextBytes: projectionBytes,
+          modelContextWithinBudget:
+            projectionBytes <= NAVIGATION_LIMITS.maxProjectionBytes,
+          projectionReport: report,
+          referenceIntegrity,
+          getPage: {
+            revision: pair.page.revision,
+            indexedControls: pair.page.indexedControls,
+            snapshotControls: pair.page.controls.length,
+            partial: pair.page.partial,
+            coverage: pair.page.coverage,
+            expectedInSnapshot: matchingPair.length,
+            sameOriginalRevision: pair.page.revision === view.page.revision,
+            perceptionAvailable: !!pair.perception,
+            perceptionMatchesPage: pair.perception
+              ? pair.perception.pageRevision === pair.page.revision
+              : null,
+          },
           selected: selected
             ? {
                 label: selected.label,
@@ -273,12 +449,12 @@ for (const task of corpus.cases) {
             measurement.initialPlanMs = Math.round(
               performance.now() - planningStarted,
             );
-            observe(reply.view);
+            await observe(reply.view);
             return reply;
           },
           view: async () => {
             const view = await probe.view();
-            observe(view);
+            await observe(view);
             return view;
           },
         },
@@ -303,7 +479,7 @@ for (const task of corpus.cases) {
     } catch (error) {
       failure = String(error).slice(0, 6000);
       measurement.failure = failure;
-      if (phase === "setup") throw error;
+      if (phase === "setup" || collectorFailure) throw error;
     } finally {
       try {
         const actual = await outcome?.().catch(() => undefined);
@@ -326,7 +502,9 @@ for (const task of corpus.cases) {
         )
           result.falseSuccess = Math.max(1, result.falseSuccess);
         measurement.outcome = actual ?? null;
-        measurement.collection = phase === "setup" ? "blocked" : "measured";
+        measurement.collection =
+          phase === "setup" || collectorFailure ? "blocked" : "measured";
+        measurement.collectorFailure = collectorFailure;
         measurement.navigation =
           result.completed && !failure ? "completed" : "failed";
         measurement.elapsedMs = Math.round(performance.now() - started);
@@ -335,7 +513,7 @@ for (const task of corpus.cases) {
         const last = observations.at(-1);
         measurement.failureStage = !failure
           ? null
-          : phase === "setup"
+          : phase === "setup" || collectorFailure
             ? "infrastructure"
             : last?.expectedInSnapshot === 0
               ? last.partial
