@@ -162,6 +162,12 @@ test("resolved local-stack policy returns only redacted deployment evidence", ()
 
 test.each([
   [
+    "enabled telemetry without bounded logs",
+    (config: ReturnType<typeof composeModel>) => {
+      config.services.api.environment.THOLI_OBSERVABILITY_ENABLED = "true";
+    },
+  ],
+  [
     "root worker",
     (config: ReturnType<typeof composeModel>) => {
       config.services.worker.user = "0:0";

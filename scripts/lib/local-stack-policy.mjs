@@ -47,6 +47,13 @@ export function inspectLocalStack(config) {
   );
   for (const name of ["api", "worker"]) {
     const service = services[name];
+    if (service.environment?.THOLI_OBSERVABILITY_ENABLED === "true")
+      requirePolicy(
+        service.logging?.driver === "json-file" &&
+          service.logging.options?.["max-size"] === "5m" &&
+          service.logging.options?.["max-file"] === "2",
+        `${name} enabled telemetry needs bounded local log rotation.`,
+      );
     const user = String(service.user || "").split(":")[0];
     requirePolicy(
       user && !["0", "root"].includes(user),

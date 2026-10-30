@@ -47,7 +47,8 @@ npm run local:up -- --profile telemetry
 Use the documented [local stack command syntax](local-stack.md) if selecting an
 alternate project/environment. The existing optional collector receives real
 OTLP JSON logs, traces and cumulative metrics. Its debug exporter is local-only
-and Docker logs rotate at 5 MiB across two files. Its Prometheus exporter listens
+and API, worker and collector logs rotate at 5 MiB across two files per container.
+Its Prometheus exporter listens
 at `telemetry:8889/metrics` only on the private application network. No telemetry
 host port is published. Do not copy detailed debug export into a public host.
 
@@ -69,7 +70,8 @@ until their authoritative producers exist in later milestones. Never infer an
 installation from a store click or a paid activation from sign-in.
 
 For hosted collectors enforce a seven-day operational TTL, encrypt transport
-and storage, restrict operator access and disable content capture. Local Docker
+and storage, restrict operator access and disable content capture. Local API,
+worker and collector Docker
 logs use size rotation rather than a time-based TTL and disappear when their
 owned containers are removed. Operator-retained exports/backups need their own
 expiry and deletion process; this code cannot delete a third-party collector's

@@ -119,11 +119,10 @@ describe("website appearance and cookie choices", () => {
     try {
       await act(async () =>
         root.render(
-          createElement(
-            PreferencesProvider,
-            { cookieAccess: jar.access },
-            createElement(Probe),
-          ),
+          createElement(PreferencesProvider, {
+            cookieAccess: jar.access,
+            children: createElement(Probe),
+          }),
         ),
       );
       preferences.setAnalyticsProvider({

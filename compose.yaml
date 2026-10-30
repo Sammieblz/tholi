@@ -20,6 +20,12 @@ x-observability: &observability
   THOLI_OTLP_ENDPOINT: http://telemetry:4318
   THOLI_OTLP_ALLOW_LOCAL: "true"
 
+x-operational-logging: &operational-logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
 services:
   gateway:
     image: nginx/nginx-unprivileged:1.30.6-alpine-slim@sha256:984a21e29bb10d4c0e122374b97b89a2101823a9331e0f3c6c04bc285ccf447f
@@ -62,6 +68,7 @@ services:
 
   api:
     <<: *api-image
+    logging: *operational-logging
     user: "1000:1000"
     command: ["node", "apps/api/dist/service.js"]
     environment:
@@ -118,6 +125,7 @@ services:
 
   worker:
     <<: *api-image
+    logging: *operational-logging
     user: "1000:1000"
     command: [node, apps/api/dist/worker.js]
     environment:
@@ -389,11 +397,7 @@ services:
     pids_limit: 64
     mem_limit: 128m
     cpus: 0.5
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "2"
+    logging: *operational-logging
     # The official scratch image has no HTTP client. The smoke command probes
     # its actual health endpoint at telemetry:13133 from the API container.
 

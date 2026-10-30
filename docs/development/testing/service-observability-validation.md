@@ -85,10 +85,11 @@ Private sentinels were absent from inspected application/collector output and
 metric labels. Raw records were not retained; the report preserves only counts
 and hashes. Synthetic ingestion alone was not treated as this proof.
 
-The subsequent changes affect only website consent controls, their browser/unit
-checks and current documentation. They do not alter the API/worker, SQL or
-collector binaries exercised by this report. Their configured website evidence
-is collected separately.
+Subsequent changes affect website consent controls, their browser/unit checks,
+current documentation and a shared local API/worker/collector log-rotation
+configuration. They do not alter the API/worker, SQL or collector binaries
+exercised by this report. Configured website and final exact-head hosted
+container evidence are collected separately.
 
 ## UI guidance
 
