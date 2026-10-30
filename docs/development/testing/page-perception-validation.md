@@ -1,109 +1,64 @@
 # Page perception validation: October 30, 2026
 
-Owner: [roadmap #23, issue #37](https://github.com/Sammieblz/tholi/issues/37).
-This record covers page-region discovery and bounded projection. It does not
-certify masked capture, Gemini quality, a release, packaging or deployment.
-Extension/API version remains 0.11.0 and website version remains 0.1.1.
+Owner: [issue #37](https://github.com/Sammieblz/tholi/issues/37). This is implementation and diagnostic evidence, not release certification. Extension/API 0.11.0 and website 0.1.1 remain unchanged.
 
-## Acceptance ownership
+## Acceptance matrix
 
-| Requirement                            | Existing owners and resulting boundary                                                                                                                                                                                                                   |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Region hierarchy and scroll containers | `StructureIndex`, `IncrementalControlIndex` and `PageDiscovery` retain generic dialog, menu, landmark and actual scroller evidence. Existing walks and per-snapshot geometry caches are reused.                                                          |
-| Measured projection loss               | The existing composition and model-context owners share ambiguity and recursive opener handling. Ephemeral coverage distinguishes observed candidates, precomposition controls, composed controls and model input. Unknown candidate counts remain null. |
-| Grounded additional observations       | A current native frame, scan UUID, local page revision and retained region identify a read-only refinement. Unknown, detached, private, closed-root or stale regions cannot acquire action authority.                                                    |
-| Privacy and budgets                    | Legacy stored models and public identifiers remain unchanged. The whole model context fits 24,000 UTF-8 bytes; reference bundles are admitted together. Existing discovery, planning and cancellation performance budgets remain the gates.              |
+| Criterion                        | Implementation and evidence                                                                                                                             | Current limit                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Region hierarchy and scrollers   | Generic dialogs, menus, regions and actual scrollers extend current discovery owners. Focused regressions passed.                                       | Unmounted, virtualized and closed-shadow controls remain unknown.                     |
+| Measured, bounded projection     | Shared ambiguity filtering, recursive opener bundles, closed ancestry and whole-context byte accounting. Both after cohorts had no dangling references. | A valid graph is not evidence that the most useful target was retained.               |
+| Grounded additional observations | Native identity, scan UUID, revision and retained region constrain read-only refinement. Native checks span observation and final binding.              | No clicking, scrolling, menu opening, wider host grant or fabricated frame transform. |
+| Privacy and existing budgets     | GET_PAGE sidecar geometry stays outside persisted sessions and public models. BFA native and dense-page checks passed.                                  | Current native performance passed; human permission checks remain pending.            |
 
-Raw ephemeral composition admits at most 16 frames including the root, 100
-regions and 600 control references. Model projection retains at most 16 frames,
-32 regions and 96 controls. Region ancestry is closed and bounded to 16 regions;
-discovery may traverse at most 64 neutral DOM ancestors to locate it. Truncation
-is reported as unknown evidence. No app-specific product selector, fixed route,
-frozen corpus or held-out request is used to tune this change.
+Raw composition is bounded to 16 frames including root, 100 regions and 600 control references. Model projection permits 16 frames, 32 regions, 96 controls and 24,000 total UTF-8 bytes. IDs, frozen tasks and existing authority boundaries remain intact.
 
-The background binds actual native identity and browser zoom around a fresh
-observation span. Authorized child-frame agents refresh through their existing
-owner. Their explicit replies defer parent scanning until the final composed
-read; ordinary mutation observations retain their normal updates. Zoom and
-native navigation invalidate an in-flight span. Geometry remains frame-local,
-not a fabricated transform into the root viewport. The sidecar travels beside
-`GET_PAGE` and never enters `PageSnapshot`, `SessionView` or persisted sessions.
+## Comparison cohorts
 
-## Frozen comparison and provenance
+Runs used Windows x64, Node 24.19.0, Chromium 156.0.8078.4 and disposable 1280 by 900 profiles. Corpus, oracle, timeouts and interactions are unchanged. Instrumented runs use the same physical collector SHA, `3eaa27c7e2f0724a6702818b3839a5ec01b03f689e9c0f9b657c9e2af035c099`. GET_PAGE refresh can replan; it is not a passive observer. The untouched cohort therefore remains distinct.
 
-The [existing protocol](navigation-baseline.md), task declaration, oracle,
-12-calibration/6-held-out split, task timeouts, interactions and independent
-outcomes remain unchanged. Every cohort retains all 18 declared cases in its
-denominator. No paid provider, authenticated website, saved screenshot or remote
-edit is involved.
+| Cohort                          | Run                                    | Collected       | Navigation completed | Target retained        | Report SHA-256 prefix |
+| ------------------------------- | -------------------------------------- | --------------- | -------------------- | ---------------------- | --------------------- |
+| Untouched before                | `ba6fb3a9-4f39-4f39-a812-7dd0b6081a7e` | 17/18           | 6/18                 | 15 known, 1 unmeasured | `53bda1356d4e`        |
+| Instrumented before, incomplete | `b36c0c55-8e6e-4ef8-b1f3-cd58bb20997e` | 17/18           | 6/18                 | 15 known, 1 unmeasured | `7d82c8d4f56c`        |
+| Filtered diagnostic             | `d9542a2c-3921-4909-97c8-e147f73c0e3f` | 1/1 exploratory | 1/1 exploratory      | 1/1                    | `ae96b537a0c1`        |
+| Instrumented before, complete   | `3baf5f50-9970-4b28-aa35-e6b9bdc38224` | 18/18           | 7/18                 | 16/18                  | `5a44cd8a3483`        |
+| Initial frozen after (BFA)      | `0fe5600c-2c81-4d99-bb21-e4387486db85` | 18/18           | 7/18                 | 15/18                  | `468234da0b44`        |
+| Post-analysis compact (15F)     | `e4ed3e69-f92c-48ae-bbd4-10241942a201` | 18/18           | 7/18                 | 16/18                  | `0e3c0a4705c0`        |
 
-- Accepted unchanged product source:
-  `50b28ea2b14f1a587260fa72c68c31381b03d688`.
-- Corpus SHA-256:
-  `1095f37ba0127937ee9ad327a49ee9170f9402cd2e13ea54d75a546e74cd8656`.
-- Protocol SHA-256:
-  `c4c7a71c62b8ab9af53c1d1643bff4727e240d1fb239e8d4c1012339c578b634`.
-- Original collector SHA-256:
-  `bb27ea04a30b6bbe631107412cb4278e646f6c994a27f2b4220ca6740bd6ac72`.
-- Measurement-only collector commit:
-  `c2bdb8e0ee871690aea639e67967d8c8c70c6107`.
-- Frozen instrumented collector SHA-256:
-  `3eaa27c7e2f0724a6702818b3839a5ec01b03f689e9c0f9b657c9e2af035c099`.
-- Unchanged Chromium build digest:
-  `5367c9c82c638a1cae8465cb210b5665251c97159586d51ef24f5ebacd6c30bd`.
-- Unchanged Firefox artifact digest:
-  `d16176308d3f3ba9aa95c351f069c6af20f661eb02858f801f3e769ee87fc040`.
-  This digest is provenance, not a claim that the public baseline ran on Firefox.
+Both incomplete cohorts retain a first-task 90-second timeout of unknown cause. The filtered success had a 19-second GET_PAGE/SET_GOAL probe and does not replace either failure.
 
-The baseline used Windows x64, Node 24.19.0, headless Chromium 156.0.8078.4 and
-the same 1280 by 900 disposable-profile configuration. Build manifests were
-verified before and after each run. Implementation lives in a separate checkout,
-so it did not modify the source or artifacts used by either before cohort.
+Complete before and initial BFA after both completed 7/18 tasks, with zero recorded false success. Target retention **regressed from 16/18 to 15/18**: wiki-plot left the model projection despite remaining in the snapshot. BFA contexts used 23,663 to 23,983 bytes versus 24,036 to 24,279 before. Budget compliance does not establish navigation improvement. Live site counts varied; indexed candidates are not eligible lost controls.
 
-| Cohort              | Run and source                                                                               | Observed result                                                                                                                                                                                                                                                                               |
-| ------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Untouched before    | `ba6fb3a9-4f39-4f39-a812-7dd0b6081a7e`, accepted unchanged source                            | 17 tasks collected; 6/18 navigation completions. `wiki-text` hit its unchanged 90-second test timeout without a measurement attachment. Collection failed overall.                                                                                                                            |
-| Instrumented before | `b36c0c55-8e6e-4ef8-b1f3-cd58bb20997e`, measurement-only commit, unchanged product artifacts | 17 tasks collected; 6/18 navigation completions. The same first task timed out without an attachment. No instrumentation failure in the 17 collected tasks. All 20 collected observation samples exceeded 24,000 bytes, ranging from 24,036 to 24,282 UTF-8 bytes. Collection failed overall. |
-| Instrumented after  | Pending final implementation and immutable build                                             | Not yet measured.                                                                                                                                                                                                                                                                             |
+Before product source is `50b28ea2b14f1a587260fa72c68c31381b03d688`; instrumentation-only source is `c2bdb8e0ee871690aea639e67967d8c8c70c6107`. Initial frozen after source is `bfa04506b9da72598b16faf53b483829fdff309f`, with Chromium digest `eb5e38d148715ee4b118f57523bbbcc62e7c3a49868eeb4ee154f0c86942244d`. Manifest verification passed before and after those complete runs.
 
-Neither before cohort recorded a false-success claim in its collected data. The
-timed-out case remains unmeasured, so this is not a complete safety result. Its
-precise timeout cause has not been established. Both failures, reports, timings,
-manifests and error contexts remain separately preserved under
-`output/qa/perception-37/{untouched-before,instrumented-before}/RUN_ID` in the
-baseline checkout. A failed or blocked case must not disappear from comparisons.
+The [comparison record](evidence/page-perception-2026-10-30.json) preserves full hashes, every case and unknown counters as null. Baseline artifacts are in the baseline checkout under `output/qa/perception-37/`; the filtered diagnostic is under `output/qa/perception37-wiki-diagnostic/`. Initial after artifacts live in the implementation checkout under `output/qa/perception-37/after/0fe5600c-2c81-4d99-bb21-e4387486db85/`.
 
-The instrumented protocol, `get-page-pair-v1`, adds one real `GET_PAGE` at each
-existing observation sample. It projects that matched page/perception/journey
-pair once and leaves the original oracle reply and initial-planning timing
-boundary intact. `GET_PAGE` refresh can replan, so it is not a passive observer.
-The instrumented before and after cohorts must use the identical collector hash
-and cadence. The unchanged original cohort remains separate.
+## Post-analysis format review
 
-## Focused evidence and remaining gates
+Current source `15f869dab56d9c053b0da5ccef5db25acaba19b6` follows a separate code-only audit, without corpus/report reads. It found repeated native references and region labels. Strict lossless frameId inversion and exact ordered regionIds retain a byte-saving fallback. Ranker, labels, headings, eligible pool, limits and Nav1 are unchanged. Two generic round-trip regressions, 53 focused tests and whole-project types passed.
 
-- Discovery: 54 tests passed. A later active-scanner refinement guard and its
-  assertion were added afterward and still require the combined fresh run.
-- Projection/contracts/journey/authentication: 51 tests passed.
-- Composition/native binding: 16 tests passed, including final-read races,
-  pre-content zoom changes, zoom ABA invalidation and authorized frame refresh.
-- Whole-project types passed before the final span/scan-cleanup changes.
-- Fresh whole-project types passed on the completed span, parser and scan-cleanup
-  source. The combined focused cohort passed 139 tests in seven files, run
-  `e459c984-2366-422e-a8b9-8f34b548f18e`; evidence is preserved under
-  `output/qa/perception-37-focused/e459c984-2366-422e-a8b9-8f34b548f18e`.
-- Production build, actual browser checks, existing performance budgets, after
-  comparison and `test:ci`: pending.
-- GitHub exact-head checks, review and merge: pending. Issue #37 remains open.
+The compact regression cohort collected 18/18 tasks, retained targets in 16/18, and completed the same 7/18 tasks, with zero false success. All contexts fit 23,731 to 23,999 bytes, with zero dangling opener, region or parent references. Artifacts remained immutable and source remained clean.
 
-Focused evidence is preserved in the implementation checkout under
-`output/qa/perception-37-discovery/`, `output/qa/perception37-composition-01/`,
-`output/qa/perception37-composition-02/` and
-`output/qa/perception37-composition-03/`. Earlier passes are not relabeled as
-evidence for later source edits. Sandbox startup failures that ran no tests are
-distinct from the subsequently completed focused runs.
+The review occurred after initial results were inspected. The compact cohort remains separate, without relabeling BFA or claiming held-out quality gains. Issue #43 requires a fresh, independently reviewed holdout before quality comparison. Existing tasks remain unchanged regression evidence.
 
-Native human permission prompts, screen-reader and signed-in workflows remain
-pending until performed. Chromium evidence does not certify Firefox. The current
-local planner does not consume the experimental model projection, so improved
-retention alone cannot establish improved local or cloud navigation quality.
+## Validation status
+
+| Source/evidence                              | Recorded result                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial focused work                         | 139 checks passed at the recorded source.                                                                                                                                                                                                                                                         |
+| BFA native frames and installed Firefox      | Two frame and two Firefox cases passed in run `1b135c36-f8cf-40f7-85b4-4a584d9efcd1`. The earlier strict message-field failure, report and trace remain under run `6cf7ca78-3115-4ea8-bd74-fb75839fcb1f`.                                                                                         |
+| BFA paired native performance                | Chrome 155 / Firefox 159 warm planning p95: 123.2 / 183 ms; OCR p95: 688.7 / 704 ms. Existing budgets passed in run `0fc0127d-d998-4f38-9568-72e4da39c13a`.                                                                                                                                       |
+| BFA dense page and actual Chrome interaction | Existing 50,000-node/5,000-control benchmark and actual Chrome interaction passed in run `7994c3de-699e-4fcd-a446-ef03002d49fe`.                                                                                                                                                                  |
+| Current compact source                       | Build/types and 53 focused tests passed. Local CI passed all 817 tests in run `e1f09fe2-1769-4d04-8641-6b7b441f6d91`.                                                                                                                                                                             |
+| Current paired native performance            | Chrome 155 / Firefox 159 warm planning p95: 114.6 / 157 ms; OCR p95: 723.2 / 758 ms. Pause/Stop remained below 1 second. Run `956841e9-d65f-4dc7-a44a-fefab3752b0d` passed.                                                                                                                       |
+| Current actual Chrome interaction            | Run `5d6f1e8a-e752-46d0-8d5f-d1d09f170ea2` passed the website interaction and native surface checks.                                                                                                                                                                                              |
+| Initial hosted 15F head                      | [Workflow 41131215447](https://github.com/Sammieblz/tholi/actions/runs/41131215447) passed all eight checks, 58 real PostgreSQL groups and 28 stack checks. Verified artifact `13013407005`, SHA-256 `1ba3e0e8b5e4a7824bfd6f7a140b5b1dd8a1b098de8eddc8b230b3297cded4e8`; owned cleanup completed. |
+| Structural review                            | Native authority, current-region refinement, composition and ephemeral ownership were reviewed without blocking findings. Snapshots remain point-in-time; content still verifies effects.                                                                                                         |
+| Remaining acceptance gates                   | Checks on the final documentation head, final review, merge and roadmap updates remain pending. Issue #37 is not yet accepted.                                                                                                                                                                    |
+
+Implementation-checkout native/performance artifacts are under `output/qa/perception-37-native/` and `output/qa/perception-37-performance/`, indexed by the run IDs above. Earlier passes do not certify later source. Current native checks verified the same manifest before and after execution. Current manifest and both target digests are recorded in the comparison JSON.
+
+A manifest failure exposed junction-backed model inputs. Physically materializing them preserved verification guards and existing archives. An LF attribute preserves the frozen collector hash.
+
+Human permission, screen-reader and signed-in checks remain pending. This record does not certify capture, Gemini, enterprise accuracy or release. The local planner does not consume experimental model projection.
