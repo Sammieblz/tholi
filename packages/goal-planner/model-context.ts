@@ -455,23 +455,58 @@ function report(
   };
 }
 
+function legacyStructure(prepared: Prepared, control: PageControl) {
+  if (!control.structure) return;
+  const regions = control.structure.regions.map((region) => ({
+    role: sanitizeText(region.role).slice(0, 40),
+    name: sanitizeText(region.name),
+  }));
+  const headings = control.structure.headings.map((heading) => ({
+    level: heading.level,
+    label: sanitizeText(heading.label),
+  }));
+  const reference = prepared.reference(control);
+  if (reference && regions.length) {
+    const chain: Region[] = [];
+    let id = prepared.metadata.get(control.id)?.regionId;
+    while (id) {
+      const region = prepared.regions.get(id);
+      if (!region || region.frameId !== reference.frameId)
+        return { regions, headings };
+      chain.unshift(region);
+      id = region.parentId;
+    }
+    const regionIds: string[] = [];
+    let start = 0;
+    for (const region of regions) {
+      const index = chain.findIndex(
+        (candidate, index) =>
+          index >= start &&
+          candidate.role === region.role &&
+          (candidate.label || "") === region.name,
+      );
+      if (index < 0) return { regions, headings };
+      regionIds.push(chain[index].id);
+      start = index + 1;
+    }
+    // The rich hierarchy can include ancestors outside the legacy DOM cutoff.
+    // Encode only the exact legacy subsequence, and only when it saves bytes.
+    if (serializedUtf8Bytes({ regionIds }) < serializedUtf8Bytes({ regions }))
+      return { regionIds, headings };
+  }
+  return { regions, headings };
+}
+
 function packedLegacy(prepared: Prepared, control: PageControl) {
   const metadata = prepared.metadata.get(control.id);
+  const identity: { frameId?: number; reference?: undefined } =
+    prepared.perception
+      ? { frameId: prepared.reference(control)?.frameId }
+      : { reference: undefined };
   return {
     id: control.id,
     ...prepared.evidence.get(control)!,
-    structure: control.structure
-      ? {
-          regions: control.structure.regions.map((region) => ({
-            role: sanitizeText(region.role).slice(0, 40),
-            name: sanitizeText(region.name),
-          })),
-          headings: control.structure.headings.map((heading) => ({
-            level: heading.level,
-            label: sanitizeText(heading.label),
-          })),
-        }
-      : undefined,
+    structure: legacyStructure(prepared, control),
     form: control.form,
     kind: control.kind,
     visible: control.visible,
@@ -485,7 +520,8 @@ function packedLegacy(prepared: Prepared, control: PageControl) {
           path: control.destination.path,
         }
       : undefined,
-    reference: prepared.reference(control),
+    // The retained frame supplies the native tuple; the control ID stays exact.
+    ...identity,
     regionId: metadata?.regionId,
     bounds: metadata?.bounds,
   };

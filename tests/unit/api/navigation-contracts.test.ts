@@ -117,6 +117,213 @@ function producerFixture() {
   return { observed, page, perception };
 }
 
+function legacyCompactionFixture() {
+  const fixture = producerFixture();
+  const { page, perception } = fixture;
+  const main = "Navigation for the currently open workspace";
+  const toolbar = "Tools for the current section and its preferences";
+  const childNative = {
+    ...perception.native,
+    frameId: 9,
+    documentId: "native:embedded-document",
+  };
+  perception.frames.push({
+    ...perception.frames[0],
+    native: childNative,
+    parentFrameId: 0,
+    scanId: "10000000-0000-4000-8000-000000000005",
+  });
+  perception.regions = [
+    { id: "f0:main", frameId: 0, role: "main", label: main },
+    {
+      id: "f0:extra",
+      frameId: 0,
+      parentId: "f0:main",
+      role: "section",
+      label: "Additional enclosing section",
+    },
+    {
+      id: "f0:toolbar",
+      frameId: 0,
+      parentId: "f0:extra",
+      role: "toolbar",
+      label: toolbar,
+    },
+    { id: "f9:main", frameId: 9, role: "main", label: main },
+    {
+      id: "f9:toolbar",
+      frameId: 9,
+      parentId: "f9:main",
+      role: "toolbar",
+      label: toolbar,
+    },
+  ];
+  page.controls[0].structure = {
+    regions: [
+      { role: "main", name: main },
+      { role: "toolbar", name: toolbar },
+    ],
+    headings: [{ level: 1, label: "Current workspace" }],
+  };
+  page.controls[1].structure = {
+    regions: [{ role: "toolbar", name: toolbar }],
+    headings: [{ level: 2, label: "Preferences group" }],
+  };
+  // The richer hierarchy can reach ancestors outside the legacy DOM cutoff.
+  page.controls[2].structure = {
+    regions: [],
+    headings: [{ level: 3, label: "Current selection" }],
+  };
+  page.controls[1].reference = {
+    tabId: childNative.tabId,
+    frameId: childNative.frameId,
+    documentId: childNative.documentId,
+    controlId: page.controls[1].id,
+  };
+  perception.controlRegions = page.controls.map((control, index) => ({
+    reference: {
+      ...(index === 1 ? childNative : perception.native),
+      controlId: control.id,
+    },
+    regionId: index === 1 ? "f9:toolbar" : "f0:toolbar",
+  }));
+  perception.coverage[0].indexedControls = 2;
+  perception.coverage[0].snapshotControls = 2;
+  perception.coverage.push({
+    ...perception.coverage[0],
+    frameId: 9,
+    indexedControls: 1,
+    snapshotControls: 1,
+  });
+  return fixture;
+}
+
+test("legacy compaction round-trips native identity and exact bounded region evidence for the same selected controls", () => {
+  const { observed, page, perception } = legacyCompactionFixture();
+  const { context, report } = buildModelProjection(
+    page,
+    "Workspace",
+    undefined,
+    perception,
+  );
+  expect(context.controls.map((control) => control.id).sort()).toEqual(
+    page.controls.map((control) => control.id).sort(),
+  );
+  const restored = {
+    ...context,
+    controls: context.controls.map((control) => {
+      const { frameId, ...remaining } = control;
+      const frame = context.frames!.find(
+        (frame) => frame.native.frameId === frameId,
+      )!;
+      const structure = control.structure!;
+      const regions =
+        "regionIds" in structure && structure.regionIds
+          ? structure.regionIds.map((id) => {
+              const region = context.regions!.find(
+                (region) => region.id === id,
+              )!;
+              return { role: region.role, name: region.label || "" };
+            })
+          : structure.regions;
+      return {
+        ...remaining,
+        reference: { ...frame.native, controlId: control.id },
+        structure: { regions, headings: structure.headings },
+      };
+    }),
+  };
+  for (const control of restored.controls) {
+    expect(control.reference).toEqual(
+      perception.controlRegions.find(
+        (entry) => entry.reference.controlId === control.id,
+      )!.reference,
+    );
+    expect(control.structure).toEqual(
+      page.controls.find((entry) => entry.id === control.id)!.structure,
+    );
+  }
+  const root = context.controls.find(
+    (control) => control.id === page.controls[0].id,
+  )!;
+  const child = context.controls.find(
+    (control) => control.id === page.controls[1].id,
+  )!;
+  const outsideLegacyCutoff = context.controls.find(
+    (control) => control.id === page.controls[2].id,
+  )!;
+  expect(root.frameId).toBe(0);
+  expect(child.frameId).toBe(9);
+  expect(root.structure).toMatchObject({
+    regionIds: ["f0:main", "f0:toolbar"],
+  });
+  expect(child.structure).toMatchObject({ regionIds: ["f9:toolbar"] });
+  expect(outsideLegacyCutoff.structure).toEqual(page.controls[2].structure);
+  expect(
+    context.controls.every((control) => !Object.hasOwn(control, "reference")),
+  ).toBe(true);
+  const compactBytes = new TextEncoder().encode(JSON.stringify(context)).length;
+  expect(compactBytes).toBeLessThan(
+    new TextEncoder().encode(JSON.stringify(restored)).length,
+  );
+  expect(report.projectionBytes).toBe(compactBytes);
+  expect(compactBytes).toBeLessThanOrEqual(
+    NAVIGATION_LIMITS.maxProjectionBytes,
+  );
+  const navigation = buildNavigationObservation(page, "Workspace", {
+    stamp: observed.stamp,
+    observedAtMs: observed.observedAtMs,
+    deadlineAtMs: observed.deadlineAtMs,
+    perception,
+  });
+  expect(
+    navigation.observation!.controls.every((control) =>
+      Object.hasOwn(control, "reference"),
+    ),
+  ).toBe(true);
+});
+
+test("legacy region encoding retains unmatched evidence and leaves absent, stale or invalid perception inputs unchanged", () => {
+  const { page, perception } = legacyCompactionFixture();
+  page.controls[0].structure!.regions[1].role = "Unrecognized role";
+  // A matching global label is insufficient without this control's ancestry.
+  perception.controlRegions[1].regionId = undefined;
+  const encoded = buildModelProjection(
+    page,
+    "Workspace",
+    undefined,
+    perception,
+  ).context;
+  for (const original of page.controls) {
+    const control = encoded.controls.find(
+      (control) => control.id === original.id,
+    )!;
+    expect(control.structure).toEqual(original.structure);
+    expect(Object.hasOwn(control.structure!, "regionIds")).toBe(false);
+  }
+  const plain = buildModelProjection(page, "Workspace").context;
+  const stale = buildModelProjection(page, "Workspace", undefined, {
+    ...perception,
+    pageRevision: page.revision + 1,
+  }).context;
+  const invalid = structuredClone(perception);
+  invalid.regions[0].parentId = "unknown-region";
+  expect(
+    buildModelProjection(page, "Workspace", undefined, invalid).context,
+  ).toEqual(plain);
+  expect(stale).toEqual(plain);
+  expect(plain.frames).toBeUndefined();
+  expect(plain.controls.every((control) => control.frameId === undefined)).toBe(
+    true,
+  );
+  for (const control of plain.controls) {
+    expect(control.structure).toEqual(
+      page.controls.find((entry) => entry.id === control.id)!.structure,
+    );
+    expect(Object.hasOwn(control, "reference")).toBe(true);
+  }
+});
+
 test("the producer retains complete region ancestry and real scroll evidence under the shared region budget", () => {
   const { observed, page, perception } = producerFixture();
   const result = buildNavigationObservation(page, "Preferences", {
