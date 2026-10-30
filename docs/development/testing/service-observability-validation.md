@@ -198,6 +198,38 @@ The ten reports/manifest/timing files are preserved under
 Generated tracked acceptance output was restored after copying the fresh report.
 This is PR evidence, not full release certification or authorization to package.
 
+## Initial hosted attempt
+
+[Workflow 41100040816](https://github.com/Sammieblz/tholi/actions/runs/41100040816)
+tested PR #74 head `6cab219e93d669faf05da8d8ea17f13e4ed55473`. Its build and
+five test groups passed the same 754 tests. The container checkout was GitHub's
+PR merge `b1c86679a8827fc583b179ae44b4e1f2ba765ad8`. It passed 58 PostgreSQL
+groups and 26 stack checks, then failed the actual Prometheus-family inspection.
+The unchanged redacted report is
+`output/qa/hosted-observability-41100040816/tholi-smoke-mvv95pnf-632d3527/smoke.json`,
+collected from 17:34:57 through 17:40:20 UTC. Owned cleanup completed. The source
+artifact is `pr-evidence-containers-1`, ID `12997278711`, SHA256
+`9af45537b5e82ce2fc0760d2e10ab5875c476ae92d9abe26cb3a02ca836d40bd`.
+The whole hosted workflow is failed evidence, irrespective of its passing groups.
+
+The original check waited for only a subset of logs/traces, then scraped metrics
+once. Stdout precedes asynchronous OTLP export and collector batching, so that
+ordering permits a missing initial metric export. The report did not retain the
+missing family names; it does not establish that race as the sole cause. The
+verification correction waits for every existing trace/log condition and all
+five real metric families within the same 15-second collection budget. Every
+scrape still rejects private identifiers immediately. Timeout diagnostics name
+only missing families from a fixed allowlist. Production telemetry and runtime
+budgets are unchanged. Fresh hosted results must establish the final outcome.
+
+The correction passed 11 focused regressions, whole-repository TypeScript and
+JavaScript syntax checks. They cover late metric and collector signals, exact
+sample families, bounded expiry, privacy on initial and later reads, remaining
+command/fetch deadlines and redacted transport failures. These are focused QA
+results, not a relabeling of the earlier 754-test local cohort. The next hosted
+workflow rebuilds the final head and reruns every required group plus the actual
+container proof.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and
