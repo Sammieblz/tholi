@@ -195,7 +195,7 @@ permission check. No production permission or authentication guard changed.
 Focused run `85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107` passed all 16 checks: nine
 dashboard and seven backend-consent cases. Its unit report SHA-256 is
 `49e588fcacb765d4b0acc8454aeb6b4d2249f9e98c22fbed9667fd300880dade`.
-This correction has not yet passed a complete CI rerun.
+This focused correction alone does not establish a complete CI pass.
 
 The failed run's retained summary is
 `output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/summary.json`,
@@ -204,20 +204,61 @@ The unit report SHA-256 is
 `4822ef7aad10c745ea85195d953ee40fe39c953b223b86ee6fae201d3bcdb2ba`.
 Both attempts are recorded separately in the content-free evidence index.
 
+The second complete local attempt,
+`0b6a884d-4ac2-46a9-9678-5b27b3dab468`, ran on clean head
+`ddffbea767cd82f7c9f9f3d428637c0e59420268` with unchanged d5a8 artifacts. Types
+and both manifest checks passed. All groups ran: unit 723/723, core 47/47,
+integration 20/20, Firefox 2/2 and UI 66/67. The result was **858/859, failed**.
+The remaining widget test still sent the retired capture shape without a UUID
+and read `capture.masks` instead of the required metadata envelope. It failed at
+`tests/browser/extension/ui/extension.spec.ts:358`, before checking mask length.
+The test must use one real capture UUID for preparation and restoration and
+retain its original masking, secrecy and presentation assertions. No production
+capture guard needs to change. A corrected test result is recorded separately
+when collected, rather than assumed from this diagnosis.
+
+[Hosted workflow 41143728361](https://github.com/Sammieblz/tholi/actions/runs/41143728361)
+failed on that same head: build, containers, core, integration, unit and Firefox
+passed; UI and aggregate `validate` failed. Its independent Cloudflare preview
+check passed and is not a workflow gate. GitHub's tested merge commit was
+`75b1633685565c6c54fb9540dff88cc02207a0c9`, with verified parents
+`fa90dd548f3b28cab1bdac630964b66a885b4d83` and the ddff head. The hosted widget
+failure matched the local failure; all other 66 hosted UI cases passed.
+
+The actual hosted container artifact `13019779172` was downloaded through the
+GitHub connection and verified against archive SHA-256
+`14f8f66292881d8daaa89a364e5045fb35dc9e9e43e0673a948cd2a307ef80c1`.
+Its bounded `smoke.json`, SHA-256
+`31bba5cd181758a47cf47c9b61e57f389487dcd6b94626cc067b503f7ae0c593`,
+records clean source at that merge commit, all 58 PostgreSQL groups and 28 stack
+checks passing, and removal of the owned project and volumes. Actual telemetry
+inspected 49 records, correlated a failed provider and two worker attempts,
+excluded the privacy sentinel and retained no raw records. This successful
+container result does not turn the failed complete workflow into a pass. The
+evidence index preserves both failed local attempts, the hosted check snapshot,
+container proof and the hosted UI artifact/report hashes.
+
+The corrected widget protocol passed its focused case in run
+`2449aaae-6637-4b7f-8035-68fb5bf3ef9e` using the unchanged d5a8 product build.
+The retained whole-reply secrecy assertion also covers metadata; one redundant
+metadata-only assertion was removed afterward. Complete CI must verify that
+final test form. The focused report and its actual hash are in the evidence
+index; this single-case pass does not replace either failed complete gate.
+
 ## Checks and remaining gates
 
-| Evidence                                                    | Recorded result                                                                                                                                                                                                                                                                                      |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Whole-project types before the precision correction         | Passed after the native API and DOM fixture typing corrections. This is implementation feedback, not evidence for later source.                                                                                                                                                                      |
-| Initial combined focused cohort                             | 84 of 85 passed in run `ef6eb674-78bb-484c-be4b-7d82a619a2a9`. The jsdom backdrop fixture failed and remains a separate failed attempt.                                                                                                                                                              |
-| Corrected content-focused cohort                            | 19 of 19 passed in run `973247ce-ea0a-4f86-8c90-29566b9ef8e3` after correcting the fixture. This narrow rerun does not replace the failed combined cohort.                                                                                                                                           |
-| Combined cohort before the precision correction             | 108 of 108 passed across eight files in run `3e337f39-affa-4d8c-b277-f9169f9a27ea`, including post-await ownership, settings/cancellation, backend egress, complete privacy traversal, native masking order, prepared fallback and image/source contract regressions. This is working-tree feedback. |
-| Precision-corrected types and focused cohort                | Whole-project types passed; 114 of 114 focused tests passed across eight files in run `c72f9f8a-92f4-4910-bb4d-ad666d91bbe8`.                                                                                                                                                                        |
-| Fresh production build and paired native pixels             | Build passed with the manifest and target digests above. Both native target cases passed in run `37b18517-c49d-436b-a116-c2b27b966cae`.                                                                                                                                                              |
-| Native backend egress                                       | The negative stale-proof case and positive masked-input control passed in run `eaf51e22-94f5-48e7-8246-bc9483d56372`.                                                                                                                                                                                |
-| Assigned-slot correction and final build                    | Types, 115 focused tests and the fresh d5a8 production build passed. Earlier cohorts remain attached to their original source/build.                                                                                                                                                                 |
-| Final paired native pixels, egress and performance          | All four cases passed in run `0d3606b5-773d-4266-b25b-13289de80cf8` with the recorded d5a8 target digests.                                                                                                                                                                                           |
-| Complete local CI, exact final-head hosted checks and merge | Pending. No final acceptance or certified archive is claimed by this record.                                                                                                                                                                                                                         |
+| Evidence                                            | Recorded result                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Whole-project types before the precision correction | Passed after the native API and DOM fixture typing corrections. This is implementation feedback, not evidence for later source.                                                                                                                                                                      |
+| Initial combined focused cohort                     | 84 of 85 passed in run `ef6eb674-78bb-484c-be4b-7d82a619a2a9`. The jsdom backdrop fixture failed and remains a separate failed attempt.                                                                                                                                                              |
+| Corrected content-focused cohort                    | 19 of 19 passed in run `973247ce-ea0a-4f86-8c90-29566b9ef8e3` after correcting the fixture. This narrow rerun does not replace the failed combined cohort.                                                                                                                                           |
+| Combined cohort before the precision correction     | 108 of 108 passed across eight files in run `3e337f39-affa-4d8c-b277-f9169f9a27ea`, including post-await ownership, settings/cancellation, backend egress, complete privacy traversal, native masking order, prepared fallback and image/source contract regressions. This is working-tree feedback. |
+| Precision-corrected types and focused cohort        | Whole-project types passed; 114 of 114 focused tests passed across eight files in run `c72f9f8a-92f4-4910-bb4d-ad666d91bbe8`.                                                                                                                                                                        |
+| Fresh production build and paired native pixels     | Build passed with the manifest and target digests above. Both native target cases passed in run `37b18517-c49d-436b-a116-c2b27b966cae`.                                                                                                                                                              |
+| Native backend egress                               | The negative stale-proof case and positive masked-input control passed in run `eaf51e22-94f5-48e7-8246-bc9483d56372`.                                                                                                                                                                                |
+| Assigned-slot correction and final build            | Types, 115 focused tests and the fresh d5a8 production build passed. Earlier cohorts remain attached to their original source/build.                                                                                                                                                                 |
+| Final paired native pixels, egress and performance  | All four cases passed in run `0d3606b5-773d-4266-b25b-13289de80cf8` with the recorded d5a8 target digests.                                                                                                                                                                                           |
+| Final immutable-source merge gates                  | Complete local CI and final-head hosted results are recorded on [PR #77](https://github.com/Sammieblz/tholi/pull/77). All required gates must pass before merge; this source snapshot preserves earlier attempts and is not release certification.                                                   |
 
 Each focused run retains its `unit.json` and `timing-unit-all.json` under
 `output/qa/vision-38-focused/<run-id>/`. These source-level runs do not establish

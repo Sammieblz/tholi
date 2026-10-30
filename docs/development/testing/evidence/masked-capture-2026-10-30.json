@@ -367,9 +367,6 @@
     ]
   },
   "remaining": [
-    "complete local CI",
-    "exact final-head hosted checks",
-    "final review and merge",
     "human capture-permission recovery",
     "Firefox positive classic-gutter verification",
     "screen-reader and signed-in checks"
@@ -785,6 +782,309 @@
         },
         "completeCiPassed": false
       }
+    },
+    {
+      "runId": "0b6a884d-4ac2-46a9-9678-5b27b3dab468",
+      "sourceHead": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+      "sourceDirty": false,
+      "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+      "manifestUnchanged": true,
+      "passed": false,
+      "stages": [
+        {
+          "name": "verify-before",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 384
+        },
+        {
+          "name": "typecheck",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 19783
+        },
+        {
+          "name": "test-ci",
+          "exitCode": 1,
+          "signal": null,
+          "elapsedMs": 748640
+        },
+        {
+          "name": "verify-after",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 399
+        }
+      ],
+      "groups": {
+        "unit": {
+          "passed": 723,
+          "total": 723
+        },
+        "core": {
+          "passed": 47,
+          "total": 47
+        },
+        "integration": {
+          "passed": 20,
+          "total": 20
+        },
+        "firefox": {
+          "passed": 2,
+          "total": 2
+        },
+        "ui": {
+          "passed": 66,
+          "total": 67
+        }
+      },
+      "totalTests": 859,
+      "passedTests": 858,
+      "failedTests": 1,
+      "browsersExecuted": true,
+      "collectedReports": [
+        {
+          "path": "output/qa/timing-ci-all.json",
+          "state": "collected",
+          "sha256": "636a792d3c891b90dc3af590f8a53645e852773240a5e6f8fc044b8e5c3d5e43",
+          "passed": null,
+          "cases": null
+        },
+        {
+          "path": "output/qa/unit.json",
+          "state": "collected",
+          "sha256": "bac48c087ec4efd7ff10d0c87ec4c81a40e68e7962e9dffe612dea18efd183cd",
+          "passed": true,
+          "cases": 723
+        },
+        {
+          "path": "output/acceptance/e2e-regressions.json",
+          "state": "collected",
+          "sha256": "1b8af229ef54a5e62974c9f37df133e08376e2df44d46b78c9e9f1b4292a4e73",
+          "passed": true,
+          "cases": 47
+        },
+        {
+          "path": "output/nlp/browser-build.json",
+          "state": "collected",
+          "sha256": "542e08e9c3796ed331b6a3dc150b1b1360b797f618926a160d4709fc90107938",
+          "passed": true,
+          "cases": 8
+        },
+        {
+          "path": "output/multi-app/browser.json",
+          "state": "collected",
+          "sha256": "d5b127b9e7a06d5aea716e64e87c2b17d26501ae178924af3f23b613eb289591",
+          "passed": true,
+          "cases": 8
+        },
+        {
+          "path": "output/vision/browser.json",
+          "state": "collected",
+          "sha256": "bfe7641e04fa92ad1df934fbb02537a9dcb480626768cff193ef657358e3ef7d",
+          "passed": true,
+          "cases": 3
+        },
+        {
+          "path": "output/reliability/browser.json",
+          "state": "collected",
+          "sha256": "14c2c0f5c13b5d5beda77c8691b0e8be85382134578b10e11f1dcddf90ed6bb6",
+          "passed": true,
+          "cases": 1
+        },
+        {
+          "path": "output/qa/firefox-build.json",
+          "state": "collected",
+          "sha256": "49486c4cb3fae992428860db3667b9f168339a81d998499fac2550245ffabba6",
+          "passed": true,
+          "cases": 2
+        },
+        {
+          "path": "output/qa/ui-build.json",
+          "state": "collected",
+          "sha256": "d59f96c038d412fa5f4767e64a81cac54d19fd2376c8db0f49322ad763b81bbc",
+          "passed": false,
+          "cases": 67
+        }
+      ],
+      "summary": {
+        "path": "output/qa/vision38-ci/0b6a884d-4ac2-46a9-9678-5b27b3dab468/summary.json",
+        "sha256": "49edb24102f1ca8ad9d9b46afc929d82b2eeb748e30780f4695da1aeda459d6b"
+      },
+      "failureCategory": "obsolete UI capture-test protocol: capture UUID omitted and metadata envelope not read",
+      "productionChangeRequired": false,
+      "correction": {
+        "runId": "2449aaae-6637-4b7f-8035-68fb5bf3ef9e",
+        "passed": true,
+        "cases": 1,
+        "buildDigest": "d684b89d75f745a3d5cec1ac0a985e879976d0b752e653442f814fb09d3d8ab1",
+        "productManifestUnchanged": true,
+        "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+        "report": {
+          "path": "output/qa/vision38-widget-correction/2449aaae-6637-4b7f-8035-68fb5bf3ef9e/ui-build.json",
+          "sha256": "36b90743a48382adee7cba5c3b0532f8c5110ad9d73d43144a526a52bf6c09e3"
+        },
+        "productionChanged": false,
+        "scope": "test uses capture UUID and metadata envelope, retaining whole-reply secrecy and hide/restore assertions",
+        "afterFocusedTestOnlyEdit": "removed redundant metadata-only secrecy assertion because the retained whole-reply assertion covers it",
+        "completeCiRequiredForFinalForm": true
+      }
     }
-  ]
+  ],
+  "hostedCiAttempts": [
+    {
+      "workflowRunId": 41143728361,
+      "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361",
+      "sourceHead": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+      "mergeCommit": "75b1633685565c6c54fb9540dff88cc02207a0c9",
+      "mergeParents": [
+        "fa90dd548f3b28cab1bdac630964b66a885b4d83",
+        "ddffbea767cd82f7c9f9f3d428637c0e59420268"
+      ],
+      "sourceDirty": false,
+      "passed": false,
+      "workflowChecks": [
+        {
+          "id": 124367010693,
+          "name": "validate",
+          "status": "completed",
+          "conclusion": "failure",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124367010693"
+        },
+        {
+          "id": 124364606174,
+          "name": "tests (ui)",
+          "status": "completed",
+          "conclusion": "failure",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606174"
+        },
+        {
+          "id": 124364606106,
+          "name": "tests (integration)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606106"
+        },
+        {
+          "id": 124364606089,
+          "name": "tests (core)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606089"
+        },
+        {
+          "id": 124364606074,
+          "name": "tests (unit)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606074"
+        },
+        {
+          "id": 124364606060,
+          "name": "tests (firefox)",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364606060"
+        },
+        {
+          "id": 124364192237,
+          "name": "containers",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364192237"
+        },
+        {
+          "id": 124364191737,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268",
+          "url": "https://github.com/Sammieblz/tholi/actions/runs/41143728361/job/124364191737"
+        }
+      ],
+      "externalChecks": [
+        {
+          "id": 124364100777,
+          "name": "Cloudflare Pages",
+          "status": "completed",
+          "conclusion": "success",
+          "head": "ddffbea767cd82f7c9f9f3d428637c0e59420268"
+        }
+      ],
+      "checksSnapshot": {
+        "path": "output\\qa\\hosted-vision38-ddffbea\\checks.snapshot.json",
+        "sha256": "e76195bf4130924e70f44d9fb9e06ad5ba23acd05af1321eb13f77d99c904a97"
+      },
+      "containers": {
+        "passed": true,
+        "artifactId": 13019779172,
+        "archive": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\containers-13019779172.zip",
+          "sha256": "14f8f66292881d8daaa89a364e5045fb35dc9e9e43e0673a948cd2a307ef80c1"
+        },
+        "report": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\smoke.json",
+          "sha256": "31bba5cd181758a47cf47c9b61e57f389487dcd6b94626cc067b503f7ae0c593"
+        },
+        "sourceSha": "75b1633685565c6c54fb9540dff88cc02207a0c9",
+        "postgresGroups": 58,
+        "stackChecks": 28,
+        "allChecksPassed": true,
+        "actualPrivateTelemetry": {
+          "name": "actual-correlated-private-safe-telemetry",
+          "passed": true,
+          "actualFailedProvider": true,
+          "actualRetriedWorker": true,
+          "attempts": 2,
+          "inspectedRecords": 49,
+          "privacySentinelAbsent": true,
+          "collectorSha256": "c58181cb28997591cd6286b23f9db1c099dc3fd4e460292c517fa550cf2cf7d9",
+          "metricsSha256": "f9b31b2ddfd28cf7a038b9e2f4db9d457e35fe523b3db864fbf8547412518e51",
+          "noRawRecordsRetained": true
+        },
+        "cleanup": "owned project and volumes removed"
+      },
+      "ui": {
+        "passed": false,
+        "passedCases": 66,
+        "totalCases": 67,
+        "artifactId": 13019379979,
+        "archive": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\ui-13019379979.zip",
+          "sha256": "68cdd07c5191e436a7c11538120172c5b7a1c0ab9a821080243070504d0d0d39"
+        },
+        "report": {
+          "path": "output\\qa\\hosted-vision38-ddffbea\\ui-build.json",
+          "sha256": "41505c95df23514b4243312bcecae88e0a29d39c35109ed936cc4bde1d8723b6"
+        },
+        "buildDigest": "4392af585352b2bede01ba6ef0ab23ce441b79d1bf1a7ab9e60c08e6abadcb44",
+        "caseId": "da119938d3268322a91b-6c3dc9c2395a6d776e23",
+        "case": "widget uses fresh frame binding, blocks secrets, moves and resizes",
+        "path": "tests/browser/extension/ui/extension.spec.ts",
+        "line": 358,
+        "error": "TypeError: Cannot read properties of undefined (reading length)",
+        "failureCategory": "obsolete UI capture-test protocol: capture UUID omitted and metadata envelope not read",
+        "productionChangeRequired": false,
+        "correctionEvidenceRef": "localCiAttempts[1].correction"
+      }
+    }
+  ],
+  "mergeGateEvidence": {
+    "url": "https://github.com/Sammieblz/tholi/pull/77",
+    "required": [
+      "complete local CI on immutable source",
+      "all final-head hosted workflow gates",
+      "final review"
+    ],
+    "allMustPassBeforeMerge": true,
+    "releaseCertified": false,
+    "finalResultsDestination": "PR77 body and issue acceptance record after immutable-source checks"
+  }
 }
