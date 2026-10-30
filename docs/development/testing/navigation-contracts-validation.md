@@ -27,9 +27,9 @@ task journeys, authentication, natural language and page context. Whole-project
 TypeScript and synchronized version checks passed after correcting a literal
 version type in the new test fixture. An independent source review found no
 remaining contract blocker. This is working-tree feedback, not release evidence.
-The production build, complete `test:ci` and exact-head hosted PR checks remain
-pending. No artifact digest or previous milestone's run is claimed as current
-evidence.
+The production build and complete `test:ci` passed as recorded below. Exact-head
+hosted PR checks remain a separate pending gate. No previous milestone's run is
+claimed as current evidence.
 
 The first complete gate, source `6bc43a5e2fae6661fba5e2613d743ca85829ec2e`
 and run `5ff69dd7-d24e-4074-b6f9-da776e6c1208`, passed its fresh build, types
@@ -43,6 +43,37 @@ run `591c5508-0a34-44dd-b62f-bf200cdd3226` against the same verified build diges
 `86515f15740ba17f01c2a2f0694625fd36866be165a10f8a2cc4989c41d466e4`.
 The failed and focused reports are preserved separately under ignored
 `output/qa/navigation-contracts-*`; neither is a complete passing gate.
+
+## Complete local PR gate
+
+Source `c8de5a62624bf586454f48b9f7a22aab689e96a3` passed the complete
+`test:ci` selection with run `312a08bd-8e2e-4f48-abe6-5b27225d165d`:
+
+| Owner                    | Passed |
+| ------------------------ | -----: |
+| Unit                     |    651 |
+| Core browser             |     47 |
+| Integration browser      |     20 |
+| Installed Firefox        |      2 |
+| Extension and website UI |     67 |
+| Total                    |    787 |
+
+Only the existing browser assertion and this validation document changed after
+the fresh build from `6bc43a5e2fae6661fba5e2613d743ca85829ec2e`. The complete
+rerun therefore used the documented prepared-build option, with the immutable
+manifest verified before and after the run. A fresh whole-project TypeScript
+check also passed on the final source after that run. This is PR evidence, not
+full release certification.
+
+The Chromium artifact digest is
+`86515f15740ba17f01c2a2f0694625fd36866be165a10f8a2cc4989c41d466e4`;
+the installed Firefox report identifies its separate target digest as
+`e359d7c62e27201c33cdbe71e2dcf93747578f04f5c6e9fb9ecb273c73bac465`.
+All eight test-report files identify the same complete PR run. The ten retained
+reports, timing record and manifest are under
+`output/qa/navigation-contracts-ci-312a08bd-8e2e-4f48-abe6-5b27225d165d`.
+The verified manifest SHA-256 is
+`6e1caccfd0406115327b0acf86f39a00eb14860736a0bb9b1e4ef264965bedce`.
 
 The first focused service-contract attempt passed four pure cases and failed 28
 cases at service startup. The future OpenAPI schemas had entered Fastify's AJV
