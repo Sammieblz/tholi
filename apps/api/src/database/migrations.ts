@@ -341,7 +341,7 @@ async function grantRuntime(client: PoolClient, role: string) {
       `GRANT SELECT,INSERT,DELETE ON tholi.product_events TO ${identifier}`,
     );
     await client.query(
-      `GRANT EXECUTE ON FUNCTION tholi.valid_product_event(jsonb),tholi.valid_job_correlation(jsonb) TO ${identifier}`,
+      `GRANT EXECUTE ON FUNCTION tholi.valid_product_event(jsonb),tholi.valid_job_correlation(jsonb),tholi.lock_product_analytics_consent() TO ${identifier}`,
     );
   }
 }

@@ -78,6 +78,22 @@ CREATE POLICY product_append ON tholi.product_events FOR INSERT WITH CHECK (
 CREATE POLICY product_delete ON tholi.product_events FOR DELETE USING (
   workspace_id=tholi.actor_workspace_id() AND account_id=tholi.actor_account_id()
   AND tholi.current_member_role(workspace_id) IS NOT NULL);
+-- Locking a membership through ordinary SELECT FOR SHARE also applies its
+-- UPDATE RLS policy, which correctly prevents an actor editing their own role.
+-- This parameterless capability locks only the established actor scope and
+-- current consent. It exposes no rows, changes no roles and grants no bypass.
+CREATE FUNCTION tholi.lock_product_analytics_consent() RETURNS boolean
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+  BEGIN
+    PERFORM 1 FROM tholi.accounts a JOIN tholi.memberships m ON m.account_id=a.id
+      WHERE a.id=tholi.actor_account_id() AND m.workspace_id=tholi.actor_workspace_id()
+        AND a.status='active' AND m.status='active' FOR SHARE OF a,m;
+    IF NOT FOUND THEN RETURN false; END IF;
+    PERFORM 1 FROM tholi.consents c WHERE c.workspace_id=tholi.actor_workspace_id()
+      AND c.account_id=tholi.actor_account_id() AND c.purpose='product_analytics'
+      AND c.policy_version='1' AND c.granted FOR UPDATE OF c;
+    RETURN FOUND;
+  END $$;
 CREATE FUNCTION tholi.purge_product_on_withdrawal() RETURNS trigger
   LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
   BEGIN IF NEW.purpose='product_analytics' AND NOT NEW.granted THEN
@@ -124,5 +140,6 @@ CREATE FUNCTION tholi.job_health() RETURNS TABLE(kind text,status text,count big
     FROM tholi.jobs j WHERE j.kind IN ('identity.prune-expired-brokers','support.operator','support.received','file.diagnostic','file.expire')
     GROUP BY j.kind,j.status ORDER BY j.kind,j.status LIMIT 100 $$;
 REVOKE ALL ON FUNCTION tholi.prune_observability(integer),tholi.job_health(),tholi.valid_product_event(jsonb),
-  tholi.valid_job_correlation(jsonb),tholi.guard_job_correlation(),tholi.purge_product_on_withdrawal() FROM PUBLIC;
+  tholi.valid_job_correlation(jsonb),tholi.guard_job_correlation(),tholi.purge_product_on_withdrawal(),
+  tholi.lock_product_analytics_consent() FROM PUBLIC;
 `;

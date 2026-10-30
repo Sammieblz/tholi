@@ -477,16 +477,10 @@ class ScopedRepositories {
     const input = recordProductEventInputSchema.parse(command);
     // Lock order matches consent withdrawal. Both retain the membership and
     // consent locks through commit, so no event can commit after withdrawal.
-    const admission = await this.client.query(
-      `SELECT c.id FROM tholi.accounts a
-      JOIN tholi.memberships m ON m.account_id=a.id AND m.workspace_id=$1
-      JOIN tholi.consents c ON c.workspace_id=m.workspace_id AND c.account_id=m.account_id
-      WHERE a.id=$2 AND a.status='active' AND m.status='active'
-        AND c.purpose='product_analytics' AND c.policy_version='1' AND c.granted
-      FOR SHARE OF a,m FOR UPDATE OF c`,
-      this.parameters,
+    const admission = await this.client.query<{ allowed: boolean }>(
+      "SELECT tholi.lock_product_analytics_consent() AS allowed",
     );
-    if (!admission.rowCount)
+    if (!admission.rows[0].allowed)
       throw new RepositoryError(
         "FORBIDDEN",
         "Current product analytics consent is required.",

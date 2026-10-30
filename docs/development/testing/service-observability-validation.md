@@ -33,6 +33,15 @@ The unchanged report is
 16:01:25 through 16:03:48 UTC on 2026-10-30. Its owned project and volumes were
 removed. The subsequent grant correction and fresh run are separate evidence.
 
+The next clean source `1d8083575e9c08376b061da0573a7eff37cad50a` passed the
+previous worker completion boundary but failed new product-event admission.
+Ordinary `FOR SHARE` on the actor's membership applies its existing UPDATE RLS
+policy, which deliberately excludes editing one's own membership. The original
+report remains `output/qa/local-stack/tholi-smoke-mvv5zcrw-5e186d59/smoke.json`,
+16:06:01 through 16:06:22 UTC. Cleanup completed. The correction uses a
+parameterless, read-only scoped locking capability, without expanding account
+or membership mutation grants. Its fresh actual run remains separate evidence.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

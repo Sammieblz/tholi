@@ -323,6 +323,66 @@ export async function runObservabilityChecks(
         { code: "FORBIDDEN" },
       );
       const consent = await grant(scope);
+      await withTransaction(
+        runtime,
+        async (client) => {
+          assert.equal(
+            (
+              await client.query(
+                "SELECT has_table_privilege(current_user,'tholi.accounts','UPDATE') AS broad_update",
+              )
+            ).rows[0].broad_update,
+            false,
+          );
+          // The existing role policy must keep self-membership locking through
+          // ordinary UPDATE admission denied. The narrow helper must work anyway.
+          assert.equal(
+            (
+              await client.query(
+                "SELECT account_id FROM tholi.memberships WHERE workspace_id=$1 AND account_id=$2 FOR SHARE",
+                [scope.workspaceId, scope.accountId],
+              )
+            ).rowCount,
+            0,
+          );
+          assert.equal(
+            (
+              await client.query(
+                "SELECT tholi.lock_product_analytics_consent() AS allowed",
+              )
+            ).rows[0].allowed,
+            true,
+          );
+        },
+        scope,
+      );
+      assert.equal(
+        (
+          await runtime.query(
+            "SELECT tholi.lock_product_analytics_consent() AS allowed",
+          )
+        ).rows[0].allowed,
+        false,
+      );
+      await withTransaction(
+        runtime,
+        async (client) => {
+          assert.equal(
+            (
+              await client.query(
+                "SELECT tholi.lock_product_analytics_consent() AS allowed",
+              )
+            ).rows[0].allowed,
+            false,
+          );
+        },
+        { accountId: scope.accountId, workspaceId: other.workspaceId },
+      );
+      if (worker)
+        await assert.rejects(
+          () => worker.query("SELECT tholi.lock_product_analytics_consent()"),
+          { code: "42501" },
+        );
       assert.deepEqual(
         await repositories.transaction(scope, (tx) =>
           tx.recordProductEvent(input),
