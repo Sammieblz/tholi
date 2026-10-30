@@ -33,6 +33,13 @@ export interface Membership {
   revision: bigint;
 }
 
+export interface Workspace {
+  id: string;
+  kind: "personal" | "organization";
+  ownerAccountId: string;
+  revision: bigint;
+}
+
 export interface Consent {
   id: string;
   purpose: string;

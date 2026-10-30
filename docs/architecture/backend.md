@@ -7,6 +7,8 @@ service architecture. This page covers the runtime foundation from
 from [#28](https://github.com/Sammieblz/tholi/issues/28), with
 [versioned service discovery and contracts](../development/service-api.md) from #29
 and [optional portable identity](../development/service-identity.md) from #30.
+[Workspace authorization and cloud consent](../development/service-authorization.md)
+extend that same runtime in #31.
 
 ## Profiles and entrypoints
 
@@ -16,8 +18,9 @@ and [optional portable identity](../development/service-identity.md) from #30.
 | Service        | `createServiceApi` in `server.ts`; `service.js` | Health/readiness, capability negotiation, OpenAPI and optional PostgreSQL-backed account authentication/session management |
 
 Without identity configuration, the service exposes health and discovery without
-opening PostgreSQL or an identity provider. Configured identity adds account and
-session routes through the same service runtime. Navigation, saved-data, credit,
+opening PostgreSQL or an identity provider. Configured identity adds account,
+session, workspace, membership and consent routes through the same service
+runtime and SQL pool. Navigation, saved-data, credit,
 billing and durable-job endpoints remain planned. A private bearer never grants
 service access. The service does not load SQLite, ONNX, OCR or their worker
 adapters. Importing either bootstrap does not listen; only running its executable
@@ -54,17 +57,22 @@ and source maps before emitting a new set. No archive is changed by a build.
 - `database/` owns the PostgreSQL service schema, scoped repositories, pooled
   transactions and one-shot operator commands. See
   [service database setup and boundaries](../development/service-database.md).
-  Identity repositories back configured account/session routes; other domain
-  repositories have no public routes yet. Neither profile migrates private SQLite.
+  Identity repositories back configured account/session routes; scoped repositories
+  back workspace, membership and consent operations. Neither profile migrates
+  private SQLite.
 - `application/identity.ts` owns one application session lifecycle for website
   cookies and native credentials through `identity-contracts.ts`. `adapters/oidc.ts`
   verifies provider proof; `adapters/service-identity.ts` composes the database and
-  provider ports. `routes/identity.ts` owns HTTP credential delivery and CSRF.
+  provider ports. `routes/identity.ts` owns HTTP credential delivery, while
+  `routes/identity-access.ts` shares credential and CSRF guards with the
+  authorization routes.
   See the [identity guide](../development/service-identity.md) for the protocol,
   approved callbacks, revocation policy and deployment settings.
 
 There is one navigation engine and one repository owner per database profile.
-Workspace role authorization/RLS and durable worker execution remain later tickets.
+`application/authorization.ts` applies the shared role/purpose policy through
+scoped repository transactions. Database row policies reinforce ownership and
+membership boundaries. Durable worker execution remains its next milestone.
 Authentication does not authorize model inference, upload local knowledge or
 transfer journey ownership to the server.
 

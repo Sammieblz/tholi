@@ -29,8 +29,10 @@ curl http://127.0.0.1:8788/api/v1/openapi.json
 A discovery-only service advertises `capabilities`, `handshake` and `openapi`.
 It needs no model provider, credentials, PostgreSQL connection or account.
 Configuring the [optional identity profile](service-identity.md) adds the
-`authentication` and `account-security` capabilities. Its authentication and
-accountData availability flags describe real sign-in and account/session metadata.
+`authentication` and `account-security` capabilities. The composed authorization
+service also advertises `tenant-authorization` and `purpose-consent` for its
+registered workspace, membership and consent operations. Its authentication and
+accountData availability flags describe these current account capabilities.
 Cloud-saved data, inference, credits and billing remain planned; decisions and
 billing availability stay false. There are no successful placeholder decision
 endpoints.
@@ -108,6 +110,10 @@ session-bound CSRF proof. Native bearer credentials and cookie sessions have
 distinct delivery rules over one session owner. Responses expose the request ID.
 CORS and a successful handshake grant no authentication or entitlement. See the
 [identity guide](service-identity.md#sessions-and-trust) for the complete policy.
+The composed workspace service additionally admits PATCH for authorized
+membership changes. [Workspace authorization](service-authorization.md) rechecks
+current membership and purpose-specific consent through the existing database
+transaction owner; selecting a workspace never grants access to it.
 
 ## Deadlines, cancellation and idempotency
 

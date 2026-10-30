@@ -16,6 +16,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Service PostgreSQL setup, migrations and repositories](development/service-database.md)
 - [Service API contracts, discovery and request policy](development/service-api.md)
 - [Optional accounts, OIDC and cross-client session security](development/service-identity.md)
+- [Workspace authorization, tenant isolation and cloud consent](development/service-authorization.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

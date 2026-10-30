@@ -134,7 +134,9 @@ describe("configured service identity composition", () => {
 
   it("describes actual identity routes and cookie security without advertising inference or billing", async () => {
     const { options, service, unexpected } = configured();
-    const app = await track(createServiceApi(options, [], service));
+    const app = await track(
+      createServiceApi(options, [], { identity: service }),
+    );
     const capabilities = (
       await app.inject({ url: "/api/v1/capabilities" })
     ).json();
@@ -196,7 +198,9 @@ describe("configured service identity composition", () => {
 
   it("grants credentialed CORS only to the exact website and admits registered native transport without cookies", async () => {
     const { options, service, store } = configured();
-    const app = await track(createServiceApi(options, [], service));
+    const app = await track(
+      createServiceApi(options, [], { identity: service }),
+    );
     for (const origin of [
       "https://tholi.io",
       "https://help.tholi.io",
@@ -254,7 +258,9 @@ describe("configured service identity composition", () => {
 
   it("never promotes a legacy private bearer into an account or native session", async () => {
     const { options, service, store, unexpected } = configured();
-    const app = await track(createServiceApi(options, [], service));
+    const app = await track(
+      createServiceApi(options, [], { identity: service }),
+    );
     const authorization = "Bearer " + "a".repeat(64);
     const account = await app.inject({
       url: "/api/v1/account",

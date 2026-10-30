@@ -10,6 +10,7 @@
 - [PostgreSQL schema, migrations and scoped repositories](../development/service-database.md)
 - [Versioned service APIs, discovery and request policy](../development/service-api.md)
 - [Optional identity, website cookies and native client sessions](../development/service-identity.md)
+- [Workspace roles, tenant isolation and purpose-specific consent](../development/service-authorization.md)
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 

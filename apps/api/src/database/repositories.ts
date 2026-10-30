@@ -27,6 +27,7 @@ import {
   type SavedArtifact,
   type ServiceRequest,
   type UsageRecord,
+  type Workspace,
 } from "./contracts";
 
 type Int8Row<T, K extends keyof T> = Omit<T, K> & Record<K, string>;
@@ -122,48 +123,79 @@ export class PostgresRepositories {
     );
   }
 
+  async listWorkspaces(
+    accountId: string,
+    options: { after?: string; limit?: number } = {},
+  ): Promise<Workspace[]> {
+    options = snapshot(options);
+    return withTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<Int8Row<Workspace, "revision">>(
+          `SELECT w.id, w.kind, w.owner_account_id AS "ownerAccountId", w.revision::text
+         FROM tholi.workspaces w JOIN tholi.memberships m
+          ON m.workspace_id = w.id AND m.account_id = $1
+         WHERE m.status = 'active' AND ($2::uuid IS NULL OR w.id > $2)
+         ORDER BY w.id LIMIT $3`,
+          [accountId, options.after ?? null, limit(options.limit)],
+        );
+        return result.rows.map((row) => ({
+          ...row,
+          revision: BigInt(row.revision),
+        }));
+      },
+      { accountId },
+    );
+  }
+
   async transaction<T>(
     scope: RepositoryScope,
     work: (repositories: ScopedRepositories) => Promise<T>,
   ): Promise<T> {
     const authorizedScope = Object.freeze({ ...scope });
-    return withTransaction(
-      this.pool,
-      async (client) => {
-        const membership = await client.query(
-          `SELECT 1 FROM tholi.memberships m
+    try {
+      return await withTransaction(
+        this.pool,
+        async (client) => {
+          const membership = await client.query(
+            `SELECT 1 FROM tholi.memberships m
            JOIN tholi.accounts a ON a.id = m.account_id
            WHERE m.workspace_id = $1 AND m.account_id = $2
              AND m.status = 'active' AND a.status = 'active'`,
-          [authorizedScope.workspaceId, authorizedScope.accountId],
-        );
-        if (!membership.rowCount)
-          throw new RepositoryError(
-            "FORBIDDEN",
-            "The workspace is unavailable.",
+            [authorizedScope.workspaceId, authorizedScope.accountId],
           );
-        let active = true;
-        const capability: Pick<PoolClient, "query"> = {
-          query: ((...args: unknown[]) => {
-            if (!active)
-              throw new RepositoryError(
-                "CONFLICT",
-                "The database transaction is no longer active.",
-              );
-            return Reflect.apply(client.query, client, args);
-          }) as PoolClient["query"],
-        };
-        try {
-          // Callers await all work. Later continuations cannot reuse this client.
-          return await work(
-            new ScopedRepositories(capability, authorizedScope),
-          );
-        } finally {
-          active = false;
-        }
-      },
-      authorizedScope,
-    );
+          if (!membership.rowCount)
+            throw new RepositoryError(
+              "FORBIDDEN",
+              "The workspace is unavailable.",
+            );
+          let active = true;
+          const capability: Pick<PoolClient, "query"> = {
+            query: ((...args: unknown[]) => {
+              if (!active)
+                throw new RepositoryError(
+                  "CONFLICT",
+                  "The database transaction is no longer active.",
+                );
+              return Reflect.apply(client.query, client, args);
+            }) as PoolClient["query"],
+          };
+          try {
+            // Callers await all work. Later continuations cannot reuse this client.
+            return await work(
+              new ScopedRepositories(capability, authorizedScope),
+            );
+          } finally {
+            active = false;
+          }
+        },
+        authorizedScope,
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code === "42501")
+        throw new RepositoryError("FORBIDDEN", "The workspace is unavailable.");
+      throw error;
+    }
   }
 }
 
@@ -172,35 +204,10 @@ export async function provisionAccountOnClient(
   client: PoolClient,
   input: RepositoryScope,
 ): Promise<RepositoryScope> {
-  await client.query(
-    "INSERT INTO tholi.accounts (id) VALUES ($1) ON CONFLICT DO NOTHING",
-    [input.accountId],
-  );
-  await client.query(
-    `INSERT INTO tholi.workspaces (id, kind, owner_account_id)
-         VALUES ($1, 'personal', $2) ON CONFLICT DO NOTHING`,
-    [input.workspaceId, input.accountId],
-  );
-  const workspace = await client.query(
-    `SELECT w.id FROM tholi.workspaces w
-         JOIN tholi.accounts a ON a.id = w.owner_account_id
-         WHERE w.id = $1 AND w.owner_account_id = $2
-           AND w.kind = 'personal' AND a.status = 'active'`,
-    [input.workspaceId, input.accountId],
-  );
-  if (!workspace.rowCount) conflict();
-  await client.query(
-    `INSERT INTO tholi.memberships (workspace_id, account_id, role)
-         VALUES ($1, $2, 'owner') ON CONFLICT DO NOTHING`,
-    [input.workspaceId, input.accountId],
-  );
-  const membership = await client.query(
-    `SELECT 1 FROM tholi.memberships
-         WHERE workspace_id = $1 AND account_id = $2
-           AND role = 'owner' AND status = 'active'`,
-    [input.workspaceId, input.accountId],
-  );
-  if (!membership.rowCount) conflict();
+  await client.query("SELECT tholi.provision_personal_account($1,$2)", [
+    input.accountId,
+    input.workspaceId,
+  ]);
   return { ...input };
 }
 
@@ -238,6 +245,33 @@ class ScopedRepositories {
     return { ...result.rows[0], revision: BigInt(result.rows[0].revision) };
   }
 
+  async getWorkspace(): Promise<Workspace> {
+    const result = await this.client.query<Int8Row<Workspace, "revision">>(
+      `SELECT id,kind,owner_account_id AS "ownerAccountId",revision::text
+       FROM tholi.workspaces WHERE id = $1`,
+      [this.scope.workspaceId],
+    );
+    if (!result.rows[0])
+      throw new RepositoryError("FORBIDDEN", "The workspace is unavailable.");
+    return { ...result.rows[0], revision: BigInt(result.rows[0].revision) };
+  }
+
+  async listMemberships(
+    options: { after?: string; limit?: number } = {},
+  ): Promise<Membership[]> {
+    options = snapshot(options);
+    const result = await this.client.query<Int8Row<Membership, "revision">>(
+      `SELECT account_id AS "accountId",role,status,revision::text FROM tholi.memberships
+       WHERE workspace_id = $1 AND ($2::uuid IS NULL OR account_id > $2)
+       ORDER BY account_id LIMIT $3`,
+      [this.scope.workspaceId, options.after ?? null, limit(options.limit)],
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      revision: BigInt(row.revision),
+    }));
+  }
+
   async getMembership(
     accountId = this.scope.accountId,
   ): Promise<Membership | undefined> {
@@ -259,11 +293,15 @@ class ScopedRepositories {
     input = snapshot(input);
     await this.lockWorkspace(true);
     integer(input.expectedRevision);
+    const workspace = await this.getWorkspace();
     if (
-      input.accountId === this.scope.accountId &&
-      (input.role !== "owner" || input.status !== "active")
+      workspace.kind === "personal" ||
+      input.accountId === workspace.ownerAccountId ||
+      input.role === "owner"
     )
-      invalid("The workspace owner must retain active ownership.");
+      invalid(
+        "Membership changes must preserve canonical workspace ownership.",
+      );
     const result =
       input.expectedRevision === 0n
         ? await this.client.query<Int8Row<Membership, "revision">>(
@@ -299,6 +337,18 @@ class ScopedRepositories {
     return row && { ...row, revision: BigInt(row.revision) };
   }
 
+  async listConsents(): Promise<Consent[]> {
+    const result = await this.client.query<Int8Row<Consent, "revision">>(
+      `SELECT id,purpose,policy_version AS "policyVersion",granted,revision::text
+       FROM tholi.consents WHERE workspace_id = $1 AND account_id = $2 ORDER BY purpose LIMIT 100`,
+      this.parameters,
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      revision: BigInt(row.revision),
+    }));
+  }
+
   async recordConsent(input: {
     purpose: string;
     policyVersion: string;
@@ -323,7 +373,7 @@ class ScopedRepositories {
             [...parameters, randomUUID()],
           )
         : await this.client.query<Int8Row<Consent, "revision">>(
-            `UPDATE tholi.consents SET policy_version = $4, granted = $5,
+            `UPDATE tholi.consents SET policy_version = CASE WHEN $5 THEN $4 ELSE policy_version END, granted = $5,
              revision = revision + 1, updated_at = now()
            WHERE workspace_id = $1 AND account_id = $2 AND purpose = $3 AND revision = $6
            RETURNING ${columns}`,
@@ -494,16 +544,9 @@ class ScopedRepositories {
       granted: string;
       spent: string;
       reserved: string;
-    }>(
-      `SELECT
-        (SELECT COALESCE(sum(amount), 0)::text FROM tholi.credit_grants
-          WHERE workspace_id = $1 AND (expires_at IS NULL OR expires_at > now())) AS granted,
-        (SELECT COALESCE(sum(amount), 0)::text FROM tholi.credit_settlements
-          WHERE workspace_id = $1) AS spent,
-        (SELECT COALESCE(sum(amount), 0)::text FROM tholi.credit_reservations
-          WHERE workspace_id = $1 AND status IN ('active', 'uncertain')) AS reserved`,
-      [this.scope.workspaceId],
-    );
+    }>("SELECT * FROM tholi.workspace_credit_totals($1)", [
+      this.scope.workspaceId,
+    ]);
     const { granted, spent, reserved } = result.rows[0];
     const available = BigInt(granted) - BigInt(spent) - BigInt(reserved);
     return {

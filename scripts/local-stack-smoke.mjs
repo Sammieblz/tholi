@@ -468,7 +468,14 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "postgres",
       "sh",
       "-ec",
-      'PGPASSWORD="$THOLI_DB_PASSWORD" psql --host=127.0.0.1 --username=tholi_runtime --dbname=tholi_restore --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="SELECT count(*) = 1 FROM tholi.accounts WHERE id = \'00000000-0000-4000-8000-000000000028\'::uuid"',
+      'PGPASSWORD="$THOLI_DB_PASSWORD" psql --host=127.0.0.1 --username=tholi_runtime --dbname=tholi_restore --set=ON_ERROR_STOP=1 --quiet --tuples-only --no-align --command="$1"',
+      "tholi-runtime-restore-check",
+      `BEGIN;
+       SET LOCAL tholi.account_id = '00000000-0000-4000-8000-000000000028';
+       SET LOCAL tholi.workspace_id = '00000000-0000-4000-8000-000000000029';
+       SELECT count(*) = 1 FROM tholi.accounts
+        WHERE id = '00000000-0000-4000-8000-000000000028'::uuid;
+       COMMIT;`,
     ]);
     requireCheck(
       restored.trim() === "t",

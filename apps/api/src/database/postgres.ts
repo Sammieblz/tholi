@@ -16,10 +16,27 @@ export interface DatabaseScope {
   workspaceId: string;
 }
 
+export interface AccountScope {
+  accountId: string;
+  workspaceId?: string;
+}
+
 const scopeSchema = z.object({
   accountId: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().uuid().optional(),
 });
+
+/** Identity discovers the actor before a workspace can be selected. Always local. */
+export async function setDatabaseScope(
+  client: Pick<PoolClient, "query">,
+  scope?: AccountScope,
+) {
+  if (scope) scopeSchema.parse(scope);
+  await client.query(
+    "SELECT set_config('tholi.account_id', $1, true), set_config('tholi.workspace_id', $2, true)",
+    [scope?.accountId ?? "", scope?.workspaceId ?? ""],
+  );
+}
 
 function bounded(value: number | undefined, fallback: number, maximum: number) {
   const result = value ?? fallback;
@@ -124,17 +141,15 @@ export function createDatabasePool(options: DatabaseOptions): Pool {
 export async function withTransaction<T>(
   pool: Pool,
   work: (client: PoolClient) => Promise<T>,
-  scope?: DatabaseScope,
+  scope?: AccountScope,
 ): Promise<T> {
-  if (scope) scopeSchema.parse(scope);
+  const localScope = scope ? Object.freeze({ ...scope }) : undefined;
+  if (localScope) scopeSchema.parse(localScope);
   const client = await pool.connect();
   let discard = false;
   try {
     await client.query("BEGIN");
-    await client.query(
-      "SELECT set_config('tholi.account_id', $1, true), set_config('tholi.workspace_id', $2, true)",
-      [scope?.accountId ?? "", scope?.workspaceId ?? ""],
-    );
+    await setDatabaseScope(client, localScope);
     const result = await work(client);
     await client.query("COMMIT");
     return result;
