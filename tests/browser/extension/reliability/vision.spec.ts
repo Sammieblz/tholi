@@ -3,6 +3,7 @@ import { test, expect } from "../../../support/browser-test";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
+import { imageCaptureFixture } from "../../../support/image-capture-fixture";
 test("compare frozen UI images with real bundled OCR in the offline production extension", async () => {
   const corpusBytes = await readFile(
     "tests/fixtures/reliability-vision/corpus.json",
@@ -42,14 +43,14 @@ test("compare frozen UI images with real bundled OCR in the offline production e
         );
         expect(createHash("sha256").update(bytes).digest("hex")).toBe(c.sha256);
         const result = await app.panel.evaluate(
-          async ({ image, engine }) =>
+          async ({ image, engine, capture }) =>
             chrome.runtime.sendMessage({
               target: "offscreen",
               type: "OCR_REQUEST",
               engine,
               id: crypto.randomUUID(),
               image,
-              metadata: { width: 960, height: 600, masks: [] },
+              ...capture,
               stamp: {
                 requestId: crypto.randomUUID(),
                 journeyId: crypto.randomUUID(),
@@ -57,12 +58,13 @@ test("compare frozen UI images with real bundled OCR in the offline production e
                 documentId: "image-corpus",
                 observationRevision: 1,
                 viewportRevision: 1,
-                captureId: crypto.randomUUID(),
+                captureId: capture.metadata.captureId,
               },
             }),
           {
             image: "data:image/png;base64," + bytes.toString("base64"),
             engine,
+            capture: imageCaptureFixture(960, 600),
           },
         );
         results.push({

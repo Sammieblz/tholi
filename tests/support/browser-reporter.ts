@@ -127,6 +127,7 @@ export default class BrowserReporter implements Reporter {
       ["motion-benchmark", "motion"],
       ["native-surfaces", "surfaces"],
       ["paired-performance", "pairedPerformance"],
+      ["pixel-privacy", "pixelPrivacy"],
       ["route-motion-timing", "routeMotion"],
       ["website-motion-timing", "websiteMotion"],
     ]) {

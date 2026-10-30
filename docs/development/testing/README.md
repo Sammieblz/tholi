@@ -27,6 +27,11 @@ The [page perception validation record](page-perception-validation.md) tracks
 #37 discovery, native-bound ephemeral context, omission accounting and the frozen
 before/after comparison. Collection success is separate from navigation success.
 
+The [masked-capture validation record](masked-capture-validation.md) tracks #38
+native capture-plane measurements, complete privacy evidence, mask-before-transform
+processing and final native/egress guards. It keeps failed probes distinct and does
+not certify arbitrary pixels, provider inference or a release.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`

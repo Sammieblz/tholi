@@ -3,6 +3,11 @@ import { hasBackendAccess } from "./site-access";
 import type { PlanInput } from "../../../../packages/navigation-core/contracts";
 import { resultSchema } from "../../../../packages/navigation-core/contracts";
 import {
+  recognitionInputSchema,
+  validatePng,
+  type RecognitionInput,
+} from "../../../../packages/vision/contracts";
+import {
   parameterizedTask,
   structuralKnowledge,
   structuralObservation,
@@ -56,16 +61,18 @@ export async function setBackendSettings(settings: Settings) {
 async function backendFetch(
   settings: Settings,
   path: string,
-  init: RequestInit,
+  init: RequestInit | (() => Promise<RequestInit>),
 ) {
   if (!(await hasBackendAccess(settings.url)))
     throw new Error(
       "Backend data transmission permission was declined or revoked.",
     );
+  const request = typeof init === "function" ? await init() : init;
+  request.signal?.throwIfAborted();
   return fetch(settings.url + path, {
-    ...init,
+    ...request,
     headers: {
-      ...init.headers,
+      ...request.headers,
       Authorization: "Bearer " + settings.token,
     },
   });
@@ -147,8 +154,9 @@ export async function deleteBackendMemory(origin?: string) {
 }
 
 export async function backendOcr(
-  input: import("../../../../packages/vision/contracts").RecognitionInput,
-  signal?: AbortSignal,
+  raw: RecognitionInput,
+  signal: AbortSignal | undefined,
+  beforeSend: () => Promise<void>,
 ) {
   const settings = await backendSettings();
   if (!settings.enabled) return;
@@ -160,16 +168,29 @@ export async function backendOcr(
   });
   if (!health.ok || !(await health.json()).capabilities?.includes("cpu-ocr"))
     return;
-  const response = await backendFetch(settings, "/v2/ocr", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-    signal: AbortSignal.any([
-      signal || new AbortController().signal,
-      AbortSignal.timeout(10000),
-    ]),
+  const response = await backendFetch(settings, "/v2/ocr", async () => {
+    const current = await backendSettings();
+    if (
+      !current.enabled ||
+      current.url !== settings.url ||
+      current.token !== settings.token
+    )
+      throw Error("The backend connection changed before image transmission.");
+    // All capability, consent and protected-setting awaits precede the capture
+    // owner's final native/viewport check. Only a bounded prepared PNG is sent.
+    await beforeSend();
+    signal?.throwIfAborted();
+    const input = recognitionInputSchema.parse(raw);
+    validatePng(input);
+    return {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signal: AbortSignal.any([
+        signal || new AbortController().signal,
+        AbortSignal.timeout(10000),
+      ]),
+    };
   });
   if (!response.ok) throw new Error("Backend OCR unavailable");
   return response.json();

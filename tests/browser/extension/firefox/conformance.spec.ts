@@ -5,6 +5,9 @@ import { test, expect } from "../../../support/browser-test";
 import { openFirefoxExtension } from "../../../support/firefox-extension";
 import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
+import type { CaptureMetadata } from "../../../../packages/vision/contracts";
+
+test.use({ trace: "off", screenshot: "off", video: "off" });
 test("Firefox uses native document identity, local planning and independently verified outcomes", async ({}, info) => {
   const fixture = await acceptanceServer();
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
@@ -117,66 +120,87 @@ test("Firefox uses native document identity, local planning and independently ve
     const capture = await app.extension(async (tabId: number) => {
       const api = (globalThis as any).browser;
       const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
-      const metadata = await api.tabs.sendMessage(
-        tabId,
-        { type: "PREPARE_CAPTURE", sessionId: session.sessionId },
-        { frameId: 0 },
-      );
+      const captureId = crypto.randomUUID();
+      let metadata: CaptureMetadata;
+      let image: string;
+      let browserZoom: number;
       try {
-        const image = await api.tabs.captureVisibleTab(
+        const prepared = await api.tabs.sendMessage(
+          tabId,
+          { type: "PREPARE_CAPTURE", sessionId: session.sessionId, captureId },
+          { frameId: 0 },
+        );
+        if (prepared?.error || !prepared?.metadata)
+          throw Error("Current Firefox capture metadata unavailable");
+        metadata = prepared.metadata;
+        browserZoom = await api.tabs.getZoom(tabId);
+        image = await api.tabs.captureVisibleTab(
           (await api.tabs.get(tabId)).windowId,
           { format: "png" },
         );
-        const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
-          type: "module",
-        });
-        try {
-          const id = crypto.randomUUID();
-          const result: any = await new Promise((resolve, reject) => {
-            const timer = setTimeout(
-              () => reject(Error("Masked capture OCR deadline")),
-              30000,
-            );
-            worker.onerror = (event) => {
-              clearTimeout(timer);
-              reject(Error(event.message));
-            };
-            worker.onmessage = ({ data }) => {
-              if (data.id === id) {
-                clearTimeout(timer);
-                data.error ? reject(Error(data.error)) : resolve(data.value);
-              }
-            };
-            worker.postMessage({
-              type: "OCR_REQUEST",
-              id,
-              image,
-              metadata,
-              stamp: {
-                requestId: session.view.request.id,
-                journeyId: session.view.journey.id,
-                contextRevision: 0,
-                documentId: session.documentId,
-                observationRevision: session.view.page.revision,
-                viewportRevision: metadata.viewportRevision,
-                captureId: crypto.randomUUID(),
-              },
-            });
-          });
-          return {
-            metadata,
-            png: image.startsWith("data:image/png;base64,"),
-            leaked: JSON.stringify(result).includes("SENTINEL"),
-          };
-        } finally {
-          worker.terminate();
-        }
+        const checked = await api.tabs.sendMessage(
+          tabId,
+          { type: "CHECK_CAPTURE", sessionId: session.sessionId, captureId },
+          { frameId: 0 },
+        );
+        if (!checked?.current) throw Error("Firefox capture was invalidated");
       } finally {
         await api.tabs.sendMessage(
           tabId,
-          { type: "RESTORE_CAPTURE", sessionId: session.sessionId },
+          { type: "RESTORE_CAPTURE", sessionId: session.sessionId, captureId },
           { frameId: 0 },
         );
+      }
+      const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
+        type: "module",
+      });
+      try {
+        const id = crypto.randomUUID();
+        const result: any = await new Promise((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(Error("Masked capture OCR deadline")),
+            30000,
+          );
+          worker.onerror = (event) => {
+            clearTimeout(timer);
+            reject(Error(event.message));
+          };
+          worker.onmessage = ({ data }) => {
+            if (data.id === id) {
+              clearTimeout(timer);
+              data.error ? reject(Error(data.error)) : resolve(data.value);
+            }
+          };
+          worker.postMessage({
+            type: "OCR_REQUEST",
+            id,
+            image,
+            metadata,
+            browserZoom,
+            captureCssBounds: {
+              x: 0,
+              y: 0,
+              width: metadata.viewport.width,
+              height: metadata.viewport.height,
+            },
+            stamp: {
+              requestId: session.view.request.id,
+              journeyId: session.view.journey.id,
+              contextRevision: session.view.journey.workflow?.revision || 0,
+              documentId: session.documentId,
+              observationRevision: metadata.observationRevision,
+              viewportRevision: metadata.viewportRevision,
+              captureId,
+            },
+          });
+        });
+        return {
+          metadata,
+          png: image.startsWith("data:image/png;base64,"),
+          leaked: JSON.stringify(result).includes("SENTINEL"),
+        };
+      } finally {
+        worker.terminate();
       }
     }, app.tabId);
     expect(capture.png).toBe(true);
@@ -197,16 +221,18 @@ test("Firefox uses native document identity, local planning and independently ve
     expect((await app.view()).status).toBe("stopped");
   } catch (error) {
     if (app) {
-      await info.attach("firefox-failure-screen", {
-        body: Buffer.from(await app.driver.takeScreenshot(), "base64"),
-        contentType: "image/png",
-      });
-    }
-    if (app)
+      const failed = await app.view().catch(() => undefined);
       await info.attach("firefox-session-failure", {
-        body: Buffer.from(JSON.stringify(await app.view().catch(() => null))),
+        body: Buffer.from(
+          JSON.stringify({
+            status: failed?.status,
+            controls: failed?.page?.controls?.length ?? null,
+            verifiedSteps: failed?.verifiedSteps ?? null,
+          }),
+        ),
         contentType: "application/json",
       });
+    }
     throw error;
   } finally {
     await app?.close();

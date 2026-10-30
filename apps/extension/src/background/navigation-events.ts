@@ -25,13 +25,43 @@ interface Context {
   attachSession: () => Promise<PinnedSession | undefined>;
   visionJob: AbortController | undefined;
   cancelVision: () => void;
+  captureWindowId: () => number | undefined;
 }
 
 export function registerNavigationEvents(context: Context) {
+  const invalidatePinned = (tabId: number) => {
+    if (tabId !== context.session?.tabId) return;
+    invalidatePagePerception();
+    if (context.visionJob) context.cancelVision();
+  };
   api.tabs.onZoomChange.addListener(({ tabId }) => {
-    if (tabId === context.session?.tabId) invalidatePagePerception();
+    invalidatePinned(tabId);
+  });
+  api.tabs.onActivated.addListener(({ windowId }) => {
+    if (windowId === context.captureWindowId() && context.visionJob)
+      context.cancelVision();
+  });
+  api.windows.onFocusChanged.addListener((windowId) => {
+    const captured = context.captureWindowId();
+    if (captured !== undefined && windowId !== captured && context.visionJob)
+      context.cancelVision();
+  });
+  api.windows.onBoundsChanged?.addListener(({ id }) => {
+    if (id === context.captureWindowId() && context.visionJob)
+      context.cancelVision();
+  });
+  api.tabs.onReplaced.addListener((_added, removed) =>
+    invalidatePinned(removed),
+  );
+  api.tabs.onDetached.addListener((tabId) => invalidatePinned(tabId));
+  api.tabs.onAttached.addListener((tabId) => invalidatePinned(tabId));
+  api.permissions.onRemoved.addListener(() => {
+    // A capture carries no retained permission catalog. Revocation fences its
+    // current span immediately, before the serialized journey queue can run.
+    if (context.session) invalidatePinned(context.session.tabId);
   });
   api.tabs.onRemoved.addListener((tabId) => {
+    invalidatePinned(tabId);
     void context.enqueue(async () => {
       if (context.session?.tabId === tabId) {
         if (context.session.handoffReturn) {
@@ -54,6 +84,7 @@ export function registerNavigationEvents(context: Context) {
   });
 
   api.webNavigation.onHistoryStateUpdated.addListener((details) => {
+    invalidatePinned(details.tabId);
     if (
       details.frameId !== 0 ||
       details.tabId !== context.session?.tabId ||
@@ -83,6 +114,7 @@ export function registerNavigationEvents(context: Context) {
   });
 
   api.webNavigation.onBeforeNavigate.addListener((details) => {
+    invalidatePinned(details.tabId);
     if (details.frameId !== 0) return;
     void context.enqueue(async () => {
       if (
@@ -140,7 +172,7 @@ export function registerNavigationEvents(context: Context) {
   });
 
   api.webNavigation.onCommitted.addListener((details) => {
-    if (details.tabId === context.session?.tabId) invalidatePagePerception();
+    invalidatePinned(details.tabId);
     if (details.frameId !== 0) return;
     void context.enqueue(async () => {
       const start = context.navigationStarts.get(details.tabId);
@@ -201,6 +233,7 @@ export function registerNavigationEvents(context: Context) {
 
   api.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (change.status !== "loading" && change.status !== "complete") return;
+    if (change.status === "loading") invalidatePinned(tabId);
     void context.enqueue(async () => {
       if (
         context.session &&
@@ -347,10 +380,5 @@ export function registerNavigationEvents(context: Context) {
         );
       }
     });
-  });
-
-  api.webNavigation.onBeforeNavigate.addListener((details) => {
-    if (details.tabId === context.session?.tabId && context.visionJob)
-      context.cancelVision();
   });
 }

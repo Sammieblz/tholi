@@ -117,13 +117,43 @@ the native target or viewport changes.
 Viewport width and height describe the layout viewport in CSS pixels. The
 `visualViewport` records its visible offset, size, scale and document position,
 with `pageLeft = scrollX + offsetLeft` and the corresponding vertical equation.
+Raw measurements remain unchanged. The [CSSOM View editor's draft](https://drafts.csswg.org/cssom-view/#extensions-to-the-window-interface)
+exposes integer `innerWidth`/`innerHeight`, while its
+[VisualViewport dimensions](https://drafts.csswg.org/cssom-view/#the-visualviewport-interface)
+use doubles. Tholi admits a visual edge up to 0.5 CSS pixels beyond an integer
+layout dimension as a bounded observed-precision policy, not a specification
+guarantee about native capture. Larger overhangs, or overhangs beyond a fractional
+layout dimension, are refused. Privacy masks use the union of the actual layout
+and visual extents, retaining private geometry in that visible fractional band.
+
 Capture `cssBounds` use layout-viewport CSS coordinates and remain within that
 visible rectangle. A full viewport image covers the complete visual viewport;
 a crop identifies a subset. `pixelBounds` identify that rectangle within the
-original bitmap. `scaleX` and `scaleY` derive from the original bitmap and visual
-viewport dimensions, rather than assuming that zoom multiplied by DPR equals
-the capture scale. The bounded final image preserves the crop aspect ratio and
-cannot upscale its source pixels.
+original bitmap. Without `captureCssBounds`, `scaleX` and `scaleY` derive from
+the original bitmap and visual viewport dimensions, preserving the original
+profile. A native layout capture can declare `source.captureCssBounds` exactly
+as the observed layout rectangle `{ x: 0, y: 0, width, height }`. Its scales and
+pixel coordinates then use that original layout plane. The visual rectangle
+remains a subset, so a scrollbar gutter can be excluded from the final image
+without relabeling the original bitmap. Zoom multiplied by DPR is never used as
+a substitute for measured pixel scale. A bounded crop reports its quantized
+native pixels and corresponding actual CSS bounds; its final image preserves
+that aspect ratio and cannot upscale its source pixels.
+
+Source aspect admission requires overlapping horizontal/vertical scale intervals
+with at most 0.5 CSS pixels of integer-layout uncertainty and 0.5 native pixels
+of quantization per axis, consistent with the observed visual edge. This does not
+replace the recorded source plane or scales. Final image geometry retains its
+one-native-pixel correspondence bound. Viewport pixel bounds stay inside the
+original bitmap; an unrepresentable fractional crop is refused. Legacy OCR drops
+an optional focus hint outside its original integer-layout coordinate contract,
+while keeping all privacy masks and whole-viewport recognition.
+
+The optional native-plane field is an explicit extension of the image source
+profile. Existing inputs without it keep their validation behavior. Older
+strict receivers reject the new field, so later inference transport must
+negotiate support before sending this profile. This milestone enables no new
+provider endpoint or automatic image transmission.
 
 | Budget                                  | Limit                                                                                              |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------- |

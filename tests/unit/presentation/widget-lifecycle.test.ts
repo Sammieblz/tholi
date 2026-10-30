@@ -181,6 +181,37 @@ it("Pause and Stop bypass a blocked routine queue and unresponsive page without 
   expect(cancel).toHaveBeenCalledTimes(2);
 });
 
+it.each([
+  { type: "SET_VISION", backend: false },
+  {
+    type: "SET_BACKEND",
+    enabled: false,
+    url: "https://api.example.test",
+    token: "",
+  },
+])("$type cancels capture before a blocked settings write", async (command) => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  const active = new AbortController();
+  const cancelVision = vi.fn(() => active.abort());
+  const enqueue = vi.fn(() => {
+    expect(active.signal.aborted).toBe(true);
+    return new Promise(() => {});
+  });
+  registerMessages({ session, enqueue, cancelVision } as any);
+  const handle = listen.mock.calls[0][0];
+  handle(
+    command,
+    { ...sender, url: api.runtime.getURL("sidepanel.html") },
+    vi.fn(),
+  );
+  expect(cancelVision).toHaveBeenCalledOnce();
+  expect(enqueue).toHaveBeenCalledOnce();
+});
+
 it("scan churn retains submitted intent but suggestions cannot install a task", async () => {
   const { api, session, sender } = environment();
   const page = { ...fixture(), revision: 1 };

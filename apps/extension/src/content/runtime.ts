@@ -17,6 +17,7 @@ import { routeRegistry } from "../../../../packages/route-registry/index";
 import type { Transition } from "../../../../packages/route-schema/index";
 import { contentMessageSchema } from "../../../../packages/route-schema/index";
 import { allowedOrigin } from "../../../../packages/safety-policy/index";
+import { visualStampSchema } from "../../../../packages/vision/contracts";
 import { startPageAppearance } from "../ui/theme/theme-agent";
 import {
   applyWidgetLayout,
@@ -30,6 +31,8 @@ import { frameVisibilityBridge } from "./frame-visibility";
 import { PageCoach } from "./page-coach";
 import {
   captureMetadata,
+  cancelCapture,
+  checkCapture,
   clearVisual,
   onVisualInvalidation,
   restoreOverlay,
@@ -64,6 +67,7 @@ if (!host[marker]) {
     });
   };
   const stopVisual = () => {
+    cancelCapture();
     visualCleanup?.();
     visualCleanup = undefined;
     clearTimeout(visualNotification);
@@ -248,16 +252,79 @@ if (!host[marker]) {
         return;
       }
       if (raw.type === "PREPARE_CAPTURE") {
-        const metadata = captureMetadata();
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => respond(metadata)),
+        const token = visualStampSchema.shape.captureId.safeParse(
+          raw.captureId,
         );
+        if (!token.success || coach.view.status !== "running") {
+          respond({ error: "A current running task is required for capture." });
+          return;
+        }
+        const owner = coach,
+          id = sessionId,
+          page = owner.getPage(),
+          perception = owner.getPerception(page);
+        if (!page || !perception) {
+          respond({ error: "Current page perception is unavailable." });
+          return;
+        }
+        const request = owner.view.request?.id,
+          journey = owner.view.journey?.id,
+          context = owner.view.journey?.workflow?.revision;
+        const current = () =>
+          coach === owner &&
+          sessionId === id &&
+          owner.view.status === "running" &&
+          !document.hidden &&
+          owner.view.page === page &&
+          owner.getPerception(page) === perception &&
+          owner.view.request?.id === request &&
+          owner.view.journey?.id === journey &&
+          owner.view.journey?.workflow?.revision === context;
+        void captureMetadata(
+          {
+            captureId: token.data,
+            scanId: perception.root.scanId,
+            observationRevision: page.revision,
+          },
+          current,
+        )
+          .then((metadata) => {
+            if (!current()) {
+              cancelCapture();
+              respond({ error: "The capture task changed." });
+              return;
+            }
+            respond({ metadata, view: owner.view, perception });
+          })
+          .catch(() =>
+            respond({
+              error: "Complete private capture evidence is unavailable.",
+            }),
+          );
         return true;
       }
       if (raw.type === "RESTORE_CAPTURE") {
-        restoreOverlay();
+        const token = visualStampSchema.shape.captureId.safeParse(
+          raw.captureId,
+        );
+        if (token.success) restoreOverlay(token.data);
         respond({ viewportRevision: viewportRevision() });
         return;
+      }
+      if (raw.type === "CHECK_CAPTURE") {
+        const token = visualStampSchema.shape.captureId.safeParse(
+          raw.captureId,
+        );
+        if (!token.success) {
+          respond({ current: false, viewportRevision: viewportRevision() });
+          return;
+        }
+        void checkCapture(token.data)
+          .then(respond)
+          .catch(() =>
+            respond({ current: false, viewportRevision: viewportRevision() }),
+          );
+        return true;
       }
       if (raw.type === "CHECK_VIEWPORT") {
         respond({ viewportRevision: viewportRevision() });

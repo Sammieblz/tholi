@@ -4,8 +4,22 @@ import {
   safeName,
   sanitizeText,
   isSensitiveElement,
+  isPixelPrivateElement,
 } from "../../../packages/privacy-redaction/index";
 describe("sensitive field exclusion", () => {
+  it("masks ordinary field pixels while preserving their public semantic labels", () => {
+    document.body.innerHTML =
+      '<input type="search" aria-label="Search products"><div role="combobox" aria-label="Choose category"></div><button>Search</button>';
+    const search = document.querySelector("input")!,
+      category = document.querySelector("div")!;
+    expect(isSensitiveElement(search)).toBe(false);
+    expect(isPixelPrivateElement(search)).toBe(true);
+    expect(isPixelPrivateElement(category)).toBe(true);
+    expect(safeName(category)).toBe("Choose category");
+    expect(isPixelPrivateElement(document.querySelector("button")!)).toBe(
+      false,
+    );
+  });
   it("never reads password/OTP/payment/token values or nested editable text", () => {
     document.body.innerHTML =
       '<button>Account <input type="password" value="SENTINEL_PASSWORD"><input autocomplete="one-time-code" value="SENTINEL_OTP"><input name="credit-card" value="SENTINEL_PAYMENT"><span contenteditable>SENTINEL_MESSAGE</span><span data-sensitive="true">SENTINEL_TOKEN</span></button>';
@@ -31,6 +45,39 @@ describe("sensitive field exclusion", () => {
     expect(s).not.toContain("person@example.com");
     expect(s).not.toContain("https://");
   });
+});
+
+it("uses native closed-root access only at the typed platform boundary and fails closed without it", async () => {
+  const { privacyShadowRoot } =
+    await import("../../../apps/extension/src/platform/api");
+  const host = document.createElement("div"),
+    root = host.attachShadow({ mode: "closed" });
+  const native = vi.fn(() => root);
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: () => "chrome-extension://test/" },
+    dom: { openOrClosedShadowRoot: native },
+  });
+  try {
+    expect(privacyShadowRoot(host)).toBe(root);
+    expect(native).toHaveBeenCalledWith(host);
+    vi.stubGlobal("chrome", {
+      runtime: { getURL: () => "chrome-extension://test/" },
+    });
+    expect(() => privacyShadowRoot(host)).toThrow(
+      "Native shadow privacy access",
+    );
+    vi.stubGlobal("browser", {
+      runtime: { getURL: () => "moz-extension://test/" },
+    });
+    Object.defineProperty(host, "openOrClosedShadowRoot", {
+      configurable: true,
+      get: () => root,
+    });
+    expect(privacyShadowRoot(host)).toBe(root);
+    expect(host.shadowRoot).toBeNull();
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
 
 import { BrowserAdapter } from "../../../packages/browser-adapter/index";

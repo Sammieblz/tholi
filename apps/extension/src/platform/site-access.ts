@@ -139,13 +139,14 @@ export function requestBackendAccess(origin: string) {
   });
 }
 
-/** Recheck Firefox consent before every backend request, including saved connections. */
+/** Recheck host access and Firefox transmission consent for saved connections. */
 export async function hasBackendAccess(origin: string) {
-  if (browserTarget() !== "firefox") return true;
   try {
     return await api.permissions.contains({
       origins: [hostPermissionPattern(origin)],
-      data_collection: [...backendData],
+      ...(browserTarget() === "firefox"
+        ? { data_collection: [...backendData] }
+        : {}),
     });
   } catch {
     return false;

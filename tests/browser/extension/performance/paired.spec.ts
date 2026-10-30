@@ -5,6 +5,7 @@ import { acceptanceServer } from "../../../support/fixture-server";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+import { imageCaptureFixture } from "../../../support/image-capture-fixture";
 async function measureBusyPage() {
   const root = document.getElementById("internet-navigator-overlay");
   const times: number[] = [];
@@ -102,59 +103,71 @@ test("paired browser CPU planning, OCR and busy-page measurements retain the sam
         }
         memory.afterPlanning = processMemory(processId);
         // Exactly the packaged OCR worker and frozen viewport, including its normal image preparation.
-        const ocr = await app.extension(async (image: string) => {
-          const api = (globalThis as any).browser || (globalThis as any).chrome;
-          const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
-            type: "module",
-          });
-          const values: number[] = [];
-          let coldMs = 0;
-          try {
-            for (let i = 0; i < 11; i++) {
-              const id = crypto.randomUUID();
-              const result: any = await new Promise((resolve, reject) => {
-                const timer = setTimeout(
-                  () => reject(Error("Packaged OCR deadline")),
-                  30000,
-                );
-                worker.onerror = (event) => {
-                  clearTimeout(timer);
-                  reject(Error(event.message));
-                };
-                worker.onmessage = ({ data }) => {
-                  if (data.id === id) {
+        const ocr = await app.extension(
+          async ({
+            image,
+            capture,
+          }: {
+            image: string;
+            capture: ReturnType<typeof imageCaptureFixture>;
+          }) => {
+            const api =
+              (globalThis as any).browser || (globalThis as any).chrome;
+            const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
+              type: "module",
+            });
+            const values: number[] = [];
+            let coldMs = 0;
+            try {
+              for (let i = 0; i < 11; i++) {
+                const id = crypto.randomUUID();
+                const result: any = await new Promise((resolve, reject) => {
+                  const timer = setTimeout(
+                    () => reject(Error("Packaged OCR deadline")),
+                    30000,
+                  );
+                  worker.onerror = (event) => {
                     clearTimeout(timer);
-                    data.error
-                      ? reject(Error(data.error))
-                      : resolve(data.value);
-                  }
-                };
-                worker.postMessage({
-                  type: "OCR_REQUEST",
-                  id,
-                  image,
-                  metadata: { width: 1920, height: 1080, masks: [] },
-                  stamp: {
-                    requestId: crypto.randomUUID(),
-                    journeyId: crypto.randomUUID(),
-                    contextRevision: 0,
-                    documentId: "paired-performance",
-                    observationRevision: 1,
-                    viewportRevision: 1,
-                    captureId: crypto.randomUUID(),
-                  },
+                    reject(Error(event.message));
+                  };
+                  worker.onmessage = ({ data }) => {
+                    if (data.id === id) {
+                      clearTimeout(timer);
+                      data.error
+                        ? reject(Error(data.error))
+                        : resolve(data.value);
+                    }
+                  };
+                  worker.postMessage({
+                    type: "OCR_REQUEST",
+                    id,
+                    image,
+                    ...capture,
+                    stamp: {
+                      requestId: crypto.randomUUID(),
+                      journeyId: crypto.randomUUID(),
+                      contextRevision: 0,
+                      documentId: "paired-performance",
+                      observationRevision: 1,
+                      viewportRevision: 1,
+                      captureId: capture.metadata.captureId,
+                    },
+                  });
                 });
-              });
-              if (!result.regions.some((r: any) => r.text === "Deploy website"))
-                throw Error("Frozen OCR outcome missing");
-              if (i === 0) coldMs = result.elapsedMs;
-              else values.push(result.elapsedMs);
+                if (
+                  !result.regions.some((r: any) => r.text === "Deploy website")
+                )
+                  throw Error("Frozen OCR outcome missing");
+                if (i === 0) coldMs = result.elapsedMs;
+                else values.push(result.elapsedMs);
+              }
+              return { coldMs, values };
+            } finally {
+              worker.terminate();
             }
-            return { coldMs, values };
-          } finally {
-            worker.terminate();
-          }
-        }, image);
+          },
+          { image, capture: imageCaptureFixture(1920, 1080) },
+        );
         memory.afterOcr = processMemory(processId);
         await app.site(() => {
           const storm = document.createElement("section");
