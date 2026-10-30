@@ -45,12 +45,33 @@ Final review after that run identified additional completion/prepare lease
 checks and a late-write ordering during cleanup. That preliminary report remains
 unchanged. It does not establish acceptance of the later corrected source.
 
-## Acceptance gates
+## Corrected source and complete validation
 
-The corrected source still requires a fresh complete container run and the
-deterministic `npm run test:ci` gate. Their results and exact source attribution
-will be recorded here before the PR is accepted. Hosted validation and a fresh
-review of the exact PR head remain separate merge gates.
+The fresh complete stack passed all 51 actual PostgreSQL groups and 18 stack
+checks from corrected commit `30ef3ac7e59a60cf79a0e3f3f25e55c762828ad9`.
+Its unchanged evidence is
+`output/qa/local-stack/tholi-smoke-mvv0mob3-66a0f3b0/smoke.json`, collected from
+13:36:11 through 13:44:51 UTC. The source tree was clean. The same production
+mail/download/deletion, backup, retained-restart, isolation and reset checks all
+passed again; owned containers, volumes and generated credentials were removed.
+
+TypeScript, the fresh production build and the complete deterministic PR cohort
+passed. The cohort contains 561 unit, 47 core extension, 20 integration,
+2 installed Firefox and 65 UI cases: 695 total. Its validation ID is
+`f8b880b3-98cd-4341-bde6-73113da060de`; every coordinator step exited zero.
+It used port 5188 without stopping or reusing the user's existing preview.
+Fresh reports and the verified build manifest are preserved under ignored
+`output/qa/service-support-ci-f8b880b3-98cd-4341-bde6-73113da060de`.
+All 82 relative targets in the updated documentation resolve.
+
+The complete browser cohort covers the existing account-free public site in
+Chromium and Firefox. The configured support/diagnostic controls have focused
+DOM/HTTP coverage; their real signed-in browser layout and screen-reader checks
+remain pending. They are not inferred from the public-site layout results.
+
+Independent read-only review of the corrected commit found no further concrete
+blockers. Hosted validation and a fresh review of the exact PR head remain
+separate merge gates. Consult the issue acceptance record for their final result.
 
 No internet email delivery, hosted bucket lifecycle, production deployment,
 account-erasure endpoint, billing notification or release package is certified
