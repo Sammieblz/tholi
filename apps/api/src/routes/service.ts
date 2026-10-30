@@ -25,7 +25,10 @@ import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
 import { identityCookieNames } from "./identity-cookies";
 
-function serviceCapabilities(identityEnabled: boolean) {
+function serviceCapabilities(
+  identityEnabled: boolean,
+  authorizationEnabled: boolean,
+) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
     version: SERVICE_CONTRACT_VERSION,
@@ -36,6 +39,9 @@ function serviceCapabilities(identityEnabled: boolean) {
       "handshake",
       "openapi",
       ...(identityEnabled ? ["authentication", "account-security"] : []),
+      ...(authorizationEnabled
+        ? ["tenant-authorization", "purpose-consent"]
+        : []),
     ],
     availability: {
       authentication: identityEnabled,
@@ -54,8 +60,12 @@ export async function registerServiceApi(
   app: FastifyInstance,
   identityEnabled = false,
   secureCookies = false,
+  authorizationEnabled = false,
 ) {
-  const capabilities = serviceCapabilities(identityEnabled);
+  const capabilities = serviceCapabilities(
+    identityEnabled,
+    authorizationEnabled,
+  );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,
     PageQuery: servicePageQuerySchema,

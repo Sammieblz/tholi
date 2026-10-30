@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { identityAndScope } from "./migrations/001-identity-and-scope";
 import { serviceData } from "./migrations/002-service-data";
 import { portableIdentity } from "./migrations/003-portable-identity";
+import { tenantAuthorization } from "./migrations/004-tenant-authorization";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -29,6 +30,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(1, "identity-and-scope", identityAndScope),
   migration(2, "service-data", serviceData),
   migration(3, "portable-identity", portableIdentity),
+  migration(4, "tenant-authorization", tenantAuthorization),
 ]);
 
 export interface MigrationOptions {
@@ -178,7 +180,8 @@ async function grantRuntime(client: PoolClient, role: string) {
   await client.query(`GRANT USAGE ON SCHEMA tholi TO ${identifier}`);
   // Durable application tables get no DELETE, TRUNCATE, DDL or future-table
   // default grant. Saved data is tombstoned; bounded ephemeral identity cleanup
-  // is granted separately below. Privileged erasure and RLS remain later work.
+  // is granted separately below. Tenant policies are versioned in migrations;
+  // broader privileged erasure remains its later lifecycle owner.
   for (const table of mutableTables) {
     if (existing.has(table))
       await client.query(
@@ -206,12 +209,38 @@ async function grantRuntime(client: PoolClient, role: string) {
         `GRANT SELECT, INSERT, DELETE ON tholi.${table} TO ${identifier}`,
       );
   }
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.current_member_role(uuid)') AS helper",
+      )
+    ).rows[0]?.helper
+  ) {
+    // Revoke old table grants before replacing them with named columns. Replaying
+    // grants must not reopen protected ownership/status fields from older versions.
+    await client.query(
+      `REVOKE INSERT, UPDATE ON tholi.accounts, tholi.workspaces FROM ${identifier}`,
+    );
+    await client.query(
+      `GRANT UPDATE (revision, updated_at, auth_grants_revoked_at) ON tholi.accounts TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT UPDATE (sync_revision, updated_at) ON tholi.workspaces TO ${identifier}`,
+    );
+    await client.query(`REVOKE UPDATE ON tholi.memberships FROM ${identifier}`);
+    await client.query(
+      `GRANT UPDATE (role, status, revision, updated_at) ON tholi.memberships TO ${identifier}`,
+    );
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.actor_account_id(), tholi.actor_workspace_id(),
+      tholi.current_member_role(uuid), tholi.provision_personal_account(uuid,uuid),
+      tholi.workspace_credit_totals(uuid) TO ${identifier}`);
+  }
 }
 
 /**
  * One operator-owned, idle PoolClient for the entire run. No HTTP startup,
  * environment reads, cloud SDKs, automatic seeds or SQLite import occur here.
- * Authorization/RLS belongs to #31; repositories must already scope each query.
+ * Tenant policies are versioned with the schema; repositories still scope queries.
  */
 export async function migrateDatabase(
   client: PoolClient,

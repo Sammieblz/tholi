@@ -58,8 +58,9 @@ Jobs admit typed record references, not browsing data or credentials.
 `PostgresRepositories.transaction(scope, callback)` checks the active account and
 membership, freezes a copy of scope and supplies transaction-bound repositories.
 Identity resolves the internal account and personal workspace from verified
-provider proof. Later workspace authorization creates the complete role-aware
-context. A request body cannot grant scope. Internal account provisioning is the
+provider proof. [Workspace authorization](service-authorization.md) resolves the
+current role and consent inside the transaction. A request body cannot grant
+scope. Internal account provisioning is the
 explicit bootstrap exception.
 
 Queries are parameterized and contain scope/ownership predicates. One checked-out
@@ -83,12 +84,13 @@ Grant allocation, expiry reconciliation, refunds, pricing and provider uncertain
 policy remain [#44](https://github.com/Sammieblz/tholi/issues/44). This is not a
 completed billing system. Job claiming/execution remains #32.
 
-RLS and role-specific application authorization remain
-[#31](https://github.com/Sammieblz/tholi/issues/31). No RLS policy is claimed here.
-Runtime SQL credentials remain internal. The configured identity service exposes
-only its account/session operations; other cloud endpoints still require their
-authorization milestones before exposure. Scoped repositories already enforce
-ownership; they do not make arbitrary SQL safe for untrusted clients.
+Row-level policies and role-specific application authorization extend the same
+repository owner in [#31](service-authorization.md). Missing transaction scope
+fails closed for tenant data. Private identity discovery and personal-account
+bootstrap have narrow internal boundaries, separate from data access. Runtime
+SQL credentials remain internal; row policies do not make arbitrary SQL safe for
+untrusted clients. New endpoints must use the same authorization owner before
+their data or effects become available.
 
 ## Migration and deployment commands
 
@@ -123,6 +125,12 @@ credentials. It leaves migrations 001/002 and their checksums intact. Identity
 flow, broker and session operations share the existing transaction owner; provider
 HTTP calls run outside those transactions. See [identity session security](service-identity.md#sessions-and-trust)
 for refresh replay, account-wide revocation and provider logout fences.
+
+Migration `004-tenant-authorization` adds tenant row policies, narrow trusted
+helpers and scoped grants without changing earlier migration bodies. Replay
+removes superseded broad grants before applying the current column permissions.
+The migration owner retains operator backup/restore authority; the runtime
+cannot assume that owner or bypass its policies.
 
 Run migrations once before admitting traffic, not from every API replica. An
 advisory lock excludes another migrator. Each version commits SQL and its SHA-256

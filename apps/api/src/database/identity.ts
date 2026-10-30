@@ -11,7 +11,7 @@ import {
   type RefreshResult,
 } from "../application/identity-contracts";
 import { RepositoryError } from "./contracts";
-import { withTransaction } from "./postgres";
+import { setDatabaseScope, withTransaction } from "./postgres";
 import { provisionAccountOnClient } from "./repositories";
 
 export class IdentityStoreError extends Error {
@@ -201,6 +201,14 @@ export class PostgresIdentityRepository implements IdentityStore {
     identity = structuredClone(identity);
     return withTransaction(this.pool, async (client) => {
       await lockIssuer(client, identity.issuer);
+      const linked = await client.query<{ account_id: string }>(
+        "SELECT account_id FROM tholi.identity_links WHERE issuer = $1 AND subject = $2",
+        [identity.issuer, identity.subject],
+      );
+      if (linked.rows[0])
+        await setDatabaseScope(client, {
+          accountId: linked.rows[0].account_id,
+        });
       const result = await client.query<IdentityAccount>(
         `SELECT i.id AS "identityId", a.id AS "accountId", w.id AS "workspaceId", a.revision::text
            FROM tholi.identity_links i JOIN tholi.accounts a ON a.id = i.account_id
@@ -212,15 +220,7 @@ export class PostgresIdentityRepository implements IdentityStore {
       );
       if (result.rows[0]) return result.rows[0];
       // A revoked account must not be replaced by a fresh identity/account.
-      if (
-        (
-          await client.query(
-            "SELECT 1 FROM tholi.identity_links WHERE issuer = $1 AND subject = $2",
-            [identity.issuer, identity.subject],
-          )
-        ).rowCount
-      )
-        throw new IdentityStoreError();
+      if (linked.rowCount) throw new IdentityStoreError();
       const scope = await provisionAccountOnClient(client, {
         accountId: randomUUID(),
         workspaceId: randomUUID(),
@@ -238,6 +238,7 @@ export class PostgresIdentityRepository implements IdentityStore {
     broker = structuredClone(broker);
     await withTransaction(this.pool, async (client) => {
       await lockIssuer(client, broker.issuer);
+      await setDatabaseScope(client, broker);
       await requireGrant(client, broker, new Date());
       await cleanup(client, new Date());
       await client.query(
@@ -287,7 +288,6 @@ export class PostgresIdentityRepository implements IdentityStore {
           encode(b.code_hash,'hex') AS "codeHash", b.client_id AS "clientId",
           b.redirect_uri AS "redirectUri", b.code_challenge AS "codeChallenge", b.expires_at AS "expiresAt"
          FROM tholi.identity_brokers b JOIN tholi.identity_links i ON i.id = b.identity_id
-          JOIN tholi.accounts a ON a.id = b.account_id
          WHERE b.code_hash = $1 AND b.client_id = $2 AND b.redirect_uri = $3
           AND b.code_challenge = $4 AND b.expires_at > $5`,
         parameters,
@@ -298,6 +298,7 @@ export class PostgresIdentityRepository implements IdentityStore {
         providerSessionId: result.rows[0].providerSessionId ?? undefined,
       };
       await lockIssuer(client, broker.issuer);
+      await setDatabaseScope(client, broker);
       try {
         await requireGrant(client, broker, now);
       } catch (error) {
@@ -317,6 +318,7 @@ export class PostgresIdentityRepository implements IdentityStore {
     value = structuredClone(value);
     await withTransaction(this.pool, async (client) => {
       await lockIssuer(client, value.providerIssuer);
+      await setDatabaseScope(client, value);
       await requireGrant(
         client,
         {
@@ -371,22 +373,30 @@ export class PostgresIdentityRepository implements IdentityStore {
     return withTransaction(this.pool, async (client) => {
       const result = await client.query<{
         id: string;
-        status: string;
         accountId: string;
+        workspaceId: string;
       }>(
-        `SELECT s.id, a.status, a.id AS "accountId" FROM tholi.sessions s
-          JOIN tholi.accounts a ON a.id = s.account_id
-          JOIN tholi.memberships m ON m.workspace_id = s.workspace_id AND m.account_id = s.account_id
+        `SELECT s.id, s.account_id AS "accountId", s.workspace_id AS "workspaceId" FROM tholi.sessions s
          WHERE s.token_hash = $1 AND s.status = 'active' AND s.access_expires_at > $2
-          AND s.expires_at > $2 AND m.status = 'active'`,
+          AND s.expires_at > $2`,
         parameters,
       );
       const row = result.rows[0];
       if (!row) return null;
+      await setDatabaseScope(client, row);
       if (!(await lockAccount(client, row.accountId))) {
         await this.revokeAccountSessions(client, row.accountId, now);
         return null;
       }
+      if (
+        !(
+          await client.query(
+            "SELECT 1 FROM tholi.memberships WHERE workspace_id = $1 AND account_id = $2 AND status = 'active'",
+            [row.workspaceId, row.accountId],
+          )
+        ).rowCount
+      )
+        return null;
       const updated = await client.query(
         `UPDATE tholi.sessions SET last_used_at = $2 WHERE id = $1 AND status = 'active'
           AND token_hash = $3 AND access_expires_at > $2 AND expires_at > $2 RETURNING id`,
@@ -404,8 +414,9 @@ export class PostgresIdentityRepository implements IdentityStore {
       const lookup = await client.query<{
         sessionId: string;
         accountId: string;
+        workspaceId: string;
       }>(
-        `SELECT s.id AS "sessionId",s.account_id AS "accountId" FROM tholi.session_refresh_tokens r
+        `SELECT s.id AS "sessionId",s.account_id AS "accountId",s.workspace_id AS "workspaceId" FROM tholi.session_refresh_tokens r
           JOIN tholi.sessions s ON s.id = r.session_id WHERE r.token_hash = $1 AND s.client_id = $2`,
         [hash(input.refreshHash), input.clientId],
       );
@@ -416,6 +427,7 @@ export class PostgresIdentityRepository implements IdentityStore {
           input.expectedSessionId !== found.sessionId)
       )
         return { status: "invalid" };
+      await setDatabaseScope(client, found);
       if (!(await lockAccount(client, found.accountId))) {
         await this.revokeAccountSessions(client, found.accountId, input.now);
         return { status: "invalid" };
@@ -490,14 +502,20 @@ export class PostgresIdentityRepository implements IdentityStore {
   }
 
   async listSessions(accountId: string, now: Date): Promise<IdentitySession[]> {
-    const result = await this.pool.query<SessionRow>(
-      `SELECT ${sessionColumns} FROM tholi.sessions s ${sessionJoins}
+    return withTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<SessionRow>(
+          `SELECT ${sessionColumns} FROM tholi.sessions s ${sessionJoins}
         WHERE s.account_id = $1 AND a.status = 'active' AND s.status = 'active'
           AND s.expires_at > $2 AND m.status = 'active'
         ORDER BY s.created_at DESC,s.id DESC LIMIT 100`,
-      [accountId, date(now)],
+          [accountId, date(now)],
+        );
+        return result.rows.map(session);
+      },
+      { accountId },
     );
-    return result.rows.map(session);
   }
 
   async revokeSession(
@@ -505,12 +523,18 @@ export class PostgresIdentityRepository implements IdentityStore {
     sessionId: string,
     now: Date,
   ): Promise<boolean> {
-    const result = await this.pool.query(
-      `UPDATE tholi.sessions SET status = 'revoked',revoked_at = $3
+    return withTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query(
+          `UPDATE tholi.sessions SET status = 'revoked',revoked_at = $3
         WHERE account_id = $1 AND id = $2 AND status = 'active' RETURNING id`,
-      [accountId, sessionId, date(now)],
+          [accountId, sessionId, date(now)],
+        );
+        return Boolean(result.rowCount);
+      },
+      { accountId },
     );
-    return Boolean(result.rowCount);
   }
 
   private async revokeAccountSessions(
@@ -530,17 +554,21 @@ export class PostgresIdentityRepository implements IdentityStore {
 
   async revokeAllSessions(accountId: string, now: Date): Promise<void> {
     now = date(now);
-    await withTransaction(this.pool, async (client) => {
-      await lockAccount(client, accountId);
-      await client.query(
-        `UPDATE tholi.accounts SET revision = revision + 1, updated_at = $2,
+    await withTransaction(
+      this.pool,
+      async (client) => {
+        await lockAccount(client, accountId);
+        await client.query(
+          `UPDATE tholi.accounts SET revision = revision + 1, updated_at = $2,
           auth_grants_revoked_at = GREATEST(auth_grants_revoked_at,
             date_trunc('second',$2::timestamptz) + $3 * interval '1 second')
           WHERE id = $1`,
-        [accountId, date(now), IDENTITY_CLOCK_TOLERANCE_SECONDS],
-      );
-      await this.revokeAccountSessions(client, accountId, now);
-    });
+          [accountId, date(now), IDENTITY_CLOCK_TOLERANCE_SECONDS],
+        );
+        await this.revokeAccountSessions(client, accountId, now);
+      },
+      { accountId },
+    );
   }
 
   async revokeProviderSessions(
@@ -563,8 +591,10 @@ export class PostgresIdentityRepository implements IdentityStore {
           ORDER BY i.account_id`,
         [input.issuer, input.subject ?? null, input.providerSessionId ?? null],
       );
-      for (const row of accounts.rows)
+      for (const row of accounts.rows) {
+        await setDatabaseScope(client, { accountId: row.account_id });
         await lockAccount(client, row.account_id);
+      }
       await cleanup(client, input.now);
       const event = await client.query(
         `INSERT INTO tholi.identity_logout_events

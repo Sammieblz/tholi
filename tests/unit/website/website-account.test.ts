@@ -114,8 +114,20 @@ it("a missing account ends loading instead of retaining mock or earlier identity
   expect(container.textContent).toBe("Signed out");
   sessionStorage.clear();
 });
-it("sign-out cancels pending account work and rejects late results from the old session", async () => {
+it("sign-out and account changes cancel old work without replacing the new account", async () => {
   let complete: (value: { items: unknown[] }) => void = () => {};
+  const nextSession = {
+    ...session,
+    account: {
+      ...session.account,
+      id: "00000000-0000-4000-8000-000000000004",
+      workspaceId: "00000000-0000-4000-8000-000000000005",
+    },
+    session: {
+      ...session.session,
+      id: "00000000-0000-4000-8000-000000000006",
+    },
+  };
   transport.request
     .mockResolvedValueOnce(session)
     .mockImplementationOnce(
@@ -127,15 +139,19 @@ it("sign-out cancels pending account work and rejects late results from the old 
     .mockResolvedValueOnce({
       signedOut: true,
       providerLogoutUrl: "https://identity.example.test/logout",
-    });
+    })
+    .mockResolvedValueOnce(nextSession);
   await mount();
   const pending = current.sessions();
   const rejected = expect(pending).rejects.toThrow("session changed");
   await act(async () => {
     await current.signOut();
   });
+  expect(current.session).toBeUndefined();
+  await act(async () => current.reload());
+  expect(current.session).toEqual(nextSession);
   complete({ items: [] });
   await rejected;
-  expect(current.session).toBeUndefined();
+  expect(current.session).toEqual(nextSession);
   expect(transport.request.mock.calls[1][3].signal.aborted).toBe(true);
 });

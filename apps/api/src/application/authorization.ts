@@ -1,0 +1,289 @@
+import { z } from "zod";
+import {
+  authorizationPageQuerySchema,
+  consentPageSchema,
+  consentSchema,
+  consentUpdateSchema,
+  membershipPageSchema,
+  membershipSchema,
+  membershipUpdateSchema,
+  workspacePageSchema,
+  workspaceSchema,
+  type AuthorizationAction,
+} from "../../../../packages/navigation-core/contracts-authorization";
+import type { ServiceErrorCode } from "../../../../packages/navigation-core/contracts-service";
+import type { ServiceRequestContext } from "../capabilities";
+import { RepositoryError } from "../database/contracts";
+import type {
+  Account,
+  Consent,
+  Membership,
+  RepositoryScope,
+  Workspace,
+} from "../database/contracts";
+import {
+  authorizationPolicyCatalog,
+  evaluateAuthorization,
+  type AuthorizationContext,
+  type AuthorizationOptions,
+} from "./authorization-policy";
+import type { IdentitySession } from "./identity-contracts";
+
+type PageQuery = { after?: string; limit?: number };
+type Principal = Pick<IdentitySession, "accountId">;
+
+/** Existing scoped repository owner implements this application-facing port. */
+export interface AuthorizationTransaction {
+  getAccount(): Promise<Account>;
+  getWorkspace(): Promise<Workspace>;
+  getMembership(accountId?: string): Promise<Membership | undefined>;
+  listMemberships(query?: PageQuery): Promise<Membership[]>;
+  listConsents(): Promise<Consent[]>;
+  setMembership(input: {
+    accountId: string;
+    role: Membership["role"];
+    status: Membership["status"];
+    expectedRevision: bigint;
+  }): Promise<Membership>;
+  recordConsent(input: {
+    purpose: string;
+    policyVersion: string;
+    granted: boolean;
+    expectedRevision: bigint;
+  }): Promise<Consent>;
+}
+export interface AuthorizationRepositories {
+  /** Rechecks the active account and memberships under its own account scope. */
+  listWorkspaces(accountId: string, query?: PageQuery): Promise<Workspace[]>;
+  transaction<T>(
+    scope: RepositoryScope,
+    work: (repository: AuthorizationTransaction) => Promise<T>,
+  ): Promise<T>;
+}
+
+export class AuthorizationError extends Error {
+  constructor(
+    readonly statusCode: number,
+    readonly code: ServiceErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "AuthorizationError";
+  }
+}
+
+const identifier = z.string().uuid();
+const forbidden = () =>
+  new AuthorizationError(403, "FORBIDDEN", "The workspace is unavailable.");
+function revision<T extends { revision: bigint }>(row: T) {
+  return { ...row, revision: row.revision.toString() };
+}
+function repositoryFailure(error: unknown): never {
+  if (error instanceof RepositoryError) {
+    if (error.code === "FORBIDDEN") throw forbidden();
+    if (error.code === "INVALID_INPUT")
+      throw new AuthorizationError(
+        400,
+        "INVALID_REQUEST",
+        "The request is invalid.",
+      );
+    if (error.code === "CONFLICT" || error.code === "IDEMPOTENCY_CONFLICT")
+      throw new AuthorizationError(
+        409,
+        error.code,
+        "The record is unavailable or has changed.",
+      );
+  }
+  throw error;
+}
+
+/** Identity supplies the actor; current repository records supply workspace authority. */
+export class AuthorizationService {
+  constructor(private readonly repositories: AuthorizationRepositories) {}
+
+  private async scoped<T>(
+    principal: Principal,
+    workspaceId: string,
+    action: AuthorizationAction,
+    work: (
+      repository: AuthorizationTransaction,
+      authorization: AuthorizationContext,
+    ) => Promise<T>,
+    context: ServiceRequestContext,
+    options?: AuthorizationOptions,
+  ) {
+    const scope = Object.freeze({
+      accountId: identifier.parse(principal.accountId),
+      workspaceId: identifier.parse(workspaceId),
+    });
+    context.signal.throwIfAborted();
+    try {
+      return await this.repositories.transaction(scope, async (repository) => {
+        context.signal.throwIfAborted();
+        const account = await repository.getAccount();
+        const workspace = await repository.getWorkspace();
+        const membership = await repository.getMembership();
+        const consents =
+          action === "policies.read" || action === "consents.write"
+            ? await repository.listConsents()
+            : undefined;
+        context.signal.throwIfAborted();
+        const authorization: AuthorizationContext = {
+          account,
+          workspace,
+          membership,
+          consents,
+        };
+        if (
+          account.id !== scope.accountId ||
+          workspace.id !== scope.workspaceId ||
+          !evaluateAuthorization(authorization, action, options).allowed
+        )
+          throw forbidden();
+        const result = await work(repository, authorization);
+        // A deadline that expired during SQL work must roll back its mutation.
+        context.signal.throwIfAborted();
+        return result;
+      });
+    } catch (error) {
+      return repositoryFailure(error);
+    }
+  }
+
+  async listWorkspaces(
+    principal: Principal,
+    rawQuery: unknown,
+    context: ServiceRequestContext,
+  ) {
+    const accountId = identifier.parse(principal.accountId);
+    const query = authorizationPageQuerySchema.parse(rawQuery);
+    context.signal.throwIfAborted();
+    try {
+      const items = (
+        await this.repositories.listWorkspaces(accountId, query)
+      ).map((row) => workspaceSchema.parse(revision(row)));
+      context.signal.throwIfAborted();
+      return workspacePageSchema.parse({
+        items,
+        ...(items.length === query.limit
+          ? { nextCursor: items.at(-1)!.id }
+          : {}),
+      });
+    } catch (error) {
+      return repositoryFailure(error);
+    }
+  }
+
+  async listMemberships(
+    principal: Principal,
+    workspaceId: string,
+    rawQuery: unknown,
+    context: ServiceRequestContext,
+  ) {
+    const query = authorizationPageQuerySchema.parse(rawQuery);
+    return this.scoped(
+      principal,
+      workspaceId,
+      "memberships.read",
+      async (repository) => {
+        const items = (await repository.listMemberships(query)).map((row) =>
+          membershipSchema.parse(revision(row)),
+        );
+        return membershipPageSchema.parse({
+          items,
+          ...(items.length === query.limit
+            ? { nextCursor: items.at(-1)!.accountId }
+            : {}),
+        });
+      },
+      context,
+    );
+  }
+
+  async updateMembership(
+    principal: Principal,
+    workspaceId: string,
+    accountId: string,
+    raw: unknown,
+    context: ServiceRequestContext,
+  ) {
+    const targetAccountId = identifier.parse(accountId);
+    const input = membershipUpdateSchema.parse(raw);
+    return this.scoped(
+      principal,
+      workspaceId,
+      "memberships.update",
+      async (repository) =>
+        membershipSchema.parse(
+          revision(
+            await repository.setMembership({
+              ...input,
+              accountId: targetAccountId,
+              expectedRevision: BigInt(input.expectedRevision),
+            }),
+          ),
+        ),
+      context,
+      { targetAccountId },
+    );
+  }
+
+  async policies(
+    principal: Principal,
+    workspaceId: string,
+    context: ServiceRequestContext,
+  ) {
+    return this.scoped(
+      principal,
+      workspaceId,
+      "policies.read",
+      async (_repository, authorization) =>
+        authorizationPolicyCatalog(authorization),
+      context,
+    );
+  }
+
+  async listConsents(
+    principal: Principal,
+    workspaceId: string,
+    context: ServiceRequestContext,
+  ) {
+    return this.scoped(
+      principal,
+      workspaceId,
+      "consents.read",
+      async (repository) =>
+        consentPageSchema.parse({
+          items: (await repository.listConsents()).map((row) =>
+            consentSchema.parse(revision(row)),
+          ),
+        }),
+      context,
+    );
+  }
+
+  async recordConsent(
+    principal: Principal,
+    workspaceId: string,
+    raw: unknown,
+    context: ServiceRequestContext,
+  ) {
+    const input = consentUpdateSchema.parse(raw);
+    return this.scoped(
+      principal,
+      workspaceId,
+      "consents.write",
+      async (repository) =>
+        consentSchema.parse(
+          revision(
+            await repository.recordConsent({
+              ...input,
+              expectedRevision: BigInt(input.expectedRevision),
+            }),
+          ),
+        ),
+      context,
+      { consentChange: input },
+    );
+  }
+}

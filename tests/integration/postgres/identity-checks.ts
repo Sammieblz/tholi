@@ -105,7 +105,7 @@ export async function runIdentityChecks(
     async () => {
       const identity = provider();
       const before = Number(
-        (await runtime.query("SELECT count(*) AS count FROM tholi.accounts"))
+        (await migration.query("SELECT count(*) AS count FROM tholi.accounts"))
           .rows[0].count,
       );
       const accounts = await Promise.all(
@@ -114,8 +114,11 @@ export async function runIdentityChecks(
       for (const account of accounts) assert.deepEqual(account, accounts[0]);
       assert.equal(
         Number(
-          (await runtime.query("SELECT count(*) AS count FROM tholi.accounts"))
-            .rows[0].count,
+          (
+            await migration.query(
+              "SELECT count(*) AS count FROM tholi.accounts",
+            )
+          ).rows[0].count,
         ),
         before + 1,
       );
@@ -512,7 +515,7 @@ export async function runIdentityChecks(
       );
 
       const previous = (
-        await runtime.query(
+        await migration.query(
           "SELECT auth_grants_revoked_at FROM tholi.accounts WHERE id = $1",
           [account.accountId],
         )
@@ -523,7 +526,7 @@ export async function runIdentityChecks(
       );
       assert.deepEqual(
         (
-          await runtime.query(
+          await migration.query(
             "SELECT auth_grants_revoked_at FROM tholi.accounts WHERE id = $1",
             [account.accountId],
           )

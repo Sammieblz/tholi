@@ -8,8 +8,15 @@ import {
 } from "./config";
 import type { PrivateCapabilities, RuntimeResource } from "./capabilities";
 import type { IdentityService } from "./application/identity";
+import type { AuthorizationService } from "./application/authorization";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
+
+/** Explicit composition seam for real services and isolated transport tests. */
+export interface ServiceApiServices {
+  identity?: IdentityService;
+  authorization?: AuthorizationService;
+}
 
 /** Compatible facade for the existing single-owner API. */
 export async function createApi(
@@ -36,11 +43,14 @@ export async function createApi(
 export async function createServiceApi(
   input: ServiceApiOptions,
   resources: RuntimeResource[] = [],
-  injectedIdentity?: IdentityService,
+  injected: ServiceApiServices = {},
 ) {
   const options = validateServiceOptions(input);
-  let identity = injectedIdentity;
+  let identity = injected.identity;
+  let authorization = injected.authorization;
   const ownedResources = [...resources];
+  if (authorization && !identity)
+    throw new Error("Authorization requires the composed identity service.");
   if (identity && !options.identity)
     throw new Error(
       "Identity injection requires an explicit identity profile.",
@@ -53,6 +63,7 @@ export async function createServiceApi(
       options.database!,
     );
     identity = runtime.service;
+    authorization = runtime.authorization;
     ownedResources.push(runtime.resource);
   }
   // Extension origins are transport admission, never account identity. Firefox's
@@ -95,7 +106,9 @@ export async function createServiceApi(
           credentials:
             !!identity &&
             request.headers.origin === options.identity?.webOrigin,
-          methods: identity ? ["GET", "POST", "DELETE"] : ["GET", "POST"],
+          methods: identity
+            ? ["GET", "POST", ...(authorization ? ["PATCH"] : []), "DELETE"]
+            : ["GET", "POST"],
           allowedHeaders: identity
             ? [
                 "Content-Type",
@@ -113,10 +126,20 @@ export async function createServiceApi(
         throw new ApiError(403, "FORBIDDEN", "Origin is not allowed.");
     });
     const { registerServiceApi } = await import("./routes/service");
-    await registerServiceApi(app, !!identity, options.identity?.secureCookies);
+    await registerServiceApi(
+      app,
+      !!identity,
+      options.identity?.secureCookies,
+      !!authorization,
+    );
     if (identity) {
       const { registerIdentityApi } = await import("./routes/identity");
       await registerIdentityApi(app, identity);
+      if (authorization) {
+        const { registerAuthorizationApi } =
+          await import("./routes/authorization");
+        await registerAuthorizationApi(app, identity, authorization);
+      }
     }
     registerHealth(app, "service", lifecycle);
   });

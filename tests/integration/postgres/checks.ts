@@ -11,6 +11,7 @@ import {
 } from "../../../apps/api/src/database/migrations";
 import { PostgresRepositories } from "../../../apps/api/src/database/repositories";
 import { runIdentityChecks } from "./identity-checks";
+import { runAuthorizationChecks } from "./authorization-checks";
 import {
   beginJourney,
   saveTask,
@@ -396,7 +397,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         );
         await assert.rejects(
           () =>
-            runtime.query(
+            migration.query(
               `INSERT INTO tholi.credit_reservations
                 (workspace_id, id, request_id, amount, expires_at)
                 VALUES ($1, $2, $3, 1, $4)`,
@@ -406,7 +407,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         );
         await assert.rejects(
           () =>
-            runtime.query(
+            migration.query(
               `INSERT INTO tholi.jobs
                 (workspace_id, id, account_id, request_id, kind, version, idempotency_key, record_references)
                 VALUES ($1, $2, $3, $4, 'sync', 1, 'foreign-request', '{}')`,
@@ -685,7 +686,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         assert.equal(replay.request.status, "completed");
         assert.equal(
           (
-            await runtime.query(
+            await migration.query(
               "SELECT count(*)::integer AS count FROM tholi.requests WHERE workspace_id = $1",
               [scope.workspaceId],
             )
@@ -935,7 +936,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         );
         assert.equal(
           (
-            await runtime.query(
+            await migration.query(
               "SELECT count(*)::integer AS count FROM tholi.credit_reservations WHERE workspace_id = $1",
               [mutableScope.workspaceId],
             )
@@ -993,7 +994,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           (error) => error === deliberate,
         );
         const counts = (
-          await runtime.query(
+          await migration.query(
             `SELECT
             (SELECT count(*)::integer FROM tholi.saved_artifacts WHERE workspace_id = $1) AS artifacts,
             (SELECT count(*)::integer FROM tholi.requests WHERE workspace_id = $1) AS requests,
@@ -1079,7 +1080,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           { code: "CONFLICT" },
         );
         const counts = (
-          await runtime.query(
+          await migration.query(
             `SELECT
             (SELECT count(*)::integer FROM tholi.jobs WHERE workspace_id = $1) AS jobs,
             (SELECT count(*)::integer FROM tholi.outbox WHERE workspace_id = $1) AS outbox`,
@@ -1112,7 +1113,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           }),
         ]);
         const stored = (
-          await runtime.query(
+          await migration.query(
             `SELECT record_references FROM tholi.jobs
            WHERE workspace_id = $1 AND idempotency_key = 'caller-mutated-references'`,
             [scope.workspaceId],
@@ -1194,7 +1195,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         });
         assert.equal(
           (
-            await runtime.query(
+            await migration.query(
               "SELECT count(*)::integer AS count FROM tholi.requests WHERE workspace_id = $1",
               [first.workspaceId],
             )
@@ -1203,7 +1204,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         );
         assert.equal(
           (
-            await runtime.query(
+            await migration.query(
               "SELECT count(*)::integer AS count FROM tholi.requests WHERE workspace_id = $1",
               [second.workspaceId],
             )
@@ -1222,8 +1223,8 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           () =>
             withTransaction(runtime, async (client) => {
               await client.query(
-                "INSERT INTO tholi.accounts (id) VALUES ($1)",
-                [accountId],
+                "SELECT tholi.provision_personal_account($1,$2)",
+                [accountId, randomUUID()],
               );
               throw deliberate;
             }),
@@ -1231,7 +1232,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
         );
         assert.equal(
           (
-            await runtime.query(
+            await migration.query(
               "SELECT count(*)::integer AS count FROM tholi.accounts WHERE id = $1",
               [accountId],
             )
@@ -1304,6 +1305,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     );
 
     await runIdentityChecks(runtime, migration, record);
+    await runAuthorizationChecks(runtime, migration, record);
     return { passed: true as const, checks };
   } finally {
     const cleanup = await Promise.allSettled([
