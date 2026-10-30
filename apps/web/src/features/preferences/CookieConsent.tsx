@@ -29,6 +29,7 @@ export function CookieConsent() {
     consent,
     storageAvailable,
     choosePreferences,
+    chooseEssentials,
     settingsOpen,
     openCookieSettings,
     closeCookieSettings,
@@ -83,7 +84,7 @@ export function CookieConsent() {
             </p>
           </div>
           <div className="cookie-banner-actions">
-            <button type="button" onClick={() => choosePreferences(false)}>
+            <button type="button" onClick={chooseEssentials}>
               Essential only
             </button>
             <button type="button" onClick={() => choosePreferences(true)}>
@@ -146,8 +147,9 @@ export function CookieConsent() {
                 <strong>Website measurements</strong>
                 <p>
                   On tholi.io, Cloudflare measures page views and performance
-                  independently of these cookie choices. The app’s own optional
-                  analytics provider is inactive.
+                  independently of these cookie choices. Optional Tholi product
+                  measurements need separate account permission and browser
+                  consent on a configured, signed-in account page.
                 </p>
               </div>
               <span className="cookie-category-state">See notice</span>
@@ -167,7 +169,7 @@ export function CookieConsent() {
               </SiteLink>
             </p>
             <div className="cookie-dialog-actions">
-              <button type="button" onClick={() => choosePreferences(false)}>
+              <button type="button" onClick={chooseEssentials}>
                 Essential only
               </button>
               <button

@@ -767,6 +767,7 @@ test("the service OpenAPI describes live routes independently of legacy APIs", a
       "sync",
       "billing",
       "onboarding",
+      "analytics",
     ]),
   );
   for (const entry of inventory) {

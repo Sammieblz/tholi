@@ -145,6 +145,8 @@ export async function runJobChecks(
         "identity_logout_events",
         "credit_grants",
         "plan_versions",
+        "security_audit",
+        "product_events",
       ])
         await assert.rejects(
           () => worker.query(`SELECT * FROM tholi.${table} LIMIT 1`),
@@ -173,6 +175,16 @@ export async function runJobChecks(
       assert.deepEqual(
         (await worker.query("SELECT id FROM tholi.jobs")).rows,
         [],
+      );
+      // UPDATE rechecks the correlation CHECK even when the stored value is
+      // NULL. Its pure validator is required without granting access to audits.
+      assert.deepEqual(
+        (
+          await worker.query(
+            'SELECT tholi.valid_job_correlation(NULL) AS absent, tholi.valid_job_correlation(\'{"prompt":"PRIVATE_SENTINEL"}\') AS rejected',
+          )
+        ).rows[0],
+        { absent: true, rejected: false },
       );
       await assert.rejects(
         () =>

@@ -1,25 +1,13 @@
 import { parseConsent, type ConsentRecord } from "./cookies";
+import {
+  productEventSchema,
+  productPageSchema,
+  type ProductEvent,
+} from "../../../../../packages/navigation-core/contracts-analytics";
 
-export const PUBLIC_PAGES = [
-  "home",
-  "about",
-  "download",
-  "support",
-  "contact",
-  "onboarding",
-  "docs",
-  "privacy",
-  "terms",
-  "cookies",
-] as const;
+export const PUBLIC_PAGES = productPageSchema.options;
 export type PublicPage = (typeof PUBLIC_PAGES)[number];
-export type WebsiteEvent =
-  | { name: "page_view"; page: PublicPage }
-  | { name: "download_click" }
-  | {
-      name: "practice_start" | "practice_complete";
-      practice: "account-settings" | "language-preference";
-    };
+export type WebsiteEvent = ProductEvent;
 
 export interface AnalyticsProvider {
   readonly id: string;
@@ -30,19 +18,30 @@ export interface AnalyticsProvider {
 
 // Rebuild an exact allowlisted object. Runtime callers cannot add a destination,
 // URL query, account identifier, document search, or conversation field.
-export function sanitizeWebsiteEvent(event: WebsiteEvent): WebsiteEvent | null {
+export function sanitizeWebsiteEvent(event: unknown): WebsiteEvent | null {
   if (!event || typeof event !== "object") return null;
-  if (event.name === "download_click") return { name: event.name };
-  if (event.name === "page_view" && PUBLIC_PAGES.includes(event.page))
-    return { name: event.name, page: event.page };
-  if (
-    (event.name === "practice_start" || event.name === "practice_complete") &&
-    (event.practice === "account-settings" ||
-      event.practice === "language-preference")
-  ) {
-    return { name: event.name, practice: event.practice };
+  const input = event as Record<string, unknown>;
+  let safe: unknown;
+  switch (input.name) {
+    case "download_click":
+    case "onboarding_complete":
+      safe = { name: input.name };
+      break;
+    case "page_view":
+      safe = { name: input.name, page: input.page };
+      break;
+    case "store_listing_opened":
+      safe = { name: input.name, browser: input.browser };
+      break;
+    case "practice_start":
+    case "practice_complete":
+      safe = { name: input.name, practice: input.practice };
+      break;
+    default:
+      return null;
   }
-  return null;
+  const parsed = productEventSchema.safeParse(safe);
+  return parsed.success ? parsed.data : null;
 }
 
 /** No app provider is configured. Host-injected scripts are outside this boundary.
@@ -54,6 +53,7 @@ export function createConsentAnalytics(
 ) {
   let consent: ConsentRecord | null = null;
   let generation = 0;
+  let providerGeneration = 0;
   let active: AbortController | null = null;
   const queue: WebsiteEvent[] = [];
   const allowed = () =>
@@ -89,6 +89,17 @@ export function createConsentAnalytics(
     }
   };
   return {
+    setProvider(next: AnalyticsProvider | null) {
+      cancel();
+      provider = next;
+      const stamp = ++providerGeneration;
+      return () => {
+        if (providerGeneration !== stamp || provider !== next) return;
+        providerGeneration++;
+        cancel();
+        provider = null;
+      };
+    },
     setConsent(record: ConsentRecord | null) {
       cancel();
       consent = record ? parseConsent(JSON.stringify(record), now()) : null;

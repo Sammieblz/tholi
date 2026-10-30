@@ -10,6 +10,7 @@ import { createSupportJobHandlers } from "./application/support-jobs";
 import { PostgresSupport } from "./database/support";
 import { createSmtpMailer } from "./adapters/smtp";
 import { createS3Objects } from "./adapters/s3";
+import { createObservability } from "./adapters/observability";
 import {
   isMainModule,
   runExecutable,
@@ -53,7 +54,14 @@ export async function createWorkerRuntime(
 ): Promise<ManagedApplication> {
   const path =
     config.healthFile === undefined ? undefined : healthPath(config.healthFile);
-  const { pool, resource } = await createServiceDatabase(config.database);
+  const observer = createObservability(config.observability);
+  const { pool, resource } = await createServiceDatabase(
+    config.database,
+    observer,
+  ).catch(async (error) => {
+    await observer.close();
+    throw error;
+  });
   const transports: { close(): Promise<void> }[] = [];
   let worker: JobWorker;
   try {
@@ -62,17 +70,20 @@ export async function createWorkerRuntime(
       const mail = createSmtpMailer(
         config.support.mail,
         config.support.allowLocal,
+        observer,
       );
       transports.push(mail);
       const objects = createS3Objects(
         config.support.objects,
         config.support.allowLocal,
+        observer,
       );
       transports.push(objects);
       external = createSupportJobHandlers(
         new PostgresSupport(pool),
         mail,
         objects,
+        observer,
       );
     }
     worker = new JobWorker(
@@ -82,10 +93,13 @@ export async function createWorkerRuntime(
         workerId: randomUUID(),
       },
       [...JOB_HANDLERS, ...external],
+      observer,
     );
   } catch (error) {
     await Promise.allSettled(transports.map((item) => item.close()));
-    await resource.close();
+    await Promise.resolve()
+      .then(() => resource.close())
+      .finally(() => observer.close());
     throw error;
   }
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -129,7 +143,9 @@ export async function createWorkerRuntime(
           await worker.close();
         } finally {
           await Promise.allSettled(transports.map((item) => item.close()));
-          await resource.close();
+          await Promise.resolve()
+            .then(() => resource.close())
+            .finally(() => observer.close());
         }
       }
     },

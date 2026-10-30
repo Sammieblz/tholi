@@ -1,6 +1,15 @@
 import { Pool, type PoolClient } from "pg";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import {
+  NO_OBSERVABILITY,
+  type Observability,
+} from "../application/observability";
+
+const observers = new WeakMap<Pool, Observability>();
+export function databaseObservability(pool: Pool): Observability {
+  return observers.get(pool) ?? NO_OBSERVABILITY;
+}
 
 export interface DatabaseOptions {
   connectionString: string;
@@ -46,7 +55,10 @@ function bounded(value: number | undefined, fallback: number, maximum: number) {
 }
 
 /** No global int8 parser: repositories explicitly expose credit quantities as bigint. */
-export function createDatabasePool(options: DatabaseOptions): Pool {
+export function createDatabasePool(
+  options: DatabaseOptions,
+  observer: Observability = NO_OBSERVABILITY,
+): Pool {
   let url: URL;
   try {
     url = new URL(options.connectionString);
@@ -133,7 +145,42 @@ export function createDatabasePool(options: DatabaseOptions): Pool {
   });
   // An idle connection failure must not crash the process or print its connection
   // string. pg removes the broken client; the next operation checks connectivity.
-  pool.on("error", () => {});
+  observers.set(pool, observer);
+  if (observer.enabled) {
+    const acquire = pool.connect.bind(pool);
+    type Callback = Parameters<Pool["connect"]>[0];
+    pool.connect = ((callback?: Callback) => {
+      const span = observer.start("database.connect");
+      const started = performance.now();
+      const finish = (failed: boolean) => {
+        span.end(failed ? "unavailable" : "ok");
+        observer.metric("database.pool.wait_ms", performance.now() - started);
+        observer.metric("database.pool.total", pool.totalCount);
+        observer.metric("database.pool.idle", pool.idleCount);
+        observer.metric("database.pool.waiting", pool.waitingCount);
+        if (failed)
+          observer.metric("database.failures", 1, { outcome: "unavailable" });
+      };
+      if (callback)
+        return acquire((error, client, release) => {
+          finish(!!error);
+          callback(error, client, release);
+        });
+      return acquire().then(
+        (client) => {
+          finish(false);
+          return client;
+        },
+        (error) => {
+          finish(true);
+          throw error;
+        },
+      );
+    }) as Pool["connect"];
+  }
+  pool.on("error", () => {
+    observer.metric("database.failures", 1, { outcome: "unavailable" });
+  });
   return pool;
 }
 
@@ -145,15 +192,25 @@ export async function withTransaction<T>(
 ): Promise<T> {
   const localScope = scope ? Object.freeze({ ...scope }) : undefined;
   if (localScope) scopeSchema.parse(localScope);
+  const observer = databaseObservability(pool);
   const client = await pool.connect();
+  const transaction = observer.start("database.transaction");
   let discard = false;
   try {
     await client.query("BEGIN");
     await setDatabaseScope(client, localScope);
-    const result = await work(client);
+    const result = await observer.run(transaction.correlation, () =>
+      work(client),
+    );
     await client.query("COMMIT");
+    transaction.end("ok");
     return result;
   } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    const outcome =
+      code === "42501" ? "denied" : code === "57014" ? "timeout" : "error";
+    transaction.end(outcome);
+    observer.metric("database.failures", 1, { outcome });
     try {
       await client.query("ROLLBACK");
     } catch {

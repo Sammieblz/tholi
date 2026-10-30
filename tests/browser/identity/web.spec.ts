@@ -20,9 +20,11 @@ import {
   signOutWebsite,
   syntheticWebsiteIdentity,
   waitForWebsiteAccount,
+  waitForIdentityGatewayCapacity,
   WebsiteIdentityError,
 } from "../../support/website-auth";
 import type { BrowserContext } from "@playwright/test";
+import { productAnalyticsRecordSchema } from "../../../packages/navigation-core/contracts-analytics";
 
 test("configured website uses real signup email recovery and retained identity without requiring accounts for Local", async ({
   browser,
@@ -47,6 +49,26 @@ test("configured website uses real signup email recovery and retained identity w
     accountErrorCode: "not checked",
     providerFormError: "none",
     failureReason: "none",
+    analyticsHttpStatus: {
+      capabilities: 0,
+      policies: 0,
+      consentRead: 0,
+      consentWrite: 0,
+      collection: 0,
+      export: 0,
+      deletion: 0,
+    },
+    // Browser-observed requests only; fixture APIRequestContext calls are separate.
+    browserServiceRequests: {
+      get: 0,
+      post: 0,
+      patch: 0,
+      delete: 0,
+      options: 0,
+      other: 0,
+    },
+    rateLimitResponses: { json: 0, html: 0, other: 0 },
+    gatewayCapacityWaitMs: { initial: 0, afterAnalytics: 0, beforeRecovery: 0 },
   };
   const saveProgress = () =>
     writeEvidence(
@@ -60,9 +82,68 @@ test("configured website uses real signup email recovery and retained identity w
   contexts.push(context);
   const page = await context.newPage();
   try {
+    stage = progress.operation = "initial gateway capacity schedule";
+    progress.gatewayCapacityWaitMs.initial =
+      await waitForIdentityGatewayCapacity();
+    stage = "account-free installation and practice";
+    progress.operation = "public installation and practice";
     let localAccountRequests = 0;
+    let productRequests = 0;
+    page.on("response", (response) => {
+      const url = new URL(response.url());
+      if (url.origin !== environment.serviceOrigin) return;
+      const method = response.request().method();
+      const status = response.status();
+      if (status === 429) {
+        const contentType = response.headers()["content-type"] ?? "";
+        if (contentType.startsWith("application/json"))
+          progress.rateLimitResponses.json++;
+        else if (contentType.startsWith("text/html"))
+          progress.rateLimitResponses.html++;
+        else progress.rateLimitResponses.other++;
+      }
+      if (method === "GET" && url.pathname === "/api/v1/capabilities")
+        progress.analyticsHttpStatus.capabilities = status;
+      else if (
+        method === "GET" &&
+        /\/workspaces\/[^/]+\/policies$/.test(url.pathname)
+      )
+        progress.analyticsHttpStatus.policies = status;
+      else if (/\/workspaces\/[^/]+\/consents$/.test(url.pathname)) {
+        if (method === "GET") progress.analyticsHttpStatus.consentRead = status;
+        else if (method === "POST")
+          progress.analyticsHttpStatus.consentWrite = status;
+      } else if (/\/workspaces\/[^/]+\/analytics\/events$/.test(url.pathname)) {
+        if (method === "GET") progress.analyticsHttpStatus.export = status;
+        else if (method === "POST")
+          progress.analyticsHttpStatus.collection = status;
+        else if (method === "DELETE")
+          progress.analyticsHttpStatus.deletion = status;
+      }
+    });
     page.on("request", (request) => {
       const url = new URL(request.url());
+      if (url.origin === environment.serviceOrigin) {
+        switch (request.method()) {
+          case "GET":
+            progress.browserServiceRequests.get++;
+            break;
+          case "POST":
+            progress.browserServiceRequests.post++;
+            break;
+          case "PATCH":
+            progress.browserServiceRequests.patch++;
+            break;
+          case "DELETE":
+            progress.browserServiceRequests.delete++;
+            break;
+          case "OPTIONS":
+            progress.browserServiceRequests.options++;
+            break;
+          default:
+            progress.browserServiceRequests.other++;
+        }
+      }
       if (
         url.origin === environment.serviceOrigin &&
         url.pathname === "/api/v1/auth/callback"
@@ -75,6 +156,12 @@ test("configured website uses real signup email recovery and retained identity w
         url.pathname.startsWith("/api/v1/account")
       )
         localAccountRequests++;
+      if (
+        url.origin === environment.serviceOrigin &&
+        /\/analytics\/events$/.test(url.pathname) &&
+        request.method() === "POST"
+      )
+        productRequests++;
     });
     await page.goto(environment.webOrigin + "/download");
     await page
@@ -185,17 +272,143 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real registration requires email verification before creating account access",
     );
-    stage = "signed-in account layout keyboard focus and reduced motion";
+    stage = progress.operation = "analytics initial consent controls";
+    await saveProgress();
+    const measurements = page.locator(
+      'section[aria-labelledby="account-analytics-heading"]',
+    );
+    const accountPermission = measurements.getByRole("checkbox", {
+      name: "Allow optional product measurements for this account",
+      exact: true,
+    });
+    const browserPermission = measurements.getByRole("checkbox", {
+      name: "Allow measurements from this browser",
+      exact: true,
+    });
+    await expect(accountPermission).toBeVisible();
+    await expect(accountPermission).not.toBeChecked();
+    await expect(browserPermission).not.toBeChecked();
+    expect(productRequests).toBe(0);
+    stage = progress.operation = "analytics save account permission";
+    await saveProgress();
+    // This controlled value follows the server response; .check() would assert
+    // an immediate state change before the authorized mutation has completed.
+    await accountPermission.click();
+    await expect(measurements).toContainText("Account permission saved.");
+    await expect(accountPermission).toBeChecked();
+    expect(productRequests).toBe(0);
+    stage = progress.operation = "analytics enable browser and collect event";
+    await saveProgress();
+    const collected = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.origin === environment.serviceOrigin &&
+        /\/analytics\/events$/.test(url.pathname) &&
+        response.request().method() === "POST"
+      );
+    });
+    await browserPermission.focus();
+    await page.keyboard.press("Space");
+    expect((await collected).status()).toBe(200);
+    await expect(browserPermission).toBeChecked();
+    stage = progress.operation = "analytics export retained event";
+    await saveProgress();
+    await measurements
+      .getByRole("button", {
+        name: "Review retained measurements",
+        exact: true,
+      })
+      .click();
+    const exported = measurements.getByRole("region", {
+      name: "Retained product measurements JSON",
+      exact: true,
+    });
+    await expect(exported).toBeVisible();
+    const rows = productAnalyticsRecordSchema
+      .array()
+      .max(100)
+      .parse(JSON.parse((await exported.textContent())!));
+    expect(
+      rows.some(
+        (row) => row.event.name === "page_view" && row.event.page === "account",
+      ),
+    ).toBe(true);
+    stage =
+      "signed-in account and retained measurements layout keyboard focus and reduced motion";
+    progress.operation = stage;
     await checkAccountLayout(page);
     checks.push(
-      "real account long identifiers and confirmation controls fit four widths in both themes with visible keyboard focus and reduced motion",
+      "real account and retained measurements fit four widths in both themes with visible keyboard focus and reduced motion",
     );
+    stage = progress.operation =
+      "analytics withdraw browser consent through Essential only";
+    await saveProgress();
+    await page
+      .getByRole("button", { name: "Cookie settings", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Cookie settings", exact: true })
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    await expect(browserPermission).not.toBeChecked();
+    await expect(accountPermission).toBeChecked();
+    stage = progress.operation = "analytics public Local pages remain inert";
+    await saveProgress();
+    const beforePublic = productRequests;
+    await page.goto(environment.webOrigin + "/onboarding");
+    await page
+      .getByRole("button", { name: "Skip onboarding", exact: true })
+      .click();
+    await expect(page).toHaveURL(environment.webOrigin + "/download");
+    expect(productRequests).toBe(beforePublic);
+    await page.goto(environment.webOrigin + "/account");
+    await waitForWebsiteAccount(page, environment);
+    await expect(accountPermission).toBeChecked();
+    await expect(browserPermission).not.toBeChecked();
+    stage = progress.operation = "analytics withdraw account permission";
+    await saveProgress();
+    await accountPermission.click();
+    await expect(measurements).toContainText(
+      "Account permission withdrawn and retained product measurements removed.",
+    );
+    await expect(accountPermission).not.toBeChecked();
+    stage = progress.operation = "analytics export after account withdrawal";
+    await saveProgress();
+    await measurements
+      .getByRole("button", {
+        name: "Review retained measurements",
+        exact: true,
+      })
+      .click();
+    await expect(exported).toHaveText("[]");
+    stage = progress.operation =
+      "analytics delete retained events without collection permission";
+    await saveProgress();
+    await measurements
+      .getByRole("button", { name: "Delete measurements", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirm", exact: true })
+      .click();
+    await expect(measurements).toContainText(
+      "Retained product measurements deleted.",
+    );
+    checks.push(
+      "real cookie/CSRF analytics collection needs both independent choices; withdrawal purges retained records and Local public pages remain inert",
+    );
+    stage = progress.operation =
+      "gateway capacity schedule before session checks";
+    await saveProgress();
+    progress.gatewayCapacityWaitMs.afterAnalytics =
+      await waitForIdentityGatewayCapacity();
     stage = "callback cookie binding and session credential protection";
+    progress.operation = stage;
     await checkCookieBinding(browser, context, callback, environment);
     const cookies = (
       await context.cookies(environment.serviceOrigin + "/api/v1/account")
-    ).filter(
-      (cookie) => ["tholi_session", "tholi_refresh"].includes(cookie.name),
+    ).filter((cookie) =>
+      ["tholi_session", "tholi_refresh"].includes(cookie.name),
     );
     expect(cookies.length).toBe(2);
     expect(
@@ -212,6 +425,7 @@ test("configured website uses real signup email recovery and retained identity w
       "actual callback rejects foreign cookie binding and completed-flow replay; credentials stay HttpOnly",
     );
     stage = "real session refresh and device revocation";
+    progress.operation = stage;
     await page
       .getByRole("button", { name: "Renew session", exact: true })
       .click();
@@ -263,11 +477,18 @@ test("configured website uses real signup email recovery and retained identity w
       "real refresh retains the session and a revoked second browser loses account access",
     );
     stage = "explicit Tholi and identity-provider sign-out";
+    progress.operation = stage;
     await signOutWebsite(page, environment, true);
     checks.push(
       "Tholi logout and explicitly confirmed provider logout complete separately",
     );
+    stage = progress.operation =
+      "gateway capacity schedule before recovery checks";
+    await saveProgress();
+    progress.gatewayCapacityWaitMs.beforeRecovery =
+      await waitForIdentityGatewayCapacity();
     stage = "real password recovery email and password update";
+    progress.operation = stage;
     const beforeRecovery = await capturedMessageIds(environment, fixture.email);
     await page.goto(environment.webOrigin + "/signin");
     await page
@@ -294,6 +515,7 @@ test("configured website uses real signup email recovery and retained identity w
       "real recovery email changes the password and fresh-browser sign-in preserves account identity",
     );
     stage = "retained realm reconciliation and fresh-browser sign-in";
+    progress.operation = stage;
     reconcileIdentityConfiguration(environment);
     const retainedContext = await identityContext(browser);
     contexts.push(retainedContext);

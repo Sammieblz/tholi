@@ -12,6 +12,7 @@ import {
 } from "../../../../packages/navigation-core/contracts-jobs";
 import { RepositoryError } from "./contracts";
 import { PostgresRepositories } from "./repositories";
+import { correlationSchema } from "../application/observability";
 
 function bounded(value: number, minimum: number, maximum: number) {
   if (!Number.isInteger(value) || value < minimum || value > maximum)
@@ -74,6 +75,7 @@ export class PostgresJobs implements JobStore {
       max_attempts: number;
       claim_token: string;
       lease_expires_at: Date;
+      origin_correlation: unknown;
     }>("SELECT * FROM tholi.claim_jobs($1,$2,$3,$4::jsonb)", [
       input.workerId,
       bounded(input.limit, 1, 10),
@@ -91,6 +93,9 @@ export class PostgresJobs implements JobStore {
       maxAttempts: row.max_attempts,
       leaseToken: row.claim_token,
       leaseExpiresAt: row.lease_expires_at,
+      ...(row.origin_correlation
+        ? { correlation: correlationSchema.parse(row.origin_correlation) }
+        : {}),
     }));
   }
 
@@ -154,6 +159,7 @@ export class PostgresJobs implements JobStore {
     intervalMs: number;
   }): Promise<number> {
     input = structuredClone(input);
+    await this.pruneObservability(input.limit);
     const scopes = await this.pool.query<{
       account_id: string;
       workspace_id: string;
@@ -185,6 +191,27 @@ export class PostgresJobs implements JobStore {
       }
     }
     return scheduled;
+  }
+
+  /** The existing worker scheduling tick also enforces metadata retention. */
+  async pruneObservability(batch = 100) {
+    return (
+      await this.pool.query<{ audit_deleted: number; product_deleted: number }>(
+        "SELECT * FROM tholi.prune_observability($1)",
+        [bounded(batch, 1, 1000)],
+      )
+    ).rows[0];
+  }
+
+  async health() {
+    return (
+      await this.pool.query<{
+        kind: string;
+        status: string;
+        count: string;
+        oldest_age_ms: number;
+      }>("SELECT * FROM tholi.job_health()")
+    ).rows;
   }
 
   /** Operator pool only. Registered kinds supply safety, never a client boolean. */

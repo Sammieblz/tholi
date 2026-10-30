@@ -20,6 +20,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Durable jobs, worker isolation, scheduling and recovery](development/service-jobs.md)
 - [Account support, notification mail and private diagnostic files](development/service-support.md)
 - [Gateway, CDN, TLS and optional edge delivery](development/service-delivery.md)
+- [Redacted operational telemetry, audit metadata and consented analytics](development/service-observability.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

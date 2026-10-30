@@ -1,6 +1,13 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { RepositoryError } from "../database/contracts";
 import { JOB_HANDLERS } from "./identity-maintenance";
+import { jobStatusSchema } from "../../../../packages/navigation-core/contracts-jobs";
+import {
+  NO_OBSERVABILITY,
+  observeOperation,
+  type Observability,
+  type ObservationOutcome,
+} from "./observability";
 import {
   JobHandlerFailure,
   type JobFailure,
@@ -33,6 +40,7 @@ export class JobWorker {
     private readonly store: JobStore,
     options: JobWorkerOptions,
     handlers: readonly RegisteredJobHandler[] = JOB_HANDLERS,
+    private readonly observer: Observability = NO_OBSERVABILITY,
   ) {
     if (
       !options.workerId ||
@@ -67,6 +75,8 @@ export class JobWorker {
     if (this.started) return;
     this.started = true;
     this.running = true;
+    this.observer.metric("worker.healthy", 0);
+    this.observer.metric("worker.active", 0);
     this.loop = this.poll()
       .catch(() => {
         this.healthy = false;
@@ -87,6 +97,7 @@ export class JobWorker {
   async stop(): Promise<void> {
     if (this.shutdown.signal.aborted) return;
     this.healthy = false;
+    this.observer.metric("worker.healthy", 0);
     const reason = new JobHandlerFailure("retryable", "SHUTDOWN");
     this.shutdown.abort(reason);
     for (const job of this.active.values()) job.controller.abort(reason);
@@ -102,6 +113,11 @@ export class JobWorker {
     if (this.shutdown.signal.aborted) return;
     this.healthy = true;
     this.lastHealthy = Date.now();
+    this.observer.metric("worker.healthy", 1);
+    this.observer.metric(
+      "worker.last_healthy_seconds",
+      this.lastHealthy / 1000,
+    );
   }
 
   private async poll() {
@@ -110,28 +126,67 @@ export class JobWorker {
       try {
         let observedDatabase = false;
         if (Date.now() >= nextSchedule) {
-          await this.store.scheduleBrokerPruning({
-            limit: 100,
-            intervalMs: this.options.scheduleIntervalMs,
-          });
-          for (const handler of this.handlers) {
-            if ("external" in handler && handler.schedule)
-              await handler.schedule({
+          await observeOperation(
+            this.observer,
+            "job.schedule",
+            { profile: "worker" },
+            async () => {
+              await this.store.scheduleBrokerPruning({
                 limit: 100,
                 intervalMs: this.options.scheduleIntervalMs,
               });
-          }
+              for (const handler of this.handlers) {
+                if ("external" in handler && handler.schedule)
+                  await handler.schedule({
+                    limit: 100,
+                    intervalMs: this.options.scheduleIntervalMs,
+                  });
+              }
+              if (this.store.health && this.observer.enabled) {
+                try {
+                  const rows = await this.store.health();
+                  this.observer.metric("job.health.available", 1);
+                  for (const kind of this.kinds)
+                    for (const status of jobStatusSchema.options) {
+                      const row = rows.find(
+                        (row) =>
+                          row.kind === kind.kind && row.status === status,
+                      );
+                      const labels = { jobKind: kind.kind, jobStatus: status };
+                      this.observer.metric(
+                        "job.queue.count",
+                        Number(row?.count ?? 0),
+                        labels,
+                      );
+                      this.observer.metric(
+                        "job.queue.age_ms",
+                        row?.oldest_age_ms ?? 0,
+                        labels,
+                      );
+                    }
+                } catch {
+                  this.observer.metric("job.health.available", 0);
+                }
+              }
+            },
+          );
           nextSchedule = Date.now() + this.options.scheduleIntervalMs;
           observedDatabase = true;
         }
         const capacity = this.options.concurrency - this.active.size;
         if (capacity > 0 && !this.shutdown.signal.aborted) {
-          const leases = await this.store.claim({
-            workerId: this.options.workerId,
-            kinds: this.kinds,
-            leaseMs: this.options.leaseMs,
-            limit: capacity,
-          });
+          const leases = await observeOperation(
+            this.observer,
+            "job.claim",
+            { profile: "worker" },
+            () =>
+              this.store.claim({
+                workerId: this.options.workerId,
+                kinds: this.kinds,
+                leaseMs: this.options.leaseMs,
+                limit: capacity,
+              }),
+          );
           observedDatabase = true;
           for (const lease of leases) {
             if (this.shutdown.signal.aborted) {
@@ -156,14 +211,17 @@ export class JobWorker {
             const key = lease.leaseToken;
             const task = this.execute(lease, controller).finally(() => {
               this.active.delete(key);
+              this.observer.metric("worker.active", this.active.size);
             });
             this.active.set(key, { controller, task });
+            this.observer.metric("worker.active", this.active.size);
           }
         }
         if (observedDatabase) this.recordHealthy();
       } catch {
         // Availability failures change health, never persist driver details.
         this.healthy = false;
+        this.observer.metric("worker.healthy", 0);
       }
       await this.wait(this.options.pollMs, this.shutdown.signal);
     }
@@ -186,7 +244,20 @@ export class JobWorker {
       await this.wait(this.options.heartbeatMs, finished);
       if (finished.aborted || controller.signal.aborted) return;
       try {
-        const state = await this.store.heartbeat(lease, this.options.leaseMs);
+        const state = await observeOperation(
+          this.observer,
+          "job.heartbeat",
+          { jobKind: lease.kind, attempt: lease.attempts },
+          () => this.store.heartbeat(lease, this.options.leaseMs),
+          {
+            outcome: (state) =>
+              state.cancelRequested
+                ? "cancelled"
+                : state.alive
+                  ? "ok"
+                  : "stale",
+          },
+        );
         if (finished.aborted) return;
         if (!state.alive || state.cancelRequested) {
           controller.abort(
@@ -200,6 +271,7 @@ export class JobWorker {
         this.recordHealthy();
       } catch {
         this.healthy = false;
+        this.observer.metric("worker.healthy", 0);
         controller.abort(new JobHandlerFailure("retryable", "UNAVAILABLE"));
         return;
       }
@@ -248,58 +320,103 @@ export class JobWorker {
   }
 
   private async reportFailure(lease: JobLease, failure: JobFailure) {
+    const span = this.observer.start(
+      "job.failure",
+      {
+        jobKind: lease.kind,
+        attempt: lease.attempts,
+      },
+      this.observer.current() ?? { ...lease.correlation, jobId: lease.id },
+    );
     try {
-      await this.store.fail(lease, failure);
+      const changed = await this.store.fail(lease, failure);
+      span.end(
+        changed
+          ? failure.classification === "failed"
+            ? "error"
+            : failure.classification
+          : "stale",
+        { errorCode: failure.code },
+      );
+      if (!changed)
+        this.observer.metric("job.stale_fences", 1, { jobKind: lease.kind });
     } catch {
       // The lease will expire for another worker; a failed write is never an ack.
       this.healthy = false;
+      this.observer.metric("worker.healthy", 0);
+      span.end("unavailable");
     }
   }
 
   private async execute(lease: JobLease, controller: AbortController) {
-    const handler = this.handlers.find(
-      (candidate) =>
-        candidate.kind === lease.kind && candidate.version === lease.version,
+    const span = this.observer.start(
+      "job.attempt",
+      { profile: "worker", jobKind: lease.kind, attempt: lease.attempts },
+      { ...lease.correlation, jobId: lease.id },
     );
-    if (!handler) {
-      await this.reportFailure(lease, {
-        classification: "failed",
-        code: "UNSUPPORTED_JOB",
-        backoffMs: 0,
-      });
-      return;
-    }
-    const finished = new AbortController();
-    const heartbeat = this.heartbeat(lease, controller, finished.signal);
-    try {
-      controller.signal.throwIfAborted();
-      if ("external" in handler) {
-        await handler.execute(
-          lease,
-          controller.signal,
-          this.backoff(lease.attempts),
-        );
+    if (lease.attempts > 1)
+      this.observer.metric("job.retries", 1, { jobKind: lease.kind });
+    return this.observer.run(span.correlation, async () => {
+      const handler = this.handlers.find(
+        (candidate) =>
+          candidate.kind === lease.kind && candidate.version === lease.version,
+      );
+      if (!handler) {
+        await this.reportFailure(lease, {
+          classification: "failed",
+          code: "UNSUPPORTED_JOB",
+          backoffMs: 0,
+        });
+        span.end("error", { errorCode: "UNSUPPORTED_JOB" });
         return;
       }
-      await this.store.runJob(lease, async (transaction) => {
+      const finished = new AbortController();
+      const heartbeat = this.heartbeat(lease, controller, finished.signal);
+      let outcome: ObservationOutcome = "returned";
+      try {
         controller.signal.throwIfAborted();
-        const result = await handler.execute(
-          transaction,
+        if ("external" in handler) {
+          await handler.execute(
+            lease,
+            controller.signal,
+            this.backoff(lease.attempts),
+          );
+          return;
+        }
+        const acknowledged = await this.store.runJob(
           lease,
-          controller.signal,
+          async (transaction) => {
+            controller.signal.throwIfAborted();
+            const result = await handler.execute(
+              transaction,
+              lease,
+              controller.signal,
+            );
+            controller.signal.throwIfAborted();
+            return result;
+          },
         );
-        controller.signal.throwIfAborted();
-        return result;
-      });
-      // A false result means a stale/cancelled fence. It must never be acknowledged.
-    } catch (error) {
-      await this.reportFailure(
-        lease,
-        this.failure(error, handler, controller.signal, lease.attempts),
-      );
-    } finally {
-      finished.abort();
-      await heartbeat;
-    }
+        outcome = acknowledged ? "ok" : "stale";
+        if (!acknowledged)
+          this.observer.metric("job.stale_fences", 1, { jobKind: lease.kind });
+        // A false result means a stale/cancelled fence. It must never be acknowledged.
+      } catch (error) {
+        const failure = this.failure(
+          error,
+          handler,
+          controller.signal,
+          lease.attempts,
+        );
+        outcome =
+          failure.classification === "failed"
+            ? "error"
+            : failure.classification;
+        await this.reportFailure(lease, failure);
+      } finally {
+        finished.abort();
+        await heartbeat;
+        span.end(outcome);
+      }
+    });
   }
 }

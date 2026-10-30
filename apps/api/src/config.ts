@@ -10,6 +10,11 @@ import type {
 } from "./application/support-contracts";
 import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-support";
 import { SERVICE_LIMITS } from "../../../packages/navigation-core/contracts-service";
+import {
+  OBSERVABILITY_DEFAULTS,
+  validateObservabilityOptions,
+  type ObservabilityOptions,
+} from "./application/observability";
 
 export interface ApiOptions {
   token: string;
@@ -21,6 +26,7 @@ export interface ApiOptions {
 
 export interface ServiceApiOptions {
   origins: string[];
+  observability?: ObservabilityOptions;
   transport?: Partial<ServiceTransportPolicy>;
   identity?: IdentityOptions;
   database?: DatabaseOptions;
@@ -127,6 +133,33 @@ export interface ListenOptions {
 
 export type Environment = Readonly<Record<string, string | undefined>>;
 
+/** Explicit, bounded telemetry. Ambient provider credentials and metadata are ignored. */
+export function parseObservabilityConfig(
+  env: Environment,
+  service: ObservabilityOptions["service"],
+): ObservabilityOptions | undefined {
+  const enabled = env.THOLI_OBSERVABILITY_ENABLED;
+  if (enabled !== undefined && !["true", "false"].includes(enabled))
+    throw new Error("Invalid observability availability configuration.");
+  if (enabled !== "true") return undefined;
+  const local = env.THOLI_OTLP_ALLOW_LOCAL;
+  if (local !== undefined && !["true", "false"].includes(local))
+    throw new Error("Invalid local telemetry configuration.");
+  if (local === "true" && env.NODE_ENV !== "development")
+    throw new Error(
+      "Local telemetry requires the explicit development profile.",
+    );
+  return validateObservabilityOptions({
+    ...OBSERVABILITY_DEFAULTS,
+    enabled: true,
+    service,
+    ...(env.THOLI_OTLP_ENDPOINT
+      ? { otlpEndpoint: env.THOLI_OTLP_ENDPOINT }
+      : {}),
+    allowLocal: local === "true",
+  });
+}
+
 function requiredText(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim() || value.includes("\0"))
     throw new Error(`Invalid ${name}.`);
@@ -201,6 +234,9 @@ export function validateServiceOptions(
     throw new Error("Invalid service configuration.");
   const origins = validateOrigins(options.origins, true);
   const transport = validateServiceTransportPolicy(options.transport);
+  const observability = options.observability
+    ? validateObservabilityOptions(options.observability, "tholi-api")
+    : undefined;
   if (!!options.identity !== !!options.database)
     throw new Error(
       "Identity requires explicit service database configuration.",
@@ -208,7 +244,7 @@ export function validateServiceOptions(
   if (!options.identity) {
     if (options.support)
       throw new Error("Support requires the composed identity profile.");
-    return { origins, transport };
+    return { origins, transport, ...(observability ? { observability } : {}) };
   }
   const identity = validateIdentityOptions(options.identity);
   if (!origins.includes(identity.webOrigin))
@@ -228,6 +264,7 @@ export function validateServiceOptions(
     origins,
     transport,
     identity,
+    ...(observability ? { observability } : {}),
     database: { ...options.database! },
     ...(options.support
       ? {
@@ -704,6 +741,7 @@ export function parseWorkerConfig(env: Environment) {
     throw new Error("Worker heartbeat must be less than half its lease.");
   return {
     database: parseDatabaseConfig(env, "worker"),
+    observability: parseObservabilityConfig(env, "tholi-worker"),
     options: {
       concurrency: budget("THOLI_WORKER_CONCURRENCY", 2, 1, 2),
       pollMs: budget("THOLI_WORKER_POLL_MS", 1000, 100, 10000),
@@ -865,6 +903,7 @@ export function parseServiceConfig(env: Environment) {
   return {
     options: validateServiceOptions({
       origins: parseOrigins(env, "THOLI_SERVICE_ORIGINS", true) ?? [],
+      observability: parseObservabilityConfig(env, "tholi-api"),
       transport: {
         ...Object.fromEntries(
           Object.entries({

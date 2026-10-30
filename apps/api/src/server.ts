@@ -11,6 +11,9 @@ import type { IdentityService } from "./application/identity";
 import type { AuthorizationService } from "./application/authorization";
 import type { JobService } from "./application/jobs";
 import type { SupportService } from "./application/support";
+import type { ProductAnalyticsService } from "./application/analytics";
+import type { Observability } from "./application/observability";
+import { createObservability } from "./adapters/observability";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
 
@@ -20,6 +23,8 @@ export interface ServiceApiServices {
   authorization?: AuthorizationService;
   jobs?: JobService;
   support?: SupportService;
+  analytics?: ProductAnalyticsService;
+  observability?: Observability;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -54,13 +59,16 @@ export async function createServiceApi(
   let authorization = injected.authorization;
   let jobs = injected.jobs;
   let support = injected.support;
+  let analytics = injected.analytics;
   const ownedResources = [...resources];
-  if ((authorization || jobs || support) && !identity)
+  if ((authorization || jobs || support || analytics) && !identity)
     throw new Error("Authorization requires the composed identity service.");
   if (identity && !options.identity)
     throw new Error(
       "Identity injection requires an explicit identity profile.",
     );
+  const observer =
+    injected.observability ?? createObservability(options.observability);
   if (options.identity && !identity) {
     const { createIdentityRuntime } =
       await import("./adapters/service-identity");
@@ -68,13 +76,20 @@ export async function createServiceApi(
       options.identity,
       options.database!,
       options.support,
-    );
+      observer,
+    ).catch(async (error) => {
+      await observer.close();
+      throw error;
+    });
     identity = runtime.service;
     authorization = runtime.authorization;
     jobs = runtime.jobs;
     support = runtime.support;
+    analytics = runtime.analytics;
     ownedResources.push(...runtime.resources);
   }
+  // Accept late completions during drain, then flush after application resources close.
+  if (observer.enabled) ownedResources.push(observer);
   // Extension origins are transport admission, never account identity. Firefox's
   // per-profile origin is not its stable registered OAuth callback.
   const nativeOrigin = (origin: string) => {
@@ -145,6 +160,7 @@ export async function createServiceApi(
         !!authorization,
         !!jobs,
         !!support,
+        !!analytics,
       );
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
@@ -158,6 +174,10 @@ export async function createServiceApi(
           const { registerJobsApi } = await import("./routes/jobs");
           await registerJobsApi(app, identity, jobs);
         }
+        if (analytics) {
+          const { registerAnalyticsApi } = await import("./routes/analytics");
+          await registerAnalyticsApi(app, identity, analytics);
+        }
         if (support) {
           const { registerSupportApi } = await import("./routes/support");
           const { registerFilesApi } = await import("./routes/files");
@@ -168,5 +188,6 @@ export async function createServiceApi(
       registerHealth(app, "service", lifecycle);
     },
     options.transport,
+    observer,
   );
 }

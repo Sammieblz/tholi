@@ -9,6 +9,10 @@ from [#28](https://github.com/Sammieblz/tholi/issues/28), with
 and [optional portable identity](../development/service-identity.md) from #30.
 [Workspace authorization and cloud consent](../development/service-authorization.md)
 extend that same runtime in #31.
+[Durable jobs](../development/service-jobs.md),
+[support/private files](../development/service-support.md) and
+[redacted observability and consented analytics](../development/service-observability.md)
+extend those existing owners in #32, #33 and #35.
 
 ## Profiles and entrypoints
 
@@ -19,9 +23,11 @@ extend that same runtime in #31.
 
 Without identity configuration, the service exposes health and discovery without
 opening PostgreSQL or an identity provider. Configured identity adds account,
-session, workspace, membership and consent routes through the same service
-runtime and SQL pool. Navigation, saved-data, credit,
-billing and durable-job endpoints remain planned. A private bearer never grants
+session, workspace, membership, consent, durable-job and consented analytics
+routes through the same service runtime and SQL pool. Explicit support
+configuration also enables approved support requests and private diagnostic
+files. Navigation, general saved-data, credit and billing endpoints remain
+planned. A private bearer never grants
 service access. The service does not load SQLite, ONNX, OCR or their worker
 adapters. Importing either bootstrap does not listen; only running its executable
 or calling its exported start function does.

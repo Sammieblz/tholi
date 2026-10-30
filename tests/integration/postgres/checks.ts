@@ -14,6 +14,7 @@ import { runIdentityChecks } from "./identity-checks";
 import { runAuthorizationChecks } from "./authorization-checks";
 import { runJobChecks } from "./job-checks";
 import { runSupportChecks } from "./support-checks";
+import { runObservabilityChecks } from "./observability-checks";
 import {
   beginJourney,
   saveTask,
@@ -1323,6 +1324,13 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
       await runJobChecks(runtime, migration, worker, record);
       await runSupportChecks(runtime, migration, worker, record);
     }
+    await runObservabilityChecks(
+      runtime,
+      migration,
+      worker,
+      options.runtimeConnection,
+      record,
+    );
     return { passed: true as const, checks };
   } finally {
     const cleanup = await Promise.allSettled([

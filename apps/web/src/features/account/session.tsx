@@ -39,6 +39,7 @@ type AccountContextValue = {
     schema: z.ZodType<T>,
     method?: "GET" | "POST" | "DELETE",
     body?: unknown,
+    signal?: AbortSignal,
   ) => Promise<T>;
 };
 const AccountContext = createContext<AccountContextValue | undefined>(
@@ -67,6 +68,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       schema: z.ZodType<T>,
       method: "GET" | "POST" | "DELETE" = "GET",
       body?: unknown,
+      signal?: AbortSignal,
     ): Promise<T> => {
       if (!serviceApiOrigin)
         throw new Error("Accounts are not configured on this website.");
@@ -81,8 +83,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           method,
           body,
           credentials: "include",
-          signal: pending.current.signal,
-          headers: csrfToken ? { "X-Tholi-CSRF": csrfToken } : undefined,
+          signal: signal
+            ? AbortSignal.any([pending.current.signal, signal])
+            : pending.current.signal,
+          headers:
+            method !== "GET" && csrfToken
+              ? { "X-Tholi-CSRF": csrfToken }
+              : undefined,
         });
         if (revision !== generation.current)
           throw new Error(

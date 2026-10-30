@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createDatabasePool } from "../../../apps/api/src/database/postgres";
-import { PostgresIdentityRepository } from "../../../apps/api/src/database/identity";
+import { createRuntimeActor } from "./runtime-actor";
 import { PostgresSupport } from "../../../apps/api/src/database/support";
 import { diagnosticSnapshotSchema } from "../../../packages/navigation-core/contracts-support";
 
@@ -32,8 +32,6 @@ export async function runSupportRuntimeProbe(options: {
     connectionString: options.workerConnection,
     max: 1,
   });
-  const digest = (value: string) =>
-    createHash("sha256").update(value).digest("hex");
   const checkedFetch = async (
     path: string,
     token?: string,
@@ -55,40 +53,8 @@ export async function runSupportRuntimeProbe(options: {
     return response;
   };
   try {
-    const identities = new PostgresIdentityRepository(runtime);
-    const bootstrap = async () => {
-      const issuedAt = new Date(Date.now() - 1000);
-      const identity = {
-        issuer: "https://identity.example.test/realms/local-runtime-probe",
-        subject: randomUUID(),
-        providerSessionId: randomUUID(),
-        issuedAt,
-        verifiedEmail: `tholi-capture-${randomUUID()}@example.invalid`,
-      };
-      const account = await identities.resolveIdentity(identity),
-        token = randomBytes(32).toString("base64url"),
-        now = new Date();
-      await identities.createSession({
-        ...account,
-        id: randomUUID(),
-        clientId: "extension-chromium",
-        clientKind: "extension",
-        providerIssuer: identity.issuer,
-        providerSubject: identity.subject,
-        providerSessionId: identity.providerSessionId,
-        providerIssuedAt: issuedAt,
-        accessHash: digest(token),
-        refreshHash: digest(randomBytes(32).toString("base64url")),
-        csrfHash: digest(randomUUID()),
-        accessExpiresAt: new Date(now.getTime() + 180000),
-        expiresAt: new Date(now.getTime() + 600000),
-        createdAt: now,
-        lastUsedAt: now,
-      });
-      return { account, token };
-    };
-    const actor = await bootstrap(),
-      stranger = await bootstrap();
+    const actor = await createRuntimeActor(runtime),
+      stranger = await createRuntimeActor(runtime);
     const submitted = (await (
       await checkedFetch("/api/v1/support/requests", actor.token, {
         idempotencyKey: randomUUID(),

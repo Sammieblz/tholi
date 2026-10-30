@@ -116,6 +116,26 @@
   margin: 6px 0;
   font-size: 14px;
 }
+.account-measurement-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.account-measurement-choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.account-measurement-export {
+  max-width: 100%;
+  max-height: 360px;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13px;
+}
 .account-dialog-backdrop {
   position: fixed;
   inset: 0;

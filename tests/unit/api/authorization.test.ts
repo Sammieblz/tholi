@@ -48,6 +48,16 @@ import {
 } from "../../../packages/navigation-core/contracts-authorization";
 import { serviceErrorEnvelopeSchema } from "../../../packages/navigation-core/contracts-service";
 import {
+  ProductAnalyticsService,
+  type ProductAnalyticsTransaction,
+} from "../../../apps/api/src/application/analytics";
+import {
+  PRODUCT_FUNNEL_AVAILABILITY,
+  productFunnelEventSchema,
+  productAnalyticsPageSchema,
+  recordProductEventInputSchema,
+} from "../../../packages/navigation-core/contracts-analytics";
+import {
   cancelJobInputSchema,
   jobPageQuerySchema,
   jobPageSchema,
@@ -65,7 +75,7 @@ const nativeToken = "n".repeat(43);
 const webToken = "w".repeat(43);
 const bearer = { authorization: `Bearer ${nativeToken}` };
 
-async function fixture(supportEnabled = true) {
+async function fixture(supportEnabled = true, analyticsEnabled = true) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
     THOLI_SERVICE_ORIGINS: `${webOrigin},https://help.tholi.io`,
@@ -134,6 +144,20 @@ async function fixture(supportEnabled = true) {
     getMembership: vi.fn(async () => membership),
     listMemberships: vi.fn(async () => [target]),
     listConsents: vi.fn(async () => consents),
+    recordProductEvent: vi.fn<
+      ProductAnalyticsTransaction["recordProductEvent"]
+    >(async () => ({ recorded: true })),
+    listProductEvents: vi.fn<ProductAnalyticsTransaction["listProductEvents"]>(
+      async () => [
+        {
+          schemaVersion: 1,
+          eventId: "00000000-0000-4000-8000-000000000035",
+          event: { name: "page_view", page: "account" },
+          recordedAt: new Date("2026-10-30T00:00:00Z"),
+        },
+      ],
+    ),
+    deleteProductEvents: vi.fn(async () => 1n),
     listJobs: vi.fn<JobTransaction["listJobs"]>(async () => [job]),
     getJob: vi.fn<JobTransaction["getJob"]>(async (id) =>
       id === job.id ? job : undefined,
@@ -320,6 +344,9 @@ async function fixture(supportEnabled = true) {
     identity,
     authorization,
     jobs,
+    ...(analyticsEnabled
+      ? { analytics: new ProductAnalyticsService(repositories) }
+      : {}),
     ...(supportEnabled ? { support } : {}),
   });
   applications.push(app);
@@ -362,6 +389,134 @@ function safeError(
   );
 }
 const change = { role: "admin", status: "active", expectedRevision: "2" };
+
+describe("consented product analytics HTTP contracts", () => {
+  const input = {
+    schemaVersion: 1,
+    eventId: "00000000-0000-4000-8000-000000000035",
+    event: { name: "page_view", page: "account" },
+  };
+  it("requires both current actor consent and real cookie/CSRF authority on a local HTTP request", async () => {
+    const f = await fixture();
+    const url = await f.app.listen({ host: "127.0.0.1", port: 0 });
+    const endpoint = `${url}/api/v1/workspaces/${f.workspace.id}/analytics/events`;
+    const send = (headers: Record<string, string> = {}) =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(input),
+      });
+    expect((await send()).status).toBe(401);
+    const cookieHeaders = { cookie: f.cookie, origin: webOrigin };
+    expect((await send(cookieHeaders)).status).toBe(403);
+    const headers = { ...cookieHeaders, "X-Tholi-CSRF": f.csrf };
+    expect((await send(headers)).status).toBe(403);
+    expect(f.scoped.recordProductEvent).not.toHaveBeenCalled();
+    f.consents.push({
+      id: randomUUID(),
+      purpose: "product_analytics",
+      policyVersion: "1",
+      granted: true,
+      revision: 1n,
+    });
+    const response = await send(headers);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ recorded: true });
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(f.scoped.recordProductEvent).toHaveBeenCalledWith(input);
+    f.consents[0].granted = false;
+    expect((await send(headers)).status).toBe(403);
+    const exported = await fetch(endpoint, { headers: cookieHeaders });
+    expect(
+      productAnalyticsPageSchema.parse(await exported.json()).items,
+    ).toHaveLength(1);
+    const deleted = await fetch(endpoint, { method: "DELETE", headers });
+    expect(await deleted.json()).toEqual({ deleted: "1" });
+  });
+
+  it("rejects invented data fields, forged workspace scope and unavailable activation producers", async () => {
+    const f = await fixture();
+    const path = `/api/v1/workspaces/${f.workspace.id}/analytics/events`;
+    for (const payload of [
+      { ...input, accountId: f.account.id },
+      { ...input, event: { ...input.event, goal: "PRIVATE_GOAL_SENTINEL" } },
+      { ...input, schemaVersion: 2 },
+      { ...input, event: { name: "mode_activated", mode: "paid-cloud" } },
+      { ...input, event: { name: "allowance_exhausted", mode: "free-cloud" } },
+    ]) {
+      expect(recordProductEventInputSchema.safeParse(payload).success).toBe(
+        false,
+      );
+      safeError(
+        await f.app.inject({
+          method: "POST",
+          url: path,
+          headers: bearer,
+          payload,
+        }),
+        400,
+        "INVALID_REQUEST",
+      );
+    }
+    safeError(
+      await f.app.inject({
+        method: "GET",
+        url: `/api/v1/workspaces/${randomUUID()}/analytics/events`,
+        headers: bearer,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(f.scoped.recordProductEvent).not.toHaveBeenCalled();
+    expect(
+      productFunnelEventSchema.safeParse({
+        name: "mode_activated",
+        mode: "local",
+      }).success,
+    ).toBe(true);
+    expect(PRODUCT_FUNNEL_AVAILABILITY).toEqual({
+      publicOnboardingFunnel: "unavailable",
+      localActivation: "unavailable",
+      freeCloudActivation: "unavailable",
+      paidCloudActivation: "unavailable",
+      allowanceExhaustion: "unavailable",
+    });
+  });
+
+  it("advertises only composed handlers and maps bounded collection admission safely", async () => {
+    const f = await fixture();
+    const disabled = await fixture(false, false);
+    expect(
+      (await f.app.inject("/api/v1/capabilities")).json().capabilities,
+    ).toContain("product-analytics");
+    expect(
+      (await disabled.app.inject("/api/v1/capabilities")).json().capabilities,
+    ).not.toContain("product-analytics");
+    const path = `/api/v1/workspaces/${f.workspace.id}/analytics/events`;
+    expect(
+      (await disabled.app.inject({ url: path, headers: bearer })).statusCode,
+    ).toBe(404);
+    f.consents.push({
+      id: randomUUID(),
+      purpose: "product_analytics",
+      policyVersion: "1",
+      granted: true,
+      revision: 1n,
+    });
+    f.scoped.recordProductEvent.mockRejectedValueOnce(
+      new RepositoryError("RATE_LIMITED", "PRIVATE_SQL_SENTINEL"),
+    );
+    const limited = await f.app.inject({
+      method: "POST",
+      url: path,
+      headers: bearer,
+      payload: input,
+    });
+    safeError(limited, 429, "RATE_LIMITED");
+    expect(limited.headers["retry-after"]).toBe("86400");
+    expect(limited.payload).not.toContain("PRIVATE_SQL_SENTINEL");
+  });
+});
 
 describe("account support and private file HTTP contracts", () => {
   const input = {

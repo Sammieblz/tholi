@@ -5,6 +5,8 @@ import {
   validateObjectReference,
 } from "./private-files";
 import { approvedMailSchema } from "./support-mail";
+import { NO_OBSERVABILITY, type Observability } from "./observability";
+import type { JobLease } from "./job-contracts";
 import type {
   ExternalOutcome,
   MailPort,
@@ -27,7 +29,38 @@ export function createSupportJobHandlers(
   store: SupportStore,
   mail: MailPort,
   objects: ObjectPort,
+  observer: Observability = NO_OBSERVABILITY,
 ): readonly ExternalJobHandler[] {
+  const finish = async (
+    lease: JobLease,
+    outcome: ExternalOutcome,
+    work: () => Promise<boolean>,
+  ) => {
+    if (!observer.enabled) return work();
+    const span = observer.start("job.acknowledge", {
+      jobKind: lease.kind,
+      attempt: lease.attempts,
+    });
+    try {
+      const changed = await work();
+      span.end(
+        changed
+          ? outcome.status === "committed"
+            ? "ok"
+            : outcome.status === "failed"
+              ? "error"
+              : outcome.status
+          : "stale",
+        { ...(outcome.code ? { errorCode: outcome.code } : {}) },
+      );
+      if (!changed)
+        observer.metric("job.stale_fences", 1, { jobKind: lease.kind });
+      return changed;
+    } catch (error) {
+      span.end("unavailable");
+      throw error;
+    }
+  };
   const execute: ExternalJobHandler["execute"] = async (
     lease,
     signal,
@@ -45,7 +78,9 @@ export function createSupportJobHandlers(
         // Expiry is mandatory, even after user cancellation or membership removal.
         outcome = { status: "retryable", code: "UNAVAILABLE", backoffMs };
       }
-      await store.finishCleanup(lease, prepared.attemptId, outcome);
+      await finish(lease, outcome, () =>
+        store.finishCleanup(lease, prepared.attemptId, outcome),
+      );
       return;
     }
     const prepared = await store.prepareExternal(lease);
@@ -81,7 +116,9 @@ export function createSupportJobHandlers(
     }
     // A finish failure leaves the durable started barrier in place. A future
     // claim may reconcile or mark uncertainty, but cannot send that SMTP effect again.
-    await store.finishExternal(lease, prepared.attemptId, outcome);
+    await finish(lease, outcome, () =>
+      store.finishExternal(lease, prepared.attemptId, outcome),
+    );
   };
   return Object.freeze(
     SUPPORT_JOB_KINDS.map((kind) =>

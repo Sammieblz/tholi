@@ -6,7 +6,18 @@ import {
   type SavedTask,
 } from "../../../../packages/page-model";
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
-import { withTransaction } from "./postgres";
+import { withTransaction, databaseObservability } from "./postgres";
+import { appendSecurityAudit } from "./audit";
+import {
+  correlationSchema,
+  type Observability,
+} from "../application/observability";
+import {
+  PRODUCT_ANALYTICS_LIMITS,
+  recordProductEventInputSchema,
+  type RecordProductEventInput,
+  type ProductAnalyticsRecord,
+} from "../../../../packages/navigation-core/contracts-analytics";
 import { pruneExpiredIdentityBrokers } from "./identity-retention";
 import { ScopedSupport } from "./support-queries";
 import type { JobLease, JobTransaction } from "../application/job-contracts";
@@ -196,7 +207,11 @@ export class PostgresRepositories {
           try {
             // Callers await all work. Later continuations cannot reuse this client.
             return await work(
-              new ScopedRepositories(capability, authorizedScope),
+              new ScopedRepositories(
+                capability,
+                authorizedScope,
+                databaseObservability(this.pool),
+              ),
             );
           } finally {
             active = false;
@@ -244,6 +259,7 @@ class ScopedRepositories {
   constructor(
     private readonly client: Pick<PoolClient, "query">,
     private readonly scope: Readonly<RepositoryScope>,
+    private readonly observer: Observability,
   ) {}
 
   private get parameters() {
@@ -359,7 +375,25 @@ class ScopedRepositories {
             ],
           );
     if (!result.rows[0]) conflict();
-    return { ...result.rows[0], revision: BigInt(result.rows[0].revision) };
+    const membership = {
+      ...result.rows[0],
+      revision: BigInt(result.rows[0].revision),
+    };
+    await appendSecurityAudit(
+      this.client,
+      {
+        ...this.scope,
+        kind: "membership.changed",
+        subjectId: membership.accountId,
+        details: {
+          role: membership.role as "admin" | "member",
+          status: membership.status,
+          revision: membership.revision.toString(),
+        },
+      },
+      this.observer,
+    );
+    return membership;
   }
 
   async getConsent(purpose: string): Promise<Consent | undefined> {
@@ -415,7 +449,103 @@ class ScopedRepositories {
             [...parameters, input.expectedRevision.toString()],
           );
     if (!result.rows[0]) conflict();
-    return { ...result.rows[0], revision: BigInt(result.rows[0].revision) };
+    const consent = {
+      ...result.rows[0],
+      revision: BigInt(result.rows[0].revision),
+    };
+    await appendSecurityAudit(
+      this.client,
+      {
+        ...this.scope,
+        kind: "consent.changed",
+        subjectId: consent.id,
+        details: {
+          purpose: consent.purpose,
+          policyVersion: consent.policyVersion,
+          granted: consent.granted,
+          revision: consent.revision.toString(),
+        },
+      },
+      this.observer,
+    );
+    return consent;
+  }
+
+  async recordProductEvent(
+    command: RecordProductEventInput,
+  ): Promise<{ recorded: boolean }> {
+    const input = recordProductEventInputSchema.parse(command);
+    // Lock order matches consent withdrawal. Both retain the membership and
+    // consent locks through commit, so no event can commit after withdrawal.
+    const admission = await this.client.query<{ allowed: boolean }>(
+      "SELECT tholi.lock_product_analytics_consent() AS allowed",
+    );
+    if (!admission.rows[0].allowed)
+      throw new RepositoryError(
+        "FORBIDDEN",
+        "Current product analytics consent is required.",
+      );
+    const existing = (
+      await this.client.query<{ event: unknown }>(
+        `SELECT event FROM tholi.product_events
+      WHERE workspace_id=$1 AND account_id=$2 AND event_id=$3`,
+        [...this.parameters, input.eventId],
+      )
+    ).rows[0];
+    if (existing) {
+      if (!isDeepStrictEqual(existing.event, input.event)) replayConflict();
+      return { recorded: false };
+    }
+    const count = (
+      await this.client.query<{ count: number }>(
+        `SELECT count(*)::integer AS count FROM tholi.product_events
+      WHERE workspace_id=$1 AND account_id=$2 AND recorded_at>clock_timestamp()-interval '1 day'`,
+        this.parameters,
+      )
+    ).rows[0].count;
+    if (count >= PRODUCT_ANALYTICS_LIMITS.dailyEvents)
+      throw new RepositoryError(
+        "RATE_LIMITED",
+        "The product event budget is exhausted.",
+      );
+    await this.client.query(
+      `INSERT INTO tholi.product_events(workspace_id,account_id,event_id,schema_version,event)
+      VALUES($1,$2,$3,$4,$5::jsonb)`,
+      [
+        ...this.parameters,
+        input.eventId,
+        input.schemaVersion,
+        JSON.stringify(input.event),
+      ],
+    );
+    return { recorded: true };
+  }
+
+  async listProductEvents(options: {
+    after?: string;
+    limit: number;
+  }): Promise<
+    (Omit<ProductAnalyticsRecord, "recordedAt"> & { recordedAt: Date })[]
+  > {
+    options = snapshot(options);
+    return (
+      await this.client.query<
+        Omit<ProductAnalyticsRecord, "recordedAt"> & { recordedAt: Date }
+      >(
+        `SELECT event_id AS "eventId",schema_version AS "schemaVersion",event,recorded_at AS "recordedAt"
+      FROM tholi.product_events WHERE workspace_id=$1 AND account_id=$2 AND expires_at>clock_timestamp()
+      AND ($3::uuid IS NULL OR event_id>$3) ORDER BY event_id LIMIT $4`,
+        [...this.parameters, options.after ?? null, limit(options.limit)],
+      )
+    ).rows;
+  }
+
+  async deleteProductEvents(): Promise<bigint> {
+    const result = await this.client.query(
+      "DELETE FROM tholi.product_events WHERE workspace_id=$1 AND account_id=$2",
+      this.parameters,
+    );
+    return BigInt(result.rowCount ?? 0);
   }
 
   async beginRequest(input: {
@@ -973,8 +1103,8 @@ class ScopedRepositories {
       invalid("Use bounded job versions and attempt counts.");
     await this.client.query(
       `INSERT INTO tholi.jobs (workspace_id, account_id, id, request_id, kind,
-         version, idempotency_key, record_references, available_at, max_attempts,replay_safe)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), $10,$11)
+         version, idempotency_key, record_references, available_at, max_attempts,replay_safe,origin_correlation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, now()), $10,$11,$12::jsonb)
        ON CONFLICT DO NOTHING`,
       [
         ...this.parameters,
@@ -987,6 +1117,9 @@ class ScopedRepositories {
         input.availableAt ? timestamp(input.availableAt) : null,
         maxAttempts,
         replaySafe,
+        this.observer.current()
+          ? JSON.stringify(correlationSchema.parse(this.observer.current()))
+          : null,
       ],
     );
     const row = (

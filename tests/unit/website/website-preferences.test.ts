@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  PreferencesProvider,
+  usePreferences,
+} from "../../../apps/web/src/features/preferences/PreferencesProvider";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONSENT_COOKIE,
@@ -80,17 +86,80 @@ describe("website appearance and cookie choices", () => {
       readWebsitePreferences(jar.access, consent.expiresAt).consent,
     ).toBeNull();
   });
-  it("withdraws preference storage by deleting theme and retains only essential choices", () => {
+  it("Essential only clears browser analytics and appearance, aborts pending events and persists one essential choice", async () => {
     const jar = cookieJar();
-    saveWebsitePreferences(jar.access, createConsent(true, now), "light", now);
-    expect(
-      saveWebsitePreferences(
-        jar.access,
-        createConsent(false, now + 100),
-        "light",
-        now + 100,
-      ),
-    ).toBe(true);
+    saveWebsitePreferences(
+      jar.access,
+      createConsent(true, now, {
+        provider: "local-test",
+        disclosure: "v1",
+        allowed: true,
+      }),
+      "light",
+      now,
+    );
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 100);
+    let preferences!: ReturnType<typeof usePreferences>;
+    function Probe() {
+      preferences = usePreferences();
+      return null;
+    }
+    let finish: (() => void) | undefined;
+    let signal: AbortSignal | undefined;
+    const send = vi.fn((_event: WebsiteEvent, activeSignal: AbortSignal) => {
+      signal = activeSignal;
+      return new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    });
+    try {
+      await act(async () =>
+        root.render(
+          createElement(PreferencesProvider, {
+            cookieAccess: jar.access,
+            children: createElement(Probe),
+          }),
+        ),
+      );
+      preferences.setAnalyticsProvider({
+        id: "local-test",
+        disclosure: "v1",
+        send,
+      });
+      act(() => preferences.openCookieSettings());
+      preferences.trackEvent({ name: "download_click" });
+      preferences.trackEvent({
+        name: "practice_start",
+        practice: "account-settings",
+      });
+      expect(send).toHaveBeenCalledOnce();
+      const writes = jar.writes.filter((value) =>
+        value.startsWith(CONSENT_COOKIE + "="),
+      ).length;
+      act(() => preferences.chooseEssentials());
+      expect(signal?.aborted).toBe(true);
+      expect(preferences.consent).toMatchObject({
+        preferences: false,
+        analytics: null,
+      });
+      expect(preferences.settingsOpen).toBe(false);
+      expect(
+        jar.writes.filter((value) => value.startsWith(CONSENT_COOKIE + "=")),
+      ).toHaveLength(writes + 1);
+      finish?.();
+      await Promise.resolve();
+      preferences.trackEvent({ name: "download_click" });
+      expect(send).toHaveBeenCalledOnce();
+    } finally {
+      finish?.();
+      act(() => root.unmount());
+      container.remove();
+      clock.mockRestore();
+    }
     expect(jar.values.has(THEME_COOKIE)).toBe(false);
     expect(
       jar.writes.some(
@@ -103,6 +172,10 @@ describe("website appearance and cookie choices", () => {
       parseConsent(cookieValue(jar.access.read(), CONSENT_COOKIE), now + 100)
         ?.preferences,
     ).toBe(false);
+    expect(
+      parseConsent(cookieValue(jar.access.read(), CONSENT_COOKIE), now + 100)
+        ?.analytics,
+    ).toBeNull();
   });
   it("never writes theme after refusal and handles unavailable or silently blocked cookies", () => {
     const blocked: CookieAccess = {
@@ -303,5 +376,46 @@ describe("consent-gated analytics preparation", () => {
     boundary.dispose();
     boundary.track({ name: "download_click" });
     expect(send).toHaveBeenCalledTimes(17);
+  });
+  it("switches account-scoped providers without replaying old queued events or letting stale cleanup remove the current owner", async () => {
+    let finish!: () => void;
+    let oldSignal: AbortSignal | undefined;
+    const previous = vi.fn((_event: WebsiteEvent, signal: AbortSignal) => {
+      oldSignal = signal;
+      return new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    });
+    const current = vi.fn(async () => {});
+    const boundary = createConsentAnalytics(null, () => now);
+    boundary.setConsent(providerConsent());
+    const disposePrevious = boundary.setProvider({
+      id: "local-test",
+      disclosure: "v1",
+      send: previous,
+    });
+    boundary.track({ name: "page_view", page: "account" });
+    boundary.track({ name: "onboarding_complete" });
+    const disposeCurrent = boundary.setProvider({
+      id: "local-test",
+      disclosure: "v1",
+      send: current,
+    });
+    expect(oldSignal?.aborted).toBe(true);
+    disposePrevious();
+    finish();
+    await Promise.resolve();
+    expect(previous).toHaveBeenCalledOnce();
+    expect(current).not.toHaveBeenCalled();
+    boundary.track({ name: "store_listing_opened", browser: "firefox" });
+    await vi.waitFor(() => expect(current).toHaveBeenCalledOnce());
+    boundary.setConsent(providerConsent());
+    disposeCurrent();
+    boundary.track({ name: "page_view", page: "account" });
+    expect(current).toHaveBeenCalledOnce();
+    expect(
+      sanitizeWebsiteEvent({ name: "mode_activated", mode: "paid-cloud" }),
+    ).toBeNull();
+    boundary.dispose();
   });
 });
