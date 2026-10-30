@@ -55,6 +55,12 @@ extension bytes did not change; the manifest separately covers the new API
 outputs. Generated reports are retained under ignored `output/qa`, not committed
 or substituted for earlier release evidence.
 
+A final consistency review corrected the executable's older "only health"
+startup message and related setup wording to include API discovery. This
+diagnostic-only correction followed the local cohort above; focused TypeScript
+and bootstrap checks passed afterward. The required hosted workflow validates
+the final PR commit, including that correction.
+
 No signed-in or native permission flow is claimed by this ticket. Real identity
 and native-browser authentication remain #30. No release, packaging or
 production deployment was performed.

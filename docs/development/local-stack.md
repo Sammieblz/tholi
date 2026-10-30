@@ -124,7 +124,7 @@ into client bundles.
 
 The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. At this stage
 that is a cloud-free policy, not a navigation endpoint: the service is still
-health-only. The typed deterministic fake and Gemini inference adapters belong
+limited to health and API discovery. The typed deterministic fake and Gemini inference adapters belong
 to [#39](https://github.com/Sammieblz/tholi/issues/39). The legacy private API keeps
 its existing local NLP/OCR behavior independently.
 

@@ -58,7 +58,7 @@ Authentication, protected service routes and durable worker execution remain lat
 The [local container stack](../development/local-stack.md) uses this same build
 and executable, with PostgreSQL, a local OIDC realm and captured mail. Its default
 internal networks deny internet egress. Infrastructure credentials are not injected
-into the health-only API before their adapters exist. `THOLI_MODEL_PROVIDER`
+into the discovery-only API before their adapters exist. `THOLI_MODEL_PROVIDER`
 defaults to `fake`; any other provider fails startup until #39 implements the
 actual inference adapter and spending enforcement. This policy does not advertise
 an inference endpoint or change the legacy local model.
@@ -74,7 +74,7 @@ Liveness reports only process/profile/version metadata and performs no dependenc
 probe or inference. Readiness is 200 when all injected resources are ready and 503
 while unavailable or draining. Each readiness probe is bounded to one second;
 failure details and credentials are withheld. An empty service resource set means
-the health-only HTTP foundation is ready, not that accounts or model inference work.
+the HTTP discovery foundation is ready, not that accounts or model inference work.
 
 Local workers acknowledge startup after imports, database/queues and message
 listeners initialize. Model loading stays lazy; this is not a warm-model or asset
