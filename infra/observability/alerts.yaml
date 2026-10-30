@@ -1,0 +1,59 @@
+groups:
+  - name: tholi-operations
+    rules:
+      - alert: TholiCollectorUnavailable
+        expr: up{job="tholi"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "The Tholi collector cannot be scraped." }
+      - alert: TholiHttpErrors
+        expr: sum(rate(tholi_operation_count_total{tholi_operation="http.request",tholi_outcome="error"}[5m])) / clamp_min(sum(rate(tholi_operation_count_total{tholi_operation="http.request"}[5m])), 0.01) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          {
+            summary: "More than five percent of Tholi HTTP requests are failing.",
+          }
+      - alert: TholiHttpLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(tholi_operation_duration_ms_bucket{tholi_operation="http.request"}[5m]))) > 3000
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          { summary: "Tholi HTTP p95 latency exceeds three seconds." }
+      - alert: TholiDatabaseCapacity
+        expr: max(tholi_database_pool_waiting) > 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          { summary: "A bounded Tholi database pool has sustained waiters." }
+      - alert: TholiStaleJobResults
+        expr: sum(increase(tholi_job_stale_fences_total[5m])) > 0
+        labels: { severity: warning }
+        annotations: { summary: "Tholi rejected a stale durable-job result." }
+      - alert: TholiWorkerUnhealthy
+        expr: tholi_worker_healthy == 0 or time() - tholi_worker_last_healthy_seconds > 30 or absent(tholi_worker_healthy)
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "Tholi worker health is stale or unavailable." }
+      - alert: TholiJobHealthUnavailable
+        expr: min(tholi_job_health_available) == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations: { summary: "Tholi could not observe the durable queue." }
+      - alert: TholiJobNeedsReview
+        expr: sum(tholi_job_queue_count{tholi_jobStatus=~"dead|uncertain"}) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          { summary: "Tholi has durable jobs requiring operator review." }
+      - alert: TholiQueueDelay
+        expr: max(tholi_job_queue_age_ms{tholi_jobStatus="queued"}) > 120000
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          { summary: "A due Tholi job has waited more than two minutes." }
+      - alert: TholiTelemetryLoss
+        expr: sum(increase(tholi_telemetry_dropped_total[5m])) + sum(increase(tholi_telemetry_export_failures_total[5m])) > 0
+        labels: { severity: warning }
+        annotations:
+          { summary: "Tholi telemetry was dropped or could not be exported." }

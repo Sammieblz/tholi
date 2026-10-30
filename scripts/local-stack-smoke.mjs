@@ -16,6 +16,7 @@ import {
   inspectLocalStack,
 } from "./lib/local-stack-policy.mjs";
 import { runGatewayChecks } from "./lib/gateway-validation.mjs";
+import { runObservabilityChecks } from "./lib/observability-validation.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const execute = promisify(execFile);
@@ -313,6 +314,15 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     const ports = await reservePorts();
     initializeLocalEnvironment({ envFile, project, ports });
     environmentCreated = true;
+    if (optional)
+      await writeFile(
+        envFile,
+        (await readFile(envFile, "utf8")).replace(
+          /^THOLI_OBSERVABILITY_ENABLED=false$/m,
+          "THOLI_OBSERVABILITY_ENABLED=true",
+        ),
+        { mode: 0o600 },
+      );
     const environment = await readFile(envFile, "utf8");
     const settings = parseEnv(environment);
     for (const line of environment.split(/\r?\n/)) {
@@ -371,6 +381,8 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     );
     const databaseConnection = (user, password) =>
       `postgresql://${user}:${encodeURIComponent(password)}@postgres:5432/tholi`;
+    const telemetrySentinel =
+      "THOLI_PRIVATE_" + randomBytes(12).toString("hex");
     const runPostgresImage = async (mode = []) =>
       JSON.parse(
         await docker(
@@ -396,6 +408,8 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
             "THOLI_DATABASE_WORKER_URL",
             "--env",
             "THOLI_SUPPORT_PROBE_API_URL",
+            "--env",
+            "THOLI_TELEMETRY_SENTINEL",
             testImage,
             ...mode,
           ],
@@ -414,6 +428,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
               settings.THOLI_WORKER_PASSWORD,
             ),
             THOLI_SUPPORT_PROBE_API_URL: "http://api:8788",
+            THOLI_TELEMETRY_SENTINEL: telemetrySentinel,
           },
         ),
       );
@@ -839,6 +854,15 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       check(
         "collector-health-and-synthetic-otlp",
         await nodeProbe({ issuer, telemetry: true }),
+      );
+      stage = "actual redacted HTTP provider and retried-worker telemetry";
+      check(
+        "actual-correlated-private-safe-telemetry",
+        await runObservabilityChecks({
+          compose,
+          runPostgresImage,
+          sentinel: telemetrySentinel,
+        }),
       );
       const expandedIds = (await compose(["ps", "--quiet"]))
         .trim()

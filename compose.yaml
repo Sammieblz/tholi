@@ -15,6 +15,11 @@ x-support-storage: &support-storage
   THOLI_OBJECT_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?Initialize local storage credentials first}
   THOLI_OBJECT_SECRET_KEY: ${STORAGE_SECRET_KEY:?Initialize local storage credentials first}
 
+x-observability: &observability
+  THOLI_OBSERVABILITY_ENABLED: ${THOLI_OBSERVABILITY_ENABLED:-false}
+  THOLI_OTLP_ENDPOINT: http://telemetry:4318
+  THOLI_OTLP_ALLOW_LOCAL: "true"
+
 services:
   gateway:
     image: nginx/nginx-unprivileged:1.30.6-alpine-slim@sha256:984a21e29bb10d4c0e122374b97b89a2101823a9331e0f3c6c04bc285ccf447f
@@ -60,7 +65,7 @@ services:
     user: "1000:1000"
     command: ["node", "apps/api/dist/service.js"]
     environment:
-      <<: *support-storage
+      <<: [*support-storage, *observability]
       NODE_ENV: development
       NODE_OPTIONS: --max-old-space-size=192
       THOLI_SERVICE_HOST: 0.0.0.0
@@ -116,7 +121,7 @@ services:
     user: "1000:1000"
     command: [node, apps/api/dist/worker.js]
     environment:
-      <<: *support-storage
+      <<: [*support-storage, *observability]
       NODE_ENV: development
       NODE_OPTIONS: --max-old-space-size=192
       THOLI_DATABASE_WORKER_URL: postgresql://tholi_worker:${THOLI_WORKER_PASSWORD:?Upgrade the local environment for worker credentials}@postgres:5432/tholi
@@ -384,6 +389,11 @@ services:
     pids_limit: 64
     mem_limit: 128m
     cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
     # The official scratch image has no HTTP client. The smoke command probes
     # its actual health endpoint at telemetry:13133 from the API container.
 

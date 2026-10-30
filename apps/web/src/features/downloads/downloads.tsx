@@ -19,8 +19,16 @@ export function StoreLink({
   describedBy?: string;
 }) {
   const store = stores[target];
+  const { trackEvent } = usePreferences();
   return (
-    <a href={store.url} className={className} aria-describedby={describedBy}>
+    <a
+      href={store.url}
+      className={className}
+      aria-describedby={describedBy}
+      onClick={() =>
+        trackEvent({ name: "store_listing_opened", browser: target })
+      }
+    >
       Add to {store.name}
     </a>
   );

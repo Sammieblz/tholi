@@ -13,6 +13,12 @@ import {
 import { JobWorker } from "../../../apps/api/src/application/job-worker";
 import { RepositoryError } from "../../../apps/api/src/database/contracts";
 import type { JobResult } from "../../../packages/navigation-core/contracts-jobs";
+import { createObservability } from "../../../apps/api/src/adapters/observability";
+import {
+  NO_OBSERVABILITY,
+  OBSERVABILITY_DEFAULTS,
+  type Observability,
+} from "../../../apps/api/src/application/observability";
 
 const workers: JobWorker[] = [];
 afterEach(async () => {
@@ -28,7 +34,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function fixture(count = 1) {
+function fixture(count = 1, observer: Observability = NO_OBSERVABILITY) {
   const account = { id: randomUUID(), status: "active" as const, revision: 1n };
   const workspace = {
     id: randomUUID(),
@@ -73,15 +79,20 @@ function fixture(count = 1) {
       return true;
     }),
   };
-  const worker = new JobWorker(store, {
-    workerId: "unit-worker",
-    concurrency: 2,
-    pollMs: 5,
-    leaseMs: 30_000,
-    heartbeatMs: 10,
-    maxBackoffMs: 60_000,
-    scheduleIntervalMs: 60_000,
-  });
+  const worker = new JobWorker(
+    store,
+    {
+      workerId: "unit-worker",
+      concurrency: 2,
+      pollMs: 5,
+      leaseMs: 30_000,
+      heartbeatMs: 10,
+      maxBackoffMs: 60_000,
+      scheduleIntervalMs: 60_000,
+    },
+    undefined,
+    observer,
+  );
   workers.push(worker);
   return {
     account,
@@ -105,6 +116,68 @@ function expectRetryBudget(backoffMs: number) {
 }
 
 describe("durable job worker", () => {
+  it("keeps persisted originating correlation across real runner retries with fresh attempt spans", async () => {
+    const lines: string[] = [];
+    const observer = createObservability(
+      { enabled: true, service: "tholi-worker", ...OBSERVABILITY_DEFAULTS },
+      {
+        write: (line, done) => {
+          lines.push(line);
+          done();
+        },
+      },
+    );
+    const origin = observer.start(
+      "http.request",
+      {},
+      { requestId: randomUUID() },
+    );
+    const f = fixture(1, observer);
+    f.leases[0].correlation = origin.correlation;
+    const retry = { ...f.leases[0], attempts: 2, leaseToken: randomUUID() };
+    vi.mocked(f.store.claim)
+      .mockResolvedValueOnce(f.leases)
+      .mockResolvedValueOnce([retry])
+      .mockResolvedValue([]);
+    vi.mocked(f.store.runJob).mockRejectedValueOnce(
+      new JobHandlerFailure("retryable", "UNAVAILABLE"),
+    );
+    try {
+      await f.worker.start();
+      await until(() => expect(f.results).toHaveLength(1));
+    } finally {
+      await f.worker.close();
+      origin.end("ok");
+      await observer.close();
+    }
+    const records = lines.flatMap((line) =>
+      line
+        .trim()
+        .split("\n")
+        .map((value) => JSON.parse(value)),
+    );
+    const attempts = records.filter(
+      (record) => record.operation === "job.attempt",
+    );
+    expect(attempts.map((record) => record.fields.attempt)).toEqual([1, 2]);
+    expect(attempts.map((record) => record.outcome)).toEqual([
+      "retryable",
+      "ok",
+    ]);
+    expect(
+      attempts.every(
+        (record) =>
+          record.correlation.traceId === origin.correlation?.traceId &&
+          record.correlation.requestId === origin.correlation?.requestId &&
+          record.correlation.jobId === f.leases[0].id,
+      ),
+    ).toBe(true);
+    expect(attempts[0].correlation.spanId).not.toBe(
+      attempts[1].correlation.spanId,
+    );
+    expect(lines.join("")).not.toContain(f.account.id);
+    expect(lines.join("")).not.toContain(f.workspace.id);
+  });
   it("runs the registered bounded handler through the sole fenced transaction owner", async () => {
     const f = fixture();
     expect(f.worker.ready()).toBe(false);

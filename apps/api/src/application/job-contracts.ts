@@ -4,6 +4,7 @@ import type {
 } from "../../../../packages/navigation-core/contracts-jobs";
 import type { RecordReferences } from "../database/contracts";
 import type { AuthorizationContextReader } from "./authorization-policy";
+import type { Correlation } from "./observability";
 
 export interface JobKind {
   kind: string;
@@ -23,6 +24,8 @@ export interface JobLease {
   maxAttempts: number;
   leaseToken: string;
   leaseExpiresAt: Date;
+  /** Immutable server origin; each actual worker attempt creates its own span. */
+  correlation?: Correlation;
 }
 
 /** Narrow, fenced transaction capabilities for the registered maintenance handler. */
@@ -54,6 +57,14 @@ export interface JobStore {
     limit: number;
     intervalMs: number;
   }): Promise<number>;
+  health?(): Promise<
+    readonly {
+      kind: string;
+      status: string;
+      count: string;
+      oldest_age_ms: number;
+    }[]
+  >;
   /** Effect, result and database-local completion outbox acknowledgement commit together. */
   runJob(
     lease: JobLease,

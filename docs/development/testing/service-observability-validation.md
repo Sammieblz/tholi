@@ -1,0 +1,29 @@
+# Service observability validation
+
+Roadmap issue: [#35](https://github.com/Sammieblz/tholi/issues/35).
+
+This record belongs to the observability implementation and does not relabel
+earlier release evidence. API/extension version remains 0.11.0; website remains
+0.1.1. No publication, packaging, paid resources or deployment is performed.
+
+## Evidence in progress
+
+- Focused configuration, HTTP request correlation and worker cleanup: 69 passed.
+- Focused telemetry, provider, worker and support owners: 64 passed.
+- Audit and PostgreSQL observer unit contracts: three passed.
+- Real PostgreSQL migration/retention/consent races and actual collector/provider/
+  retried-worker inspection: pending the fresh owned stack run.
+- Configured account consent controls in real Chromium/Firefox: pending.
+- Deterministic PR gate and hosted exact-commit checks: pending.
+
+Failed diagnostics and subsequent evidence will remain separately attributed.
+No local fixture result certifies a native permission flow, screen reader,
+external inbox delivery, live Gemini inference or managed alert delivery.
+
+## UI guidance
+
+Applied `.codex/skills/fixing-accessibility/SKILL.md` and
+`.codex/skills/baseline-ui/SKILL.md`: distinct native labeled permissions with
+connected descriptions, 44 px label targets, existing focus tokens, busy/status
+and alert semantics, named keyboard-scrollable retained records and the existing
+Base UI confirmation dialog. Branding, fonts and animation policy are unchanged.

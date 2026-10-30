@@ -25,6 +25,8 @@ import {
   useAccount,
 } from "../../../apps/web/src/features/account/session";
 import { ServiceClientError } from "../../../packages/navigation-core/service-client";
+import { AccountAnalytics } from "../../../apps/web/src/features/account/AccountAnalytics";
+import { PreferencesProvider } from "../../../apps/web/src/features/preferences/PreferencesProvider";
 const session = {
   account: {
     id: "00000000-0000-4000-8000-000000000001",
@@ -61,6 +63,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   vi.resetAllMocks();
+  document.cookie = "tholi_consent=; Path=/; Max-Age=0";
 });
 async function mount() {
   await act(async () => {
@@ -154,4 +157,80 @@ it("sign-out and account changes cancel old work without replacing the new accou
   await rejected;
   expect(current.session).toEqual(nextSession);
   expect(transport.request.mock.calls[1][3].signal.aborted).toBe(true);
+});
+
+it("requires separate account and browser consent and aborts pending collection immediately on withdrawal", async () => {
+  let granted = false;
+  let revision = 0;
+  let complete!: (value: { recorded: boolean }) => void;
+  let eventSignal: AbortSignal | undefined;
+  const sent: unknown[] = [];
+  transport.request.mockImplementation(
+    async (_origin, path: string, _schema, options) => {
+      if (path === "/api/v1/account") return session;
+      if (path === "/api/v1/capabilities")
+        return { capabilities: ["product-analytics"] };
+      if (path.endsWith("/policies"))
+        return {
+          consentPolicies: [
+            { purpose: "product_analytics", policyVersion: "1" },
+          ],
+        };
+      if (path.endsWith("/consents")) {
+        if (options.method === "GET") return { items: [] };
+        granted = options.body.granted;
+        revision++;
+        return {
+          id: "00000000-0000-4000-8000-000000000035",
+          purpose: "product_analytics",
+          policyVersion: "1",
+          granted,
+          revision: String(revision),
+        };
+      }
+      if (path.endsWith("/analytics/events") && options.method === "POST") {
+        sent.push(options.body);
+        eventSignal = options.signal;
+        return new Promise((resolve) => {
+          complete = resolve;
+        });
+      }
+      throw new Error("Unexpected account measurement request.");
+    },
+  );
+  await act(async () =>
+    root.render(
+      createElement(
+        PreferencesProvider,
+        null,
+        createElement(AccountProvider, null, createElement(AccountAnalytics)),
+      ),
+    ),
+  );
+  const choices = [
+    ...container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+  ];
+  expect(choices).toHaveLength(2);
+  expect(choices.map((input) => input.checked)).toEqual([false, false]);
+  expect(sent).toEqual([]);
+  await act(async () => choices[0].click());
+  expect(granted).toBe(true);
+  expect(sent).toEqual([]);
+  await act(async () => choices[1].click());
+  expect(sent).toEqual([
+    {
+      schemaVersion: 1,
+      eventId: expect.any(String),
+      event: { name: "page_view", page: "account" },
+    },
+  ]);
+  expect(eventSignal?.aborted).toBe(false);
+  await act(async () => choices[0].click());
+  expect(eventSignal?.aborted).toBe(true);
+  expect(granted).toBe(false);
+  await act(async () => complete({ recorded: true }));
+  expect(sent).toHaveLength(1);
+  expect(container.textContent).toContain(
+    "Account permission withdrawn and retained product measurements removed.",
+  );
 });

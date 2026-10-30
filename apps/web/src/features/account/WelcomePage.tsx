@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { z } from "zod";
 import type { identitySessionsSchema } from "../../../../../packages/navigation-core/contracts-identity";
 import { SiteLink } from "../../app/router";
 import { useAccount } from "./session";
+import { AccountConfirmation } from "./AccountConfirmation";
+import { AccountAnalytics } from "./AccountAnalytics";
 import "./account.css";
 
 export function WelcomePage() {
@@ -112,7 +113,7 @@ export function WelcomePage() {
             >
               Sign out
             </button>
-            <Confirmation
+            <AccountConfirmation
               title="Sign out of every Tholi session?"
               description="This revokes access on your other browsers and devices. Local guidance and local data remain available."
               label="Sign out everywhere"
@@ -160,7 +161,7 @@ export function WelcomePage() {
                     </time>
                   </p>
                 </div>
-                <Confirmation
+                <AccountConfirmation
                   title="Revoke this session?"
                   description="This session will no longer have access to your Tholi account."
                   label={`Revoke ${session.current ? "this" : session.clientKind} session`}
@@ -177,6 +178,9 @@ export function WelcomePage() {
               </li>
             ))}
           </ul>
+          <AccountAnalytics
+            key={`${account.session.account.id}:${account.session.account.workspaceId}`}
+          />
         </>
       ) : (
         <>
@@ -211,35 +215,5 @@ export function WelcomePage() {
         available in this release.
       </p>
     </section>
-  );
-}
-function Confirmation({
-  title,
-  description,
-  label,
-  busy,
-  onConfirm,
-}: {
-  title: string;
-  description: string;
-  label: string;
-  busy: boolean;
-  onConfirm: () => void;
-}) {
-  return (
-    <AlertDialog.Root>
-      <AlertDialog.Trigger disabled={busy}>{label}</AlertDialog.Trigger>
-      <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="account-dialog-backdrop" />
-        <AlertDialog.Popup className="account-dialog">
-          <AlertDialog.Title>{title}</AlertDialog.Title>
-          <AlertDialog.Description>{description}</AlertDialog.Description>
-          <div className="account-actions">
-            <AlertDialog.Close>Cancel</AlertDialog.Close>
-            <AlertDialog.Close onClick={onConfirm}>Confirm</AlertDialog.Close>
-          </div>
-        </AlertDialog.Popup>
-      </AlertDialog.Portal>
-    </AlertDialog.Root>
   );
 }

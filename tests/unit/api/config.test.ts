@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { runDatabaseCommand } from "../../../apps/api/src/database/cli";
 import {
   parsePrivateConfig,
+  parseObservabilityConfig,
   parseWorkerConfig,
   parseDatabaseConfig,
   parseServiceConfig,
@@ -38,6 +39,56 @@ const supportEnvironment = () => ({
 });
 
 describe("service-only transport policy", () => {
+  it("requires explicit bounded telemetry opt-in and keeps local collectors development-only", () => {
+    expect(parseObservabilityConfig({}, "tholi-api")).toBeUndefined();
+    expect(
+      parseObservabilityConfig(
+        { THOLI_OTLP_ENDPOINT: "not-a-url" },
+        "tholi-worker",
+      ),
+    ).toBeUndefined();
+    expect(
+      parseObservabilityConfig(
+        { THOLI_OBSERVABILITY_ENABLED: "true" },
+        "tholi-api",
+      ),
+    ).toMatchObject({
+      enabled: true,
+      service: "tholi-api",
+      queueMaxRecords: 256,
+    });
+    const local = {
+      THOLI_OBSERVABILITY_ENABLED: "true",
+      THOLI_OTLP_ENDPOINT: "http://telemetry:4318",
+      THOLI_OTLP_ALLOW_LOCAL: "true",
+    };
+    expect(() => parseObservabilityConfig(local, "tholi-api")).toThrow();
+    expect(
+      parseObservabilityConfig(
+        { ...local, NODE_ENV: "development" },
+        "tholi-worker",
+      )?.otlpEndpoint,
+    ).toBe("http://telemetry:4318");
+    for (const endpoint of [
+      "http://outside.example.test",
+      "https://user:secret@collector.example.test",
+      "https://collector.example.test/?token=private",
+      "https://collector.example.test/#private",
+      "https://collector.example.test/v1/traces",
+    ])
+      expect(() =>
+        parseObservabilityConfig(
+          { ...local, NODE_ENV: "development", THOLI_OTLP_ENDPOINT: endpoint },
+          "tholi-api",
+        ),
+      ).toThrow();
+    expect(() =>
+      parseObservabilityConfig(
+        { THOLI_OBSERVABILITY_ENABLED: "yes" },
+        "tholi-api",
+      ),
+    ).toThrow();
+  });
   it("defaults to no trusted proxy and keeps private configuration independent", () => {
     expect(parseServiceConfig({}).options.transport).toEqual(
       SERVICE_TRANSPORT_DEFAULTS,
@@ -309,7 +360,7 @@ describe("API configuration profiles", () => {
         "development profile",
       );
     await expect(runDatabaseCommand("reset")).rejects.toThrow(
-      "migrate, verify, seed or retry-job",
+      "migrate, verify, seed, retry-job, audit-export or audit-prune",
     );
   });
   it("requires explicit PostgreSQL credentials and separates migration pool budgets", () => {

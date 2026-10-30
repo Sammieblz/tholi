@@ -12,7 +12,12 @@ import {
   type RefreshResult,
 } from "../application/identity-contracts";
 import { RepositoryError } from "./contracts";
-import { setDatabaseScope, withTransaction } from "./postgres";
+import {
+  setDatabaseScope,
+  withTransaction,
+  databaseObservability,
+} from "./postgres";
+import { appendSecurityAudit } from "./audit";
 import { provisionAccountOnClient } from "./repositories";
 import { cleanupExpiredIdentity as cleanup } from "./identity-retention";
 
@@ -383,6 +388,17 @@ export class PostgresIdentityRepository implements IdentityStore {
           date(value.expiresAt),
         ],
       );
+      await appendSecurityAudit(
+        client,
+        {
+          accountId: value.accountId,
+          workspaceId: value.workspaceId,
+          kind: "session.created",
+          subjectId: value.id,
+          details: {},
+        },
+        databaseObservability(this.pool),
+      );
     });
   }
 
@@ -479,6 +495,17 @@ export class PostgresIdentityRepository implements IdentityStore {
           "UPDATE tholi.sessions SET status = 'revoked', revoked_at = $2 WHERE id = $1",
           [found.sessionId, input.now],
         );
+        await appendSecurityAudit(
+          client,
+          {
+            accountId: found.accountId,
+            workspaceId: found.workspaceId,
+            kind: "session.refresh_replay",
+            subjectId: found.sessionId,
+            details: {},
+          },
+          databaseObservability(this.pool),
+        );
         return { status: "replayed" };
       }
       const accessExpiresAt = new Date(
@@ -515,6 +542,17 @@ export class PostgresIdentityRepository implements IdentityStore {
           accessExpiresAt,
           input.now,
         ],
+      );
+      await appendSecurityAudit(
+        client,
+        {
+          accountId: found.accountId,
+          workspaceId: found.workspaceId,
+          kind: "session.rotated",
+          subjectId: found.sessionId,
+          details: {},
+        },
+        databaseObservability(this.pool),
       );
       return {
         status: "rotated",
@@ -553,6 +591,17 @@ export class PostgresIdentityRepository implements IdentityStore {
         WHERE account_id = $1 AND id = $2 AND status = 'active' RETURNING id`,
           [accountId, sessionId, date(now)],
         );
+        if (result.rowCount)
+          await appendSecurityAudit(
+            client,
+            {
+              accountId,
+              kind: "session.revoked",
+              subjectId: sessionId,
+              details: {},
+            },
+            databaseObservability(this.pool),
+          );
         return Boolean(result.rowCount);
       },
       { accountId },
@@ -563,11 +612,24 @@ export class PostgresIdentityRepository implements IdentityStore {
     client: PoolClient,
     accountId: string,
     now: Date,
+    audit = true,
   ) {
-    await client.query(
-      "UPDATE tholi.sessions SET status = 'revoked',revoked_at = $2 WHERE account_id = $1 AND status = 'active'",
+    const revoked = await client.query<{ id: string }>(
+      "UPDATE tholi.sessions SET status = 'revoked',revoked_at = $2 WHERE account_id = $1 AND status = 'active' RETURNING id",
       [accountId, date(now)],
     );
+    if (audit)
+      for (const { id } of revoked.rows)
+        await appendSecurityAudit(
+          client,
+          {
+            accountId,
+            kind: "session.revoked",
+            subjectId: id,
+            details: {},
+          },
+          databaseObservability(this.pool),
+        );
     await client.query(
       "DELETE FROM tholi.identity_brokers WHERE account_id = $1",
       [accountId],
@@ -587,7 +649,12 @@ export class PostgresIdentityRepository implements IdentityStore {
           WHERE id = $1`,
           [accountId, date(now), IDENTITY_CLOCK_TOLERANCE_SECONDS],
         );
-        await this.revokeAccountSessions(client, accountId, now);
+        await this.revokeAccountSessions(client, accountId, now, false);
+        await appendSecurityAudit(
+          client,
+          { accountId, kind: "sessions.revoked_all", details: {} },
+          databaseObservability(this.pool),
+        );
       },
       { accountId },
     );
@@ -646,6 +713,18 @@ export class PostgresIdentityRepository implements IdentityStore {
           input.now,
         ],
       );
+      for (const row of accounts.rows) {
+        await setDatabaseScope(client, { accountId: row.account_id });
+        await appendSecurityAudit(
+          client,
+          {
+            accountId: row.account_id,
+            kind: "sessions.provider_revoked",
+            details: {},
+          },
+          databaseObservability(this.pool),
+        );
+      }
     });
   }
 }

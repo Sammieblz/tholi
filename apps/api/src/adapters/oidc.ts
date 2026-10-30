@@ -16,6 +16,11 @@ import {
 } from "../application/identity-contracts";
 import type { ServiceRequestContext } from "../capabilities";
 import { supportInputSchema } from "../../../../packages/navigation-core/contracts-support";
+import {
+  NO_OBSERVABILITY,
+  observeOperation,
+  type Observability,
+} from "../application/observability";
 
 const LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
 const invalid = () =>
@@ -59,15 +64,23 @@ function sessionId(value: unknown) {
 export function createOidcProvider(
   options: IdentityOptions,
   fetcher: typeof fetch = fetch,
+  observer: Observability = NO_OBSERVABILITY,
 ): IdentityProvider {
   const keys = createRemoteJWKSet(new URL(options.jwksUri), {
     timeoutDuration: 5000,
     cooldownDuration: 5000,
     cacheMaxAge: 5 * 60_000,
     [customFetch]: async (url, init) => {
-      const response = await fetcher(url, { ...init, credentials: "omit" });
-      const data = await boundedJson(response);
-      return Response.json(data);
+      return observeOperation(
+        observer,
+        "identity.keys",
+        { provider: "oidc" },
+        async () => {
+          const response = await fetcher(url, { ...init, credentials: "omit" });
+          const data = await boundedJson(response);
+          return Response.json(data);
+        },
+      );
     },
   });
   async function verify(
@@ -75,32 +88,40 @@ export function createOidcProvider(
     context: ServiceRequestContext,
     requiredClaims: string[],
   ) {
-    context.signal.throwIfAborted();
-    if (token.length > 32 * 1024) throw invalid();
-    try {
-      const result = await jwtVerify(token, keys, {
-        issuer: options.issuer,
-        audience: options.clientId,
-        algorithms: ["RS256"],
-        requiredClaims,
-        maxTokenAge: 300,
-        clockTolerance: IDENTITY_CLOCK_TOLERANCE_SECONDS,
-      });
-      context.signal.throwIfAborted();
-      const claims = result.payload;
-      if (
-        (claims.azp !== undefined && claims.azp !== options.clientId) ||
-        (Array.isArray(claims.aud) &&
-          (claims.aud.some((audience) => audience !== options.clientId) ||
-            (claims.aud.length > 1 && claims.azp !== options.clientId)))
-      )
-        throw invalid();
-      return claims;
-    } catch (error) {
-      context.signal.throwIfAborted();
-      if (error instanceof IdentityError) throw error;
-      throw invalid();
-    }
+    return observeOperation(
+      observer,
+      "identity.verify",
+      { provider: "oidc" },
+      async () => {
+        context.signal.throwIfAborted();
+        if (token.length > 32 * 1024) throw invalid();
+        try {
+          const result = await jwtVerify(token, keys, {
+            issuer: options.issuer,
+            audience: options.clientId,
+            algorithms: ["RS256"],
+            requiredClaims,
+            maxTokenAge: 300,
+            clockTolerance: IDENTITY_CLOCK_TOLERANCE_SECONDS,
+          });
+          context.signal.throwIfAborted();
+          const claims = result.payload;
+          if (
+            (claims.azp !== undefined && claims.azp !== options.clientId) ||
+            (Array.isArray(claims.aud) &&
+              (claims.aud.some((audience) => audience !== options.clientId) ||
+                (claims.aud.length > 1 && claims.azp !== options.clientId)))
+          )
+            throw invalid();
+          return claims;
+        } catch (error) {
+          context.signal.throwIfAborted();
+          if (error instanceof IdentityError) throw error;
+          throw invalid();
+        }
+      },
+      { signal: context.signal },
+    );
   }
   function providerTime(claims: JWTPayload) {
     if (!Number.isSafeInteger(claims.iat) || claims.iat! <= 0) throw invalid();
@@ -139,74 +160,84 @@ export function createOidcProvider(
       return url.href;
     },
     async exchange({ code, verifier, nonceHash, context }) {
-      context.signal.throwIfAborted();
-      const signal = AbortSignal.any([
-        context.signal,
-        AbortSignal.timeout(
-          Math.min(5000, Math.max(1, context.deadlineAt - Date.now())),
-        ),
-      ]);
-      let data: Record<string, unknown>;
-      try {
-        const response = await fetcher(options.tokenEndpoint, {
-          method: "POST",
-          redirect: "manual",
-          credentials: "omit",
-          signal,
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Authorization:
-              "Basic " +
-              Buffer.from(
-                encodeURIComponent(options.clientId) +
-                  ":" +
-                  encodeURIComponent(options.clientSecret),
-              ).toString("base64"),
-          },
-          body: new URLSearchParams({
-            grant_type: "authorization_code",
-            code,
-            redirect_uri: options.callbackUrl,
-            code_verifier: verifier,
-          }),
-        });
-        data = await boundedJson(response);
-      } catch (error) {
-        context.signal.throwIfAborted();
-        if (error instanceof IdentityError) throw error;
-        throw new IdentityError(
-          503,
-          "UNAVAILABLE",
-          "The identity provider is temporarily unavailable.",
-        );
-      }
-      if (typeof data.id_token !== "string") throw invalid();
-      const claims = await verify(data.id_token, context, [
-        "sub",
-        "exp",
-        "iat",
-        "nonce",
-      ]);
-      if (
-        !subject(claims.sub) ||
-        typeof claims.nonce !== "string" ||
-        !equalIdentityHash(identityHash(claims.nonce), nonceHash) ||
-        (options.requireVerifiedEmail && claims.email_verified !== true) ||
-        (claims.sid !== undefined && !sessionId(claims.sid))
-      )
-        throw invalid();
-      // Access and refresh tokens returned by the provider are deliberately discarded.
-      const email = supportInputSchema.shape.email.safeParse(claims.email);
-      return {
-        issuer: options.issuer,
-        subject: claims.sub!,
-        issuedAt: providerTime(claims),
-        verifiedEmail:
-          claims.email_verified === true && email.success ? email.data : null,
-        ...(typeof claims.sid === "string"
-          ? { providerSessionId: claims.sid }
-          : {}),
-      };
+      return observeOperation(
+        observer,
+        "identity.exchange",
+        { provider: "oidc" },
+        async () => {
+          context.signal.throwIfAborted();
+          const signal = AbortSignal.any([
+            context.signal,
+            AbortSignal.timeout(
+              Math.min(5000, Math.max(1, context.deadlineAt - Date.now())),
+            ),
+          ]);
+          let data: Record<string, unknown>;
+          try {
+            const response = await fetcher(options.tokenEndpoint, {
+              method: "POST",
+              redirect: "manual",
+              credentials: "omit",
+              signal,
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Authorization:
+                  "Basic " +
+                  Buffer.from(
+                    encodeURIComponent(options.clientId) +
+                      ":" +
+                      encodeURIComponent(options.clientSecret),
+                  ).toString("base64"),
+              },
+              body: new URLSearchParams({
+                grant_type: "authorization_code",
+                code,
+                redirect_uri: options.callbackUrl,
+                code_verifier: verifier,
+              }),
+            });
+            data = await boundedJson(response);
+          } catch (error) {
+            context.signal.throwIfAborted();
+            if (error instanceof IdentityError) throw error;
+            throw new IdentityError(
+              503,
+              "UNAVAILABLE",
+              "The identity provider is temporarily unavailable.",
+            );
+          }
+          if (typeof data.id_token !== "string") throw invalid();
+          const claims = await verify(data.id_token, context, [
+            "sub",
+            "exp",
+            "iat",
+            "nonce",
+          ]);
+          if (
+            !subject(claims.sub) ||
+            typeof claims.nonce !== "string" ||
+            !equalIdentityHash(identityHash(claims.nonce), nonceHash) ||
+            (options.requireVerifiedEmail && claims.email_verified !== true) ||
+            (claims.sid !== undefined && !sessionId(claims.sid))
+          )
+            throw invalid();
+          // Access and refresh tokens returned by the provider are deliberately discarded.
+          const email = supportInputSchema.shape.email.safeParse(claims.email);
+          return {
+            issuer: options.issuer,
+            subject: claims.sub!,
+            issuedAt: providerTime(claims),
+            verifiedEmail:
+              claims.email_verified === true && email.success
+                ? email.data
+                : null,
+            ...(typeof claims.sid === "string"
+              ? { providerSessionId: claims.sid }
+              : {}),
+          };
+        },
+        { signal: context.signal },
+      );
     },
     async verifyLogout(token, context) {
       const claims = await verify(token, context, ["iat", "jti", "events"]);

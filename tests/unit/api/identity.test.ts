@@ -2,6 +2,8 @@ import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { beforeAll, describe, expect, it, vi, afterEach } from "vitest";
 import { exportJWK, generateKeyPair, SignJWT, type JWTPayload } from "jose";
 import { createOidcProvider } from "../../../apps/api/src/adapters/oidc";
+import { createObservability } from "../../../apps/api/src/adapters/observability";
+import { OBSERVABILITY_DEFAULTS } from "../../../apps/api/src/application/observability";
 import {
   IdentityService,
   identityHash,
@@ -135,6 +137,65 @@ const exchangeInput = () => ({
 });
 
 describe("trusted OIDC provider verification", () => {
+  it("correlates a failed provider without exporting codes, PKCE or raw provider errors", async () => {
+    const lines: string[] = [];
+    const observer = createObservability(
+      { enabled: true, service: "tholi-api", ...OBSERVABILITY_DEFAULTS },
+      {
+        write: (line, done) => {
+          lines.push(line);
+          done();
+        },
+      },
+    );
+    const root = observer.start(
+      "http.request",
+      { route: "completeServiceAuthorization" },
+      { requestId: randomUUID() },
+    );
+    const provider = createOidcProvider(
+      options,
+      async () => {
+        throw new Error("PRIVATE_PROVIDER_RESPONSE_SENTINEL");
+      },
+      observer,
+    );
+    try {
+      await expect(
+        observer.run(root.correlation, () =>
+          provider.exchange(exchangeInput()),
+        ),
+      ).rejects.toMatchObject({ statusCode: 503, code: "UNAVAILABLE" });
+    } finally {
+      root.end("unavailable");
+      await observer.close();
+    }
+    const records = lines.flatMap((line) =>
+      line
+        .trim()
+        .split("\n")
+        .map((value) => JSON.parse(value)),
+    );
+    const failed = records.find(
+      (record) => record.operation === "identity.exchange",
+    );
+    expect(failed).toMatchObject({
+      outcome: "error",
+      correlation: {
+        requestId: root.correlation?.requestId,
+        traceId: root.correlation?.traceId,
+      },
+      parentSpanId: root.correlation?.spanId,
+    });
+    for (const value of [
+      "PRIVATE_PROVIDER_RESPONSE_SENTINEL",
+      "synthetic-provider-code",
+      "synthetic-provider-verifier",
+      options.clientSecret,
+      options.tokenEndpoint,
+    ])
+      expect(lines.join("")).not.toContain(value);
+  });
   it.each([
     ["person@example.test", "person@example.test"],
     ["not-an-address", null],

@@ -304,4 +304,45 @@ describe("consent-gated analytics preparation", () => {
     boundary.track({ name: "download_click" });
     expect(send).toHaveBeenCalledTimes(17);
   });
+  it("switches account-scoped providers without replaying old queued events or letting stale cleanup remove the current owner", async () => {
+    let finish!: () => void;
+    let oldSignal: AbortSignal | undefined;
+    const previous = vi.fn((_event: WebsiteEvent, signal: AbortSignal) => {
+      oldSignal = signal;
+      return new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    });
+    const current = vi.fn(async () => {});
+    const boundary = createConsentAnalytics(null, () => now);
+    boundary.setConsent(providerConsent());
+    const disposePrevious = boundary.setProvider({
+      id: "local-test",
+      disclosure: "v1",
+      send: previous,
+    });
+    boundary.track({ name: "page_view", page: "account" });
+    boundary.track({ name: "onboarding_complete" });
+    const disposeCurrent = boundary.setProvider({
+      id: "local-test",
+      disclosure: "v1",
+      send: current,
+    });
+    expect(oldSignal?.aborted).toBe(true);
+    disposePrevious();
+    finish();
+    await Promise.resolve();
+    expect(previous).toHaveBeenCalledOnce();
+    expect(current).not.toHaveBeenCalled();
+    boundary.track({ name: "store_listing_opened", browser: "firefox" });
+    await vi.waitFor(() => expect(current).toHaveBeenCalledOnce());
+    boundary.setConsent(providerConsent());
+    disposeCurrent();
+    boundary.track({ name: "page_view", page: "account" });
+    expect(current).toHaveBeenCalledOnce();
+    expect(
+      sanitizeWebsiteEvent({ name: "mode_activated", mode: "paid-cloud" }),
+    ).toBeNull();
+    boundary.dispose();
+  });
 });

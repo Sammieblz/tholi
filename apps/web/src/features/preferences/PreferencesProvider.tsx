@@ -3,9 +3,14 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
-import { createConsentAnalytics, type WebsiteEvent } from "./analytics";
+import {
+  createConsentAnalytics,
+  type AnalyticsProvider,
+  type WebsiteEvent,
+} from "./analytics";
 import {
   browserCookies,
   createConsent,
@@ -16,6 +21,7 @@ import {
   type ConsentRecord,
   type WebsiteTheme,
   type CookieAccess,
+  type AnalyticsConsent,
 } from "./cookies";
 
 interface PreferencesContextValue {
@@ -29,6 +35,8 @@ interface PreferencesContextValue {
   openCookieSettings(): void;
   closeCookieSettings(): void;
   trackEvent(event: WebsiteEvent): void;
+  setAnalyticsProvider(provider: AnalyticsProvider | null): () => void;
+  chooseAnalytics(choice: AnalyticsConsent | null): void;
 }
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
@@ -49,7 +57,11 @@ export function PreferencesProvider({
   const [settingsOpen, setSettingsOpen] = useState(false);
   // No app provider, environment URL, script or pixel. This does not govern
   // scripts injected by the hosting platform.
-  const [analytics] = useState(() => createConsentAnalytics());
+  const [analytics] = useState(() => {
+    const boundary = createConsentAnalytics();
+    boundary.setConsent(initial.consent);
+    return boundary;
+  });
 
   useEffect(() => {
     document.documentElement.dataset.tholiTheme = theme;
@@ -59,7 +71,6 @@ export function PreferencesProvider({
       ?.setAttribute("content", theme === "light" ? "#faf7f0" : "#101c17");
   }, [theme]);
   useEffect(() => {
-    analytics.setConsent(consent);
     if (!consent?.preferences) deleteThemeCookie(cookies);
     if (!consent) return;
     let timer: ReturnType<typeof setTimeout>;
@@ -85,11 +96,25 @@ export function PreferencesProvider({
   };
   const choosePreferences = (allowed: boolean) => {
     // Preferences consent cannot opt anyone into a future analytics provider.
-    const next = createConsent(allowed);
+    const next = consent
+      ? { ...consent, preferences: allowed }
+      : createConsent(allowed);
     analytics.setConsent(next);
     updateConsent(next);
     setStorageAvailable(saveWebsitePreferences(cookies, next, theme));
     setSettingsOpen(false);
+  };
+  const setAnalyticsProvider = useCallback(
+    (provider: AnalyticsProvider | null) => analytics.setProvider(provider),
+    [analytics],
+  );
+  const chooseAnalytics = (choice: AnalyticsConsent | null) => {
+    const next = consent
+      ? { ...consent, analytics: choice }
+      : createConsent(false, Date.now(), choice);
+    analytics.setConsent(next);
+    updateConsent(next);
+    setStorageAvailable(saveWebsitePreferences(cookies, next, theme));
   };
   return (
     <PreferencesContext.Provider
@@ -104,6 +129,8 @@ export function PreferencesProvider({
         openCookieSettings: () => setSettingsOpen(true),
         closeCookieSettings: () => setSettingsOpen(false),
         trackEvent: analytics.track,
+        setAnalyticsProvider,
+        chooseAnalytics,
       }}
     >
       {children}

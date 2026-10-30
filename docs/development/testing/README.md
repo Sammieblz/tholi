@@ -42,6 +42,13 @@ including exact hosts, forwarded-header sanitization, private response policy,
 raw-byte preservation and direct API admission. Synthetic local certificates
 do not establish internet certificate or hosted firewall configuration.
 
+The optional stack also inspects real redacted [operational telemetry](../service-observability.md)
+across HTTP, an actual failed OIDC exchange and an interrupted/retried SMTP job.
+It verifies durable origin correlation, actual collector ingestion and absence
+of synthetic private sentinels. PostgreSQL owns audit atomicity/privileges,
+consented analytics, withdrawal, expiry and correlation persistence. Portable
+dashboard/alert definitions do not certify hosted alert delivery.
+
 Real [portable identity](../service-identity.md) checks are separate opt-in local
 cohorts: `npm run test:identity` exercises native Chrome and Firefox, while
 `npm run test:identity:web` exercises configured website registration,

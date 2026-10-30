@@ -4,6 +4,11 @@ import { isIP } from "node:net";
 import { ServerResponse, type IncomingMessage } from "node:http";
 import { z } from "zod";
 import apiPackage from "../package.json" with { type: "json" };
+import {
+  NO_OBSERVABILITY,
+  type Observability,
+  type ObservationSpan,
+} from "./application/observability";
 import type { RuntimeResource, ServiceRequestContext } from "./capabilities";
 import {
   validateServiceTransportPolicy,
@@ -30,6 +35,10 @@ export class ApiError extends Error {
 
 const requestContexts = new WeakMap<FastifyRequest, ServiceRequestContext>();
 const transportRequestIds = new WeakMap<IncomingMessage, string>();
+const requestObservations = new WeakMap<
+  FastifyRequest,
+  { observer: Observability; span: ObservationSpan }
+>();
 
 /** Node can reject socket budgets/expectations before invoking Fastify hooks. */
 class ServiceResponse<
@@ -61,7 +70,12 @@ export async function duringServiceRequest<T>(
     return await Promise.race([
       Promise.resolve().then(() => {
         context.signal.throwIfAborted();
-        return operation(context);
+        const observation = requestObservations.get(request);
+        return observation
+          ? observation.observer.run(observation.span.correlation, () =>
+              operation(context),
+            )
+          : operation(context);
       }),
       interrupted,
     ]);
@@ -89,6 +103,7 @@ export async function createHttpApi(
     lifecycle: { ready(): Promise<boolean> },
   ) => Promise<void>,
   transport?: Partial<ServiceTransportPolicy>,
+  observer: Observability = NO_OBSERVABILITY,
 ) {
   const policy =
     profile === "service"
@@ -162,6 +177,36 @@ export async function createHttpApi(
       },
     },
   });
+  if (observer.enabled) {
+    app.addHook("onRequest", async (request, reply) => {
+      const span = observer.start(
+        "http.request",
+        {
+          profile,
+          route: (
+            request.routeOptions.schema as { operationId?: string } | undefined
+          )?.operationId,
+        },
+        { requestId: request.id },
+      );
+      requestObservations.set(request, { observer, span });
+      reply.raw.once("close", () => {
+        if (!reply.raw.writableFinished) span.end("cancelled");
+      });
+    });
+    app.addHook("onResponse", async (request, reply) => {
+      requestObservations
+        .get(request)
+        ?.span.end(
+          reply.statusCode >= 500
+            ? "error"
+            : reply.statusCode >= 400
+              ? "denied"
+              : "ok",
+          { statusCode: reply.statusCode },
+        );
+    });
+  }
   let draining = false;
   let stopping: Promise<void> | undefined;
   let closing: Promise<void> | undefined;

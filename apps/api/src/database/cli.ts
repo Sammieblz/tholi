@@ -6,6 +6,7 @@ import { PostgresRepositories } from "./repositories";
 import { PostgresJobs } from "./jobs";
 import { REGISTERED_JOB_KINDS } from "../application/identity-maintenance";
 import { z } from "zod";
+import { readSecurityAudit } from "./audit";
 
 export const localSeed = Object.freeze({
   accountId: "00000000-0000-4000-8000-000000000028",
@@ -18,9 +19,46 @@ export async function runDatabaseCommand(
   env: Environment = process.env,
   args: readonly string[] = [],
 ) {
-  if (!["migrate", "verify", "seed", "retry-job"].includes(command ?? ""))
-    throw new Error("Use database-cli.js migrate, verify, seed or retry-job.");
-  if (args.length !== (command === "retry-job" ? 5 : 0))
+  if (
+    ![
+      "migrate",
+      "verify",
+      "seed",
+      "retry-job",
+      "audit-export",
+      "audit-prune",
+    ].includes(command ?? "")
+  )
+    throw new Error(
+      "Use database-cli.js migrate, verify, seed, retry-job, audit-export or audit-prune.",
+    );
+  const auditFilter =
+    command === "audit-export"
+      ? z
+          .union([
+            z.tuple([
+              z.enum(["account", "workspace"]),
+              z.string().uuid(),
+              z.coerce.number().int().min(1).max(100),
+            ]),
+            z.tuple([
+              z.enum(["account", "workspace"]),
+              z.string().uuid(),
+              z.coerce.number().int().min(1).max(100),
+              z.string().uuid(),
+            ]),
+          ])
+          .parse(args)
+      : undefined;
+  const pruneBudget =
+    command === "audit-prune"
+      ? z.tuple([z.coerce.number().int().min(1).max(1000)]).parse(args)[0]
+      : undefined;
+  if (
+    !auditFilter &&
+    pruneBudget === undefined &&
+    args.length !== (command === "retry-job" ? 5 : 0)
+  )
     throw new Error(
       "Retry requires workspace, job, expected revision, registered kind and version.",
     );
@@ -53,12 +91,42 @@ export async function runDatabaseCommand(
   const pool = createDatabasePool(
     parseDatabaseConfig(
       env,
-      command === "migrate" || command === "retry-job"
+      ["migrate", "retry-job", "audit-export", "audit-prune"].includes(
+        command ?? "",
+      )
         ? "migration"
         : "runtime",
     ),
   );
   try {
+    if (auditFilter) {
+      const [scope, id, limit, cursorId] = auditFilter;
+      const client = await pool.connect();
+      try {
+        await verifyDatabase(client);
+        const items = await readSecurityAudit(client, {
+          ...(scope === "account" ? { accountId: id } : { workspaceId: id }),
+          limit,
+          ...(cursorId ? { after: cursorId } : {}),
+        });
+        const last = items.at(-1);
+        return {
+          items,
+          ...(items.length === limit && last ? { nextCursor: last.id } : {}),
+        };
+      } finally {
+        client.release();
+      }
+    }
+    if (pruneBudget !== undefined) {
+      const client = await pool.connect();
+      try {
+        await verifyDatabase(client);
+      } finally {
+        client.release();
+      }
+      return new PostgresJobs(pool).pruneObservability(pruneBudget);
+    }
     if (command === "seed") {
       await new PostgresRepositories(pool).provisionAccount(localSeed);
     } else {
@@ -95,12 +163,16 @@ export async function runDatabaseCommand(
 
 if (isMainModule(import.meta.url)) {
   try {
-    await runDatabaseCommand(
+    const result = await runDatabaseCommand(
       process.argv[2],
       process.env,
       process.argv.slice(3),
     );
-    console.log("Tholi database operation completed.");
+    console.log(
+      result === undefined
+        ? "Tholi database operation completed."
+        : JSON.stringify(result),
+    );
   } catch {
     // Driver and constraint messages can contain credentials or submitted data.
     console.error(

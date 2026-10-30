@@ -146,8 +146,9 @@ export function CookieConsent() {
                 <strong>Website measurements</strong>
                 <p>
                   On tholi.io, Cloudflare measures page views and performance
-                  independently of these cookie choices. The app’s own optional
-                  analytics provider is inactive.
+                  independently of these cookie choices. Optional Tholi product
+                  measurements need separate account permission and browser
+                  consent on a configured, signed-in account page.
                 </p>
               </div>
               <span className="cookie-category-state">See notice</span>

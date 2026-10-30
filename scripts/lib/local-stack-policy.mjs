@@ -87,6 +87,9 @@ export function inspectLocalStack(config) {
           "THOLI_DATABASE_WORKER_URL",
           "THOLI_DATABASE_POOL_MAX",
           "THOLI_SUPPORT_ENABLED",
+          "THOLI_OBSERVABILITY_ENABLED",
+          "THOLI_OTLP_ENDPOINT",
+          "THOLI_OTLP_ALLOW_LOCAL",
         ].includes(key) ||
         ["THOLI_WORKER_", "THOLI_OBJECT_", "THOLI_SMTP_"].some((prefix) =>
           key.startsWith(prefix),

@@ -19,6 +19,7 @@ export interface ServiceRouteInventoryEntry {
     | "saved-data"
     | "sync"
     | "billing"
+    | "analytics"
     | "onboarding";
   status: "implemented" | "planned";
   issue: number;
@@ -583,5 +584,38 @@ export const SERVICE_ROUTES = [
     access: "authenticated",
     summary:
       "Complete a single-use client-bound return while keeping interrupted users' Local path available.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/workspaces/{workspaceId}/analytics/events",
+    operationId: "recordProductAnalyticsEvent",
+    group: "analytics",
+    status: "planned",
+    issue: 35,
+    access: "authenticated",
+    summary:
+      "Record one minimized product event under current actor consent; no activation or installation claims.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/workspaces/{workspaceId}/analytics/events",
+    operationId: "exportProductAnalyticsEvents",
+    group: "analytics",
+    status: "planned",
+    issue: 35,
+    access: "authenticated",
+    summary:
+      "Export the actor's bounded retained product events independently of collection consent or credits.",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/workspaces/{workspaceId}/analytics/events",
+    operationId: "deleteProductAnalyticsEvents",
+    group: "analytics",
+    status: "planned",
+    issue: 35,
+    access: "authenticated",
+    summary:
+      "Delete the actor's attributed product events without deleting operational, audit or financial records.",
   },
 ] as const satisfies readonly ServiceRouteInventoryEntry[];

@@ -1,0 +1,11 @@
+# Operator-owned Prometheus configuration. Join only the private application
+# network; do not expose collector ports on a public ingress.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+rule_files: [alerts.yaml]
+scrape_configs:
+  - job_name: tholi
+    static_configs:
+      - targets: [telemetry:8889]
+    honor_labels: true

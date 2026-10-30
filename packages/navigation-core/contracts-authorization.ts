@@ -120,6 +120,8 @@ export const authorizationActionSchema = z.enum([
   "files.link",
   "files.download",
   "analytics.record",
+  "analytics.read",
+  "analytics.delete",
 ]);
 export type AuthorizationAction = z.infer<typeof authorizationActionSchema>;
 

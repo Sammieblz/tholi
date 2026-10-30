@@ -9,6 +9,9 @@ import type {
 } from "../../../apps/api/src/capabilities";
 import apiPackage from "../../../apps/api/package.json";
 import { createApi, createServiceApi } from "../../../apps/api/src/server";
+import { duringServiceRequest } from "../../../apps/api/src/http";
+import { createObservability } from "../../../apps/api/src/adapters/observability";
+import { OBSERVABILITY_DEFAULTS } from "../../../apps/api/src/application/observability";
 import type { NavigationRequest } from "../../../packages/navigation-core/contracts";
 import type { WorkflowContext } from "../../../packages/navigation-core/workflow-contracts";
 import { MODEL_REVISION } from "../../../packages/nlp/constants";
@@ -41,6 +44,56 @@ vi.mock("tesseract.js", () => {
 vi.mock("node:worker_threads", () => ({ Worker: localRuntime.worker }));
 
 const applications: FastifyInstance[] = [];
+test("HTTP correlation reaches nested provider work without recording private request data", async () => {
+  const records: string[] = [];
+  const observer = createObservability(
+    { ...OBSERVABILITY_DEFAULTS, enabled: true, service: "tholi-api" },
+    {
+      write(value, completed) {
+        records.push(value);
+        completed();
+      },
+    },
+  );
+  const app = track(
+    await createServiceApi({ origins: [] }, [], { observability: observer }),
+  );
+  app.post("/test-correlation", async (request) =>
+    duringServiceRequest(request, async () => {
+      const span = observer.start("identity.exchange", { provider: "oidc" });
+      span.end("error");
+      throw new Error("PRIVATE_PROVIDER_BODY_SENTINEL");
+    }),
+  );
+  const response = await app.inject({
+    method: "POST",
+    url: "/test-correlation?code=PRIVATE_AUTHCODE_SENTINEL",
+    headers: { authorization: "Bearer PRIVATE_CREDENTIAL_SENTINEL" },
+    payload: {
+      screenshot: "PRIVATE_IMAGE_SENTINEL",
+      goal: "PRIVATE_GOAL_SENTINEL",
+    },
+  });
+  expect(response.statusCode).toBe(500);
+  await app.close();
+  const parsed = records
+    .join("")
+    .trim()
+    .split("\n")
+    .map((value) => JSON.parse(value));
+  const http = parsed.find((record) => record.operation === "http.request");
+  const provider = parsed.find(
+    (record) => record.operation === "identity.exchange",
+  );
+  expect(http.correlation.requestId).toBe(response.headers["x-request-id"]);
+  expect(provider.correlation.requestId).toBe(http.correlation.requestId);
+  expect(provider.correlation.traceId).toBe(http.correlation.traceId);
+  expect(provider.parentSpanId).toBe(http.correlation.spanId);
+  expect(http).toMatchObject({ outcome: "error", fields: { statusCode: 500 } });
+  expect(records.join("")).not.toMatch(
+    /PRIVATE_|test-correlation|Bearer|authorization|screenshot|goal/,
+  );
+});
 afterEach(async () => {
   await Promise.all(applications.splice(0).map((app) => app.close()));
 });

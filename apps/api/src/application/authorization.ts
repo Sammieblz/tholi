@@ -99,6 +99,12 @@ export function authorizationRepositoryFailure(error: unknown): never {
         error.code,
         "The record is unavailable or has changed.",
       );
+    if (error.code === "RATE_LIMITED")
+      throw new AuthorizationError(
+        429,
+        "RATE_LIMITED",
+        "The request allowance has been reached. Try again later.",
+      );
   }
   throw error;
 }
@@ -125,7 +131,9 @@ export async function withAuthorization<
       context.signal.throwIfAborted();
       const authorization = await readAuthorizationContext(repository, {
         includeConsents:
-          action === "policies.read" || action === "consents.write",
+          action === "policies.read" ||
+          action === "consents.write" ||
+          action === "analytics.record",
       });
       context.signal.throwIfAborted();
       if (

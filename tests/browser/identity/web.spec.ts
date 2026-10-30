@@ -23,6 +23,7 @@ import {
   WebsiteIdentityError,
 } from "../../support/website-auth";
 import type { BrowserContext } from "@playwright/test";
+import { productAnalyticsRecordSchema } from "../../../packages/navigation-core/contracts-analytics";
 
 test("configured website uses real signup email recovery and retained identity without requiring accounts for Local", async ({
   browser,
@@ -61,6 +62,7 @@ test("configured website uses real signup email recovery and retained identity w
   const page = await context.newPage();
   try {
     let localAccountRequests = 0;
+    let productRequests = 0;
     page.on("request", (request) => {
       const url = new URL(request.url());
       if (
@@ -75,6 +77,12 @@ test("configured website uses real signup email recovery and retained identity w
         url.pathname.startsWith("/api/v1/account")
       )
         localAccountRequests++;
+      if (
+        url.origin === environment.serviceOrigin &&
+        /\/analytics\/events$/.test(url.pathname) &&
+        request.method() === "POST"
+      )
+        productRequests++;
     });
     await page.goto(environment.webOrigin + "/download");
     await page
@@ -190,12 +198,98 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real account long identifiers and confirmation controls fit four widths in both themes with visible keyboard focus and reduced motion",
     );
+    stage = "real optional account analytics choices collection and withdrawal";
+    const measurements = page.locator(
+      'section[aria-labelledby="account-analytics-heading"]',
+    );
+    const accountPermission = measurements.getByRole("checkbox", {
+      name: "Allow optional product measurements for this account",
+      exact: true,
+    });
+    const browserPermission = measurements.getByRole("checkbox", {
+      name: "Allow measurements from this browser",
+      exact: true,
+    });
+    await expect(accountPermission).toBeVisible();
+    await expect(accountPermission).not.toBeChecked();
+    await expect(browserPermission).not.toBeChecked();
+    expect(productRequests).toBe(0);
+    await accountPermission.check();
+    await expect(measurements).toContainText("Account permission saved.");
+    expect(productRequests).toBe(0);
+    const collected = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.origin === environment.serviceOrigin &&
+        /\/analytics\/events$/.test(url.pathname) &&
+        response.request().method() === "POST"
+      );
+    });
+    await browserPermission.focus();
+    await page.keyboard.press("Space");
+    expect((await collected).status()).toBe(200);
+    await measurements
+      .getByRole("button", {
+        name: "Review retained measurements",
+        exact: true,
+      })
+      .click();
+    const exported = measurements.getByRole("region", {
+      name: "Retained product measurements JSON",
+      exact: true,
+    });
+    await expect(exported).toBeVisible();
+    const rows = productAnalyticsRecordSchema
+      .array()
+      .max(100)
+      .parse(JSON.parse((await exported.textContent())!));
+    expect(
+      rows.some(
+        (row) => row.event.name === "page_view" && row.event.page === "account",
+      ),
+    ).toBe(true);
+    await browserPermission.uncheck();
+    const beforePublic = productRequests;
+    await page.goto(environment.webOrigin + "/onboarding");
+    await page
+      .getByRole("button", { name: "Skip onboarding", exact: true })
+      .click();
+    await expect(page).toHaveURL(environment.webOrigin + "/download");
+    expect(productRequests).toBe(beforePublic);
+    await page.goto(environment.webOrigin + "/account");
+    await waitForWebsiteAccount(page, environment);
+    await expect(accountPermission).toBeChecked();
+    await expect(browserPermission).not.toBeChecked();
+    await accountPermission.uncheck();
+    await expect(measurements).toContainText(
+      "Account permission withdrawn and retained product measurements removed.",
+    );
+    await measurements
+      .getByRole("button", {
+        name: "Review retained measurements",
+        exact: true,
+      })
+      .click();
+    await expect(exported).toHaveText("[]");
+    await measurements
+      .getByRole("button", { name: "Delete measurements", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirm", exact: true })
+      .click();
+    await expect(measurements).toContainText(
+      "Retained product measurements deleted.",
+    );
+    checks.push(
+      "real cookie/CSRF analytics collection needs both independent choices; withdrawal purges retained records and Local public pages remain inert",
+    );
     stage = "callback cookie binding and session credential protection";
     await checkCookieBinding(browser, context, callback, environment);
     const cookies = (
       await context.cookies(environment.serviceOrigin + "/api/v1/account")
-    ).filter(
-      (cookie) => ["tholi_session", "tholi_refresh"].includes(cookie.name),
+    ).filter((cookie) =>
+      ["tholi_session", "tholi_refresh"].includes(cookie.name),
     );
     expect(cookies.length).toBe(2);
     expect(

@@ -14,6 +14,8 @@ import type {
   SupportStore,
 } from "../../../apps/api/src/application/support-contracts";
 import { RepositoryError } from "../../../apps/api/src/database/contracts";
+import { createObservability } from "../../../apps/api/src/adapters/observability";
+import { OBSERVABILITY_DEFAULTS } from "../../../apps/api/src/application/observability";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -308,22 +310,80 @@ describe("external job orchestration", () => {
     "records SMTP %s without a SQL callback across I/O",
     async (receipt, status, backoffMs) => {
       const f = fixture();
+      const lines: string[] = [];
+      const observer = createObservability(
+        { enabled: true, service: "tholi-worker", ...OBSERVABILITY_DEFAULTS },
+        {
+          write: (line, done) => {
+            lines.push(line);
+            done();
+          },
+        },
+      );
       vi.mocked(f.store.prepareExternal).mockResolvedValue(f.prepared);
       vi.mocked(f.mail.send).mockImplementation(async () => {
         expect(f.store.prepareExternal).toHaveResolvedWith(f.prepared);
         return receipt;
       });
-      const handler = createSupportJobHandlers(f.store, f.mail, f.objects).find(
-        (h) => h.kind === f.lease.kind,
-      )!;
-      await handler.execute(f.lease, new AbortController().signal, 1000);
+      const handler = createSupportJobHandlers(
+        f.store,
+        f.mail,
+        f.objects,
+        observer,
+      ).find((h) => h.kind === f.lease.kind)!;
+      try {
+        await handler.execute(f.lease, new AbortController().signal, 1000);
+      } finally {
+        await observer.close();
+      }
       expect(f.store.finishExternal).toHaveBeenCalledWith(
         f.lease,
         f.prepared.attemptId,
         expect.objectContaining({ status, backoffMs }),
       );
+      const records = lines.flatMap((line) =>
+        line
+          .trim()
+          .split("\n")
+          .map((value) => JSON.parse(value)),
+      );
+      expect(
+        records.find((record) => record.operation === "job.acknowledge")
+          ?.outcome,
+      ).toBe(status === "committed" ? "ok" : status);
     },
   );
+  it("records a lost external finish fence as stale rather than successful delivery acknowledgement", async () => {
+    const f = fixture();
+    const lines: string[] = [];
+    const observer = createObservability(
+      { enabled: true, service: "tholi-worker", ...OBSERVABILITY_DEFAULTS },
+      {
+        write: (line, done) => {
+          lines.push(line);
+          done();
+        },
+      },
+    );
+    vi.mocked(f.store.prepareExternal).mockResolvedValue(f.prepared);
+    vi.mocked(f.store.finishExternal).mockResolvedValue(false);
+    try {
+      await createSupportJobHandlers(f.store, f.mail, f.objects, observer)
+        .find((handler) => handler.kind === f.lease.kind)!
+        .execute(f.lease, new AbortController().signal, 1000);
+    } finally {
+      await observer.close();
+    }
+    const records = lines.flatMap((line) =>
+      line
+        .trim()
+        .split("\n")
+        .map((value) => JSON.parse(value)),
+    );
+    expect(
+      records.find((record) => record.operation === "job.acknowledge")?.outcome,
+    ).toBe("stale");
+  });
   it("does not resend after a failed durable finish and a subsequent started barrier", async () => {
     const f = fixture();
     vi.mocked(f.store.prepareExternal)

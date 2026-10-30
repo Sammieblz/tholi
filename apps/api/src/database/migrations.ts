@@ -6,6 +6,7 @@ import { portableIdentity } from "./migrations/003-portable-identity";
 import { tenantAuthorization } from "./migrations/004-tenant-authorization";
 import { durableJobs } from "./migrations/005-durable-jobs";
 import { mailStorageSupport } from "./migrations/006-mail-storage-support";
+import { portableObservability } from "./migrations/007-observability";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -35,6 +36,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(4, "tenant-authorization", tenantAuthorization),
   migration(5, "durable-jobs", durableJobs),
   migration(6, "mail-storage-support", mailStorageSupport),
+  migration(7, "portable-observability", portableObservability),
 ]);
 
 export interface MigrationOptions {
@@ -93,6 +95,16 @@ async function grantWorker(client: PoolClient, role: string) {
     await client.query(`GRANT EXECUTE ON FUNCTION tholi.schedule_file_expiry(integer),tholi.prepare_file_cleanup(uuid,uuid,uuid),
       tholi.finish_external_effect(uuid,uuid,uuid,uuid,text,text,integer),tholi.require_live_external_lease(uuid,uuid,uuid) TO ${identifier}`);
   }
+  if (
+    (
+      await client.query(
+        "SELECT to_regclass('tholi.security_audit') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.prune_observability(integer),tholi.job_health() TO ${identifier}`,
+    );
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {
@@ -321,6 +333,15 @@ async function grantRuntime(client: PoolClient, role: string) {
     );
     await client.query(
       `GRANT EXECUTE ON FUNCTION tholi.valid_diagnostic_snapshot(jsonb) TO ${identifier}`,
+    );
+  }
+  if (existing.has("security_audit")) {
+    await client.query(`GRANT INSERT ON tholi.security_audit TO ${identifier}`);
+    await client.query(
+      `GRANT SELECT,INSERT,DELETE ON tholi.product_events TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.valid_product_event(jsonb),tholi.valid_job_correlation(jsonb) TO ${identifier}`,
     );
   }
 }

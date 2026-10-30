@@ -61,10 +61,10 @@ export function privacySections(): LegalSection[] {
           </p>
           <p>
             On tholi.io, Cloudflare adds page-view and performance measurements
-            independently of the website’s cookie choices. The app’s own
-            optional analytics provider remains inactive, and there is no
-            advertising integration. Cookie choices govern Tholi’s appearance
-            storage; they do not disable Cloudflare’s injected script. See the{" "}
+            independently of the website's cookie choices. Optional Tholi
+            account analytics requires separate account-purpose and browser
+            consent. No advertising integration is included. Appearance choices
+            do not disable Cloudflare's injected script. See the{" "}
             <SiteLink to="/cookies">cookie notice</SiteLink>.
           </p>
         </>
@@ -745,19 +745,32 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
             .
           </p>
           <p>
-            The app’s own optional analytics provider is inactive. Its consent
-            gate applies to a future provider added by Tholi. It cannot activate
-            collection without that provider’s identity and disclosures plus
-            fresh provider-specific consent. Eligible future events are limited
-            to page views, download clicks and practice start or completion.
-            Destination text, conversations, account details, documentation
-            searches and extension observations are excluded.
+            On a configured signed-in account page, optional Tholi account
+            analytics uses the Tholi account service. It sends fixed event
+            categories only after both account product-analytics consent and
+            this browser's matching provider consent. Sign-in, appearance
+            choices and extension installation do not grant that consent. Public
+            Local use and practice have no account analytics provider.
           </p>
           <p>
-            For that future app provider, withdrawing consent stops optional
-            events and clears pending work. Its identity and retention period
-            will be listed here before activation. This gate does not control
-            scripts added by the hosting platform.
+            Events can identify an account-page view and other explicitly
+            supported public event categories. They contain no destination text,
+            conversations, documentation searches, private URLs, screenshots,
+            form contents or credentials. The service associates accepted
+            records with the authenticated account and workspace and makes them
+            available for up to 30 days, then prunes expired records. Operator
+            backups and exports follow their own expiry process. Cloud
+            activation, credit usage and paid-plan events are unavailable until
+            those features exist.
+          </p>
+          <p>
+            The account page lets you review or delete your records. Withdrawing
+            account product-analytics consent also deletes its retained
+            attributed events. Withdrawing this browser's consent stops new
+            events and cancels pending work. Essential authentication,
+            operational security and audit records have separate purposes and
+            retention. Account and financial ledgers remain separate sources of
+            authority. These choices do not control hosting-platform scripts.
           </p>
         </>
       ),

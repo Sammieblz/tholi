@@ -5,11 +5,16 @@ import { SiteLink, useRouter } from "../../app/router";
 import { Demo } from "../demo/Demo";
 import { StoreLink } from "../downloads/downloads";
 import "./onboarding.css";
+import { usePreferences } from "../preferences";
 export function OnboardingPage() {
   const [step, setStep] = useState(0),
     [mode, setMode] = useState<"guide" | "conversation">("guide");
   const { go } = useRouter();
-  const complete = () => go("/download");
+  const { trackEvent } = usePreferences();
+  const complete = () => {
+    trackEvent({ name: "onboarding_complete" });
+    go("/download");
+  };
   return (
     <section className="onboarding">
       <div className="onboarding-heading">
@@ -105,7 +110,7 @@ export function OnboardingPage() {
           </>
         )}
       </div>
-      <button className="text-button" onClick={complete}>
+      <button className="text-button" onClick={() => go("/download")}>
         Skip onboarding
       </button>
       <p className="onboarding-caption">

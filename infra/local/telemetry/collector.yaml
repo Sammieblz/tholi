@@ -14,8 +14,15 @@ processors:
     send_batch_size: 128
 
 exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    translation_strategy: UnderscoreEscapingWithSuffixes
+    resource_constant_labels:
+      included: [service.name, service.version, service.instance.id]
   debug:
-    verbosity: basic
+    # Local-only, bounded by Docker's log rotation. Application records contain
+    # only the finite redacted schema, never request bodies or provider errors.
+    verbosity: detailed
 
 extensions:
   health_check:
@@ -31,7 +38,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [debug, prometheus]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]

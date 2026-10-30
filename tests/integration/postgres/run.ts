@@ -1,6 +1,7 @@
 import { runPostgresChecks } from "./checks";
 import { runWorkerRuntimeProbe } from "./job-checks";
 import { runSupportRuntimeProbe } from "./support-runtime-probe";
+import { runTelemetryRuntimeProbe } from "./telemetry-runtime-probe";
 
 try {
   const migrationConnection = process.env.THOLI_DATABASE_MIGRATION_URL;
@@ -11,24 +12,37 @@ try {
     process.argv.length === 3 && process.argv[2] === "--worker-runtime-probe";
   const supportProbe =
     process.argv.length === 3 && process.argv[2] === "--support-runtime-probe";
-  if (process.argv.length > 2 && !probe && !supportProbe)
+  const telemetryProbe =
+    process.argv[2] === "--telemetry-runtime-probe" &&
+    ((process.argv.length === 4 && process.argv[3] === "submit") ||
+      (process.argv.length === 5 && process.argv[3] === "complete"));
+  if (process.argv.length > 2 && !probe && !supportProbe && !telemetryProbe)
     throw new Error("Unknown PostgreSQL verification mode.");
   process.stdout.write(
     JSON.stringify(
-      supportProbe
-        ? await runSupportRuntimeProbe({
+      telemetryProbe
+        ? await runTelemetryRuntimeProbe({
+            phase: process.argv[3] as "submit" | "complete",
+            jobId: process.argv[4],
+            sentinel: process.env.THOLI_TELEMETRY_SENTINEL ?? "",
             migrationConnection,
             runtimeConnection,
-            workerConnection: process.env.THOLI_DATABASE_WORKER_URL ?? "",
             apiUrl: process.env.THOLI_SUPPORT_PROBE_API_URL ?? "",
           })
-        : probe
-          ? await runWorkerRuntimeProbe({ runtimeConnection })
-          : await runPostgresChecks({
+        : supportProbe
+          ? await runSupportRuntimeProbe({
               migrationConnection,
               runtimeConnection,
-              workerConnection: process.env.THOLI_DATABASE_WORKER_URL,
-            }),
+              workerConnection: process.env.THOLI_DATABASE_WORKER_URL ?? "",
+              apiUrl: process.env.THOLI_SUPPORT_PROBE_API_URL ?? "",
+            })
+          : probe
+            ? await runWorkerRuntimeProbe({ runtimeConnection })
+            : await runPostgresChecks({
+                migrationConnection,
+                runtimeConnection,
+                workerConnection: process.env.THOLI_DATABASE_WORKER_URL,
+              }),
     ) + "\n",
   );
 } catch (error) {
