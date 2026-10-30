@@ -139,8 +139,12 @@ export async function runObservabilityChecks(
             (client) =>
               client.query(
                 `INSERT INTO tholi.security_audit(account_id,subject_id,kind,details)
-      VALUES($1,$2,'session.revoked','{"privateUrl":"AUDIT_PRIVATE_SENTINEL"}')`,
-                [scope.accountId, randomUUID()],
+      VALUES($1,$2,'session.revoked',$3::jsonb)`,
+                [
+                  scope.accountId,
+                  randomUUID(),
+                  JSON.stringify({ privateUrl: "AUDIT_PRIVATE_SENTINEL" }),
+                ],
               ),
             scope,
           ),
@@ -437,8 +441,17 @@ export async function runObservabilityChecks(
             (client) =>
               client.query(
                 `INSERT INTO tholi.product_events(workspace_id,account_id,event_id,schema_version,event)
-      VALUES($1,$2,$3,1,'{"name":"page_view","page":"account","goal":"PRODUCT_PRIVATE_SENTINEL"}')`,
-                [scope.workspaceId, scope.accountId, randomUUID()],
+      VALUES($1,$2,$3,1,$4::jsonb)`,
+                [
+                  scope.workspaceId,
+                  scope.accountId,
+                  randomUUID(),
+                  JSON.stringify({
+                    name: "page_view",
+                    page: "account",
+                    goal: "PRODUCT_PRIVATE_SENTINEL",
+                  }),
+                ],
               ),
             scope,
           ),
@@ -645,6 +658,7 @@ export async function runObservabilityChecks(
           { connectionString: runtimeConnection, max: 1 },
           observer,
         );
+        let phase = "ENQUEUE_ORIGIN";
         try {
           const observed = new PostgresRepositories(pool),
             scope = await provision(),
@@ -669,6 +683,7 @@ export async function runObservabilityChecks(
             job.id,
           );
           const jobs = new PostgresJobs(worker);
+          phase = "FIRST_CLAIM";
           await migration.query(
             "UPDATE tholi.jobs SET available_at=clock_timestamp()+interval '1 day' WHERE kind=$1 AND status='queued' AND id<>$2",
             [command.kind, job.id],
@@ -683,6 +698,7 @@ export async function runObservabilityChecks(
           ).find((item) => item.id === job.id);
           assert.ok(lease);
           assert.deepEqual(lease.correlation, origin);
+          phase = "RETRY_ORIGIN";
           assert.equal(
             await jobs.fail(lease, {
               classification: "retryable",
@@ -707,15 +723,28 @@ export async function runObservabilityChecks(
           assert.deepEqual(retried.correlation, origin);
           assert.notEqual(retried.leaseToken, lease.leaseToken);
           assert.equal(retried.attempts, 2);
+          phase = "IMMUTABLE_ORIGIN";
           await assert.rejects(
             () =>
-              runtime.query(
-                "UPDATE tholi.jobs SET origin_correlation=$1::jsonb WHERE id=$2",
-                [JSON.stringify(current), job.id],
+              withTransaction(
+                runtime,
+                (client) =>
+                  client.query(
+                    "UPDATE tholi.jobs SET origin_correlation=$1::jsonb WHERE id=$2 AND workspace_id=$3 AND account_id=$4",
+                    [
+                      JSON.stringify(current),
+                      job.id,
+                      scope.workspaceId,
+                      scope.accountId,
+                    ],
+                  ),
+                scope,
               ),
             { code: "23514" },
           );
+          phase = "PUBLIC_METADATA";
           assert.ok(!("correlation" in job));
+          phase = "SAFE_SQL_METRICS";
           await assert.rejects(() =>
             observed.transaction(scope, (client) =>
               client.getArtifact("SQL_PRIVATE_SENTINEL"),
@@ -739,6 +768,11 @@ export async function runObservabilityChecks(
             JSON.stringify(observations),
             /SQL_PRIVATE_SENTINEL|postgres:|password|SELECT |INSERT |UPDATE |token_hash/,
           );
+        } catch {
+          // Fixed diagnostic labels only, never actual assertion values or SQL.
+          throw Object.assign(new Error("Correlation verification failed."), {
+            code: "CORRELATION_" + phase,
+          });
         } finally {
           await pool.end();
         }

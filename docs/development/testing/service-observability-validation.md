@@ -42,6 +42,17 @@ report remains `output/qa/local-stack/tholi-smoke-mvv5zcrw-5e186d59/smoke.json`,
 parameterless, read-only scoped locking capability, without expanding account
 or membership mutation grants. Its fresh actual run remains separate evidence.
 
+Clean source `ca2e19dfa0e5015cd0a35da7b517f20560d44899` then passed the new
+consent and retention boundaries and stopped at the last correlation assertion.
+The test attempted an unscoped runtime UPDATE, which RLS correctly hid, so the
+immutable-origin trigger was never reached. The test now uses the existing
+scoped transaction and retains its expected `23514` rejection. Production code
+did not change for this correction. Synthetic negative JSON checks also now
+use SQL parameters so their payloads do not appear in statement diagnostics.
+The unchanged report is
+`output/qa/local-stack/tholi-smoke-mvv64jy2-9965e4c4/smoke.json`, collected from
+16:10:04 through 16:10:24 UTC, with owned cleanup complete.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and
