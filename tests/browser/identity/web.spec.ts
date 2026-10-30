@@ -48,6 +48,15 @@ test("configured website uses real signup email recovery and retained identity w
     accountErrorCode: "not checked",
     providerFormError: "none",
     failureReason: "none",
+    analyticsHttpStatus: {
+      capabilities: 0,
+      policies: 0,
+      consentRead: 0,
+      consentWrite: 0,
+      collection: 0,
+      export: 0,
+      deletion: 0,
+    },
   };
   const saveProgress = () =>
     writeEvidence(
@@ -63,6 +72,30 @@ test("configured website uses real signup email recovery and retained identity w
   try {
     let localAccountRequests = 0;
     let productRequests = 0;
+    page.on("response", (response) => {
+      const url = new URL(response.url());
+      if (url.origin !== environment.serviceOrigin) return;
+      const method = response.request().method();
+      const status = response.status();
+      if (method === "GET" && url.pathname === "/api/v1/capabilities")
+        progress.analyticsHttpStatus.capabilities = status;
+      else if (
+        method === "GET" &&
+        /\/workspaces\/[^/]+\/policies$/.test(url.pathname)
+      )
+        progress.analyticsHttpStatus.policies = status;
+      else if (/\/workspaces\/[^/]+\/consents$/.test(url.pathname)) {
+        if (method === "GET") progress.analyticsHttpStatus.consentRead = status;
+        else if (method === "POST")
+          progress.analyticsHttpStatus.consentWrite = status;
+      } else if (/\/workspaces\/[^/]+\/analytics\/events$/.test(url.pathname)) {
+        if (method === "GET") progress.analyticsHttpStatus.export = status;
+        else if (method === "POST")
+          progress.analyticsHttpStatus.collection = status;
+        else if (method === "DELETE")
+          progress.analyticsHttpStatus.deletion = status;
+      }
+    });
     page.on("request", (request) => {
       const url = new URL(request.url());
       if (
@@ -193,7 +226,8 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real registration requires email verification before creating account access",
     );
-    stage = "real optional account analytics choices collection and withdrawal";
+    stage = progress.operation = "analytics initial consent controls";
+    await saveProgress();
     const measurements = page.locator(
       'section[aria-labelledby="account-analytics-heading"]',
     );
@@ -209,9 +243,16 @@ test("configured website uses real signup email recovery and retained identity w
     await expect(accountPermission).not.toBeChecked();
     await expect(browserPermission).not.toBeChecked();
     expect(productRequests).toBe(0);
-    await accountPermission.check();
+    stage = progress.operation = "analytics save account permission";
+    await saveProgress();
+    // This controlled value follows the server response; .check() would assert
+    // an immediate state change before the authorized mutation has completed.
+    await accountPermission.click();
     await expect(measurements).toContainText("Account permission saved.");
+    await expect(accountPermission).toBeChecked();
     expect(productRequests).toBe(0);
+    stage = progress.operation = "analytics enable browser and collect event";
+    await saveProgress();
     const collected = page.waitForResponse((response) => {
       const url = new URL(response.url());
       return (
@@ -223,6 +264,9 @@ test("configured website uses real signup email recovery and retained identity w
     await browserPermission.focus();
     await page.keyboard.press("Space");
     expect((await collected).status()).toBe(200);
+    await expect(browserPermission).toBeChecked();
+    stage = progress.operation = "analytics export retained event";
+    await saveProgress();
     await measurements
       .getByRole("button", {
         name: "Review retained measurements",
@@ -249,7 +293,9 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real account and retained measurements fit four widths in both themes with visible keyboard focus and reduced motion",
     );
-    stage = "real optional account analytics withdrawal";
+    stage = progress.operation =
+      "analytics withdraw browser consent through Essential only";
+    await saveProgress();
     await page
       .getByRole("button", { name: "Cookie settings", exact: true })
       .click();
@@ -259,6 +305,8 @@ test("configured website uses real signup email recovery and retained identity w
       .click();
     await expect(browserPermission).not.toBeChecked();
     await expect(accountPermission).toBeChecked();
+    stage = progress.operation = "analytics public Local pages remain inert";
+    await saveProgress();
     const beforePublic = productRequests;
     await page.goto(environment.webOrigin + "/onboarding");
     await page
@@ -270,10 +318,15 @@ test("configured website uses real signup email recovery and retained identity w
     await waitForWebsiteAccount(page, environment);
     await expect(accountPermission).toBeChecked();
     await expect(browserPermission).not.toBeChecked();
-    await accountPermission.uncheck();
+    stage = progress.operation = "analytics withdraw account permission";
+    await saveProgress();
+    await accountPermission.click();
     await expect(measurements).toContainText(
       "Account permission withdrawn and retained product measurements removed.",
     );
+    await expect(accountPermission).not.toBeChecked();
+    stage = progress.operation = "analytics export after account withdrawal";
+    await saveProgress();
     await measurements
       .getByRole("button", {
         name: "Review retained measurements",
@@ -281,6 +334,9 @@ test("configured website uses real signup email recovery and retained identity w
       })
       .click();
     await expect(exported).toHaveText("[]");
+    stage = progress.operation =
+      "analytics delete retained events without collection permission";
+    await saveProgress();
     await measurements
       .getByRole("button", { name: "Delete measurements", exact: true })
       .click();
