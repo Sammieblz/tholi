@@ -231,8 +231,19 @@ test("documentation sitemap, crawler guidance and brand assets have real content
     "512x512",
   ]);
   const redirects = await readFile("dist/web/_redirects", "utf8");
-  for (const path of ["signin", "signup", "welcome"])
-    expect(redirects).toContain(`/${path} /download 301`);
+  for (const suffix of ["", "/", ".html"])
+    expect(redirects).toContain(`/welcome${suffix} /account 301`);
+  const headers = await readFile("dist/web/_headers", "utf8");
+  for (const path of ["signin", "signup", "account"]) {
+    expect(redirects).not.toContain(`/${path} /download`);
+    expect(headers).toContain(
+      `/${path}\n  Cache-Control: private, no-store\n  X-Robots-Tag: noindex`,
+    );
+    expect(locations).not.toContain(`https://tholi.io/${path}`);
+    expect(await readFile(`dist/web/${path}.html`, "utf8")).toContain(
+      'content="noindex, follow"',
+    );
+  }
   for (const [slug, source] of Object.entries({
     architecture: "docs/architecture/navigation.md",
     "natural-language": "docs/architecture/natural-language.md",

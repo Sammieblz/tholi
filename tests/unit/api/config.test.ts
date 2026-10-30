@@ -8,8 +8,10 @@ import {
   validateApiOptions,
   validatePrivateConnection,
   validateServiceOptions,
+  validateIdentityOptions,
   type ApiOptions,
 } from "../../../apps/api/src/config";
+import type { IdentityOptions } from "../../../apps/api/src/application/identity-contracts";
 
 const chrome = "chrome-extension://" + "a".repeat(32);
 const firefox = "moz-extension://12345678-1234-1234-1234-123456789abc";
@@ -19,6 +21,41 @@ const privateOptions: ApiOptions = {
   database: "data/navigator.sqlite",
   models: "assets/models",
 };
+
+function identityEnvironment(local = false): Record<string, string> {
+  const provider = local
+    ? "http://localhost:18080"
+    : "https://identity.tholi.io";
+  const transport = local ? "http://oidc:8080" : provider;
+  const webOrigin = local ? "http://127.0.0.1:5174" : "https://tholi.io";
+  return {
+    NODE_ENV: local ? "development" : "production",
+    THOLI_SERVICE_ORIGINS: webOrigin,
+    THOLI_SERVICE_PUBLIC_ORIGIN: local
+      ? "http://127.0.0.1:8788"
+      : "https://api.tholi.io",
+    THOLI_DATABASE_URL:
+      "postgresql://runtime:synthetic-password@postgres/tholi",
+    THOLI_IDENTITY_ISSUER: provider + "/realms/tholi",
+    THOLI_IDENTITY_AUTHORIZATION_ENDPOINT:
+      provider + "/realms/tholi/protocol/openid-connect/auth",
+    THOLI_IDENTITY_TOKEN_ENDPOINT:
+      transport + "/realms/tholi/protocol/openid-connect/token",
+    THOLI_IDENTITY_JWKS_URI:
+      transport + "/realms/tholi/protocol/openid-connect/certs",
+    THOLI_IDENTITY_LOGOUT_ENDPOINT:
+      provider + "/realms/tholi/protocol/openid-connect/logout",
+    THOLI_IDENTITY_CLIENT_ID: "tholi-service",
+    THOLI_IDENTITY_CLIENT_SECRET_KEY:
+      "synthetic-client-secret-for-configuration-only",
+    THOLI_IDENTITY_FLOW_SECRET_KEY: Buffer.alloc(32, 7).toString("base64url"),
+    THOLI_IDENTITY_WEB_ORIGIN: webOrigin,
+    THOLI_IDENTITY_CHROMIUM_CALLBACKS:
+      "https://" + "a".repeat(32) + ".chromiumapp.org/",
+    THOLI_IDENTITY_FIREFOX_CALLBACKS:
+      "https://synthetic.extensions.allizom.org/",
+  };
+}
 
 describe("API configuration profiles", () => {
   it("refuses synthetic database seed outside the explicit development profile", async () => {
@@ -241,5 +278,232 @@ describe("API configuration profiles", () => {
       token: privateOptions.token,
       origins: [chrome],
     });
+  });
+
+  it.each([false, true])(
+    "selects explicit portable identity and runtime database settings (local=%s)",
+    (local) => {
+      const env = identityEnvironment(local);
+      const { options } = parseServiceConfig(env);
+      expect(options.database).toEqual({
+        connectionString: env.THOLI_DATABASE_URL,
+        max: 8,
+      });
+      expect(options.identity).toMatchObject({
+        issuer: env.THOLI_IDENTITY_ISSUER,
+        tokenEndpoint: env.THOLI_IDENTITY_TOKEN_ENDPOINT,
+        jwksUri: env.THOLI_IDENTITY_JWKS_URI,
+        callbackUrl: env.THOLI_SERVICE_PUBLIC_ORIGIN + "/api/v1/auth/callback",
+        secureCookies: !local,
+        requireVerifiedEmail: true,
+        accessLifetimeMs: 300_000,
+        sessionLifetimeMs: 43_200_000,
+        clients: [
+          {
+            id: "web",
+            kind: "web",
+            redirectUris: [
+              env.THOLI_IDENTITY_WEB_ORIGIN + "/account",
+              env.THOLI_IDENTITY_WEB_ORIGIN + "/download",
+            ],
+          },
+          {
+            id: "extension-chromium",
+            kind: "extension",
+            redirectUris: [env.THOLI_IDENTITY_CHROMIUM_CALLBACKS],
+          },
+          {
+            id: "extension-firefox",
+            kind: "extension",
+            redirectUris: [env.THOLI_IDENTITY_FIREFOX_CALLBACKS],
+          },
+        ],
+      });
+      expect(options.identity).not.toHaveProperty("database");
+    },
+  );
+
+  it("refuses incomplete identity profiles without echoing supplied secrets", () => {
+    const complete = identityEnvironment();
+    for (const missing of [
+      "THOLI_IDENTITY_ISSUER",
+      "THOLI_DATABASE_URL",
+      "THOLI_IDENTITY_CLIENT_ID",
+      "THOLI_IDENTITY_CLIENT_SECRET_KEY",
+      "THOLI_IDENTITY_FLOW_SECRET_KEY",
+      "THOLI_IDENTITY_WEB_ORIGIN",
+      "THOLI_SERVICE_PUBLIC_ORIGIN",
+      "THOLI_IDENTITY_TOKEN_ENDPOINT",
+      "THOLI_IDENTITY_AUTHORIZATION_ENDPOINT",
+      "THOLI_IDENTITY_JWKS_URI",
+      "THOLI_IDENTITY_LOGOUT_ENDPOINT",
+    ]) {
+      const env = { ...complete };
+      delete env[missing];
+      expect(() => parseServiceConfig(env)).toThrow();
+    }
+    const secret = "PRIVATE_CONFIGURATION_SENTINEL";
+    try {
+      parseServiceConfig({
+        ...complete,
+        THOLI_IDENTITY_CLIENT_SECRET_KEY: secret,
+      });
+      throw new Error("Expected rejection");
+    } catch (error) {
+      expect(String(error)).not.toContain(secret);
+      expect(String(error)).toContain("identity configuration");
+    }
+    const options = parseServiceConfig(complete).options;
+    expect(() =>
+      validateServiceOptions({
+        origins: options.origins,
+        identity: options.identity,
+      }),
+    ).toThrow("database");
+    expect(() =>
+      validateServiceOptions({
+        origins: options.origins,
+        database: options.database,
+      }),
+    ).toThrow("database");
+  });
+
+  it.each([
+    [
+      "THOLI_IDENTITY_ISSUER",
+      "https://user:secret@identity.tholi.io/realms/tholi",
+    ],
+    [
+      "THOLI_IDENTITY_TOKEN_ENDPOINT",
+      "https://identity.tholi.io/token?credential=PRIVATE_SENTINEL",
+    ],
+    ["THOLI_IDENTITY_JWKS_URI", "https://identity.tholi.io/keys#fragment"],
+    ["THOLI_IDENTITY_AUTHORIZATION_ENDPOINT", "javascript:alert(1)"],
+    ["THOLI_IDENTITY_LOGOUT_ENDPOINT", "http://identity.tholi.io/logout"],
+    ["THOLI_SERVICE_PUBLIC_ORIGIN", "https://api.tholi.io/prefix"],
+    ["THOLI_IDENTITY_WEB_ORIGIN", "https://tholi.io/account"],
+    [
+      "THOLI_IDENTITY_CHROMIUM_CALLBACKS",
+      "https://approved.chromiumapp.org/#token",
+    ],
+  ])(
+    "rejects unsafe identity URL in %s without exposing its value",
+    (name, value) => {
+      try {
+        parseServiceConfig({ ...identityEnvironment(), [name]: value });
+        throw new Error("Expected rejection");
+      } catch (error) {
+        expect(String(error)).not.toContain(value);
+        expect(String(error)).not.toContain("PRIVATE_SENTINEL");
+        expect(String(error)).not.toContain("Expected rejection");
+      }
+    },
+  );
+
+  it("validates strict identity clients, callback ownership and bounded lifetimes", () => {
+    const configured = parseServiceConfig(identityEnvironment()).options;
+    const identity = configured.identity!;
+    const invalid: IdentityOptions[] = [
+      { ...identity, unexpected: true } as IdentityOptions,
+      { ...identity, clients: [...identity.clients, identity.clients[0]] },
+      {
+        ...identity,
+        clients: [
+          {
+            ...identity.clients[0],
+            redirectUris: ["https://elsewhere.test/account"],
+          },
+        ],
+      },
+      {
+        ...identity,
+        clients: [
+          {
+            ...identity.clients[0],
+            redirectUris: [
+              ...identity.clients[0].redirectUris,
+              identity.clients[0].redirectUris[0],
+            ],
+          },
+        ],
+      },
+      {
+        ...identity,
+        clients: [
+          {
+            ...identity.clients[0],
+            unexpected: true,
+          } as IdentityOptions["clients"][number],
+        ],
+      },
+      {
+        ...identity,
+        clients: [
+          { ...identity.clients[1], redirectUris: ["http://localhost:4567/"] },
+        ],
+      },
+      { ...identity, callbackUrl: "https://api.tholi.io/api/v1/other" },
+      {
+        ...identity,
+        flowEncryptionKey: Buffer.alloc(31).toString("base64url"),
+      },
+      { ...identity, secureCookies: false },
+      { ...identity, accessLifetimeMs: 59_999 },
+      { ...identity, accessLifetimeMs: 900_001 },
+      { ...identity, sessionLifetimeMs: 299_999 },
+      { ...identity, sessionLifetimeMs: 43_200_001 },
+      { ...identity, accessLifetimeMs: 600_000, sessionLifetimeMs: 300_000 },
+    ];
+    for (const input of invalid)
+      expect(() => validateIdentityOptions(input)).toThrow();
+    expect(() =>
+      validateServiceOptions({ ...configured, origins: [] }),
+    ).toThrow("configured service origin");
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(),
+        THOLI_IDENTITY_CLIENTS: "not-json",
+      }),
+    ).toThrow("registered identity clients");
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(),
+        THOLI_IDENTITY_ACCESS_LIFETIME_MS: "1e5",
+      }),
+    ).toThrow("identity configuration");
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(),
+        THOLI_IDENTITY_SESSION_LIFETIME_MS: "Infinity",
+      }),
+    ).toThrow("identity configuration");
+  });
+
+  it("requires a usable same-site cookie topology and confines HTTP development exceptions", () => {
+    const production = parseServiceConfig(identityEnvironment()).options
+      .identity!;
+    expect(() =>
+      validateIdentityOptions({
+        ...production,
+        callbackUrl: "https://elsewhere.test/api/v1/auth/callback",
+      }),
+    ).toThrow("domain topology");
+    const local = parseServiceConfig(identityEnvironment(true)).options
+      .identity!;
+    expect(() =>
+      validateIdentityOptions({
+        ...local,
+        callbackUrl: "http://localhost:8788/api/v1/auth/callback",
+      }),
+    ).toThrow("domain topology");
+    expect(() =>
+      validateIdentityOptions({
+        ...local,
+        tokenEndpoint: "http://untrusted-network.test/token",
+      }),
+    ).toThrow("verified HTTPS");
+    expect(() =>
+      validateIdentityOptions({ ...local, webOrigin: "http://0.0.0.0:5174" }),
+    ).toThrow();
   });
 });

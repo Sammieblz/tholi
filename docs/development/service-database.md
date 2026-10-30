@@ -4,11 +4,15 @@ Roadmap [#28](https://github.com/Sammieblz/tholi/issues/28) implements the datab
 foundation of the [portable backend decision](../plans/gemini-cloud-and-enterprise.md).
 The same migrations and repositories run locally, on a VM or against hosted
 PostgreSQL. They never read, migrate or upload the private SQLite knowledge.
-The HTTP service still exposes health endpoints only.
+The optional [identity profile](service-identity.md) uses these repositories for
+account authentication and session security. Navigation, saved-data and billing
+HTTP endpoints remain planned.
 
 ## Local setup
 
-Follow [local stack setup](local-stack.md), then run:
+Follow [local stack setup](local-stack.md). Normal `local:up` runs the dedicated
+schema and identity initialization containers before admitting API traffic.
+For an explicit migration replay and the optional synthetic application fixture:
 
 ```sh
 npm run local:migrate
@@ -18,7 +22,8 @@ npm run local:seed
 Migration reapplies infrastructure bootstrap, then applies versioned application
 migrations. Seed preserves the OIDC realm and idempotently provisions one synthetic
 Tholi account and personal workspace. Their UUIDs end in `0028` and `0029`.
-It grants no credits or paid entitlement and does not implement application login.
+It grants no credits or paid entitlement and does not sign a user in. Real
+provider login links its verified identity to an internal account separately.
 The operator-only `database-tools` container reuses the API image; its migration
 credentials never enter the HTTP service. The seed requires both
 `NODE_ENV=development` and `THOLI_ALLOW_DEV_SEED=true`.
@@ -32,14 +37,14 @@ only that project's volumes. Migrate and seed again after an explicit reset.
 versioned migrations and one-shot CLI. Migration SQL is embedded in TypeScript
 so the existing API build carries the exact bytes without a second SQL tree.
 
-| Area                 | Stored foundation                                                             |
-| -------------------- | ----------------------------------------------------------------------------- |
-| Identity and scope   | Accounts, issuer/subject links, workspaces, memberships and session metadata  |
-| Consent and requests | Versioned decisions, scoped command keys, canonical payload hashes and status |
-| Plans and usage      | Immutable plan versions, workspace entitlements and integer model usage       |
-| Credits              | Integer grants, reservations and immutable settlements; one derived ledger    |
-| Saved data           | Account-owned saved routes, optimistic revisions, sync stamps and tombstones  |
-| Background work      | Scoped job references, lease/status fields and transactional outbox metadata  |
+| Area                 | Stored foundation                                                                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity and scope   | Accounts, issuer/subject links, workspaces, memberships, one-use flows/brokers, session families, refresh hashes and provider logout markers |
+| Consent and requests | Versioned decisions, scoped command keys, canonical payload hashes and status                                                                |
+| Plans and usage      | Immutable plan versions, workspace entitlements and integer model usage                                                                      |
+| Credits              | Integer grants, reservations and immutable settlements; one derived ledger                                                                   |
+| Saved data           | Account-owned saved routes, optimistic revisions, sync stamps and tombstones                                                                 |
+| Background work      | Scoped job references, lease/status fields and transactional outbox metadata                                                                 |
 
 Composite foreign keys and uniqueness keep tenant references within their
 workspace. Indexes cover foreign keys, scoped lookups, sync and pending work.
@@ -52,9 +57,10 @@ Jobs admit typed record references, not browsing data or credentials.
 
 `PostgresRepositories.transaction(scope, callback)` checks the active account and
 membership, freezes a copy of scope and supplies transaction-bound repositories.
-Later identity/authorization owners create that server-validated context. A
-request body cannot grant scope. Internal account provisioning is the explicit
-bootstrap exception.
+Identity resolves the internal account and personal workspace from verified
+provider proof. Later workspace authorization creates the complete role-aware
+context. A request body cannot grant scope. Internal account provisioning is the
+explicit bootstrap exception.
 
 Queries are parameterized and contain scope/ownership predicates. One checked-out
 connection owns `BEGIN`, transaction-local scope, callback, commit/rollback and
@@ -79,9 +85,10 @@ completed billing system. Job claiming/execution remains #32.
 
 RLS and role-specific application authorization remain
 [#31](https://github.com/Sammieblz/tholi/issues/31). No RLS policy is claimed here.
-Runtime SQL credentials remain internal, and new cloud endpoints must not be
-exposed before authentication/authorization pass. Scoped repositories already
-enforce ownership; they do not make arbitrary SQL safe for untrusted clients.
+Runtime SQL credentials remain internal. The configured identity service exposes
+only its account/session operations; other cloud endpoints still require their
+authorization milestones before exposure. Scoped repositories already enforce
+ownership; they do not make arbitrary SQL safe for untrusted clients.
 
 ## Migration and deployment commands
 
@@ -104,9 +111,18 @@ Provision separate migration/runtime roles, using the existing local bootstrap
 as the reference. The migrator owns the schema. Set
 `THOLI_DATABASE_RUNTIME_ROLE` for the existing runtime role, default
 `tholi_runtime`. Migration refuses privileged, owner or owner-assuming roles and
-grants operations on named tables only. Runtime gets no DDL, DELETE, TRUNCATE or
-blanket future-table grants. Catalog/financial tables are append-only for runtime;
-physical erasure remains later privileged deletion work.
+grants operations on named tables only. Runtime gets no DDL, TRUNCATE or blanket
+future-table grants. DELETE is limited to expiring identity flows, brokers and
+provider logout markers for one-use consumption and bounded cleanup. Saved data
+remains tombstoned and catalog/financial tables remain append-only for runtime;
+broader physical erasure remains later privileged deletion work.
+
+Migration `003-portable-identity` extends the existing session foundation and
+revokes pre-identity active session rows rather than interpreting them as issued
+credentials. It leaves migrations 001/002 and their checksums intact. Identity
+flow, broker and session operations share the existing transaction owner; provider
+HTTP calls run outside those transactions. See [identity session security](service-identity.md#sessions-and-trust)
+for refresh replay, account-wide revocation and provider logout fences.
 
 Run migrations once before admitting traffic, not from every API replica. An
 advisory lock excludes another migrator. Each version commits SQL and its SHA-256

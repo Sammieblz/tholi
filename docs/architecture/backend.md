@@ -2,22 +2,26 @@
 
 The current API has two explicit bootstraps in the existing `apps/api` application.
 The [portable backend decision](../plans/gemini-cloud-and-enterprise.md) defines the
-later service architecture. This page covers the runtime foundation from
+service architecture. This page covers the runtime foundation from
 [#26](https://github.com/Sammieblz/tholi/issues/26) and service database foundation
 from [#28](https://github.com/Sammieblz/tholi/issues/28), with
-[versioned service discovery and contracts](../development/service-api.md) from #29.
+[versioned service discovery and contracts](../development/service-api.md) from #29
+and [optional portable identity](../development/service-identity.md) from #30.
 
 ## Profiles and entrypoints
 
-| Profile        | Factory and executable                          | Current capabilities                                                              |
-| -------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| Legacy private | `createApi` in `server.ts`; `cli.js`            | Existing authenticated `/v1` and `/v2`, SQLite, local inference and OCR workers   |
-| Service        | `createServiceApi` in `server.ts`; `service.js` | Health/readiness, capability negotiation, OpenAPI and injected resource lifecycle |
+| Profile        | Factory and executable                          | Current capabilities                                                                                                       |
+| -------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Legacy private | `createApi` in `server.ts`; `cli.js`            | Existing authenticated `/v1` and `/v2`, SQLite, local inference and OCR workers                                            |
+| Service        | `createServiceApi` in `server.ts`; `service.js` | Health/readiness, capability negotiation, OpenAPI and optional PostgreSQL-backed account authentication/session management |
 
-The service profile has no account, navigation, PostgreSQL or durable-job endpoints
-yet. A private bearer never grants service access. It does not load SQLite,
-ONNX, OCR or their worker adapters. Importing either bootstrap does not listen;
-only running its executable or calling its exported start function does.
+Without identity configuration, the service exposes health and discovery without
+opening PostgreSQL or an identity provider. Configured identity adds account and
+session routes through the same service runtime. Navigation, saved-data, credit,
+billing and durable-job endpoints remain planned. A private bearer never grants
+service access. The service does not load SQLite, ONNX, OCR or their worker
+adapters. Importing either bootstrap does not listen; only running its executable
+or calling its exported start function does.
 
 `scripts/build-api.mjs` preserves `cli.js`, `server.js`, `inference.js` and `ocr.js`,
 adds `service.js` and `database-cli.js`, and emits shared ESM chunks beside those entrypoints. Dynamic
@@ -50,15 +54,26 @@ and source maps before emitting a new set. No archive is changed by a build.
 - `database/` owns the PostgreSQL service schema, scoped repositories, pooled
   transactions and one-shot operator commands. See
   [service database setup and boundaries](../development/service-database.md).
-  These repositories have no service HTTP routes and never migrate private SQLite.
+  Identity repositories back configured account/session routes; other domain
+  repositories have no public routes yet. Neither profile migrates private SQLite.
+- `application/identity.ts` owns one application session lifecycle for website
+  cookies and native credentials through `identity-contracts.ts`. `adapters/oidc.ts`
+  verifies provider proof; `adapters/service-identity.ts` composes the database and
+  provider ports. `routes/identity.ts` owns HTTP credential delivery and CSRF.
+  See the [identity guide](../development/service-identity.md) for the protocol,
+  approved callbacks, revocation policy and deployment settings.
 
 There is one navigation engine and one repository owner per database profile.
-Authentication, protected service routes and durable worker execution remain later tickets.
+Workspace role authorization/RLS and durable worker execution remain later tickets.
+Authentication does not authorize model inference, upload local knowledge or
+transfer journey ownership to the server.
 
 The [local container stack](../development/local-stack.md) uses this same build
 and executable, with PostgreSQL, a local OIDC realm and captured mail. Its default
-internal networks deny internet egress. Infrastructure credentials are not injected
-into the discovery-only API before their adapters exist. `THOLI_MODEL_PROVIDER`
+internal networks deny internet egress. One-shot initialization containers apply
+migrations and reconcile the local identity client before the configured API starts.
+HTTP replicas receive runtime SQL and confidential OIDC client credentials, never
+migration or identity administration credentials. `THOLI_MODEL_PROVIDER`
 defaults to `fake`; any other provider fails startup until #39 implements the
 actual inference adapter and spending enforcement. This policy does not advertise
 an inference endpoint or change the legacy local model.
@@ -67,14 +82,18 @@ an inference endpoint or change the legacy local model.
 
 Both profiles provide `GET /health/live` and `GET /health/ready`. The private
 profile requires the existing bearer and origin policy for both; the service
-profile exposes them without account authentication and applies its exact-origin
-allowlist to browser requests. Responses have `Cache-Control: no-store`.
+profile exposes them without account authentication and applies its configured
+browser-origin policy. Configured identity separates credentialed website
+requests from native bearer transport; CORS is not authentication. Responses have
+`Cache-Control: no-store`.
 
 Liveness reports only process/profile/version metadata and performs no dependency
 probe or inference. Readiness is 200 when all injected resources are ready and 503
 while unavailable or draining. Each readiness probe is bounded to one second;
 failure details and credentials are withheld. An empty service resource set means
-the HTTP discovery foundation is ready, not that accounts or model inference work.
+the HTTP discovery foundation is ready. With identity enabled, readiness verifies
+the service database schema through the runtime role. It does not probe provider
+login, send mail or run model inference; those need their own verification.
 
 Local workers acknowledge startup after imports, database/queues and message
 listeners initialize. Model loading stays lazy; this is not a warm-model or asset
@@ -98,7 +117,7 @@ unknown route, payload/content-type limits and unavailable service have distinct
 statuses/codes. Unexpected exceptions do not expose their original message.
 The [service API contract](../development/service-api.md) defines separate
 versioned discovery, strict schemas, request deadlines and future route inventory.
-Authenticated service routes remain #30 work.
+Configured account/session routes use the same safe error and deadline policy.
 
 ## Validation ownership
 
@@ -114,6 +133,8 @@ Existing real-model integrations remain the functional owners:
 `tests/unit/api` covers distinct configuration, profile isolation, safe errors,
 worker startup/cancellation/failure and runtime shutdown contracts. Compiled
 bootstrap smoke checks additionally verify lazy native dependencies and default
-worker locations; their observed result belongs in the issue PR. The deterministic
-PR gate remains `npm run test:ci`. These checks do not certify a release, live
-Gemini quality, native browser permissions or signed-in accounts.
+worker locations; their observed result belongs in the issue PR. Identity has
+distinct signed-token/HTTP regressions and real PostgreSQL coverage, with native
+browser and provider-flow checks recorded separately. The deterministic PR gate
+remains `npm run test:ci`. Unit checks do not certify a release, live Gemini
+quality, native browser permissions or completed provider sign-in.

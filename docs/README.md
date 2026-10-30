@@ -15,6 +15,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Cloud-free local backend containers](development/local-stack.md)
 - [Service PostgreSQL setup, migrations and repositories](development/service-database.md)
 - [Service API contracts, discovery and request policy](development/service-api.md)
+- [Optional accounts, OIDC and cross-client session security](development/service-identity.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

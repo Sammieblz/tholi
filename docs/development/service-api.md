@@ -26,10 +26,14 @@ curl http://127.0.0.1:8788/api/v1/handshake \
 curl http://127.0.0.1:8788/api/v1/openapi.json
 ```
 
-The response currently advertises only `capabilities`, `handshake` and `openapi`.
-Authentication, account data, decisions and billing are unavailable. No model
-provider, credentials, PostgreSQL connection or account is needed for discovery.
-There are no successful placeholder account or decision endpoints.
+A discovery-only service advertises `capabilities`, `handshake` and `openapi`.
+It needs no model provider, credentials, PostgreSQL connection or account.
+Configuring the [optional identity profile](service-identity.md) adds the
+`authentication` and `account-security` capabilities. Its authentication and
+accountData availability flags describe real sign-in and account/session metadata.
+Cloud-saved data, inference, credits and billing remain planned; decisions and
+billing availability stay false. There are no successful placeholder decision
+endpoints.
 
 The executable OpenAPI document contains the request example above, bounded
 schemas and common error definitions. Its `paths` describe registered operations
@@ -90,12 +94,20 @@ mutation. Only explicitly classified unavailable failures are retryable.
 `X-Request-Id` is a server-generated UUID;
 caller-supplied IDs cannot replace it.
 
-All service responses, including errors, are `Cache-Control: no-store`. All
-legacy authenticated responses now have the same explicit cache policy while
-retaining their response/status contracts. Browser CORS uses exact configured
-website origins, permits GET/POST and only the currently needed headers, and
-exposes the request ID. CORS and a successful handshake are not authorization.
-Account routes must add their own authentication and CSRF policy in #30.
+All service responses, including errors, are `Cache-Control: no-store`. Legacy
+authenticated responses retain the same explicit cache policy and existing
+response/status contracts. Discovery-only browser CORS uses exact configured
+website origins, GET/POST and its bounded content-type/deadline headers.
+
+Configured identity additionally admits registered Chromium and validated native
+Firefox origins for bearer transport, DELETE session revocation, Authorization
+and X-Tholi-CSRF headers. Only the exact configured website origin receives
+credentialed CORS. Cookie-authenticated reads reject another Origin, including
+native extension origins; cookie mutations require both the website Origin and
+session-bound CSRF proof. Native bearer credentials and cookie sessions have
+distinct delivery rules over one session owner. Responses expose the request ID.
+CORS and a successful handshake grant no authentication or entitlement. See the
+[identity guide](service-identity.md#sessions-and-trust) for the complete policy.
 
 ## Deadlines, cancellation and idempotency
 
@@ -115,7 +127,7 @@ or that a mutation did not commit. The legacy inference/OCR timeouts and
 retained-request behavior remain unchanged. Interactive observations must not
 become a durable replay queue.
 
-Future mutations use the existing repository request ledger, not process-local
+Future workspace/domain mutations use the existing repository request ledger, not process-local
 deduplication. The identity is `(workspace, actor, operation/version, key)`, bound
 to a server-computed canonical-command SHA-256 hash. Canonicalization occurs
 after strict validation, includes the operation version, and excludes transport
@@ -129,7 +141,8 @@ Plan selection is intent. The server resolves catalog versions, entitlement,
 credit availability and approved callback/checkout destinations. Client tier
 names, counters, payment redirects and arbitrary URLs never grant access.
 Shared auth/checkout intent schemas accept named destinations rather than URLs;
-#30/#50 implement registered, single-use bound returns. Local use needs no
+Identity uses registered, single-use PKCE-bound broker returns; checkout remains
+#50 work. Local use needs no
 account or checkout, and Free Cloud must not require paid checkout. Account/data
 read, export and deletion permissions stay separate from inference credits.
 

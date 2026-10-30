@@ -25,7 +25,7 @@ function db() {
   }));
 }
 export async function getPrivateSetting<T>(
-  key: "backend" | "vision",
+  key: "backend" | "vision" | "service-auth",
 ): Promise<T | undefined> {
   if (browserTarget() === "chromium") {
     await protectLocalSettings();
@@ -40,7 +40,7 @@ export async function getPrivateSetting<T>(
   });
 }
 export async function setPrivateSetting(
-  key: "backend" | "vision",
+  key: "backend" | "vision" | "service-auth",
   value: unknown,
 ) {
   if (browserTarget() === "chromium") {

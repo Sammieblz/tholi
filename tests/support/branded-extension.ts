@@ -5,17 +5,20 @@ import edge from "selenium-webdriver/edge.js";
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { attachWebDriverExtension } from "./webdriver-extension";
+import { attachWebDriverExtension, seleniumBidi } from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
+
 export async function openBrandedExtension(
   name: "chrome" | "edge" | "brave",
   url: string,
 ) {
   assertFixtureUrl(url);
   const options = name === "edge" ? new edge.Options() : new chrome.Options();
+  const nativeIdentity =
+    name === "chrome" && process.env.THOLI_BROWSER_GROUP === "identity";
   options.addArguments(
     "--headless=new",
     "--enable-unsafe-extension-debugging",
@@ -75,7 +78,12 @@ export async function openBrandedExtension(
     await driver.switchTo().newWindow("tab");
     const panel = await driver.getWindowHandle();
     await driver.get("chrome-extension://" + installed.id + "/sidepanel.html");
-    await driver.wait(until.elementLocated(By.css(".tholi-app")), 10000);
+    const application = await driver.wait(
+      until.elementLocated(By.css(".tholi-app")),
+      10000,
+    );
+    if (nativeIdentity)
+      await driver.wait(until.elementIsVisible(application), 10_000);
     const tabId = await driver.executeAsyncScript<number>(function (
       url: string,
       done: (value: number) => void,
@@ -88,6 +96,26 @@ export async function openBrandedExtension(
         );
     }, url);
     if (tabId < 0) throw Error("Branded fixture tab missing");
+    if (nativeIdentity) {
+      // The mapper can pause the browser-owned auth popup and restarted worker.
+      // Keep the real browser flow and use classic execution after installation.
+      // https://github.com/GoogleChromeLabs/chromium-bidi/blob/main/src/bidiMapper/BidiServer.ts
+      const reply = await (
+        await seleniumBidi(driver)
+      ).send({
+        method: "goog:cdp.sendCommand",
+        params: {
+          method: "Target.setAutoAttach",
+          params: {
+            autoAttach: false,
+            waitForDebuggerOnStart: false,
+            flatten: true,
+          },
+        },
+      });
+      if (reply.error)
+        throw Error("The native Chrome debugger attachment policy failed.");
+    }
     return await attachWebDriverExtension(
       driver,
       website,
@@ -95,6 +123,8 @@ export async function openBrandedExtension(
       tabId,
       url,
       await fixtureOnlySeleniumNetwork(driver, [website, panel]),
+      undefined,
+      nativeIdentity ? "classic" : "bidi",
     );
   } catch (error) {
     await driver.quit().catch(() => {});

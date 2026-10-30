@@ -136,8 +136,8 @@ test("published store download links navigate independently of cookies and devel
   expect(metadataRequests).toBe(1);
 });
 
-for (const retired of ["signin", "signup", "welcome"])
-  test(`retired account route /${retired} replaces history without a Back loop`, async ({
+for (const route of ["signin", "signup", "welcome"])
+  test(`account route /${route} ignores mock identity and preserves Back behavior`, async ({
     page,
   }) => {
     await page.addInitScript(() =>
@@ -158,9 +158,11 @@ for (const retired of ["signin", "signup", "welcome"])
       link.href = route;
       link.textContent = "Legacy account bookmark";
       document.querySelector("main")!.append(link);
-    }, "/" + retired);
+    }, "/" + route);
     await page.getByRole("link", { name: "Legacy account bookmark" }).click();
-    await expect(page).toHaveURL(/\/download$/);
+    await expect(page).toHaveURL(
+      new RegExp(`/${route === "welcome" ? "account" : route}$`),
+    );
     await expect(page.locator("main h1")).toBeFocused();
     await expect(
       page.locator('input[type="password"], .auth-page'),
@@ -169,12 +171,16 @@ for (const retired of ["signin", "signup", "welcome"])
       "Legacy account reader",
     );
     await expect(
-      page.getByRole("link", { name: /Welcome|Sign in|Sign up/ }),
+      page
+        .locator("nav")
+        .getByRole("link", { name: /Welcome|Sign in|Sign up/ }),
     ).toHaveCount(0);
     await page.goBack();
     await expect(page).toHaveURL(/\/about$/);
     await page.goForward();
-    await expect(page).toHaveURL(/\/download$/);
+    await expect(page).toHaveURL(
+      new RegExp(`/${route === "welcome" ? "account" : route}$`),
+    );
   });
 
 test("account-free onboarding, dark theme and reduced motion retain local practice", async ({

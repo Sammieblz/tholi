@@ -33,6 +33,8 @@ const full =
       "nlp",
       "multi-app",
       "vision",
+      "identity",
+      "identity-web",
     ].includes(task));
 const env = {
   ...process.env,
@@ -86,6 +88,8 @@ function vitest(scope) {
   ]);
 }
 const browserGroups = {
+  identity: ["native-identity"],
+  "identity-web": ["identity-web-chromium", "identity-web-firefox"],
   "navigation-baseline": ["navigation-baseline"],
   core: ["core-desktop", "narrow"],
   integration: ["nlp", "multi-app", "continuity", "reliability"],
@@ -112,15 +116,17 @@ const browserGroups = {
 };
 function browser(scope) {
   env.THOLI_BROWSER_GROUP = scope;
-  env.THOLI_BROWSER_NETWORK = [
-    "navigation-baseline",
-    "live",
-    "acceptance",
-    "acceptance-chromium",
-    "acceptance-firefox",
-  ].includes(scope)
-    ? "public"
-    : "fixtures";
+  env.THOLI_BROWSER_NETWORK = ["identity", "identity-web"].includes(scope)
+    ? "local-identity"
+    : [
+          "navigation-baseline",
+          "live",
+          "acceptance",
+          "acceptance-chromium",
+          "acceptance-firefox",
+        ].includes(scope)
+      ? "public"
+      : "fixtures";
   run(scope, "node_modules/playwright/cli.js", [
     "test",
     ...(forwarded.some((arg) => arg.startsWith("--project"))

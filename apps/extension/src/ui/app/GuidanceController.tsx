@@ -5,6 +5,7 @@ import { api } from "../../platform/api";
 import { JourneyDetails } from "../features/journey/JourneyDetails";
 import { AdvancedTools } from "../features/advanced/AdvancedTools";
 import { WorkflowPanel } from "../features/journey/WorkflowPanel";
+import { AccountSettings } from "../features/account/AccountSettings";
 import {
   currentAttentionWorkflow,
   workflowRequiresAttention,
@@ -81,6 +82,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       }
       notice={notice}
       widget={widget}
+      account={widget ? undefined : <AccountSettings />}
       onMinimize={() =>
         void api.runtime.sendMessage({ type: "UI_MINIMIZE" }).then((r) => {
           if (r.error) setError(r.error);

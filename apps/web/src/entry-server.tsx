@@ -5,7 +5,7 @@ import { StaticRouter } from "./app/router";
 import { PreferencesProvider } from "./features/preferences";
 export {
   publicPages,
-  retiredAccountPaths,
+  accountRedirects,
   metadataForPath,
   seoTags,
   absoluteUrl,

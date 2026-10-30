@@ -31,6 +31,21 @@ The same job runs [service database checks](../service-database.md) against actu
 PostgreSQL: upgrades, runtime privileges, scoped transactions, revision/credit
 concurrency, backup/restore and reset. Its test image is separate from production.
 
+Real [portable identity](../service-identity.md) checks are separate opt-in local
+cohorts: `npm run test:identity` exercises native Chrome and Firefox, while
+`npm run test:identity:web` exercises configured website registration,
+verification and recovery in Chromium and Firefox. They require an explicitly
+allocated `tholi-smoke-...` stack with its private environment inside `output/qa`,
+matching service/provider origins and synthetic credentials supplied through
+process environment. They fail when configuration or a real native permission
+dialog is unavailable. They do not substitute mocked tokens or permission grants.
+Set `THOLI_IDENTITY_REGISTER_CALLBACKS=1` only to register observed native returns
+on that allocated local stack. Build the configured website for its declared
+`THOLI_WEB_ORIGIN`, and keep these runs separate from the default account-free
+website build. Screenshots, video and traces are disabled to keep credentials,
+email action links and session cookies out of artifacts. Their focused evidence
+does not certify a release or replace the deterministic PR gate.
+
 Nightly at 06:00 UTC, manual full validation and version tags retain public-site journeys, frozen model/OCR benchmarks, busy-page/performance budgets and every responsive acceptance scenario. Public tests include the reported-page and language cases formerly hidden in the NLP browser folder. PR contexts reject unexpected public HTTP requests; explicitly fulfilled fixtures remain usable. The full coordinator applies the same fixture-only network policy to its local browser groups, enabling public access only for live-site and acceptance groups.
 
 Each workflow builds extension, website, API and browser fixtures once. Core/integration groups start only the demo preview; UI starts demo and website previews; live-site groups start neither; acceptance starts only the demo needed by its local fixture. Parallel jobs download immutable artifacts and verify `output/build-manifest.json`, including pinned inference assets. Heavy model jobs stay isolated. npm downloads and verified pinned assets are cached; caches never replace hash validation. State reads are passive and bounded. Starting a browser fixture waits for both worker state and the panel ready controls. Headless exports use a shared browser-completion/file adapter; automatic-download prompts are explicitly pregranted in disposable profiles. Only the two export fixtures select Chromium’s disk-backed blob transport to avoid host memory-pressure starvation; performance profiles retain normal browser settings. Fresh profiles preserve test isolation, while extension files are shared. Fixture-only permission copies are created once per worker. Native grants still require manual verification.
@@ -57,4 +72,4 @@ Full validation includes paired `browser-performance` measurements on the same h
 
 Full acceptance has separate `acceptance-chromium` and `acceptance-firefox` owners, each covering both declared viewports and all frozen IDs. Nightly CI runs them in separate jobs and merges only matching run/build evidence. Locally, `node scripts/test.mjs full --group acceptance-firefox` runs that complete owner; the Chromium equivalent uses `acceptance-chromium`. The existing `test:acceptance` alias still runs both targets as a focused validation. Background memory assertions wait for durable state without adding persistence latency to navigation or Stop. Browser teardown has a separate thirty-second bound, and native Firefox timeouts clean up only identity-checked disposable profiles.
 
-Gecko cannot intercept privileged extension contexts through BiDi. Deterministic website interception rejects public HTTP requests; packaged extension CSP/assets and private-settings boundaries are checked separately. Native permission prompts, screen-reader speech and signed-in workflows remain explicit manual checks.
+Gecko cannot intercept privileged extension contexts through BiDi. Deterministic website interception rejects public HTTP requests; packaged extension CSP/assets and private-settings boundaries are checked separately. Ordinary fixture suites do not establish native permissions or signed-in behavior. Those require separately recorded real-browser cohorts or manual checks. Screen-reader speech remains a manual check.

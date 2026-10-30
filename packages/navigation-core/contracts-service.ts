@@ -21,14 +21,12 @@ const implementationVersionSchema = z.string().min(1).max(80);
 const supportedVersionsSchema = z
   .array(z.literal(SERVICE_CONTRACT_VERSION))
   .length(1);
-export const serviceCapabilitySchema = z.enum([
-  "capabilities",
-  "handshake",
-  "openapi",
-]);
+// Unknown, bounded capability names remain readable by older version-1 clients.
+// Clients must explicitly require a capability before using its contract.
+export const serviceCapabilitySchema = capabilityNameSchema;
 const capabilitiesSchema = z
   .array(serviceCapabilitySchema)
-  .max(3)
+  .max(32)
   .refine(
     (values) => new Set(values).size === values.length,
     "Capabilities must be distinct.",

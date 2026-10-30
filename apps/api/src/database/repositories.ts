@@ -117,38 +117,9 @@ export class PostgresRepositories {
     },
   ): Promise<RepositoryScope> {
     input = snapshot(input);
-    return withTransaction(this.pool, async (client) => {
-      await client.query(
-        "INSERT INTO tholi.accounts (id) VALUES ($1) ON CONFLICT DO NOTHING",
-        [input.accountId],
-      );
-      await client.query(
-        `INSERT INTO tholi.workspaces (id, kind, owner_account_id)
-         VALUES ($1, 'personal', $2) ON CONFLICT DO NOTHING`,
-        [input.workspaceId, input.accountId],
-      );
-      const workspace = await client.query(
-        `SELECT w.id FROM tholi.workspaces w
-         JOIN tholi.accounts a ON a.id = w.owner_account_id
-         WHERE w.id = $1 AND w.owner_account_id = $2
-           AND w.kind = 'personal' AND a.status = 'active'`,
-        [input.workspaceId, input.accountId],
-      );
-      if (!workspace.rowCount) conflict();
-      await client.query(
-        `INSERT INTO tholi.memberships (workspace_id, account_id, role)
-         VALUES ($1, $2, 'owner') ON CONFLICT DO NOTHING`,
-        [input.workspaceId, input.accountId],
-      );
-      const membership = await client.query(
-        `SELECT 1 FROM tholi.memberships
-         WHERE workspace_id = $1 AND account_id = $2
-           AND role = 'owner' AND status = 'active'`,
-        [input.workspaceId, input.accountId],
-      );
-      if (!membership.rowCount) conflict();
-      return { ...input };
-    });
+    return withTransaction(this.pool, (client) =>
+      provisionAccountOnClient(client, input),
+    );
   }
 
   async transaction<T>(
@@ -194,6 +165,43 @@ export class PostgresRepositories {
       authorizedScope,
     );
   }
+}
+
+/** Identity linking and operator seeding share the same atomic provisioning. */
+export async function provisionAccountOnClient(
+  client: PoolClient,
+  input: RepositoryScope,
+): Promise<RepositoryScope> {
+  await client.query(
+    "INSERT INTO tholi.accounts (id) VALUES ($1) ON CONFLICT DO NOTHING",
+    [input.accountId],
+  );
+  await client.query(
+    `INSERT INTO tholi.workspaces (id, kind, owner_account_id)
+         VALUES ($1, 'personal', $2) ON CONFLICT DO NOTHING`,
+    [input.workspaceId, input.accountId],
+  );
+  const workspace = await client.query(
+    `SELECT w.id FROM tholi.workspaces w
+         JOIN tholi.accounts a ON a.id = w.owner_account_id
+         WHERE w.id = $1 AND w.owner_account_id = $2
+           AND w.kind = 'personal' AND a.status = 'active'`,
+    [input.workspaceId, input.accountId],
+  );
+  if (!workspace.rowCount) conflict();
+  await client.query(
+    `INSERT INTO tholi.memberships (workspace_id, account_id, role)
+         VALUES ($1, $2, 'owner') ON CONFLICT DO NOTHING`,
+    [input.workspaceId, input.accountId],
+  );
+  const membership = await client.query(
+    `SELECT 1 FROM tholi.memberships
+         WHERE workspace_id = $1 AND account_id = $2
+           AND role = 'owner' AND status = 'active'`,
+    [input.workspaceId, input.accountId],
+  );
+  if (!membership.rowCount) conflict();
+  return { ...input };
 }
 
 /** Created by PostgresRepositories.transaction, on its checked-out connection. */

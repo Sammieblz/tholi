@@ -5,12 +5,12 @@
   margin: 32px auto 64px;
   border: 1px solid var(--line);
   border-radius: 22px;
-  overflow: clip;
   background: var(--card);
 }
 .auth-aside {
-  min-height: 620px;
+  min-height: 560px;
   padding: 48px 40px;
+  border-radius: 22px 0 0 22px;
   background: var(--jade);
   color: var(--on-jade);
   display: flex;
@@ -32,13 +32,11 @@
 .auth-aside > div > span:last-child {
   font-size: 15px;
   line-height: 1.7;
-  opacity: 0.8;
 }
 .auth-aside-label,
 .auth-aside > span:last-child {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  opacity: 0.8;
 }
 .auth-card {
   padding: 44px;
@@ -49,80 +47,21 @@
   font-size: 36px;
   margin: 20px 0 16px;
 }
-.auth-card > .small {
-  font-size: 13px;
-}
-.auth-card label {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  margin: 20px 0 0;
-}
-.auth-card input {
-  display: block;
-  width: 100%;
-  margin-top: 9px;
-  min-height: 48px;
-  font-size: 14px;
-  font-weight: 400;
-}
-.auth-card input[aria-invalid="true"] {
-  border-color: var(--danger);
-}
 .auth-card .primary {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   width: 100%;
-  margin-top: 24px;
+  margin-block: 24px;
   min-height: 50px;
   font-size: 14px;
 }
-.auth-card .primary .tholi-wayfinder {
-  width: 24px;
-  height: 24px;
-}
-.field-optional {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 400;
-  margin-left: 6px;
-}
-.password-field {
-  display: block;
-  position: relative;
-}
-.password-field input {
-  padding-right: 64px;
-}
-.password-field button {
-  position: absolute;
-  right: 6px;
-  top: 2px;
-  height: 44px;
-  min-height: 44px;
-  padding: 6px 10px;
-  background: transparent;
-  border: 0;
-  color: var(--jade);
-  font-size: 12px;
-}
-.field-hint {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 8px 0 0;
-}
-.field-error,
 .auth-error {
   color: var(--danger);
-  font-size: 12px;
   line-height: 1.6;
-  margin: 7px 0 0;
 }
 .auth-switch {
-  font-size: 12px;
-  margin: 24px 0;
+  margin-block: 24px;
 }
 .auth-independent {
   display: flex;
@@ -130,45 +69,75 @@
   align-items: flex-start;
   padding-top: 20px;
   border-top: 1px solid var(--line);
-  color: var(--jade);
-  font-size: 12px;
   line-height: 1.6;
 }
 .auth-independent svg {
   flex: none;
-  margin-top: 2px;
+  margin-top: 3px;
 }
-.welcome-intro {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.account-details {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 24px;
+  margin-block: 28px;
 }
-.welcome-intro .tholi-wayfinder {
-  width: 56px;
-  height: 56px;
+.account-details dt {
+  font-weight: 700;
 }
-.welcome h1 {
+.account-details dd {
+  margin: 0;
   overflow-wrap: anywhere;
 }
-.welcome > p {
-  max-width: 66ch;
-  color: var(--muted);
-}
-.welcome-actions {
+.account-actions {
   display: flex;
-  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin: 28px 0 32px;
+  gap: 12px;
+  margin-block: 24px;
 }
-.welcome-actions > button {
+.account-actions button,
+.account-sessions button {
+  min-height: 44px;
+}
+.account-sessions {
+  list-style: none;
+  padding: 0;
+}
+.account-sessions > li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-block: 24px;
+  border-bottom: 1px solid var(--line);
 }
-.welcome .demo {
-  margin-top: 44px;
+.account-sessions p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+.account-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+  z-index: 200;
+}
+.account-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 40px));
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  z-index: 201;
+}
+.account-dialog h2 {
+  font-size: 26px;
+  margin-top: 0;
 }
 @media (max-width: 900px) {
   .auth-layout {
@@ -192,6 +161,7 @@
   }
   .auth-aside {
     min-height: 0;
+    border-radius: 22px 22px 0 0;
     padding: 24px;
     flex-direction: row;
     align-items: center;
@@ -218,5 +188,12 @@
   }
   .auth-card h1 {
     font-size: 32px;
+  }
+  .account-details {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .account-details dd {
+    margin-bottom: 12px;
   }
 }

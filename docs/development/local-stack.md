@@ -2,8 +2,9 @@
 
 Roadmap [#27](https://github.com/Sammieblz/tholi/issues/27) supplies development
 infrastructure for the [portable backend](../plans/gemini-cloud-and-enterprise.md).
-It uses the existing API build and service runtime. It does not change the
-account-free extension or its optional SQLite/private API.
+It uses the existing API build and service runtime, with optional account/session
+integration from [#30](service-identity.md). Local extension guidance and the
+optional SQLite/private API remain independent of accounts.
 
 ## Prerequisites and startup
 
@@ -27,6 +28,18 @@ your directory's ACLs; choose a private working directory. `.env.example` explai
 the supported settings and contains only disposable development values. These
 credentials and the local realm must never be used for a hosted environment.
 
+For an environment created before identity integration, append its missing
+settings without replacing the file or deleting data:
+
+```sh
+npm run local:init -- --upgrade-identity true
+npm run local:up
+```
+
+The explicit upgrade preserves existing secrets, ports and project settings.
+See [identity setup](service-identity.md#local-setup) for the website service
+origin and browser callback registration.
+
 The API uses the pinned, non-root image built by `apps/api/Dockerfile` through
 `build:api`, not the extension/model build or a release packager. The image keeps
 the existing API entrypoints and their shared chunks. Its Node/Debian base matches
@@ -36,14 +49,14 @@ there is no idle worker pretending to process jobs in this stack.
 
 ## Services and trust boundaries
 
-| Service             | Host access                          | Container address          | Persistence                      |
-| ------------------- | ------------------------------------ | -------------------------- | -------------------------------- |
-| API                 | `http://localhost:8788/health/ready` | `api:8788`                 | Stateless                        |
-| PostgreSQL          | None                                 | `postgres:5432`            | Named PostgreSQL volume          |
-| Local OIDC          | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL |
-| Mail capture        | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume             |
-| Optional S3 storage | `http://localhost:18333`             | `storage:8333`             | Named storage volume             |
-| Optional telemetry  | None                                 | OTLP HTTP `telemetry:4318` | No durable telemetry store       |
+| Service             | Host access                          | Container address          | Persistence                         |
+| ------------------- | ------------------------------------ | -------------------------- | ----------------------------------- |
+| API                 | `http://127.0.0.1:8788/health/ready` | `api:8788`                 | Account/session state in PostgreSQL |
+| PostgreSQL          | None                                 | `postgres:5432`            | Named PostgreSQL volume             |
+| Local OIDC          | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL    |
+| Mail capture        | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume                |
+| Optional S3 storage | `http://localhost:18333`             | `storage:8333`             | Named storage volume                |
+| Optional telemetry  | None                                 | OTLP HTTP `telemetry:4318` | No durable telemetry store          |
 
 Ports are adjustable in `.env`; all published ports bind to loopback on the local
 gateway. It proxies only the four fixed application, identity, mail and optional
@@ -59,13 +72,16 @@ The optional S3 service requires generated credentials and denies anonymous read
 The API runs as a non-root user with a read-only root filesystem, writable tmpfs,
 dropped Linux capabilities and no privilege escalation. Images are pinned to
 version and manifest digest. Health probes check local services without inference
-or paid requests. Container startup dependencies do not make the current API
-database-aware: `/health/ready` still describes its health-only resource set.
+or paid requests. The configured API checks its PostgreSQL schema during startup
+and readiness. It does not treat readiness as proof of provider login, mail
+delivery or native browser authorization. A discovery-only API launched without
+identity configuration retains its empty dependency set.
 
 The PostgreSQL bootstrap separates administration, migrations, runtime and OIDC
 ownership. Application runtime credentials cannot create schemas or bypass RLS.
-Use the migration role only for schema changes. The local server and identity
-pool have explicit connection bounds; future API/worker pools must fit the
+Use the migration role only for schema changes. PostgreSQL, Keycloak and API
+pools have explicit connection bounds; future workers and additional replicas
+must fit the
 [adopted connection budget](../plans/gemini-cloud-and-enterprise.md#scaling-deadlines-and-connection-budgets).
 Do not publish PostgreSQL or identity management ports to a public interface.
 
@@ -75,9 +91,12 @@ Initial PostgreSQL startup creates the local databases and roles. The identity
 container imports `infra/local/oidc/tholi-local-realm.json` on its first startup.
 The sample identity is synthetic and local-only; use the username in that file
 and `OIDC_TEST_PASSWORD` from your private `.env`. The admin password is separate.
-The application account/workspace seed is synthetic and does not sign a user in.
-Sign-up, sessions, extension login and PKCE integration remain
-[#30](https://github.com/Sammieblz/tholi/issues/30).
+Dedicated `database-migrate` and `identity-configure` initialization containers
+apply the service schema and reconcile the local realm/client before the API
+starts. HTTP replicas never run migrations or identity administration. The
+application account/workspace seed is synthetic and does not sign a user in.
+Use the separate [identity guide](service-identity.md) for real local sign-up,
+website sessions, native extension login and verification/recovery mail.
 
 ```sh
 npm run local:migrate
@@ -89,26 +108,30 @@ application migrations through the operator-only API-image command. See
 [service database setup, roles and pooling](service-database.md). Keep migration
 execution as a one-shot operator command rather than racing it from API replicas.
 
-`local:seed` creates the local realm if missing and preserves an existing realm.
-It also idempotently provisions a synthetic Tholi account and personal workspace
-after migrations, without granting credits or paid entitlements.
-It does not silently replace changed users or erase identity data. Changes to a
-checked-in realm import are not automatically applied to a retained database.
-Use a deliberate identity migration or an explicitly destructive local reset.
-Changing a password in `.env` does not rotate initialized credentials on normal
-startup. The explicit infrastructure migration reapplies database-role passwords;
-identity admin/user rotation requires its own deliberate operation. Coordinate
-credential rotation rather than deleting data.
+`local:seed` reconciles the owned realm settings and confidential `tholi-service`
+client while retaining existing users and their credentials. It also idempotently
+provisions a separate synthetic Tholi account and personal workspace after
+migrations, without granting credits or paid entitlements. The initializer uses
+the same identity seed owner, so retained installations gain the registered
+client without a reset. Realm import alone does not update retained installations.
+
+Changing `OIDC_TEST_PASSWORD` or the administrator password in `.env` does not
+rotate an existing identity user's credentials. Database-role passwords are
+reapplied by the explicit infrastructure migration. The owned OIDC client secret
+is reconciled from its configured value. Coordinate credential rotation and
+session invalidation using the [identity policy](service-identity.md#sessions-and-trust),
+rather than deleting data.
 
 The canonical local issuer is
 `http://localhost:18080/realms/tholi-local` (adjust for your chosen port). Containers
 reach discovery/JWKS through `oidc:8080`; the issuer must remain the canonical
-browser URL. Container `localhost` refers to that container. The eventual identity
-adapter must validate issuer and audience and use the appropriate internal
-backchannel. This stack alone does not implement that adapter. The website dev
-server remains `http://127.0.0.1:5174`. The seed contains no application OAuth
-clients; #30 must register exact redirect URIs, without wildcards, with its login
-integration.
+browser URL. Container `localhost` refers to that container. The configured adapter
+validates the public issuer and uses explicit internal token/JWKS endpoints. The
+website dev server remains `http://127.0.0.1:5174`; use the configured
+`127.0.0.1` API origin for account flows so browser-binding cookies return to the
+same host. The confidential client's exact callback, logout return and internal
+backchannel are reconciled by the seed. Native browser callbacks require their
+own exact registrations, without wildcards.
 
 ## Optional profiles and model policy
 
@@ -123,8 +146,9 @@ both services. Read generated storage credentials from `.env`; do not copy them
 into client bundles.
 
 The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. At this stage
-that is a cloud-free policy, not a navigation endpoint: the service is still
-limited to health and API discovery. The typed deterministic fake and Gemini inference adapters belong
+that is a cloud-free policy, not a navigation endpoint. Configured identity adds
+only accounts and session security to health/discovery. The typed deterministic
+fake and Gemini inference adapters belong
 to [#39](https://github.com/Sammieblz/tholi/issues/39). The legacy private API keeps
 its existing local NLP/OCR behavior independently.
 

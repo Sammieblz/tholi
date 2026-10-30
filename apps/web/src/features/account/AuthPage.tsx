@@ -1,196 +1,104 @@
 import "./account.css";
-import { useRef, useState } from "react";
 import { ShieldCheck } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { useAccount } from "./session";
+
 export function AuthPage({ signup }: { signup: boolean }) {
-  const { go } = useRouter(),
-    { save } = useAccount();
-  const [name, setName] = useState(""),
-    [email, setEmail] = useState(""),
-    [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{
-    email?: string;
-    password?: string;
-    session?: string;
-  }>({});
-  const [loading, setLoading] = useState(false),
-    [showPassword, setShowPassword] = useState(false);
-  const emailInput = useRef<HTMLInputElement>(null),
-    passwordInput = useRef<HTMLInputElement>(null);
-  const auth = async () => {
-    if (loading) return;
-    const next: typeof errors = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      next.email = "Enter an email address, such as you@example.com.";
-    if (password.length < 8)
-      next.password = "Use at least 8 characters for the demo password.";
-    setErrors(next);
-    if (next.email || next.password) {
-      (next.email ? emailInput : passwordInput).current?.focus();
-      return;
-    }
-    setLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 180));
-      save({
-        name: name.trim() || email.trim().split("@")[0],
-        email: email.trim(),
-        onboarded: !signup,
-      });
-      setPassword("");
-      go(signup ? "/onboarding" : "/welcome");
-    } catch {
-      setErrors({
-        session:
-          "The demo session could not be saved. Allow browser session storage or get the extension without an account.",
-      });
-      setLoading(false);
-    }
-  };
+  const account = useAccount();
+  const { search } = useRouter();
+  const action = signup ? "signup" : "signin";
   return (
-    <section className="auth-layout">
+    <section className="auth-layout" aria-busy={account.loading}>
       <aside className="auth-aside" aria-hidden="true">
-        <Wayfinder state={loading ? "planning" : "idle"} />
+        <Wayfinder state="idle" />
         <div>
           <span className="auth-aside-label">A LITTLE DIRECTION</span>
           <p>
-            Less “where is it?”
+            Find your way.
             <br />
-            More “here we go.”
+            Keep control.
           </p>
           <span>
-            Keep your destination.
+            Your local guidance stays yours.
             <br />
-            Find your next step.
+            An account is always optional.
           </span>
         </div>
         <span>THOLI / FIND YOUR WAY FORWARD</span>
       </aside>
       <div className="auth-card">
-        <p className="eyebrow">LOCAL DEMO ACCOUNT</p>
+        <p className="eyebrow">YOUR THOLI ACCOUNT</p>
         <h1>{signup ? "A clear place to start." : "Welcome back."}</h1>
-        <p className="small" id="demo-account-note">
-          Explore a mock account using example details. No real account is
-          created and nothing is sent. Real accounts are coming in a later
-          version.
-        </p>
-        <form
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            void auth();
-          }}
-          aria-busy={loading}
-          aria-describedby="demo-account-note"
-        >
-          {signup && (
-            <label htmlFor="demo-name">
-              Name{" "}
-              <span className="field-optional" aria-hidden="true">
-                optional
-              </span>
-              <input
-                id="demo-name"
-                aria-label="Name"
-                autoComplete="off"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={80}
-                placeholder="How should we greet you?"
-              />
-            </label>
-          )}
-          <label htmlFor="demo-email">
-            Email
-            <input
-              ref={emailInput}
-              id="demo-email"
-              type="email"
-              autoComplete="off"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? "demo-email-error" : undefined}
-            />
-          </label>
-          {errors.email && (
-            <p className="field-error" id="demo-email-error" role="alert">
-              {errors.email}
-            </p>
-          )}
-          <label htmlFor="demo-password">Demo password</label>
-          <span className="password-field">
-            <input
-              ref={passwordInput}
-              id="demo-password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="off"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={8}
-              aria-invalid={!!errors.password}
-              aria-describedby={
-                errors.password
-                  ? "demo-password-help demo-password-error"
-                  : "demo-password-help"
-              }
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-pressed={showPassword}
-              aria-label={
-                showPassword ? "Hide demo password" : "Show demo password"
-              }
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </span>
-          <p id="demo-password-help" className="field-hint">
-            Use any example with 8 or more characters. It is never saved.
+        {new URLSearchParams(search).has("error") && (
+          <p className="auth-error" role="alert">
+            Sign-in was not completed. Try again when you are ready.
           </p>
-          {errors.password && (
-            <p className="field-error" id="demo-password-error" role="alert">
-              {errors.password}
+        )}
+        {account.loading ? (
+          <p role="status">Checking your account session.</p>
+        ) : account.session ? (
+          <>
+            <p>You are signed in. Review your sessions and account security.</p>
+            <SiteLink className="web-primary" to="/account">
+              Open your account
+            </SiteLink>
+          </>
+        ) : account.configured ? (
+          <>
+            <p>
+              Continue to Tholi's identity provider to{" "}
+              {signup ? "create your account" : "sign in"}. Your password stays
+              with the identity provider.
             </p>
-          )}
-          {errors.session && (
-            <p className="auth-error" role="alert">
-              {errors.session}
+            <a
+              className="primary web-primary"
+              href={account.authorizationUrl(action)}
+            >
+              Continue to {signup ? "sign up" : "sign in"}
+            </a>
+            <p className="small">
+              Secure session cookies are essential for accounts. Optional cookie
+              choices do not prevent sign-in.
             </p>
-          )}
-          <button className="primary web-primary" disabled={loading}>
-            {loading ? (
-              <>
-                <Wayfinder state="planning" />
-                Opening your local preview
-              </>
-            ) : (
-              <>{signup ? "Create demo account" : "Sign in to demo"}</>
-            )}
-          </button>
-        </form>
+            <p>
+              <a href={account.authorizationUrl("recover")}>
+                Recover account access
+              </a>
+            </p>
+            <p className="auth-switch">
+              <SiteLink to={signup ? "/signin" : "/signup"}>
+                {signup
+                  ? "Already have an account? Sign in"
+                  : "New here? Sign up"}
+              </SiteLink>
+            </p>
+          </>
+        ) : (
+          <>
+            <p>
+              Accounts are not available on this website yet. You can install
+              and use Tholi locally without an account.
+            </p>
+            <SiteLink className="web-primary" to="/download">
+              Get Tholi
+            </SiteLink>
+          </>
+        )}
+        {account.error && (
+          <p className="auth-error" role="alert">
+            {account.error}
+          </p>
+        )}
         <p className="auth-legal small">
           Read our <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
-          <SiteLink to="/terms">terms</SiteLink> before trying the account
-          preview.
-        </p>
-        <p className="auth-switch">
-          <SiteLink to={signup ? "/signin" : "/signup"}>
-            {signup
-              ? "Already exploring? Sign in to the demo"
-              : "New here? Create a demo account"}
-          </SiteLink>
+          <SiteLink to="/terms">terms</SiteLink>. Cloud guidance, paid plans and
+          credits are not available in this release.
         </p>
         <div className="auth-independent">
-          <ShieldCheck width={17} aria-hidden="true" />
+          <ShieldCheck width={18} aria-hidden="true" />
           <SiteLink to="/download">
-            Get the extension without an account
+            Use local guidance without an account
           </SiteLink>
         </div>
       </div>

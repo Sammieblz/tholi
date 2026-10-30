@@ -4,6 +4,7 @@ import {
   setPrivateSetting,
 } from "../platform/private-settings";
 import { api, type Tabs } from "../platform/api";
+import { serviceAuthCommand } from "../platform/service-auth";
 import type { createJourneyService } from "./journey-service";
 import type { SuspendedJourney } from "../../../../packages/navigation-core/continuity";
 import { taskKey } from "../../../../packages/goal-planner/task-journey";
@@ -94,6 +95,22 @@ interface Context {
 
 export function registerMessages(context: Context) {
   api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (typeof raw?.type === "string" && raw.type.startsWith("AUTH_")) {
+      if (!isPanel(sender)) {
+        respond({ error: "Open account controls from the Tholi sidebar." });
+        return;
+      }
+      // Authentication has its own lifecycle. A native sign-in window cannot block the journey queue.
+      void serviceAuthCommand(raw)
+        .then(respond)
+        .catch(() =>
+          respond({
+            error:
+              "The account request could not be completed. Review the service origin and account permissions, then try again.",
+          }),
+        );
+      return true;
+    }
     if (raw?.type === "UI_RESET_SESSION") {
       if (!trustedUi(sender, context.session)) {
         respond({ error: "Trusted Tholi interface required." });

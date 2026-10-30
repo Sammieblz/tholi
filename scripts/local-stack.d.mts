@@ -2,6 +2,7 @@ export function initializeLocalEnvironment(options: {
   envFile: string;
   project?: string;
   ports?: Record<string, string | number>;
+  upgradeIdentity?: boolean;
 }): { envFile: string };
 export interface LocalStackOptions {
   action: "up" | "down" | "status" | "logs" | "migrate" | "seed" | "reset";

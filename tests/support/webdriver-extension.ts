@@ -1,4 +1,5 @@
-import type { WebDriver } from "selenium-webdriver";
+import { error as webdriverError, type WebDriver } from "selenium-webdriver";
+import type chrome from "selenium-webdriver/chrome.js";
 import type { EventEmitter } from "node:events";
 export interface SeleniumBidi {
   send(command: {
@@ -19,12 +20,62 @@ export async function attachWebDriverExtension(
   url: string,
   finishNetwork: () => Promise<void>,
   closeDriver = () => driver.quit(),
+  execution: "bidi" | "classic" = "bidi",
 ) {
-  const bidi = await seleniumBidi(driver);
+  const bidi = execution === "bidi" ? await seleniumBidi(driver) : undefined;
   async function extension<T>(
     fn: (...args: any[]) => T,
     ...args: unknown[]
   ): Promise<Awaited<T>> {
+    if (execution === "classic") {
+      let previous: string | undefined;
+      try {
+        previous = await driver.getWindowHandle();
+      } catch (error) {
+        if (!(error instanceof webdriverError.NoSuchWindowError)) throw error;
+      }
+      if (previous !== panel) {
+        await driver.switchTo().window(panel);
+        if (previous) {
+          const targetId = previous.replace(/^CDwindow-/, "");
+          if (!/^[a-f0-9]{32}$/i.test(targetId))
+            throw Error("The native Chrome window identity is invalid.");
+          try {
+            // Keep actual browser focus on the website or auth popup while
+            // executing commands in the known synthetic sidebar tab.
+            await (driver as chrome.Driver).sendDevToolsCommand(
+              "Target.activateTarget",
+              { targetId },
+            );
+          } catch (error) {
+            const closed =
+              error instanceof webdriverError.NoSuchWindowError ||
+              (error instanceof webdriverError.WebDriverError &&
+                /No target with given id found|Target closed|target window already closed/i.test(
+                  error.message,
+                ));
+            if (
+              !closed ||
+              (await driver.getAllWindowHandles()).includes(previous)
+            )
+              throw error;
+          }
+        }
+      }
+      const raw = await driver.executeAsyncScript<string>(
+        "const done = arguments[arguments.length - 1];" +
+          "const args = JSON.parse(arguments[0]);" +
+          "Promise.resolve().then(() => (" +
+          fn.toString() +
+          ")(...args)).then(value => done(JSON.stringify({value}))," +
+          "() => done(JSON.stringify({error:true})));",
+        JSON.stringify(args),
+      );
+      const result = JSON.parse(raw);
+      if (result.error) throw Error("Extension WebDriver command failed.");
+      return result.value;
+    }
+    if (!bidi) throw Error("Extension WebDriver transport is unavailable.");
     const result = await bidi.send({
       method: "script.callFunction",
       params: {

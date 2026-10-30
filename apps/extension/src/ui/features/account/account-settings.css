@@ -1,0 +1,59 @@
+.tholi-account-settings {
+  margin: 16px 0;
+  padding: 16px 0;
+  border: 0;
+  border-block: 1px solid var(--line);
+  min-width: 0;
+}
+.tholi-account-settings legend {
+  padding: 0;
+  font-weight: 700;
+}
+.tholi-account-settings p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.tholi-account-settings label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.tholi-account-settings input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+}
+.tholi-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+.tholi-account-settings button {
+  min-height: 44px;
+}
+.tholi-account-id {
+  overflow-wrap: anywhere;
+}
+.tholi-account-settings ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tholi-account-settings li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}

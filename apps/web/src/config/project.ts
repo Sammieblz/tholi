@@ -1,4 +1,10 @@
 import metadata from "../../../../package.json" with { type: "json" };
+import { serviceOrigin } from "../../../../packages/navigation-core/service-client";
+
+const configuredService = import.meta.env?.VITE_THOLI_SERVICE_ORIGIN;
+export const serviceApiOrigin = configuredService?.trim()
+  ? serviceOrigin(configuredService)
+  : undefined;
 
 /** Canonical repository links come from the root package metadata. */
 export const repositoryUrl = metadata.repository.url.replace(/\.git$/, "");
