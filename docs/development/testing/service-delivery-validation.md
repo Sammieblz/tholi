@@ -27,6 +27,19 @@ container acceptance evidence. Real socket cases include forged forwarding,
 bounded admission, partial-header timeout, header overflow and Node's early
 socket-budget rejection with distinct server correlation and no-store headers.
 
+## Initial actual stack
+
+The clean source `834120aa1448e13038bc5502b59bdb9104e419da` passed all 51
+PostgreSQL groups, startup and repeated seed/migration checks. Its gateway
+cohort passed TLS, exact-host rejection, forwarding/raw-byte preservation,
+private cache isolation and upstream retry-header preservation, then failed
+inside the grouped authentication/CORS/body probes. The unchanged report is
+`output/qa/local-stack/tholi-smoke-mvv2wbrm-8219a696/smoke.json`, collected from
+14:39:41 through 14:43:15 UTC. Its owned project, volumes and synthetic TLS files
+were removed. It is failed evidence, not acceptance. The probe now identifies
+the fixed operation and numeric status without logging headers, bodies, private
+URLs or raw exceptions; its assertions are unchanged.
+
 Cloudflare edge behavior, Google gateway/WAF policy, hosted origin firewall
 configuration, an internet-trusted certificate and production load testing
 remain separate authorized deployment checks. Native browser permission,

@@ -169,6 +169,9 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     https = await import("node:https");
   const { createHmac } = await import("node:crypto");
   const results = [];
+  let phase = "TLS startup",
+    expectedStatus,
+    observedStatus;
   const tlsAgent = new https.Agent({ keepAlive: true, maxSockets: 16 });
   const plainAgent = new http.Agent({ keepAlive: true, maxSockets: 16 });
   const check = (name) => results.push({ name, passed: true });
@@ -221,6 +224,17 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
       req.on("error", reject);
       req.end(payload);
     });
+  // Labels are fixed QA operations. Never attach assertion messages or response
+  // headers/bodies, which can contain credentials or provider details.
+  const expectResponse = async (label, options, expected) => {
+    phase = label;
+    expectedStatus = expected;
+    observedStatus = undefined;
+    const response = await request(options);
+    observedStatus = response.status;
+    assert.equal(observedStatus, expectedStatus);
+    return response;
+  };
   try {
     const privateResponse = (response) =>
       assert.equal(response.headers["cache-control"], "no-store");
@@ -342,47 +356,60 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     );
 
     for (const direct of [false, true]) {
-      const denied = await request({
-        direct,
-        path: "/api/v1/account",
-        headers: { Authorization: "Bearer invalid" },
-      });
-      assert.equal(denied.status, 401);
+      const boundary = direct ? "direct API" : "TLS proxy";
+      const denied = await expectResponse(
+        boundary + " authentication",
+        {
+          direct,
+          path: "/api/v1/account",
+          headers: { Authorization: "Bearer invalid" },
+        },
+        401,
+      );
       privateResponse(denied);
       assert.notEqual(denied.headers["x-request-id"], "attacker-controlled");
-      const preflight = await request({
-        direct,
-        path: "/api/v1/support/requests",
-        method: "OPTIONS",
-        headers: {
-          Origin: origin,
-          "Access-Control-Request-Method": "POST",
-          "Access-Control-Request-Headers": "Content-Type",
+      const preflight = await expectResponse(
+        boundary + " allowed CORS preflight",
+        {
+          direct,
+          path: "/api/v1/support/requests",
+          method: "OPTIONS",
+          headers: {
+            Origin: origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Content-Type",
+          },
         },
-      });
-      assert.equal(preflight.status, 204);
+        204,
+      );
       assert.equal(preflight.headers["access-control-allow-origin"], origin);
       privateResponse(preflight);
-      const forbidden = await request({
-        direct,
-        path: "/api/v1/support/requests",
-        method: "OPTIONS",
-        headers: {
-          Origin: "https://untrusted.example.test",
-          "Access-Control-Request-Method": "POST",
+      const forbidden = await expectResponse(
+        boundary + " denied CORS preflight",
+        {
+          direct,
+          path: "/api/v1/support/requests",
+          method: "OPTIONS",
+          headers: {
+            Origin: "https://untrusted.example.test",
+            "Access-Control-Request-Method": "POST",
+          },
         },
-      });
-      assert.equal(forbidden.status, 403);
+        403,
+      );
       assert.equal(forbidden.headers["access-control-allow-origin"], undefined);
       privateResponse(forbidden);
-      const oversized = await request({
-        direct,
-        path: "/api/v1/support/requests",
-        method: "POST",
-        body: Buffer.alloc(512 * 1024 + 1, 32),
-        headers: { "Content-Type": "application/json" },
-      });
-      assert.equal(oversized.status, 413);
+      const oversized = await expectResponse(
+        boundary + " body budget",
+        {
+          direct,
+          path: "/api/v1/support/requests",
+          method: "POST",
+          body: Buffer.alloc(512 * 1024 + 1, 32),
+          headers: { "Content-Type": "application/json" },
+        },
+        413,
+      );
       privateResponse(oversized);
     }
     check(
@@ -445,6 +472,12 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     throw new Error(
       "Gateway validation failed after " +
         (results.at(-1)?.name ?? "TLS startup") +
+        "; phase " +
+        phase +
+        "; observed status " +
+        (observedStatus ?? "unavailable") +
+        "; expected status " +
+        (expectedStatus ?? "unavailable") +
         ".",
     );
   } finally {
