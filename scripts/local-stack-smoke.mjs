@@ -501,8 +501,17 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "The actual runtime role cannot read restored application records.",
     );
     check("application-backup-restore-with-runtime-readback");
+    stage = "worker restart after backup verification";
     await compose(
-      ["start", "--wait", "--wait-timeout", "90", "worker"],
+      [
+        "up",
+        "--detach",
+        "--no-deps",
+        "--wait",
+        "--wait-timeout",
+        "90",
+        "worker",
+      ],
       120000,
     );
     stage = "PostgreSQL role and schema privileges";
