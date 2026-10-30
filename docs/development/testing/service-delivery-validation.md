@@ -5,7 +5,7 @@ Roadmap [#34](https://github.com/Sammieblz/tholi/issues/34), collected on
 support, identity and database evidence. It does not authorize deployment,
 publication, a website release or replacing an existing archive.
 
-## Scope and pending validation
+## Scope and focused checks
 
 The change extends the existing Fastify, local gateway and website static-build
 owners. It adds a VM TLS adapter and shares the website cache policy between
@@ -13,9 +13,9 @@ Cloudflare Pages output and an optional Nginx static-host fragment. No edge
 function is required by the demonstrated workflows. The raw-byte receiver is
 test-only; no unsigned production webhook endpoint is introduced.
 
-The complete deterministic PR cohort, actual local-stack/TLS checks and
-exact-head hosted validation are pending until their results are recorded below.
-No earlier report is relabeled to cover these edits.
+Exact-head hosted validation remains a required merge gate. The local results
+below retain their original source and run attribution; no earlier report is
+relabeled to cover later edits.
 
 The focused configuration, service HTTP and retained-profile cohort passed all
 96 cases. The shared delivery/static-output/metadata/router cohort passed all
@@ -93,6 +93,30 @@ focused bootstrap cases and whole-project TypeScript pass. No application
 input changed after that successful build; its complete immutable manifest was
 verified before using the documented prepared-build option for a new full PR
 cohort.
+
+## Complete corrected local PR cohort
+
+All 729 cases passed: 593 unit, 47 core extension, 20 integration, two installed
+Firefox and 67 UI cases. Every coordinator step exited zero. Its run ID is
+`f6f413b2-4cbd-4262-a809-dc48dc37b996`, and all eight owner reports independently
+record that same ID and a passing result. The cohort used port 5188 and the
+verified immutable build from `95f2e58811e8defbec28168bfc81ced0ba60c328` after
+the test-only bootstrap correction. Current types were separately rechecked.
+The complete build manifest verified again after all browser groups finished.
+
+Reports, timing, manifest and generated operator configuration are preserved at
+`output/qa/service-delivery-ci-f6f413b2-4cbd-4262-a809-dc48dc37b996`. The public
+website cases passed in Chromium and Firefox, including no-JavaScript HTML,
+route CSS, account aliases and Back behavior, generated headers, downloads,
+keyboard interaction, theme and reduced-motion checks. Native browser permission
+or screen-reader behavior is not inferred from these automated public-site
+results. All 130 relative links in the updated documentation resolve.
+
+Final independent read-only review found no further concrete blocker. A small
+real HTTP investigation did not reproduce the proposed request-write race, so
+no speculative transport change was made. The initial unattributed failure
+remains recorded above. The exact-head hosted container repeat is still required
+before issue acceptance.
 
 ## Deployment limitations
 
