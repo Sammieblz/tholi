@@ -20,6 +20,14 @@ groups:
         labels: { severity: warning }
         annotations:
           { summary: "Tholi HTTP p95 latency exceeds three seconds." }
+      - alert: TholiProviderErrors
+        expr: sum by (tholi_provider) (rate(tholi_operation_count_total{tholi_provider=~"oidc|smtp|s3",tholi_outcome=~"error|not-sent|uncertain|unavailable|timeout"}[5m])) / clamp_min(sum by (tholi_provider) (rate(tholi_operation_count_total{tholi_provider=~"oidc|smtp|s3"}[5m])), 0.01) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          {
+            summary: "A Tholi provider has a sustained failure rate above ten percent.",
+          }
       - alert: TholiDatabaseCapacity
         expr: max(tholi_database_pool_waiting) > 0
         for: 2m

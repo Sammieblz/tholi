@@ -53,6 +53,21 @@ The unchanged report is
 `output/qa/local-stack/tholi-smoke-mvv64jy2-9965e4c4/smoke.json`, collected from
 16:10:04 through 16:10:24 UTC, with owned cleanup complete.
 
+## First complete-stack attempt
+
+Clean source `a4fdebccc06036353070292a006a14d3a0255ef4` passed all 58 real
+PostgreSQL groups and 26 stack checks, including nine gateway groups, real SMTP
+and private-file expiry, restore/privileges, retained restart and collector
+ingestion. It then stopped before the new telemetry probe executed because its
+command flag was passed to Node rather than the test script. The correction is
+limited to QA command wiring. This run does not prove runtime sentinel privacy
+or failed-provider/retried-worker correlation.
+
+The unchanged failed report is
+`output/qa/local-stack/tholi-smoke-mvv68t8r-2e097bc9/smoke.json`, collected from
+16:13:22 through 16:21:02 UTC. Its owned project, volumes, environment and
+synthetic TLS files were removed.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

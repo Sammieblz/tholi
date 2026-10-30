@@ -414,6 +414,34 @@
         "mode": "markdown",
         "content": "Provider spend, interactive model stale results, Local/Free/Paid activation and allowance exhaustion are unavailable until their authoritative roadmap milestones. Missing data is not zero. Store clicks do not establish installation; sign-in does not establish paid activation. Alerts require an operator-owned Prometheus and routing configuration."
       }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Provider failure rate",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tholi_provider) (rate(tholi_operation_count_total{tholi_provider=~\"oidc|smtp|s3\",tholi_outcome=~\"error|not-sent|uncertain|unavailable|timeout\"}[5m])) / clamp_min(sum by (tholi_provider) (rate(tholi_operation_count_total{tholi_provider=~\"oidc|smtp|s3\"}[5m])), 0.01)",
+          "legendFormat": "{{tholi_provider}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
     }
   ]
 }

@@ -12,10 +12,17 @@ export async function runObservabilityChecks({
   sentinel,
 }) {
   const since = new Date().toISOString();
+  const probe = (...args) =>
+    runPostgresImage([
+      "node",
+      "/app/postgres-check.mjs",
+      "--telemetry-runtime-probe",
+      ...args,
+    ]);
   let submitted;
   await compose(["stop", "mail"], 30000);
   try {
-    submitted = await runPostgresImage(["--telemetry-runtime-probe", "submit"]);
+    submitted = await probe("submit");
     requireCheck(
       submitted.passed &&
         submitted.jobId &&
@@ -30,11 +37,7 @@ export async function runObservabilityChecks({
       90000,
     );
   }
-  const completed = await runPostgresImage([
-    "--telemetry-runtime-probe",
-    "complete",
-    submitted.jobId,
-  ]);
+  const completed = await probe("complete", submitted.jobId);
   requireCheck(
     completed.passed &&
       completed.attempts >= 2 &&
