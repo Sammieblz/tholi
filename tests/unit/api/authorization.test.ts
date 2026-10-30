@@ -7,6 +7,10 @@ import {
   type AuthorizationTransaction,
 } from "../../../apps/api/src/application/authorization";
 import {
+  JobService,
+  type JobTransaction,
+} from "../../../apps/api/src/application/jobs";
+import {
   IdentityService,
   identityHash,
 } from "../../../apps/api/src/application/identity";
@@ -20,6 +24,8 @@ import {
   RepositoryError,
   type Consent,
   type Membership,
+  type Job,
+  type RepositoryScope,
 } from "../../../apps/api/src/database/contracts";
 import { createServiceApi } from "../../../apps/api/src/server";
 import {
@@ -29,6 +35,12 @@ import {
   workspacePageSchema,
 } from "../../../packages/navigation-core/contracts-authorization";
 import { serviceErrorEnvelopeSchema } from "../../../packages/navigation-core/contracts-service";
+import {
+  cancelJobInputSchema,
+  jobPageQuerySchema,
+  jobPageSchema,
+  jobSchema,
+} from "../../../packages/navigation-core/contracts-jobs";
 
 const applications: FastifyInstance[] = [];
 afterEach(async () => {
@@ -84,12 +96,42 @@ async function fixture() {
     revision: 2n,
   };
   const consents: Consent[] = [];
+  const job: Job & { leaseOwner: string; leaseToken: string } = {
+    id: randomUUID(),
+    accountId: account.id,
+    requestId: randomUUID(),
+    kind: "fixture.prune",
+    version: 1,
+    recordReferences: { accountId: account.id },
+    status: "queued",
+    availableAt: new Date(),
+    maxAttempts: 3,
+    revision: 1n,
+    attempts: 0,
+    cancelRequested: false,
+    errorCode: null,
+    result: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    leaseOwner: "PRIVATE_WORKER_SENTINEL",
+    leaseToken: "PRIVATE_FENCE_SENTINEL",
+  };
   const scoped = {
     getAccount: vi.fn(async () => account),
     getWorkspace: vi.fn(async () => workspace),
     getMembership: vi.fn(async () => membership),
     listMemberships: vi.fn(async () => [target]),
     listConsents: vi.fn(async () => consents),
+    listJobs: vi.fn<JobTransaction["listJobs"]>(async () => [job]),
+    getJob: vi.fn<JobTransaction["getJob"]>(async (id) =>
+      id === job.id ? job : undefined,
+    ),
+    cancelJob: vi.fn<JobTransaction["cancelJob"]>(async () => ({
+      ...job,
+      status: "running",
+      cancelRequested: true,
+      revision: 2n,
+    })),
     setMembership: vi.fn<AuthorizationTransaction["setMembership"]>(
       async (input) => ({
         accountId: input.accountId,
@@ -114,14 +156,17 @@ async function fixture() {
       },
     ),
   };
-  const repositories: AuthorizationRepositories = {
+  const repositories = {
     listWorkspaces: vi.fn(async () => [workspace]),
-    async transaction(scope, work) {
+    async transaction<T>(
+      scope: RepositoryScope,
+      work: (repository: typeof scoped) => Promise<T>,
+    ) {
       if (scope.accountId !== account.id || scope.workspaceId !== workspace.id)
         throw new RepositoryError("FORBIDDEN", "PRIVATE_SCOPE_SENTINEL");
       return work(scoped);
     },
-  };
+  } satisfies AuthorizationRepositories;
   vi.spyOn(repositories, "transaction");
   const session: IdentitySession = {
     id: randomUUID(),
@@ -188,7 +233,12 @@ async function fixture() {
   const csrf = identity.account(webSession).csrfToken!;
   webSession.csrfHash = identityHash(csrf);
   const authorization = new AuthorizationService(repositories);
-  const app = await createServiceApi(options, [], { identity, authorization });
+  const jobs = new JobService(repositories);
+  const app = await createServiceApi(options, [], {
+    identity,
+    authorization,
+    jobs,
+  });
   applications.push(app);
   return {
     app,
@@ -202,6 +252,7 @@ async function fixture() {
     membership,
     target,
     consents,
+    job,
     csrf,
     cookie: `__Host-tholi_session=${webToken}`,
   };
@@ -580,5 +631,217 @@ describe("tenant authorization routes", () => {
       500,
       "INTERNAL_ERROR",
     );
+  });
+});
+
+describe("actor-private durable job routes", () => {
+  it("exposes only the three registered operations and whitelisted job metadata", async () => {
+    const { app, workspace, job, scoped } = await fixture();
+    const openapi = (await app.inject({ url: "/api/v1/openapi.json" })).json();
+    const operations = Object.values(
+      openapi.paths as Record<
+        string,
+        Record<string, { tags?: string[]; operationId: string }>
+      >,
+    )
+      .flatMap((path) => Object.values(path))
+      .filter((operation) => operation.tags?.includes("jobs"));
+    expect(operations.map((operation) => operation.operationId).sort()).toEqual(
+      ["cancelWorkspaceJob", "getWorkspaceJob", "listWorkspaceJobs"],
+    );
+    expect(
+      (await app.inject({ url: "/api/v1/capabilities" })).json().capabilities,
+    ).toContain("durable-jobs");
+    const base = `/api/v1/workspaces/${workspace.id}/jobs`;
+    const response = await app.inject({
+      url: `${base}?limit=1&status=queued`,
+      headers: bearer,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    const page = jobPageSchema.parse(response.json());
+    expect(page.items[0]).toMatchObject({
+      id: job.id,
+      revision: "1",
+      status: "queued",
+    });
+    expect(page.nextCursor).toBe(job.id);
+    expect(scoped.listJobs).toHaveBeenCalledWith({
+      limit: 1,
+      status: "queued",
+    });
+    const read = await app.inject({
+      url: `${base}/${job.id}`,
+      headers: bearer,
+    });
+    expect(jobSchema.parse(read.json())).toEqual(page.items[0]);
+    expect(response.body + read.body).not.toMatch(
+      /SENTINEL|recordReferences|leaseOwner|leaseToken|accountId|requestId/,
+    );
+    safeError(
+      await app.inject({ url: `${base}/${randomUUID()}`, headers: bearer }),
+      404,
+      "NOT_FOUND",
+    );
+    safeError(
+      await app.inject({
+        method: "POST",
+        url: base,
+        headers: bearer,
+        payload: {},
+      }),
+      404,
+      "NOT_FOUND",
+    );
+    safeError(
+      await app.inject({
+        method: "POST",
+        url: `${base}/${job.id}/retry`,
+        headers: bearer,
+        payload: {},
+      }),
+      404,
+      "NOT_FOUND",
+    );
+  });
+
+  it("rejects forged scope and actor records even for organization admins", async () => {
+    const { app, workspace, job, scoped, membership } = await fixture();
+    const base = `/api/v1/workspaces/${workspace.id}/jobs`;
+    safeError(await app.inject({ url: base }), 401, "UNAUTHENTICATED");
+    safeError(
+      await app.inject({
+        url: `/api/v1/workspaces/${randomUUID()}/jobs`,
+        headers: bearer,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    for (const query of [
+      "accountId=" + randomUUID(),
+      "limit=01",
+      "limit=1e1",
+      "limit=1&limit=2",
+      "status=unknown",
+      "cursor=unused",
+    ])
+      safeError(
+        await app.inject({ url: `${base}?${query}`, headers: bearer }),
+        400,
+        "INVALID_REQUEST",
+      );
+    membership.role = "admin";
+    workspace.ownerAccountId = randomUUID();
+    scoped.getJob.mockResolvedValueOnce({ ...job, accountId: randomUUID() });
+    safeError(
+      await app.inject({ url: `${base}/${job.id}`, headers: bearer }),
+      404,
+      "NOT_FOUND",
+    );
+    scoped.getJob.mockResolvedValueOnce({ ...job, accountId: randomUUID() });
+    safeError(
+      await app.inject({
+        method: "POST",
+        url: `${base}/${job.id}/cancel`,
+        headers: bearer,
+        payload: { expectedRevision: "1" },
+      }),
+      404,
+      "NOT_FOUND",
+    );
+    expect(scoped.cancelJob).not.toHaveBeenCalled();
+    membership.status = "revoked";
+    safeError(
+      await app.inject({ url: base, headers: bearer }),
+      403,
+      "FORBIDDEN",
+    );
+  });
+
+  it("uses shared cookie/CSRF guards and reports running cancellation as intent", async () => {
+    const { app, workspace, job, scoped, cookie, csrf } = await fixture();
+    const url = `/api/v1/workspaces/${workspace.id}/jobs/${job.id}/cancel`;
+    const payload = { expectedRevision: "1" };
+    safeError(
+      await app.inject({
+        method: "POST",
+        url,
+        headers: { cookie, origin: webOrigin },
+        payload,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(scoped.cancelJob).not.toHaveBeenCalled();
+    const result = await app.inject({
+      method: "POST",
+      url,
+      headers: { cookie, origin: webOrigin, "x-tholi-csrf": csrf },
+      payload,
+    });
+    expect(result.statusCode).toBe(200);
+    expect(jobSchema.parse(result.json())).toMatchObject({
+      status: "running",
+      cancelRequested: true,
+      revision: "2",
+    });
+    expect(scoped.cancelJob).toHaveBeenCalledWith({
+      id: job.id,
+      expectedRevision: 1n,
+    });
+    for (const invalid of [
+      { expectedRevision: "0" },
+      { expectedRevision: 1 },
+      { ...payload, accountId: randomUUID() },
+      { ...payload, force: true },
+    ])
+      safeError(
+        await app.inject({
+          method: "POST",
+          url,
+          headers: bearer,
+          payload: invalid,
+        }),
+        400,
+        "INVALID_REQUEST",
+      );
+    scoped.cancelJob.mockRejectedValueOnce(
+      new RepositoryError("CONFLICT", "PRIVATE_CONFLICT_SENTINEL"),
+    );
+    safeError(
+      await app.inject({ method: "POST", url, headers: bearer, payload }),
+      409,
+      "CONFLICT",
+    );
+  });
+
+  it("bounds wire revisions, failure/results and rejects private worker metadata", async () => {
+    const { app, workspace, job } = await fixture();
+    const response = await app.inject({
+      url: `/api/v1/workspaces/${workspace.id}/jobs/${job.id}`,
+      headers: bearer,
+    });
+    const dto = jobSchema.parse(response.json());
+    for (const invalid of [
+      { ...dto, revision: 1 },
+      { ...dto, revision: "9223372036854775808" },
+      { ...dto, attempts: 4 },
+      { ...dto, maxAttempts: 101 },
+      { ...dto, errorCode: "raw provider password" },
+      { ...dto, result: { processed: 101 } },
+      { ...dto, result: { processed: 1, content: "PRIVATE_RESULT_SENTINEL" } },
+      { ...dto, leaseToken: "PRIVATE_FENCE_SENTINEL" },
+    ])
+      expect(jobSchema.safeParse(invalid).success).toBe(false);
+    expect(
+      cancelJobInputSchema.safeParse({ expectedRevision: "01" }).success,
+    ).toBe(false);
+    expect(
+      jobPageQuerySchema.parse({
+        limit: "50",
+        after: job.id,
+        status: "uncertain",
+      }),
+    ).toEqual({ limit: 50, after: job.id, status: "uncertain" });
   });
 });

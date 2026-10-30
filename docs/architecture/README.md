@@ -11,6 +11,7 @@
 - [Versioned service APIs, discovery and request policy](../development/service-api.md)
 - [Optional identity, website cookies and native client sessions](../development/service-identity.md)
 - [Workspace roles, tenant isolation and purpose-specific consent](../development/service-authorization.md)
+- [Durable worker, PostgreSQL leases and scheduling](../development/service-jobs.md)
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 

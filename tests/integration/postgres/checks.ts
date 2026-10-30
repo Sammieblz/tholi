@@ -12,6 +12,7 @@ import {
 import { PostgresRepositories } from "../../../apps/api/src/database/repositories";
 import { runIdentityChecks } from "./identity-checks";
 import { runAuthorizationChecks } from "./authorization-checks";
+import { runJobChecks } from "./job-checks";
 import {
   beginJourney,
   saveTask,
@@ -20,6 +21,7 @@ import {
 export interface PostgresCheckOptions {
   migrationConnection: string;
   runtimeConnection: string;
+  workerConnection?: string;
 }
 
 export async function runPostgresChecks(options: PostgresCheckOptions) {
@@ -36,6 +38,10 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     max: 1,
   });
   const repositories = new PostgresRepositories(runtime);
+  const worker = options.workerConnection
+    ? createDatabasePool({ connectionString: options.workerConnection, max: 4 })
+    : undefined;
+  const workerRole = worker ? "tholi_worker" : undefined;
   const provision = () =>
     repositories.provisionAccount({
       accountId: randomUUID(),
@@ -89,7 +95,10 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
             "INSERT INTO tholi.sessions (id,account_id,token_hash,expires_at) VALUES ($1,$2,$3,$4)",
             [foundationSessionId, accountId, Buffer.alloc(32, 1), future()],
           );
-          await migrateDatabase(client, { runtimeRole: "tholi_runtime" });
+          await migrateDatabase(client, {
+            runtimeRole: "tholi_runtime",
+            workerRole,
+          });
           assert.equal(
             (
               await client.query(
@@ -113,7 +122,10 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
             )
           ).rows;
           assert.equal(before.length, migrations.length);
-          await migrateDatabase(client, { runtimeRole: "tholi_runtime" });
+          await migrateDatabase(client, {
+            runtimeRole: "tholi_runtime",
+            workerRole,
+          });
           await verifyDatabase(client);
           assert.deepEqual(
             (
@@ -1306,12 +1318,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
 
     await runIdentityChecks(runtime, migration, record);
     await runAuthorizationChecks(runtime, migration, record);
+    if (worker) await runJobChecks(runtime, migration, worker, record);
     return { passed: true as const, checks };
   } finally {
     const cleanup = await Promise.allSettled([
       migration.end(),
       runtime.end(),
       reused.end(),
+      worker?.end(),
     ]);
     if (cleanup.some((result) => result.status === "rejected"))
       throw new Error("PostgreSQL connection cleanup failed.");

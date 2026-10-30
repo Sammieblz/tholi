@@ -309,12 +309,14 @@ function parseOrigins(
 /** Explicit service configuration; never read legacy SQLite paths or ambient PG*. */
 export function parseDatabaseConfig(
   env: Environment,
-  purpose: "runtime" | "migration" = "runtime",
+  purpose: "runtime" | "migration" | "worker" = "runtime",
 ): DatabaseOptions {
   const name =
     purpose === "migration"
       ? "THOLI_DATABASE_MIGRATION_URL"
-      : "THOLI_DATABASE_URL";
+      : purpose === "worker"
+        ? "THOLI_DATABASE_WORKER_URL"
+        : "THOLI_DATABASE_URL";
   const connectionString = environmentValue(env, name);
   if (!connectionString) throw new Error(`Missing ${name}.`);
   let url: URL;
@@ -329,14 +331,58 @@ export function parseDatabaseConfig(
   if (maxText !== undefined && !/^\d+$/.test(maxText))
     throw new Error("Invalid PostgreSQL pool budget.");
   const max =
-    maxText === undefined ? (purpose === "migration" ? 1 : 8) : Number(maxText);
+    maxText === undefined
+      ? purpose === "migration"
+        ? 1
+        : purpose === "worker"
+          ? 4
+          : 8
+      : Number(maxText);
   if (
     !Number.isSafeInteger(max) ||
     max < 1 ||
-    max > (purpose === "migration" ? 2 : 32)
+    max > (purpose === "migration" ? 2 : purpose === "worker" ? 4 : 32)
   )
     throw new Error("Invalid PostgreSQL pool budget.");
   return { connectionString, max };
+}
+
+/** Independent SQL-only worker profile. No identity or model credentials needed. */
+export function parseWorkerConfig(env: Environment) {
+  const budget = (
+    name: string,
+    fallback: number,
+    minimum: number,
+    maximum: number,
+  ) => {
+    const text = environmentValue(env, name);
+    const value =
+      text === undefined ? fallback : /^\d+$/.test(text) ? Number(text) : NaN;
+    if (!Number.isSafeInteger(value) || value < minimum || value > maximum)
+      throw new Error(`Invalid ${name} budget.`);
+    return value;
+  };
+  const leaseMs = budget("THOLI_WORKER_LEASE_MS", 30000, 10000, 120000);
+  const heartbeatMs = budget("THOLI_WORKER_HEARTBEAT_MS", 10000, 1000, 30000);
+  if (heartbeatMs * 2 >= leaseMs)
+    throw new Error("Worker heartbeat must be less than half its lease.");
+  return {
+    database: parseDatabaseConfig(env, "worker"),
+    options: {
+      concurrency: budget("THOLI_WORKER_CONCURRENCY", 2, 1, 2),
+      pollMs: budget("THOLI_WORKER_POLL_MS", 1000, 100, 10000),
+      leaseMs,
+      heartbeatMs,
+      maxBackoffMs: budget("THOLI_WORKER_MAX_BACKOFF_MS", 60000, 1000, 60000),
+      scheduleIntervalMs: budget(
+        "THOLI_WORKER_SCHEDULE_MS",
+        60000,
+        1000,
+        3600000,
+      ),
+    },
+    healthFile: environmentValue(env, "THOLI_WORKER_HEALTH_FILE"),
+  };
 }
 
 export function parsePrivateConfig(env: Environment, cwd = process.cwd()) {

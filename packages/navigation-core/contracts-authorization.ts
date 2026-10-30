@@ -103,6 +103,8 @@ export const authorizationActionSchema = z.enum([
   "policies.read",
   "consents.read",
   "consents.write",
+  "jobs.read",
+  "jobs.cancel",
   "saved-data.read",
   "saved-data.write",
   "saved-data.import",

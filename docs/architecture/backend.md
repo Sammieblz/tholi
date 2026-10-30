@@ -72,7 +72,8 @@ and source maps before emitting a new set. No archive is changed by a build.
 There is one navigation engine and one repository owner per database profile.
 `application/authorization.ts` applies the shared role/purpose policy through
 scoped repository transactions. Database row policies reinforce ownership and
-membership boundaries. Durable worker execution remains its next milestone.
+membership boundaries. The [durable worker](../development/service-jobs.md)
+uses an independent executable and SQL role, fenced leases and scoped handlers.
 Authentication does not authorize model inference, upload local knowledge or
 transfer journey ownership to the server.
 

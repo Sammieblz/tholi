@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 
-const requiredServices = ["api", "postgres", "oidc", "mail", "gateway"];
+const requiredServices = [
+  "api",
+  "worker",
+  "postgres",
+  "oidc",
+  "mail",
+  "gateway",
+];
 const credentialKeys = new Set([
   "GEMINI_API_KEY",
   "GOOGLE_API_KEY",
@@ -37,24 +44,54 @@ export function inspectLocalStack(config) {
     (api.environment?.THOLI_MODEL_PROVIDER || "fake") === "fake",
     "the local stack must use the fake model provider.",
   );
-  const user = String(api.user || "").split(":")[0];
+  for (const name of ["api", "worker"]) {
+    const service = services[name];
+    const user = String(service.user || "").split(":")[0];
+    requirePolicy(
+      user && !["0", "root"].includes(user),
+      `${name} must run as a non-root user.`,
+    );
+    requirePolicy(
+      service.read_only === true,
+      `${name} root filesystem must be read-only.`,
+    );
+    requirePolicy(
+      service.cap_drop?.includes("ALL"),
+      `${name} must drop all Linux capabilities.`,
+    );
+    requirePolicy(
+      service.security_opt?.some((option) =>
+        /^no-new-privileges(?::|=)true$/.test(option),
+      ),
+      `${name} must disallow gaining new privileges.`,
+    );
+  }
+  const worker = services.worker;
   requirePolicy(
-    user && !["0", "root"].includes(user),
-    "API must run as a non-root user.",
+    worker.image === api.image,
+    "worker and API must use the same application image.",
   );
   requirePolicy(
-    api.read_only === true,
-    "API root filesystem must be read-only.",
+    Object.keys(worker.networks || {}).length === 1 &&
+      worker.networks.database !== undefined,
+    "worker requires only the private database network in this milestone.",
   );
   requirePolicy(
-    api.cap_drop?.includes("ALL"),
-    "API must drop all Linux capabilities.",
-  );
-  requirePolicy(
-    api.security_opt?.some((option) =>
-      /^no-new-privileges(?::|=)true$/.test(option),
+    Object.keys(worker.environment || {}).every(
+      (key) =>
+        [
+          "NODE_ENV",
+          "NODE_OPTIONS",
+          "THOLI_DATABASE_WORKER_URL",
+          "THOLI_DATABASE_POOL_MAX",
+        ].includes(key) || key.startsWith("THOLI_WORKER_"),
     ),
-    "API must disallow gaining new privileges.",
+    "worker must not receive runtime, migration, identity or provider credentials.",
+  );
+  requirePolicy(
+    new URL(worker.environment?.THOLI_DATABASE_WORKER_URL || "invalid:")
+      .username === "tholi_worker",
+    "local worker requires its distinct SQL role.",
   );
   const ports = [];
   const images = {};

@@ -370,41 +370,50 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     );
     const databaseConnection = (user, password) =>
       `postgresql://${user}:${encodeURIComponent(password)}@postgres:5432/tholi`;
-    const postgresChecks = JSON.parse(
-      await docker(
-        [
-          "run",
-          "--rm",
-          "--network",
-          config.networks.database.name,
-          "--read-only",
-          "--cap-drop",
-          "ALL",
-          "--security-opt",
-          "no-new-privileges:true",
-          "--memory",
-          "256m",
-          "--pids-limit",
-          "64",
-          "--env",
-          "THOLI_DATABASE_URL",
-          "--env",
-          "THOLI_DATABASE_MIGRATION_URL",
-          testImage,
-        ],
-        120000,
-        {
-          THOLI_DATABASE_URL: databaseConnection(
-            "tholi_runtime",
-            settings.THOLI_DB_PASSWORD,
-          ),
-          THOLI_DATABASE_MIGRATION_URL: databaseConnection(
-            "tholi_migrator",
-            settings.THOLI_MIGRATION_PASSWORD,
-          ),
-        },
-      ),
-    );
+    const runPostgresImage = async (mode = []) =>
+      JSON.parse(
+        await docker(
+          [
+            "run",
+            "--rm",
+            "--network",
+            config.networks.database.name,
+            "--read-only",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges:true",
+            "--memory",
+            "256m",
+            "--pids-limit",
+            "64",
+            "--env",
+            "THOLI_DATABASE_URL",
+            "--env",
+            "THOLI_DATABASE_MIGRATION_URL",
+            "--env",
+            "THOLI_DATABASE_WORKER_URL",
+            testImage,
+            ...mode,
+          ],
+          120000,
+          {
+            THOLI_DATABASE_URL: databaseConnection(
+              "tholi_runtime",
+              settings.THOLI_DB_PASSWORD,
+            ),
+            THOLI_DATABASE_MIGRATION_URL: databaseConnection(
+              "tholi_migrator",
+              settings.THOLI_MIGRATION_PASSWORD,
+            ),
+            THOLI_DATABASE_WORKER_URL: databaseConnection(
+              "tholi_worker",
+              settings.THOLI_WORKER_PASSWORD,
+            ),
+          },
+        ),
+      );
+    const postgresChecks = await runPostgresImage();
     requireCheck(postgresChecks.passed && postgresChecks.checks.length > 0);
     check("real-postgres-migrations-and-repositories", postgresChecks);
     stage = "clean stack build and startup";
@@ -418,7 +427,17 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       for (const command of localStackCommands({ action, envFile, project }))
         await docker(command, 90000);
     check("idempotent-bootstrap-and-local-seed");
+    stage = "actual independent worker effect and acknowledgement";
+    const workerProbe = await runPostgresImage([
+      "node",
+      "/app/postgres-check.mjs",
+      "--worker-runtime-probe",
+    ]);
+    requireCheck(workerProbe.passed);
+    check("actual-worker-effect-and-atomic-completion", workerProbe);
     stage = "PostgreSQL application backup and restore";
+    // Quiesce the only autonomous writer while comparing the restored snapshot.
+    await compose(["stop", "worker"], 30000);
     const backup = await compose(
       [
         "exec",
@@ -482,6 +501,10 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "The actual runtime role cannot read restored application records.",
     );
     check("application-backup-restore-with-runtime-readback");
+    await compose(
+      ["start", "--wait", "--wait-timeout", "90", "worker"],
+      120000,
+    );
     stage = "PostgreSQL role and schema privileges";
     const roleRows = JSON.parse(
       await compose([
@@ -496,16 +519,17 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
         "-v",
         "ON_ERROR_STOP=1",
         "-Atc",
-        "SELECT json_build_object('roles', (SELECT json_agg(json_build_object('name',rolname,'superuser',rolsuper,'bypassRls',rolbypassrls,'connections',rolconnlimit) ORDER BY rolname) FROM pg_roles WHERE rolname IN ('tholi_runtime','tholi_migrator','tholi_identity')), 'runtimeConnect',has_database_privilege('tholi_runtime','tholi','CONNECT'), 'runtimeCreateSchema',has_database_privilege('tholi_runtime','tholi','CREATE'), 'runtimeCreateObjects',has_schema_privilege('tholi_runtime','public','CREATE'));",
+        "SELECT json_build_object('roles', (SELECT json_agg(json_build_object('name',rolname,'superuser',rolsuper,'bypassRls',rolbypassrls,'connections',rolconnlimit) ORDER BY rolname) FROM pg_roles WHERE rolname IN ('tholi_runtime','tholi_migrator','tholi_identity','tholi_worker')), 'runtimeConnect',has_database_privilege('tholi_runtime','tholi','CONNECT'), 'runtimeCreateSchema',has_database_privilege('tholi_runtime','tholi','CREATE'), 'runtimeCreateObjects',has_schema_privilege('tholi_runtime','public','CREATE'));",
       ]),
     );
     const roleLimits = {
       tholi_runtime: 8,
+      tholi_worker: 4,
       tholi_migrator: 2,
       tholi_identity: 6,
     };
     requireCheck(
-      roleRows.roles?.length === 3 &&
+      roleRows.roles?.length === 4 &&
         roleRows.roles.every(
           (role) =>
             !role.superuser &&
@@ -560,8 +584,15 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       .split(/\s+/)
       .filter(Boolean);
     const containers = JSON.parse(await docker(["inspect", ...ids]));
-    requireCheck(containers.length === 5);
-    const expected = ["api", "postgres", "oidc", "mail", "gateway"].sort();
+    requireCheck(containers.length === 6);
+    const expected = [
+      "api",
+      "worker",
+      "postgres",
+      "oidc",
+      "mail",
+      "gateway",
+    ].sort();
     requireCheck(
       JSON.stringify(
         containers
@@ -578,6 +609,20 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     const runtimeApi = containers.find(
       (item) => item.Config.Labels["com.docker.compose.service"] === "api",
     );
+    const runtimeWorker = containers.find(
+      (item) => item.Config.Labels["com.docker.compose.service"] === "worker",
+    );
+    requireCheck(
+      runtimeWorker &&
+        runtimeWorker.Image === runtimeApi.Image &&
+        runtimeWorker.State.Health?.Status === "healthy" &&
+        runtimeWorker.Config.Cmd?.includes("apps/api/dist/worker.js"),
+      "The independent worker must run the application image and pass live polling health.",
+    );
+    check("independent-worker-polling-health", {
+      sameImage: true,
+      publicPorts: false,
+    });
     requireCheck(
       runtimeApi.HostConfig.ReadonlyRootfs &&
         runtimeApi.HostConfig.CapDrop?.includes("ALL") &&

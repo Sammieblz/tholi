@@ -1,6 +1,7 @@
 -- Local infrastructure only. Application tables and migrations belong to #28.
 \set ON_ERROR_STOP on
 \getenv runtime_password THOLI_DB_PASSWORD
+\getenv worker_password THOLI_WORKER_PASSWORD
 \getenv migration_password THOLI_MIGRATION_PASSWORD
 \getenv identity_password OIDC_DB_PASSWORD
 
@@ -13,9 +14,14 @@ SELECT 'CREATE ROLE tholi_migrator' WHERE NOT EXISTS (
 SELECT 'CREATE ROLE tholi_identity' WHERE NOT EXISTS (
   SELECT FROM pg_roles WHERE rolname = 'tholi_identity'
 ) \gexec
+SELECT 'CREATE ROLE tholi_worker' WHERE NOT EXISTS (
+  SELECT FROM pg_roles WHERE rolname = 'tholi_worker'
+) \gexec
 
 ALTER ROLE tholi_runtime WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
   NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 8 PASSWORD :'runtime_password';
+ALTER ROLE tholi_worker WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+  NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 4 PASSWORD :'worker_password';
 ALTER ROLE tholi_migrator WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
   NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 2 PASSWORD :'migration_password';
 ALTER ROLE tholi_identity WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
@@ -32,13 +38,13 @@ ALTER DATABASE tholi OWNER TO tholi_migrator;
 ALTER DATABASE tholi_identity OWNER TO tholi_identity;
 REVOKE ALL ON DATABASE tholi FROM PUBLIC;
 REVOKE ALL ON DATABASE tholi_identity FROM PUBLIC;
-GRANT CONNECT ON DATABASE tholi TO tholi_runtime, tholi_migrator;
+GRANT CONNECT ON DATABASE tholi TO tholi_runtime, tholi_worker, tholi_migrator;
 GRANT CONNECT ON DATABASE tholi_identity TO tholi_identity;
 
 \connect tholi
 ALTER SCHEMA public OWNER TO tholi_migrator;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO tholi_runtime;
+GRANT USAGE ON SCHEMA public TO tholi_runtime, tholi_worker;
 
 \connect tholi_identity
 ALTER SCHEMA public OWNER TO tholi_identity;

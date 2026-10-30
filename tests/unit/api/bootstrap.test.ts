@@ -12,8 +12,13 @@ import { isAbsolute, join, resolve, sep } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startPrivateApi } from "../../../apps/api/src/cli";
 import { startServiceApi } from "../../../apps/api/src/service";
+import { startWorker, checkWorkerHealth } from "../../../apps/api/src/worker";
 import { createApi, createServiceApi } from "../../../apps/api/src/server";
-import { runExecutable, startRuntime } from "../../../apps/api/src/runtime";
+import {
+  runExecutable,
+  startRuntime,
+  startManagedRuntime,
+} from "../../../apps/api/src/runtime";
 import type { ApiOptions } from "../../../apps/api/src/config";
 
 vi.mock("../../../apps/api/src/server", () => ({
@@ -53,6 +58,63 @@ function application() {
 }
 
 describe("API bootstrap and shutdown", () => {
+  it("validates a standalone worker before allocation and starts without HTTP or OIDC", async () => {
+    const app = {
+      start: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const factory = vi.fn(async () => app);
+    await expect(
+      startWorker(
+        {
+          THOLI_DATABASE_URL: "postgresql://runtime:synthetic@localhost/tholi",
+        },
+        factory,
+      ),
+    ).rejects.toThrow("THOLI_DATABASE_WORKER_URL");
+    expect(factory).not.toHaveBeenCalled();
+    const runtime = await startWorker(
+      {
+        THOLI_DATABASE_WORKER_URL:
+          "postgresql://worker:synthetic@localhost/tholi",
+      },
+      factory,
+      { signals: new EventEmitter() },
+    );
+    expect(app.start).toHaveBeenCalledOnce();
+    await runtime.shutdown();
+    expect(app.close).toHaveBeenCalledOnce();
+  });
+
+  it("accepts only bounded fresh worker health markers", async () => {
+    const file = join(await temporaryDirectory(), "worker-health.json");
+    await writeFile(file, JSON.stringify({ healthyAt: 100000 }));
+    await expect(checkWorkerHealth(file, 100001)).resolves.toBeUndefined();
+    await expect(checkWorkerHealth(file, 130001)).rejects.toThrow("stale");
+    await expect(checkWorkerHealth(file, 99999)).rejects.toThrow("stale");
+    await writeFile(file, "x".repeat(129));
+    await expect(checkWorkerHealth(file)).rejects.toThrow("Invalid");
+  });
+  it("drains an independent worker through the same signal owner without opening HTTP", async () => {
+    const worker = {
+      start: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const signals = new EventEmitter();
+    const runtime = await startManagedRuntime(
+      async () => worker,
+      (app) => app.start(),
+      { signals },
+      "worker",
+    );
+    expect(worker.start).toHaveBeenCalledOnce();
+    signals.emit("SIGTERM");
+    await runtime.shutdown();
+    expect(worker.close).toHaveBeenCalledOnce();
+    expect(
+      signals.listenerCount("SIGINT") + signals.listenerCount("SIGTERM"),
+    ).toBe(0);
+  });
   it("imports both executable entrypoints without starting an application", () => {
     expect(createApi).not.toHaveBeenCalled();
     expect(createServiceApi).not.toHaveBeenCalled();

@@ -7,6 +7,11 @@ export interface RuntimeApplication {
   close(): Promise<void>;
 }
 
+export interface ManagedApplication {
+  start(): Promise<unknown>;
+  close(): Promise<void>;
+}
+
 type Signal = "SIGINT" | "SIGTERM";
 export interface RuntimeOptions {
   signals?: {
@@ -23,6 +28,16 @@ export async function startRuntime<T extends RuntimeApplication>(
   listen: ListenOptions,
   options: RuntimeOptions = {},
 ) {
+  return startManagedRuntime(factory, (app) => app.listen(listen), options);
+}
+
+/** One signal and bounded-drain owner for HTTP and independent workers. */
+export async function startManagedRuntime<T extends { close(): Promise<void> }>(
+  factory: () => Promise<T>,
+  start: (app: T) => Promise<unknown>,
+  options: RuntimeOptions = {},
+  label = "API",
+) {
   const signals = options.signals ?? process;
   const reportError =
     options.reportError ??
@@ -37,7 +52,7 @@ export async function startRuntime<T extends RuntimeApplication>(
     .then(factory)
     .then(async (created) => {
       app = created;
-      if (!closing) await app.listen(listen);
+      if (!closing) await start(app);
     });
   const shutdown = (): Promise<void> => {
     if (closing) return closing;
@@ -46,7 +61,7 @@ export async function startRuntime<T extends RuntimeApplication>(
     let timer: ReturnType<typeof setTimeout>;
     const deadline = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(
-        () => reject(new Error("Tholi API shutdown timed out.")),
+        () => reject(new Error(`Tholi ${label} shutdown timed out.`)),
         drainMs,
       );
       timer.unref();
@@ -63,7 +78,7 @@ export async function startRuntime<T extends RuntimeApplication>(
     void shutdown().then(
       () => options.exit?.(0),
       () => {
-        reportError("Tholi API shutdown failed or exceeded its deadline.");
+        reportError(`Tholi ${label} shutdown failed or exceeded its deadline.`);
         options.exit?.(1);
       },
     );
@@ -74,20 +89,24 @@ export async function startRuntime<T extends RuntimeApplication>(
     await listening;
   } catch {
     await shutdown().catch(() => {
-      reportError("Tholi API startup cleanup failed or exceeded its deadline.");
+      reportError(
+        `Tholi ${label} startup cleanup failed or exceeded its deadline.`,
+      );
       options.exit?.(1);
     });
     throw new Error(
       app
-        ? "Tholi API could not start listening."
-        : "Tholi API initialization failed.",
+        ? label === "API"
+          ? "Tholi API could not start listening."
+          : `Tholi ${label} could not start.`
+        : `Tholi ${label} initialization failed.`,
     );
   }
   if (closing) {
     await closing;
-    throw new Error("Tholi API startup was interrupted.");
+    throw new Error(`Tholi ${label} startup was interrupted.`);
   }
-  if (!app) throw new Error("Tholi API initialization failed.");
+  if (!app) throw new Error(`Tholi ${label} initialization failed.`);
   return { app, shutdown };
 }
 
@@ -97,12 +116,15 @@ export function isMainModule(url: string): boolean {
   );
 }
 
-export async function runExecutable(start: () => Promise<unknown>) {
+export async function runExecutable(
+  start: () => Promise<unknown>,
+  label = "API",
+) {
   try {
     await start();
   } catch {
     process.stderr.write(
-      "Tholi API startup failed. Check configuration and local resources.\n",
+      `Tholi ${label} startup failed. Check configuration and local resources.\n`,
     );
     process.exitCode = 1;
   }

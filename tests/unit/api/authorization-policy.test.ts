@@ -243,6 +243,8 @@ describe("server-derived authorization policy", () => {
         "credits.read",
         "support.request",
         "consents.read",
+        "jobs.read",
+        "jobs.cancel",
       ] as const) {
         expect(evaluateAuthorization(scope, action)).toEqual({ allowed: true });
         expect(

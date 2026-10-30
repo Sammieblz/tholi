@@ -5,6 +5,7 @@
   set -eu
 
   : "${THOLI_DB_PASSWORD:?Missing local runtime password}"
+  : "${THOLI_WORKER_PASSWORD:?Missing local worker password}"
   : "${THOLI_MIGRATION_PASSWORD:?Missing local migration password}"
   : "${OIDC_DB_PASSWORD:?Missing local identity password}"
 

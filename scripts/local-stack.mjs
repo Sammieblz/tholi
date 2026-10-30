@@ -31,6 +31,7 @@ export function initializeLocalEnvironment({
   project,
   ports = {},
   upgradeIdentity = false,
+  upgradeWorker = false,
 }) {
   let template = readFileSync(resolve(root, ".env.example"), "utf8");
   template = template.replace(
@@ -62,14 +63,18 @@ export function initializeLocalEnvironment({
   }
   const target = resolve(envFile);
   mkdirSync(dirname(target), { recursive: true });
-  if (upgradeIdentity) {
+  if (upgradeIdentity || upgradeWorker) {
     if (!existsSync(target))
       throw new Error("Initialize the local environment before upgrading it.");
     const existing = readFileSync(target, "utf8");
     const settings = parseEnv(existing);
     const additions = template.split(/\r?\n/).filter((line) => {
       const name = line.slice(0, line.indexOf("="));
-      return name.startsWith("THOLI_IDENTITY_") && !(name in settings);
+      return (
+        ((upgradeIdentity && name.startsWith("THOLI_IDENTITY_")) ||
+          (upgradeWorker && name === "THOLI_WORKER_PASSWORD")) &&
+        !(name in settings)
+      );
     });
     if (additions.length)
       writeFileSync(
@@ -198,6 +203,13 @@ function main(args) {
           );
         options.upgradeIdentity = true;
         break;
+      case "--upgrade-worker":
+        if (action !== "init" || value !== "true")
+          throw new Error(
+            "Worker environment upgrades require init --upgrade-worker true.",
+          );
+        options.upgradeWorker = true;
+        break;
       default:
         throw new Error(`Unknown option: ${flags[i]}.`);
     }
@@ -208,7 +220,7 @@ function main(args) {
       envFile: options.envFile ?? resolve(root, ".env"),
     });
     console.log(
-      `${options.upgradeIdentity ? "Updated missing identity settings in" : "Created"} ${result.envFile}. Keep local credentials private.`,
+      `${options.upgradeIdentity || options.upgradeWorker ? "Updated missing local settings in" : "Created"} ${result.envFile}. Keep local credentials private.`,
     );
     return;
   }

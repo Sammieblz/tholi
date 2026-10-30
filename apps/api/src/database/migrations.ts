@@ -4,6 +4,7 @@ import { identityAndScope } from "./migrations/001-identity-and-scope";
 import { serviceData } from "./migrations/002-service-data";
 import { portableIdentity } from "./migrations/003-portable-identity";
 import { tenantAuthorization } from "./migrations/004-tenant-authorization";
+import { durableJobs } from "./migrations/005-durable-jobs";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -31,6 +32,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(2, "service-data", serviceData),
   migration(3, "portable-identity", portableIdentity),
   migration(4, "tenant-authorization", tenantAuthorization),
+  migration(5, "durable-jobs", durableJobs),
 ]);
 
 export interface MigrationOptions {
@@ -38,6 +40,61 @@ export interface MigrationOptions {
   target?: number;
   /** Existing non-owner runtime role. Role names are not part of migration bytes. */
   runtimeRole?: string;
+  /** Dedicated non-owner dispatcher/handler role, never the HTTP role. */
+  workerRole?: string;
+}
+
+async function grantWorker(client: PoolClient, role: string) {
+  const identifier = runtimeIdentifier(role);
+  await validateWorkerRole(client, role);
+  if (
+    !(
+      await client.query(
+        "SELECT to_regprocedure('tholi.claim_jobs(text,integer,integer,jsonb)') AS helper",
+      )
+    ).rows[0]?.helper
+  )
+    return;
+  await client.query(`GRANT USAGE ON SCHEMA tholi TO ${identifier}`);
+  await client.query(`GRANT SELECT ON tholi.schema_migrations,tholi.accounts,tholi.workspaces,
+    tholi.memberships,tholi.consents,tholi.jobs,tholi.outbox TO ${identifier}`);
+  await client.query(
+    `GRANT INSERT ON tholi.jobs,tholi.outbox TO ${identifier}`,
+  );
+  await client.query(
+    `GRANT UPDATE (sync_revision,updated_at) ON tholi.workspaces TO ${identifier}`,
+  );
+  await client.query(`GRANT UPDATE (status,result_count,last_error_code,claim_token,lease_owner,lease_expires_at,revision,updated_at)
+    ON tholi.jobs TO ${identifier}`);
+  await client.query(
+    `GRANT UPDATE (status,published_at) ON tholi.outbox TO ${identifier}`,
+  );
+  await client.query(`GRANT EXECUTE ON FUNCTION tholi.actor_account_id(),tholi.actor_workspace_id(),
+    tholi.current_member_role(uuid),tholi.claim_jobs(text,integer,integer,jsonb),
+    tholi.heartbeat_job(uuid,uuid,uuid,integer),tholi.fail_job(uuid,uuid,uuid,text,text,integer),
+    tholi.broker_prune_candidates(integer,integer),tholi.prune_expired_brokers(integer) TO ${identifier}`);
+}
+
+async function validateWorkerRole(client: PoolClient, role: string) {
+  await validateRuntimeRole(client, role);
+  const result = await client.query<{ unsafe: boolean }>(
+    `SELECT EXISTS (
+    SELECT FROM pg_roles r WHERE pg_has_role($1::name,r.oid,'SET')
+      AND CASE WHEN to_regclass('tholi.sessions') IS NULL THEN false ELSE
+        has_table_privilege(r.oid,'tholi.sessions','SELECT')
+        OR CASE WHEN to_regclass('tholi.credit_grants') IS NULL THEN false ELSE
+          (has_table_privilege(r.oid,'tholi.credit_grants','INSERT')
+            OR has_table_privilege(r.oid,'tholi.plan_versions','INSERT')
+            OR has_table_privilege(r.oid,'tholi.entitlements','INSERT,UPDATE')) END
+        OR CASE WHEN to_regprocedure('tholi.provision_personal_account(uuid,uuid)') IS NULL THEN false
+          ELSE has_function_privilege(r.oid,'tholi.provision_personal_account(uuid,uuid)','EXECUTE') END
+        END) AS unsafe`,
+    [role],
+  );
+  if (result.rows[0]?.unsafe)
+    throw new Error(
+      "Worker role must not assume credential, provisioning or funding access.",
+    );
 }
 
 type AppliedMigration = Pick<
@@ -250,6 +307,12 @@ export async function migrateDatabase(
   if (!Number.isSafeInteger(target) || target < 0 || target > migrations.length)
     throw new Error("Unknown database migration target.");
   if (options.runtimeRole !== undefined) runtimeIdentifier(options.runtimeRole);
+  if (options.workerRole !== undefined) runtimeIdentifier(options.workerRole);
+  if (
+    options.workerRole !== undefined &&
+    options.workerRole === options.runtimeRole
+  )
+    throw new Error("HTTP and worker database roles must be distinct.");
   const lock = await client.query<{ locked: boolean }>(
     "SELECT pg_try_advisory_lock($1, $2) AS locked",
     lockKey,
@@ -260,6 +323,8 @@ export async function migrateDatabase(
   try {
     if (options.runtimeRole !== undefined)
       await validateRuntimeRole(client, options.runtimeRole);
+    if (options.workerRole !== undefined)
+      await validateWorkerRole(client, options.workerRole);
     await transaction(client, async () => {
       await client.query("CREATE SCHEMA IF NOT EXISTS tholi");
       await client.query(`CREATE TABLE IF NOT EXISTS tholi.schema_migrations (
@@ -286,6 +351,8 @@ export async function migrateDatabase(
       await transaction(client, () =>
         grantRuntime(client, options.runtimeRole!),
       );
+    if (options.workerRole !== undefined)
+      await transaction(client, () => grantWorker(client, options.workerRole!));
     return { version: target, applied };
   } catch (error) {
     failed = true;

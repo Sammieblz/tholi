@@ -28,6 +28,7 @@ import { identityCookieNames } from "./identity-cookies";
 function serviceCapabilities(
   identityEnabled: boolean,
   authorizationEnabled: boolean,
+  jobsEnabled: boolean,
 ) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -42,6 +43,7 @@ function serviceCapabilities(
       ...(authorizationEnabled
         ? ["tenant-authorization", "purpose-consent"]
         : []),
+      ...(jobsEnabled ? ["durable-jobs"] : []),
     ],
     availability: {
       authentication: identityEnabled,
@@ -61,10 +63,12 @@ export async function registerServiceApi(
   identityEnabled = false,
   secureCookies = false,
   authorizationEnabled = false,
+  jobsEnabled = false,
 ) {
   const capabilities = serviceCapabilities(
     identityEnabled,
     authorizationEnabled,
+    jobsEnabled,
   );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,

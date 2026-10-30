@@ -1,5 +1,9 @@
 import type { SavedTask } from "../../../../packages/page-model";
 import type { DatabaseScope } from "./postgres";
+import type {
+  JobErrorCode,
+  JobResult,
+} from "../../../../packages/navigation-core/contracts-jobs";
 
 export type RepositoryScope = DatabaseScope;
 
@@ -149,6 +153,13 @@ export interface Job {
     | "uncertain";
   availableAt: Date;
   maxAttempts: number;
+  revision: bigint;
+  attempts: number;
+  cancelRequested: boolean;
+  errorCode: JobErrorCode | null;
+  result: JobResult | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface OutboxEntry {
