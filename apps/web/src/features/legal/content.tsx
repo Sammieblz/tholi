@@ -60,6 +60,16 @@ export function privacySections(): LegalSection[] {
             drafts and optional account support are handled separately.
           </p>
           <p>
+            The account service records redacted operational health data and
+            separate security audit metadata for session, membership and consent
+            changes. Audit records expire after 90 days and are pruned by
+            maintenance. Infrastructure logs, operator exports and backups have
+            separately configured expiry. Routine telemetry excludes navigation
+            content, screenshots, private URLs, form contents and credentials.
+            Optional product measurements have separate choices and retention
+            described in the cookie notice.
+          </p>
+          <p>
             On tholi.io, Cloudflare adds page-view and performance measurements
             independently of the website's cookie choices. Optional Tholi
             account analytics requires separate account-purpose and browser
@@ -770,7 +780,10 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
             events and cancels pending work. Essential authentication,
             operational security and audit records have separate purposes and
             retention. Account and financial ledgers remain separate sources of
-            authority. These choices do not control hosting-platform scripts.
+            authority. Choosing Essential only withdraws browser analytics and
+            appearance storage, while the account permission stays under its
+            separate control. These choices do not control hosting-platform
+            scripts.
           </p>
         </>
       ),

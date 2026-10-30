@@ -193,11 +193,6 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real registration requires email verification before creating account access",
     );
-    stage = "signed-in account layout keyboard focus and reduced motion";
-    await checkAccountLayout(page);
-    checks.push(
-      "real account long identifiers and confirmation controls fit four widths in both themes with visible keyboard focus and reduced motion",
-    );
     stage = "real optional account analytics choices collection and withdrawal";
     const measurements = page.locator(
       'section[aria-labelledby="account-analytics-heading"]',
@@ -248,7 +243,22 @@ test("configured website uses real signup email recovery and retained identity w
         (row) => row.event.name === "page_view" && row.event.page === "account",
       ),
     ).toBe(true);
-    await browserPermission.uncheck();
+    stage =
+      "signed-in account and retained measurements layout keyboard focus and reduced motion";
+    await checkAccountLayout(page);
+    checks.push(
+      "real account and retained measurements fit four widths in both themes with visible keyboard focus and reduced motion",
+    );
+    stage = "real optional account analytics withdrawal";
+    await page
+      .getByRole("button", { name: "Cookie settings", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Cookie settings", exact: true })
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    await expect(browserPermission).not.toBeChecked();
+    await expect(accountPermission).toBeChecked();
     const beforePublic = productRequests;
     await page.goto(environment.webOrigin + "/onboarding");
     await page

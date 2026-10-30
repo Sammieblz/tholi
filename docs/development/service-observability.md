@@ -118,6 +118,9 @@ collection consent. Withdrawing the account purpose atomically purges attributed
 events; browser withdrawal stops/aborts collection without pretending to erase an
 already accepted server copy. Essential auth/security/audit records and financial
 ledgers remain separate. Public Local use and practice have no account provider.
+The website's **Essential only** action withdraws both browser analytics and
+appearance storage immediately; it does not change the separate account-purpose
+grant. Saving an appearance choice does not grant analytics consent.
 Future cloud activation/allowance schemas are reserved but rejected by current
 ingestion. No automatic local-data upload is introduced.
 The public onboarding/practice/store funnel is unavailable to the configured

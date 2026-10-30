@@ -9,10 +9,10 @@ earlier release evidence. API/extension version remains 0.11.0; website remains
 ## Evidence in progress
 
 - Focused configuration, HTTP request correlation and worker cleanup: 69 passed.
-- Focused telemetry, provider, worker and support owners: 64 passed.
+- Final focused telemetry, provider, worker and support owners: 66 passed.
 - Audit and PostgreSQL observer unit contracts: three passed.
 - Real PostgreSQL migration/retention/consent races and actual collector/provider/
-  retried-worker inspection: pending the fresh owned stack run.
+  retried-worker inspection: passed as recorded below.
 - Configured account consent controls in real Chromium/Firefox: pending.
 - Deterministic PR gate and hosted exact-commit checks: pending.
 
@@ -67,6 +67,28 @@ The unchanged failed report is
 `output/qa/local-stack/tholi-smoke-mvv68t8r-2e097bc9/smoke.json`, collected from
 16:13:22 through 16:21:02 UTC. Its owned project, volumes, environment and
 synthetic TLS files were removed.
+
+## Passing actual stack
+
+Clean source `cd95af7360ac15d663456b826f6cbb3e6a0e6f6c` passed all 58 real
+PostgreSQL groups and all 28 stack checks from 16:23:06 through 16:32:10 UTC.
+The redacted report is
+`output/qa/local-stack/tholi-smoke-mvv6lbab-ba803d44/smoke.json`.
+Its owned project, volumes, environment and synthetic TLS files were removed.
+
+The real telemetry check inspected 58 records, correlated an actual rejected
+OIDC exchange with its HTTP parent, and observed an independently running worker
+complete SMTP on attempt two after an actual capture-service interruption.
+Origin correlation remained immutable, attempt spans were distinct, and the
+collector received real traces/logs/metrics. Actual Prometheus scraping passed.
+Private sentinels were absent from inspected application/collector output and
+metric labels. Raw records were not retained; the report preserves only counts
+and hashes. Synthetic ingestion alone was not treated as this proof.
+
+The subsequent changes affect only website consent controls, their browser/unit
+checks and current documentation. They do not alter the API/worker, SQL or
+collector binaries exercised by this report. Their configured website evidence
+is collected separately.
 
 ## UI guidance
 

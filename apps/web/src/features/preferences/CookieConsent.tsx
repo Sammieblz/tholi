@@ -29,6 +29,7 @@ export function CookieConsent() {
     consent,
     storageAvailable,
     choosePreferences,
+    chooseEssentials,
     settingsOpen,
     openCookieSettings,
     closeCookieSettings,
@@ -83,7 +84,7 @@ export function CookieConsent() {
             </p>
           </div>
           <div className="cookie-banner-actions">
-            <button type="button" onClick={() => choosePreferences(false)}>
+            <button type="button" onClick={chooseEssentials}>
               Essential only
             </button>
             <button type="button" onClick={() => choosePreferences(true)}>
@@ -168,7 +169,7 @@ export function CookieConsent() {
               </SiteLink>
             </p>
             <div className="cookie-dialog-actions">
-              <button type="button" onClick={() => choosePreferences(false)}>
+              <button type="button" onClick={chooseEssentials}>
                 Essential only
               </button>
               <button

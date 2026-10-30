@@ -31,6 +31,7 @@ interface PreferencesContextValue {
   consent: ConsentRecord | null;
   storageAvailable: boolean;
   choosePreferences(allowed: boolean): void;
+  chooseEssentials(): void;
   settingsOpen: boolean;
   openCookieSettings(): void;
   closeCookieSettings(): void;
@@ -94,15 +95,27 @@ export function PreferencesProvider({
     if (consent?.preferences && !writeThemeCookie(cookies, next, consent))
       setStorageAvailable(false);
   };
-  const choosePreferences = (allowed: boolean) => {
-    // Preferences consent cannot opt anyone into a future analytics provider.
-    const next = consent
-      ? { ...consent, preferences: allowed }
-      : createConsent(allowed);
+  const commitConsent = (next: ConsentRecord, closeSettings = false) => {
     analytics.setConsent(next);
     updateConsent(next);
     setStorageAvailable(saveWebsitePreferences(cookies, next, theme));
-    setSettingsOpen(false);
+    if (closeSettings) setSettingsOpen(false);
+  };
+  const choosePreferences = (allowed: boolean) => {
+    // Appearance choices never grant analytics permission.
+    commitConsent(
+      consent ? { ...consent, preferences: allowed } : createConsent(allowed),
+      true,
+    );
+  };
+  const chooseEssentials = () => {
+    // Browser withdrawal does not change the separate account purpose grant.
+    commitConsent(
+      consent
+        ? { ...consent, preferences: false, analytics: null }
+        : createConsent(false),
+      true,
+    );
   };
   const setAnalyticsProvider = useCallback(
     (provider: AnalyticsProvider | null) => analytics.setProvider(provider),
@@ -112,9 +125,7 @@ export function PreferencesProvider({
     const next = consent
       ? { ...consent, analytics: choice }
       : createConsent(false, Date.now(), choice);
-    analytics.setConsent(next);
-    updateConsent(next);
-    setStorageAvailable(saveWebsitePreferences(cookies, next, theme));
+    commitConsent(next);
   };
   return (
     <PreferencesContext.Provider
@@ -125,6 +136,7 @@ export function PreferencesProvider({
         consent,
         storageAvailable,
         choosePreferences,
+        chooseEssentials,
         settingsOpen,
         openCookieSettings: () => setSettingsOpen(true),
         closeCookieSettings: () => setSettingsOpen(false),
