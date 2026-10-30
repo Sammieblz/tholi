@@ -77,9 +77,16 @@ export class PostgresSupport implements SupportStore {
     return this.scoped(scope, (queries) => queries.getFile(fileId), signal);
   }
 
-  prepareExternal(lease: JobLease) {
+  async prepareExternal(lease: JobLease) {
     lease = structuredClone(lease);
-    return this.scoped(lease, (queries) => queries.prepareExternal(lease));
+    try {
+      return await this.scoped(lease, (queries) =>
+        queries.prepareExternal(lease),
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code === "40001") return null;
+      throw error;
+    }
   }
 
   async finishExternal(
@@ -103,20 +110,25 @@ export class PostgresSupport implements SupportStore {
         "Use a bounded external outcome.",
       );
     if (outcome.code !== undefined) jobErrorCodeSchema.parse(outcome.code);
-    return (
-      await this.pool.query<{ changed: boolean }>(
-        "SELECT tholi.finish_external_effect($1,$2,$3,$4,$5,$6,$7) AS changed",
-        [
-          lease.workspaceId,
-          lease.id,
-          lease.leaseToken,
-          attemptId,
-          outcome.status,
-          outcome.code ?? null,
-          outcome.backoffMs,
-        ],
-      )
-    ).rows[0].changed;
+    try {
+      return (
+        await this.pool.query<{ changed: boolean }>(
+          "SELECT tholi.finish_external_effect($1,$2,$3,$4,$5,$6,$7) AS changed",
+          [
+            lease.workspaceId,
+            lease.id,
+            lease.leaseToken,
+            attemptId,
+            outcome.status,
+            outcome.code ?? null,
+            outcome.backoffMs,
+          ],
+        )
+      ).rows[0].changed;
+    } catch (error) {
+      if ((error as { code?: string }).code === "40001") return false;
+      throw error;
+    }
   }
 
   async prepareCleanup(lease: JobLease): Promise<PreparedCleanup | null> {
@@ -131,26 +143,31 @@ export class PostgresSupport implements SupportStore {
         "INVALID_INPUT",
         "Use a registered expiry workflow.",
       );
-    const result = await this.pool.query<{
-      attempt_id: string;
-      effect_id: string;
-      command_hash: string;
-      file_id: string;
-      object_key: string;
-    }>("SELECT * FROM tholi.prepare_file_cleanup($1,$2,$3)", [
-      lease.workspaceId,
-      lease.id,
-      lease.leaseToken,
-    ]);
-    const row = result.rows[0];
-    return row
-      ? {
-          attemptId: row.attempt_id,
-          effectId: row.effect_id,
-          commandHash: row.command_hash,
-          file: { id: row.file_id, key: row.object_key },
-        }
-      : null;
+    try {
+      const result = await this.pool.query<{
+        attempt_id: string;
+        effect_id: string;
+        command_hash: string;
+        file_id: string;
+        object_key: string;
+      }>("SELECT * FROM tholi.prepare_file_cleanup($1,$2,$3)", [
+        lease.workspaceId,
+        lease.id,
+        lease.leaseToken,
+      ]);
+      const row = result.rows[0];
+      return row
+        ? {
+            attemptId: row.attempt_id,
+            effectId: row.effect_id,
+            commandHash: row.command_hash,
+            file: { id: row.file_id, key: row.object_key },
+          }
+        : null;
+    } catch (error) {
+      if ((error as { code?: string }).code === "40001") return null;
+      throw error;
+    }
   }
 
   finishCleanup(lease: JobLease, attemptId: string, outcome: ExternalOutcome) {

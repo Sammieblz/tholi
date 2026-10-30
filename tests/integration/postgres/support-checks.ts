@@ -84,6 +84,8 @@ export async function runSupportChecks(
   };
   const readJob = (scope: RepositoryScope, id: string) =>
     repositories.transaction(scope, (owner) => owner.getJob(id));
+  const readRequest = (scope: RepositoryScope, id: string) =>
+    repositories.transaction(scope, (owner) => owner.getRequest(id));
   const diagnostic = (scope: RepositoryScope) =>
     api.requestDiagnostic(scope, {
       idempotencyKey: randomUUID(),
@@ -209,6 +211,7 @@ export async function runSupportChecks(
         }),
         true,
       );
+      assert.equal((await readRequest(scope, saved.id))?.status, "pending");
       const another = await api.submit(scope, command());
       await identities.resolveIdentity({
         ...identity,
@@ -242,6 +245,7 @@ export async function runSupportChecks(
       );
       assert.equal(await effects.prepareExternal(renewed), null);
       assert.equal((await readJob(scope, lease.id))?.status, "uncertain");
+      assert.equal((await readRequest(scope, saved.id))?.status, "uncertain");
       const known = await api.submit(scope, command()),
         current = await claim(known.operatorJobId, "support.operator");
       const knownPrepared = await effects.prepareExternal(current);
@@ -261,6 +265,7 @@ export async function runSupportChecks(
         false,
       );
       assert.equal((await readJob(scope, current.id))?.status, "succeeded");
+      assert.equal((await readRequest(scope, known.id))?.status, "completed");
       assert.equal(
         (
           await migration.query(
@@ -278,6 +283,10 @@ export async function runSupportChecks(
     async () => {
       const { scope } = await fixture(),
         saved = await api.submit(scope, command());
+      await migration.query(
+        "UPDATE tholi.jobs SET max_attempts=1 WHERE id=$1",
+        [saved.operatorJobId],
+      );
       const lease = await claim(saved.operatorJobId, "support.operator"),
         first = await effects.prepareExternal(lease);
       assert.ok(first);
@@ -289,6 +298,23 @@ export async function runSupportChecks(
         }),
         true,
       );
+      const dead = await readJob(scope, lease.id);
+      assert.equal(dead?.status, "dead");
+      assert.equal((await readRequest(scope, saved.id))?.status, "failed");
+      assert.equal(
+        await new PostgresJobs(migration).retryDead(
+          {
+            workspaceId: scope.workspaceId,
+            id: lease.id,
+            expectedRevision: dead!.revision,
+            kind: lease.kind,
+            version: 1,
+          },
+          [{ kind: lease.kind, version: 1, replaySafe: true }],
+        ),
+        true,
+      );
+      assert.equal((await readRequest(scope, saved.id))?.status, "pending");
       const next = await claim(lease.id, lease.kind),
         second = await effects.prepareExternal(next);
       assert.ok(second);
@@ -302,6 +328,7 @@ export async function runSupportChecks(
         }),
         true,
       );
+      assert.equal((await readRequest(scope, saved.id))?.status, "completed");
     },
   );
 
@@ -345,6 +372,10 @@ export async function runSupportChecks(
         false,
       );
       assert.equal(
+        (await readRequest(scope, saved.requestId))?.status,
+        "pending",
+      );
+      assert.equal(
         await effects.finishExternal(next, second.attemptId, {
           status: "committed",
           backoffMs: 0,
@@ -352,6 +383,10 @@ export async function runSupportChecks(
         true,
       );
       assert.equal((await api.getFile(scope, saved.fileId))?.status, "ready");
+      assert.equal(
+        (await readRequest(scope, saved.requestId))?.status,
+        "completed",
+      );
       assert.equal(await api.getFile(other.scope, saved.fileId), null);
       await assert.rejects(
         () =>
@@ -376,6 +411,102 @@ export async function runSupportChecks(
           ),
         { code: "23514" },
       );
+    },
+  );
+
+  await record(
+    "external completion rolls back domain and attempt changes when a live lease expires during SQL lock waits",
+    async () => {
+      for (const status of ["committed", "retryable"] as const) {
+        const { scope } = await fixture(),
+          saved = await diagnostic(scope);
+        const lease = await claim(saved.jobId, "file.diagnostic"),
+          prepared = await effects.prepareExternal(lease);
+        assert.ok(prepared);
+        const expiry = (
+          await migration.query(
+            "UPDATE tholi.jobs SET lease_expires_at=clock_timestamp()+interval '750 milliseconds' WHERE id=$1 RETURNING lease_expires_at",
+            [lease.id],
+          )
+        ).rows[0].lease_expires_at;
+        const blocker = await migration.connect();
+        let finishing: Promise<boolean> | undefined;
+        try {
+          await blocker.query("BEGIN");
+          if (status === "committed")
+            await blocker.query(
+              "SELECT id FROM tholi.private_files WHERE id=$1 FOR UPDATE",
+              [saved.fileId],
+            );
+          else
+            await blocker.query(
+              "SELECT id FROM tholi.external_attempts WHERE id=$1 FOR UPDATE",
+              [prepared.attemptId],
+            );
+          finishing = effects.finishExternal(lease, prepared.attemptId, {
+            status,
+            ...(status === "retryable" ? { code: "UNAVAILABLE" as const } : {}),
+            backoffMs: status === "retryable" ? 1000 : 0,
+          });
+          void finishing.catch(() => {});
+          let waiting = false;
+          const observedBy = Date.now() + 500;
+          while (!waiting && Date.now() < observedBy) {
+            waiting = (
+              await blocker.query(`SELECT EXISTS(SELECT FROM pg_locks blocked WHERE NOT blocked.granted AND blocked.locktype='transactionid'
+              AND blocked.transactionid IN(SELECT held.transactionid FROM pg_locks held WHERE held.pid=pg_backend_pid() AND held.granted AND held.locktype='transactionid')) AS waiting`)
+            ).rows[0].waiting;
+            if (!waiting)
+              await new Promise((resolve) => setTimeout(resolve, 5));
+          }
+          assert.equal(
+            waiting,
+            true,
+            "The external finish reached the protected SQL lock before expiry.",
+          );
+          while (
+            !(
+              await blocker.query(
+                "SELECT clock_timestamp()>$1::timestamptz AS expired",
+                [expiry],
+              )
+            ).rows[0].expired
+          )
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        } finally {
+          await blocker.query("ROLLBACK");
+          blocker.release();
+        }
+        assert.equal(await finishing, false);
+        assert.equal(
+          (await api.getFile(scope, saved.fileId))?.status,
+          "pending",
+        );
+        assert.equal(
+          (await readRequest(scope, saved.requestId))?.status,
+          "pending",
+        );
+        assert.equal((await readJob(scope, lease.id))?.status, "running");
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT state FROM tholi.external_attempts WHERE id=$1",
+              [prepared.attemptId],
+            )
+          ).rows[0].state,
+          "started",
+        );
+        assert.equal(
+          (
+            await migration.query(
+              "SELECT count(*)::integer AS count FROM tholi.outbox WHERE job_id=$1",
+              [lease.id],
+            )
+          ).rows[0].count,
+          0,
+        );
+        assert.equal(await effects.prepareExternal(lease), null);
+      }
     },
   );
 
@@ -568,9 +699,19 @@ export async function runSupportChecks(
         [saved.fileId],
       );
       await effects.scheduleFileExpiry({ limit: 100, intervalMs: 60000 });
-      // The original worker reports the remote PUT only after the first DELETE.
-      // Its lease cannot publish/ack, but a completed DELETE is not trusted as a
-      // permanent guarantee that the generated object can never exist again.
+      rows = (
+        await migration.query(
+          "SELECT id FROM tholi.jobs WHERE workspace_id=$1 AND kind='file.expire' ORDER BY created_at,id",
+          [scope.workspaceId],
+        )
+      ).rows;
+      assert.equal(rows.length, 2);
+      const nextLease = await claim(rows[1].id, "file.expire"),
+        next = await effects.prepareCleanup(nextLease);
+      assert.ok(next);
+      // The original PUT reports after the first DELETE and after the second
+      // cleanup prepared its DELETE, but before that cleanup records completion.
+      // A running cleanup must preserve the newer file revision's reaping intent.
       assert.equal(
         await effects.finishExternal(putLease, put.attemptId, {
           status: "committed",
@@ -585,12 +726,26 @@ export async function runSupportChecks(
         )
       ).rows;
       assert.equal(rows.length, 2);
-      const nextLease = await claim(rows[1].id, "file.expire"),
-        next = await effects.prepareCleanup(nextLease);
-      assert.ok(next);
       assert.equal(next.file.key, put.command.file.key);
       assert.equal(
         await effects.finishCleanup(nextLease, next.attemptId, {
+          status: "committed",
+          backoffMs: 0,
+        }),
+        true,
+      );
+      rows = (
+        await migration.query(
+          "SELECT id FROM tholi.jobs WHERE workspace_id=$1 AND kind='file.expire' ORDER BY created_at,id",
+          [scope.workspaceId],
+        )
+      ).rows;
+      assert.equal(rows.length, 3);
+      const finalLease = await claim(rows[2].id, "file.expire"),
+        final = await effects.prepareCleanup(finalLease);
+      assert.ok(final);
+      assert.equal(
+        await effects.finishCleanup(finalLease, final.attemptId, {
           status: "committed",
           backoffMs: 0,
         }),
@@ -610,7 +765,7 @@ export async function runSupportChecks(
             [scope.workspaceId],
           )
         ).rows[0].count,
-        2,
+        3,
       );
       assert.equal(
         (

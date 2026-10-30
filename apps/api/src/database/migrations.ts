@@ -87,8 +87,11 @@ async function grantWorker(client: PoolClient, role: string) {
     await client.query(
       `GRANT UPDATE(state,finished_at) ON tholi.external_attempts TO ${identifier}`,
     );
+    await client.query(
+      `GRANT UPDATE(status,updated_at) ON tholi.requests TO ${identifier}`,
+    );
     await client.query(`GRANT EXECUTE ON FUNCTION tholi.schedule_file_expiry(integer),tholi.prepare_file_cleanup(uuid,uuid,uuid),
-      tholi.finish_external_effect(uuid,uuid,uuid,uuid,text,text,integer) TO ${identifier}`);
+      tholi.finish_external_effect(uuid,uuid,uuid,uuid,text,text,integer),tholi.require_live_external_lease(uuid,uuid,uuid) TO ${identifier}`);
   }
 }
 

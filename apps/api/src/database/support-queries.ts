@@ -380,10 +380,16 @@ export class ScopedSupport {
         WHERE workspace_id=$1 AND effect_id=$2 AND state='started'`,
         [this.scope.workspaceId, effect.id],
       );
-      await this.client.query(
-        "SELECT tholi.fail_job($1,$2,$3,'uncertain','UNAVAILABLE',0)",
+      const changed = await this.client.query<{ changed: boolean }>(
+        "SELECT tholi.fail_job($1,$2,$3,'uncertain','UNAVAILABLE',0) AS changed",
         [this.scope.workspaceId, lease.id, lease.leaseToken],
       );
+      if (changed.rows[0].changed && lease.kind === "support.operator")
+        await this.client.query(
+          `UPDATE tholi.requests SET status='uncertain',updated_at=clock_timestamp()
+            WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND status IN ('pending','uncertain')`,
+          [...this.parameters, row.request_id],
+        );
       return null;
     }
     const attemptId = randomUUID();
@@ -391,6 +397,10 @@ export class ScopedSupport {
       `INSERT INTO tholi.external_attempts(workspace_id,id,effect_id,claim_token,state)
       VALUES($1,$2,$3,$4,'started')`,
       [this.scope.workspaceId, attemptId, effect.id, lease.leaseToken],
+    );
+    await this.client.query(
+      "SELECT tholi.require_live_external_lease($1,$2,$3)",
+      [this.scope.workspaceId, lease.id, lease.leaseToken],
     );
     return { attemptId, effectId: effect.id, commandHash, command };
   }

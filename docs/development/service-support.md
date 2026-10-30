@@ -168,6 +168,8 @@ links, Blob download and removal of private controls on session expiry. Adapter,
 worker and actual PostgreSQL checks cover their own boundaries. The existing
 local-stack smoke owns actual local mail/object/expiry evidence; recorded
 results belong in a fresh dated validation report.
+The [milestone validation record](testing/service-support-validation.md) keeps
+each collected run and its source attribution separate.
 
 `npm run test:ci` remains the required PR gate. Focused evidence or captured mail
 does not certify a release, external email delivery, a hosted deployment or

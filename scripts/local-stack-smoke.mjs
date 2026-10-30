@@ -829,7 +829,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       const expandedContainers = JSON.parse(
         await docker(["inspect", ...expandedIds]),
       );
-      report.optionalImages = Object.fromEntries(
+      report.storageAndTelemetryImages = Object.fromEntries(
         expandedContainers
           .filter((item) =>
             ["storage", "telemetry"].includes(
@@ -841,7 +841,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
             { id: item.Image, configured: item.Config.Image },
           ]),
       );
-      requireCheck(Object.keys(report.optionalImages).length === 2);
+      requireCheck(Object.keys(report.storageAndTelemetryImages).length === 2);
     }
     stage = "explicit reset and clean application seed";
     assertOwnedSmokeProject(project, report.project);

@@ -118,6 +118,7 @@ CREATE TABLE tholi.external_attempts (
   id uuid NOT NULL,
   effect_id uuid NOT NULL,
   claim_token uuid NOT NULL,
+  expected_file_revision bigint CHECK(expected_file_revision>0),
   state text NOT NULL CHECK(state IN ('started','committed','retryable','uncertain','failed')),
   started_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   -- Initial provider calls are capped at 15 s. This conservative 45 s window
@@ -140,6 +141,16 @@ CREATE POLICY attempt_actor ON tholi.external_attempts USING (workspace_id=tholi
   AND EXISTS(SELECT FROM tholi.external_effects e WHERE e.workspace_id=external_attempts.workspace_id AND e.id=external_attempts.effect_id))
   WITH CHECK(workspace_id=tholi.actor_workspace_id()
   AND EXISTS(SELECT FROM tholi.external_effects e WHERE e.workspace_id=external_attempts.workspace_id AND e.id=external_attempts.effect_id));
+
+-- The two preparation paths share a final, non-renewing pre-egress fence.
+CREATE FUNCTION tholi.require_live_external_lease(workspace uuid,job uuid,fence uuid) RETURNS void
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+  BEGIN
+    IF NOT EXISTS(SELECT FROM tholi.jobs WHERE workspace_id=workspace AND id=job AND claim_token=fence
+      AND status='running' AND version=1 AND kind IN ('support.operator','support.received','file.diagnostic','file.expire')
+      AND cancel_requested_at IS NULL AND lease_expires_at>clock_timestamp()) THEN
+      RAISE EXCEPTION 'The external lease is unavailable.' USING ERRCODE='40001'; END IF;
+  END $$;
 
 -- Retention jobs use the original scope IDs, not an invented system tenant.
 CREATE FUNCTION tholi.enqueue_file_expiry(target_workspace uuid,target_file uuid) RETURNS boolean
@@ -203,8 +214,10 @@ CREATE FUNCTION tholi.prepare_file_cleanup(workspace uuid,job uuid,fence uuid)
     IF effect IS NULL THEN RAISE EXCEPTION 'The effect has changed.' USING ERRCODE='23514'; END IF;
     IF EXISTS(SELECT FROM tholi.external_attempts a WHERE a.workspace_id=workspace AND a.effect_id=effect AND a.claim_token=fence) THEN RETURN; END IF;
     attempt:=gen_random_uuid();
-    INSERT INTO tholi.external_attempts(workspace_id,id,effect_id,claim_token,state) VALUES(workspace,attempt,effect,fence,'started');
+    INSERT INTO tholi.external_attempts(workspace_id,id,effect_id,claim_token,state,expected_file_revision)
+      VALUES(workspace,attempt,effect,fence,'started',f.revision+CASE WHEN f.status IN ('pending','ready') THEN 1 ELSE 0 END);
     UPDATE tholi.private_files SET status='deleting',revision=revision+1 WHERE workspace_id=workspace AND id=f.id AND status IN ('pending','ready');
+    PERFORM tholi.require_live_external_lease(workspace,job,fence);
     RETURN QUERY SELECT attempt,effect,encode(digest,'hex'),f.id,f.object_key;
   END $$;
 
@@ -212,7 +225,7 @@ CREATE FUNCTION tholi.prepare_file_cleanup(workspace uuid,job uuid,fence uuid)
 -- started attempt under a live lease, never authorize another external effect.
 CREATE FUNCTION tholi.finish_external_effect(workspace uuid,job uuid,fence uuid,attempt uuid,outcome text,error_code text,backoff_ms integer)
   RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-  DECLARE j tholi.jobs; changed integer; visible boolean; f tholi.private_files;
+  DECLARE j tholi.jobs; changed integer; visible boolean; f tholi.private_files; expected_revision bigint; primary_status text;
   BEGIN
     IF outcome IS NULL OR outcome NOT IN ('committed','retryable','uncertain','failed')
       OR backoff_ms IS NULL OR backoff_ms NOT BETWEEN 0 AND 60000
@@ -244,18 +257,27 @@ CREATE FUNCTION tholi.finish_external_effect(workspace uuid,job uuid,fence uuid,
     END IF;
     UPDATE tholi.external_attempts a SET state=outcome,finished_at=clock_timestamp()
       FROM tholi.external_effects e WHERE a.workspace_id=workspace AND a.id=attempt AND a.claim_token=fence AND a.state='started'
-        AND e.workspace_id=a.workspace_id AND e.id=a.effect_id AND e.job_id=job;
+        AND e.workspace_id=a.workspace_id AND e.id=a.effect_id AND e.job_id=job RETURNING a.expected_file_revision INTO expected_revision;
     GET DIAGNOSTICS changed=ROW_COUNT; IF changed=0 THEN RETURN false; END IF;
     IF outcome<>'committed' THEN
-      RETURN tholi.fail_job(workspace,job,fence,CASE WHEN outcome='retryable' THEN 'retryable' WHEN outcome='uncertain' THEN 'uncertain' ELSE 'failed' END,
-        COALESCE(error_code,'UNAVAILABLE'),backoff_ms);
+      IF NOT tholi.fail_job(workspace,job,fence,CASE WHEN outcome='retryable' THEN 'retryable' WHEN outcome='uncertain' THEN 'uncertain' ELSE 'failed' END,
+        COALESCE(error_code,'UNAVAILABLE'),backoff_ms) THEN
+        RAISE EXCEPTION 'The external lease is unavailable.' USING ERRCODE='40001'; END IF;
+      IF j.kind IN ('support.operator','file.diagnostic') THEN
+        SELECT CASE WHEN status='queued' THEN 'pending' WHEN status='uncertain' THEN 'uncertain' ELSE 'failed' END INTO primary_status
+          FROM tholi.jobs WHERE workspace_id=workspace AND id=job;
+        UPDATE tholi.requests SET status=primary_status,updated_at=clock_timestamp() WHERE workspace_id=workspace AND id=j.request_id
+          AND account_id=j.account_id AND (status IN ('pending','uncertain') OR status=primary_status);
+      END IF;
+      RETURN true;
     END IF;
     IF j.kind IN ('file.diagnostic','file.expire') THEN
       SELECT * INTO f FROM tholi.private_files WHERE workspace_id=workspace AND request_id=j.request_id AND account_id=j.account_id FOR UPDATE;
       IF f.id IS NULL THEN RAISE EXCEPTION 'The file is unavailable.' USING ERRCODE='23514'; END IF;
       IF j.kind='file.expire' THEN
+        IF expected_revision IS NULL THEN RAISE EXCEPTION 'The cleanup revision is unavailable.' USING ERRCODE='23514'; END IF;
         UPDATE tholi.private_files SET status='deleted',snapshot=NULL,deleted_at=clock_timestamp(),last_reaped_at=clock_timestamp(),
-          next_reconcile_at=CASE WHEN EXISTS(SELECT FROM tholi.external_attempts a
+          next_reconcile_at=CASE WHEN f.revision<>expected_revision THEN clock_timestamp() WHEN EXISTS(SELECT FROM tholi.external_attempts a
             JOIN tholi.external_effects e ON e.workspace_id=a.workspace_id AND e.id=a.effect_id
             JOIN tholi.jobs p ON p.workspace_id=e.workspace_id AND p.id=e.job_id WHERE p.workspace_id=workspace
               AND p.request_id=f.request_id AND p.kind='file.diagnostic' AND a.state<>'committed')
@@ -272,7 +294,15 @@ CREATE FUNCTION tholi.finish_external_effect(workspace uuid,job uuid,fence uuid,
       END IF;
     END IF;
     UPDATE tholi.jobs SET status='succeeded',result_count=1,last_error_code=NULL,claim_token=NULL,lease_owner=NULL,lease_expires_at=NULL,
-      revision=revision+1,updated_at=clock_timestamp() WHERE workspace_id=workspace AND id=job;
+      revision=revision+1,updated_at=clock_timestamp() WHERE workspace_id=workspace AND id=job AND claim_token=fence
+        AND lease_expires_at>clock_timestamp();
+    GET DIAGNOSTICS changed=ROW_COUNT;
+    IF changed=0 THEN RAISE EXCEPTION 'The external lease is unavailable.' USING ERRCODE='40001'; END IF;
+    IF j.kind IN ('support.operator','file.diagnostic') THEN
+      UPDATE tholi.requests SET status='completed',updated_at=clock_timestamp() WHERE workspace_id=workspace AND id=j.request_id
+        AND account_id=j.account_id AND status IN ('pending','uncertain');
+    END IF;
+    IF j.kind='file.expire' THEN PERFORM tholi.enqueue_file_expiry(workspace,f.id); END IF;
     INSERT INTO tholi.outbox(workspace_id,id,job_id,event_kind,idempotency_key,status,published_at)
       VALUES(workspace,gen_random_uuid(),job,'job.completed','job:'||job::text||':completed','published',clock_timestamp()) ON CONFLICT DO NOTHING;
     RETURN true;
@@ -287,11 +317,14 @@ CREATE FUNCTION tholi.guard_retention_job_cancel() RETURNS trigger LANGUAGE plpg
       AND EXISTS(SELECT FROM tholi.external_effects e JOIN tholi.external_attempts a ON a.workspace_id=e.workspace_id AND a.effect_id=e.id
         WHERE e.workspace_id=OLD.workspace_id AND e.job_id=OLD.id AND a.state IN ('started','uncertain','committed')) THEN
       RAISE EXCEPTION 'The external outcome requires review.' USING ERRCODE='42501'; END IF;
+    IF OLD.status='dead' AND NEW.status='queued' AND OLD.kind IN ('support.operator','file.diagnostic') THEN
+      UPDATE tholi.requests SET status='pending',updated_at=clock_timestamp() WHERE workspace_id=OLD.workspace_id
+        AND id=OLD.request_id AND account_id=OLD.account_id AND status='failed'; END IF;
     RETURN NEW;
   END $$;
 CREATE TRIGGER retention_job_cancel BEFORE UPDATE ON tholi.jobs FOR EACH ROW EXECUTE FUNCTION tholi.guard_retention_job_cancel();
 
 REVOKE ALL ON FUNCTION tholi.enqueue_file_expiry(uuid,uuid),tholi.schedule_file_expiry(integer),
   tholi.prepare_file_cleanup(uuid,uuid,uuid),tholi.finish_external_effect(uuid,uuid,uuid,uuid,text,text,integer),
-  tholi.guard_retention_job_cancel(),tholi.valid_diagnostic_snapshot(jsonb) FROM PUBLIC;
+  tholi.guard_retention_job_cancel(),tholi.valid_diagnostic_snapshot(jsonb),tholi.require_live_external_lease(uuid,uuid,uuid) FROM PUBLIC;
 `;
