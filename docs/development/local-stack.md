@@ -75,6 +75,7 @@ Initial PostgreSQL startup creates the local databases and roles. The identity
 container imports `infra/local/oidc/tholi-local-realm.json` on its first startup.
 The sample identity is synthetic and local-only; use the username in that file
 and `OIDC_TEST_PASSWORD` from your private `.env`. The admin password is separate.
+The application account/workspace seed is synthetic and does not sign a user in.
 Sign-up, sessions, extension login and PKCE integration remain
 [#30](https://github.com/Sammieblz/tholi/issues/30).
 
@@ -83,13 +84,14 @@ npm run local:migrate
 npm run local:seed
 ```
 
-`local:migrate` explicitly reapplies the idempotent **infrastructure bootstrap**
-to the running PostgreSQL container. It does not claim to migrate application
-tables. Versioned application migrations and seed data belong to
-[#28](https://github.com/Sammieblz/tholi/issues/28). Keep migration execution as a
-one-shot operator command rather than racing it from every API replica.
+`local:migrate` reapplies infrastructure bootstrap, then runs checked, versioned
+application migrations through the operator-only API-image command. See
+[service database setup, roles and pooling](service-database.md). Keep migration
+execution as a one-shot operator command rather than racing it from API replicas.
 
 `local:seed` creates the local realm if missing and preserves an existing realm.
+It also idempotently provisions a synthetic Tholi account and personal workspace
+after migrations, without granting credits or paid entitlements.
 It does not silently replace changed users or erase identity data. Changes to a
 checked-in realm import are not automatically applied to a retained database.
 Use a deliberate identity migration or an explicitly destructive local reset.

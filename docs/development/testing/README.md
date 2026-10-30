@@ -27,6 +27,9 @@ API container and does not duplicate the full application/model build. This
 infrastructure smoke uses no paid accounts or external mail destinations. See
 [local stack setup and safety](../local-stack.md) for prerequisites, retained-data
 checks and redacted evidence. Ordinary unit runs do not need a Docker daemon.
+The same job runs [service database checks](../service-database.md) against actual
+PostgreSQL: upgrades, runtime privileges, scoped transactions, revision/credit
+concurrency, backup/restore and reset. Its test image is separate from production.
 
 Nightly at 06:00 UTC, manual full validation and version tags retain public-site journeys, frozen model/OCR benchmarks, busy-page/performance budgets and every responsive acceptance scenario. Public tests include the reported-page and language cases formerly hidden in the NLP browser folder. PR contexts reject unexpected public HTTP requests; explicitly fulfilled fixtures remain usable. The full coordinator applies the same fixture-only network policy to its local browser groups, enabling public access only for live-site and acceptance groups.
 

@@ -1,7 +1,9 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { runDatabaseCommand } from "../../../apps/api/src/database/cli";
 import {
   parsePrivateConfig,
+  parseDatabaseConfig,
   parseServiceConfig,
   validateApiOptions,
   validatePrivateConnection,
@@ -19,6 +21,66 @@ const privateOptions: ApiOptions = {
 };
 
 describe("API configuration profiles", () => {
+  it("refuses synthetic database seed outside the explicit development profile", async () => {
+    for (const env of [
+      { NODE_ENV: "production", THOLI_ALLOW_DEV_SEED: "true" },
+      { NODE_ENV: "development", THOLI_ALLOW_DEV_SEED: "false" },
+      {},
+    ])
+      await expect(runDatabaseCommand("seed", env)).rejects.toThrow(
+        "development profile",
+      );
+    await expect(runDatabaseCommand("reset")).rejects.toThrow(
+      "migrate, verify or seed",
+    );
+  });
+  it("requires explicit PostgreSQL credentials and separates migration pool budgets", () => {
+    const runtime = "postgresql://runtime:local@localhost/tholi";
+    const migration = "postgresql://migrator:local@localhost/tholi";
+    expect(parseDatabaseConfig({ THOLI_DATABASE_URL: runtime })).toEqual({
+      connectionString: runtime,
+      max: 8,
+    });
+    expect(
+      parseDatabaseConfig(
+        { THOLI_DATABASE_MIGRATION_URL: migration },
+        "migration",
+      ),
+    ).toEqual({ connectionString: migration, max: 1 });
+    expect(() =>
+      parseDatabaseConfig({ THOLI_DATABASE_URL: runtime }, "migration"),
+    ).toThrow("THOLI_DATABASE_MIGRATION_URL");
+    expect(() =>
+      parseDatabaseConfig({
+        PGDATABASE: "implicit",
+        NAVIGATOR_DATA_DIR: "private",
+      }),
+    ).toThrow("THOLI_DATABASE_URL");
+    for (const value of ["0", "33", "1e1", "1.2", "NaN"])
+      expect(() =>
+        parseDatabaseConfig({
+          THOLI_DATABASE_URL: runtime,
+          THOLI_DATABASE_POOL_MAX: value,
+        }),
+      ).toThrow("budget");
+    expect(() =>
+      parseDatabaseConfig(
+        {
+          THOLI_DATABASE_MIGRATION_URL: migration,
+          THOLI_DATABASE_POOL_MAX: "3",
+        },
+        "migration",
+      ),
+    ).toThrow("budget");
+    for (const connection of [
+      "navigator.sqlite",
+      "https://example.test",
+      "file:///private",
+    ])
+      expect(() =>
+        parseDatabaseConfig({ THOLI_DATABASE_URL: connection }),
+      ).toThrow();
+  });
   it("retains loopback legacy defaults independently of service configuration", () => {
     const cwd = resolve("profile-fixture");
     expect(

@@ -1,5 +1,12 @@
 name: tholi-local
 
+x-api-image: &api-image
+  image: ${COMPOSE_PROJECT_NAME:-tholi-local}-api:dev
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: runtime
+
 services:
   gateway:
     image: nginx/nginx-unprivileged:1.30.6-alpine-slim@sha256:984a21e29bb10d4c0e122374b97b89a2101823a9331e0f3c6c04bc285ccf447f
@@ -39,11 +46,7 @@ services:
       api: { condition: service_healthy }
 
   api:
-    image: ${COMPOSE_PROJECT_NAME:-tholi-local}-api:dev
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: runtime
+    <<: *api-image
     user: "1000:1000"
     command: ["node", "apps/api/dist/service.js"]
     environment:
@@ -79,6 +82,30 @@ services:
       postgres: { condition: service_healthy }
       oidc: { condition: service_healthy }
       mail: { condition: service_healthy }
+
+  # Operator-only commands. Neither credential is injected into the HTTP service.
+  database-tools:
+    <<: *api-image
+    profiles: [tools]
+    entrypoint: [node, apps/api/dist/database-cli.js]
+    command: [verify]
+    user: "1000:1000"
+    environment:
+      NODE_ENV: development
+      THOLI_ALLOW_DEV_SEED: "true"
+      THOLI_DATABASE_URL: postgresql://tholi_runtime:${THOLI_DB_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
+      THOLI_DATABASE_MIGRATION_URL: postgresql://tholi_migrator:${THOLI_MIGRATION_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
+      THOLI_DATABASE_RUNTIME_ROLE: tholi_runtime
+    networks: [database]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 1
+    depends_on:
+      postgres: { condition: service_healthy }
 
   postgres:
     image: postgres:18.6-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8

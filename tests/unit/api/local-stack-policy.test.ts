@@ -6,7 +6,10 @@ import {
   assertOwnedSmokeProject,
   inspectLocalStack,
 } from "../../../scripts/lib/local-stack-policy.mjs";
-import { localStackArguments } from "../../../scripts/local-stack.mjs";
+import {
+  localStackArguments,
+  localStackCommands,
+} from "../../../scripts/local-stack.mjs";
 
 function composeModel() {
   const image = "registry.test/local:1@sha256:" + "a".repeat(64);
@@ -210,6 +213,19 @@ test("regular teardown preserves volumes and reset requires an explicit matching
   try {
     await writeFile(envFile, `COMPOSE_PROJECT_NAME="${project}" # local\n`);
     const options = { envFile };
+    for (const action of ["migrate", "seed"] as const) {
+      const commands = localStackCommands({ ...options, action });
+      expect(commands).toHaveLength(2);
+      expect(commands[0]).toEqual(localStackArguments({ ...options, action }));
+      expect(commands[1].slice(-6)).toEqual([
+        "run",
+        "--rm",
+        "--no-deps",
+        "-T",
+        "database-tools",
+        action,
+      ]);
+    }
     expect(localStackArguments({ ...options, action: "down" })).not.toContain(
       "--volumes",
     );

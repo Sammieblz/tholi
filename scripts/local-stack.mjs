@@ -123,6 +123,27 @@ export function localStackArguments({
   return args;
 }
 
+/** Infrastructure bootstrap stays separate from versioned application migrations. */
+export function localStackCommands(options) {
+  const commands = [localStackArguments(options)];
+  if (["migrate", "seed"].includes(options.action)) {
+    const base = localStackArguments({ ...options, action: "status" }).slice(
+      0,
+      -1,
+    );
+    commands.push([
+      ...base,
+      "run",
+      "--rm",
+      "--no-deps",
+      "-T",
+      "database-tools",
+      options.action,
+    ]);
+  }
+  return commands;
+}
+
 function main(args) {
   const [action, ...flags] = args;
   const options = { action, selectedProfiles: [] };
@@ -157,15 +178,20 @@ function main(args) {
     );
     return;
   }
-  const result = spawnSync("docker", localStackArguments(options), {
-    cwd: root,
-    stdio: "inherit",
-  });
-  if (result.error)
-    throw new Error(
-      "Docker could not start. Install Docker with Compose and start its Linux engine.",
-    );
-  process.exitCode = result.status ?? 1;
+  for (const command of localStackCommands(options)) {
+    const result = spawnSync("docker", command, {
+      cwd: root,
+      stdio: "inherit",
+    });
+    if (result.error)
+      throw new Error(
+        "Docker could not start. Install Docker with Compose and start its Linux engine.",
+      );
+    if (result.status !== 0) {
+      process.exitCode = result.status ?? 1;
+      return;
+    }
+  }
 }
 
 if (

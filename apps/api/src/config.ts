@@ -1,5 +1,6 @@
 import { isIP } from "node:net";
 import { resolve } from "node:path";
+import type { DatabaseOptions } from "./database/postgres";
 
 export interface ApiOptions {
   token: string;
@@ -137,6 +138,39 @@ function parseOrigins(
       .filter(Boolean),
     service,
   );
+}
+
+/** Explicit service configuration; never read legacy SQLite paths or ambient PG*. */
+export function parseDatabaseConfig(
+  env: Environment,
+  purpose: "runtime" | "migration" = "runtime",
+): DatabaseOptions {
+  const name =
+    purpose === "migration"
+      ? "THOLI_DATABASE_MIGRATION_URL"
+      : "THOLI_DATABASE_URL";
+  const connectionString = environmentValue(env, name);
+  if (!connectionString) throw new Error(`Missing ${name}.`);
+  let url: URL;
+  try {
+    url = new URL(connectionString);
+  } catch {
+    throw new Error("Invalid PostgreSQL connection configuration.");
+  }
+  if (!["postgres:", "postgresql:"].includes(url.protocol))
+    throw new Error("A PostgreSQL connection URL is required.");
+  const maxText = environmentValue(env, "THOLI_DATABASE_POOL_MAX");
+  if (maxText !== undefined && !/^\d+$/.test(maxText))
+    throw new Error("Invalid PostgreSQL pool budget.");
+  const max =
+    maxText === undefined ? (purpose === "migration" ? 1 : 8) : Number(maxText);
+  if (
+    !Number.isSafeInteger(max) ||
+    max < 1 ||
+    max > (purpose === "migration" ? 2 : 32)
+  )
+    throw new Error("Invalid PostgreSQL pool budget.");
+  return { connectionString, max };
 }
 
 export function parsePrivateConfig(env: Environment, cwd = process.cwd()) {

@@ -13,6 +13,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Optional API setup](guides/backend.md)
 - [API profiles, ownership and lifecycle](architecture/backend.md)
 - [Cloud-free local backend containers](development/local-stack.md)
+- [Service PostgreSQL setup, migrations and repositories](development/service-database.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help
