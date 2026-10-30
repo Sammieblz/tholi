@@ -688,5 +688,103 @@
       "Crop selection did not include the slot fixture; zero crop slot samples are not slot-masking successes.",
       "The native cohort and paired timings are focused evidence, not full release certification."
     ]
-  }
+  },
+  "localCiAttempts": [
+    {
+      "runId": "55ec14af-dba8-428a-9aa8-781227856539",
+      "sourceHead": "e45f71fc9baede24a14d40da706695d460965ae1",
+      "sourceDirty": false,
+      "manifestSha256": "d5a8f82fa541055498f0d3307b361dd02882bc6707a527f51344a26dcdb310d0",
+      "manifestUnchanged": true,
+      "passed": false,
+      "stages": [
+        {
+          "name": "verify-before",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 503
+        },
+        {
+          "name": "typecheck",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 20653
+        },
+        {
+          "name": "test-ci",
+          "exitCode": 1,
+          "signal": null,
+          "elapsedMs": 112291
+        },
+        {
+          "name": "verify-after",
+          "exitCode": 0,
+          "signal": null,
+          "elapsedMs": 360
+        }
+      ],
+      "unit": {
+        "total": 723,
+        "passed": 722,
+        "failed": 1,
+        "fileCount": 68,
+        "report": {
+          "path": "output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/output/qa/unit.json",
+          "sha256": "4822ef7aad10c745ea85195d953ee40fe39c953b223b86ee6fae201d3bcdb2ba"
+        }
+      },
+      "browsersExecuted": false,
+      "excludedUnrelatedReports": [
+        {
+          "path": "output/acceptance/e2e-regressions.json",
+          "originalRunId": "57b74697-c67b-43cc-9fda-4c34f05dc634"
+        },
+        {
+          "path": "output/nlp/browser-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/multi-app/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/vision/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/reliability/browser.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/qa/firefox-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        },
+        {
+          "path": "output/qa/ui-build.json",
+          "originalRunId": "e1f09fe2-1769-4d04-8641-6b7b441f6d91"
+        }
+      ],
+      "summary": {
+        "path": "output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/summary.json",
+        "sha256": "17e68bec19561f7d18f2dff36136e94105eb6fc095d2673e8ebf45ac8426aabb"
+      },
+      "failureCategory": "connected-backend unit fixture lacked explicit Chromium host-permission API",
+      "correction": {
+        "productionChanged": false,
+        "scope": "test fixture supplies explicit origin grant and verifies current permission check",
+        "runId": "85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107",
+        "passed": true,
+        "total": 16,
+        "groups": {
+          "dashboard": 9,
+          "backendConsent": 7
+        },
+        "report": {
+          "path": "output/qa/vision-38-focused/85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107/unit.json",
+          "sha256": "49e588fcacb765d4b0acc8454aeb6b4d2249f9e98c22fbed9667fd300880dade"
+        },
+        "completeCiPassed": false
+      }
+    }
+  ]
 }

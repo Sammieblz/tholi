@@ -179,6 +179,31 @@ remains before-slot evidence. Final report:
 SHA-256 `f8c2d604f8d2e1e9e3fd343be7b24219e0f4c8d3e7dabd2edb4b540bfeea72c8`.
 This focused project pass is not complete CI or release certification.
 
+## Local PR gate and permission-fixture correction
+
+The first complete local CI attempt,
+`55ec14af-dba8-428a-9aa8-781227856539`, failed on clean source
+`e45f71fc9baede24a14d40da706695d460965ae1`. Types and before/after d5a8 manifest
+verification passed. Unit tests executed all 723 cases across 68 files, with
+722 passing and one failing: the existing connected-backend dashboard fixture
+did not expose the Chromium host-permission API now required by the production
+boundary. Browser groups never ran. Old browser reports were identified as
+unrelated and excluded from this run's evidence.
+
+The test fixture now explicitly grants its configured origin and asserts the
+permission check. No production permission or authentication guard changed.
+Focused run `85f3f7c3-3167-4b9f-b6d3-9cd1f3c71107` passed all 16 checks: nine
+dashboard and seven backend-consent cases. Its unit report SHA-256 is
+`49e588fcacb765d4b0acc8454aeb6b4d2249f9e98c22fbed9667fd300880dade`.
+This correction has not yet passed a complete CI rerun.
+
+The failed run's retained summary is
+`output/qa/vision38-ci/55ec14af-dba8-428a-9aa8-781227856539/summary.json`,
+SHA-256 `17e68bec19561f7d18f2dff36136e94105eb6fc095d2673e8ebf45ac8426aabb`.
+The unit report SHA-256 is
+`4822ef7aad10c745ea85195d953ee40fe39c953b223b86ee6fae201d3bcdb2ba`.
+Both attempts are recorded separately in the content-free evidence index.
+
 ## Checks and remaining gates
 
 | Evidence                                                    | Recorded result                                                                                                                                                                                                                                                                                      |
