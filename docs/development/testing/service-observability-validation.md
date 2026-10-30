@@ -20,6 +20,19 @@ Failed diagnostics and subsequent evidence will remain separately attributed.
 No local fixture result certifies a native permission flow, screen reader,
 external inbox delivery, live Gemini inference or managed alert delivery.
 
+## Initial real PostgreSQL failure
+
+Clean source `5cb2b3686c1069f6d0f4033c00e1b1810ebd30cc` passed Compose policy,
+then failed the existing competing-dispatcher completion check. PostgreSQL
+reported missing worker EXECUTE permission on `valid_job_correlation`, which is
+rechecked by the new jobs CHECK constraint during completion. No successful
+container or telemetry certification is claimed for this run.
+
+The unchanged report is
+`output/qa/local-stack/tholi-smoke-mvv5tg3n-5c569683/smoke.json`, collected from
+16:01:25 through 16:03:48 UTC on 2026-10-30. Its owned project and volumes were
+removed. The subsequent grant correction and fresh run are separate evidence.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

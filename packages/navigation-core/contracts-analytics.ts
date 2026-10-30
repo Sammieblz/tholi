@@ -63,6 +63,7 @@ export const productFunnelEventSchema = z.discriminatedUnion("name", [
     .strict(),
 ]);
 export const PRODUCT_FUNNEL_AVAILABILITY = Object.freeze({
+  publicOnboardingFunnel: "unavailable",
   localActivation: "unavailable",
   freeCloudActivation: "unavailable",
   paidCloudActivation: "unavailable",

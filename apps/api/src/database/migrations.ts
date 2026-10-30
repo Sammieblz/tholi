@@ -103,7 +103,7 @@ async function grantWorker(client: PoolClient, role: string) {
     ).rows[0]?.present
   )
     await client.query(
-      `GRANT EXECUTE ON FUNCTION tholi.prune_observability(integer),tholi.job_health() TO ${identifier}`,
+      `GRANT EXECUTE ON FUNCTION tholi.prune_observability(integer),tholi.job_health(),tholi.valid_job_correlation(jsonb) TO ${identifier}`,
     );
 }
 
