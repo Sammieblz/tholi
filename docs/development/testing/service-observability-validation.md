@@ -151,6 +151,24 @@ were removed; the temporary orchestration script was removed after verification.
 This is configured local Chromium/Firefox evidence, not native Chrome, external
 inbox or managed-cloud certification.
 
+## Deterministic gate attempts
+
+The first fresh default build at clean source `863ffa6` passed type/version
+checks and compilation. Gate run `5f387550-ba22-4b6c-a4cb-2137d6d204d6` then
+stopped with 615 of 618 unit tests passing. Two exact assertions omitted the new
+analytics inventory group and fifth explicitly unavailable funnel. The first
+correlation test also exceeded Vitest's default five-second timeout. Its focused
+unchanged file subsequently passed all nine tests, with that case taking 4,059 ms;
+the timeout and production deadlines were not changed. The exact-assertion
+corrections separately passed all 49 tests in their existing two files.
+
+The failed unit report, timings and build manifest remain under
+`output/qa/service-observability-ci-failed-5f387550-ba22-4b6c-a4cb-2137d6d204d6/`.
+Only tests and this technical evidence record changed after compilation. The next
+gate uses the documented prepared-build path after fresh type checks and full
+manifest verification; it does not rebuild or combine results with this failed
+run. Hosted PR checks still perform their own fresh exact-head build.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

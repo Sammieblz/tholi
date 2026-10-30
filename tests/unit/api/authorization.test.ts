@@ -474,9 +474,13 @@ describe("consented product analytics HTTP contracts", () => {
         mode: "local",
       }).success,
     ).toBe(true);
-    expect(Object.values(PRODUCT_FUNNEL_AVAILABILITY)).toEqual(
-      Array(4).fill("unavailable"),
-    );
+    expect(PRODUCT_FUNNEL_AVAILABILITY).toEqual({
+      publicOnboardingFunnel: "unavailable",
+      localActivation: "unavailable",
+      freeCloudActivation: "unavailable",
+      paidCloudActivation: "unavailable",
+      allowanceExhaustion: "unavailable",
+    });
   });
 
   it("advertises only composed handlers and maps bounded collection admission safely", async () => {
