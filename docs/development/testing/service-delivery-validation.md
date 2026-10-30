@@ -81,6 +81,19 @@ prerendered routes, 26 assets and 84 Cloudflare header rules. Every actual asset
 has its own immutable rule; untracked assets still fail. The generated operator
 fragment is ignored locally and remains outside public assets.
 
+The next complete attempt passed types and the entire fresh production build,
+then passed 592 of 593 unit cases. Its single failure was an existing bootstrap
+assertion expecting the old `{ origins: [] }` service configuration without the
+new transport defaults. The unchanged failed cohort and build manifest are
+preserved under
+`output/qa/service-delivery-failed-unit-0c00db74-1084-48e8-88b1-dbe211bd43db`.
+The existing assertion now compares the exact options with the shared
+`SERVICE_TRANSPORT_DEFAULTS`, avoiding another literal default catalog. Its 17
+focused bootstrap cases and whole-project TypeScript pass. No application
+input changed after that successful build; its complete immutable manifest was
+verified before using the documented prepared-build option for a new full PR
+cohort.
+
 ## Deployment limitations
 
 Cloudflare edge behavior, Google gateway/WAF policy, hosted origin firewall
