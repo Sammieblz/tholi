@@ -15,6 +15,9 @@ engine first and allow enough memory for PostgreSQL and Keycloak alongside Node
 builds. The first image build and pulls need internet access. Running the default
 stack needs no provider account, cloud project or model download.
 
+The complete smoke also resolves the VM delivery overlay and therefore requires
+Compose **2.24.4 or newer** for its explicit `!override` ports and mounts.
+
 From the repository root:
 
 ```sh

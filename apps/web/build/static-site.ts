@@ -23,7 +23,9 @@ export function staticSite(): Plugin {
       generatedAssets.clear();
       styles.clear();
     },
-    generateBundle(_options, bundle) {
+    writeBundle(_options, bundle) {
+      // Vite's later generateBundle hooks finalize CSS assets and chunk metadata.
+      // Inspect the completed written bundle, then compare it with disk below.
       for (const chunk of Object.values(bundle)) {
         if (chunk.fileName.startsWith("assets/"))
           generatedAssets.add(chunk.fileName);

@@ -11,6 +11,7 @@ assets/models/
 assets/ocr/
 assets/paddle/
 output/qa/
+output/deploy/
 output/releases/
 output/nlp/
 output/multi-app/
