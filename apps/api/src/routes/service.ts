@@ -21,6 +21,10 @@ import {
   serviceRevisionGuardSchema,
   serviceSyncQuerySchema,
 } from "../../../../packages/navigation-core/contracts-service";
+import {
+  navigationDecisionSchema,
+  navigationObservationSchema,
+} from "../../../../packages/navigation-core/contracts-navigation";
 import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
 import { identityCookieNames } from "./identity-cookies";
@@ -99,9 +103,23 @@ export async function registerServiceApi(
           "Service contract version, independent of product releases and the legacy private /v1 and /v2 profiles. Only executable paths are available; x-tholi-route-inventory identifies planned work.",
       },
       security: [],
-      ...(identityEnabled
-        ? {
-            components: {
+      components: {
+        // Future OpenAPI components do not enter Fastify's executable AJV schema
+        // registry. Their OpenAPI dialect is documentation, not route admission.
+        schemas: {
+          NavigationObservation: jsonSchema(
+            navigationObservationSchema.describe(
+              "Future independently versioned ephemeral navigation contract. This component does not enable a decision route, image upload or model capability. Native scope, encoded budgets and cross-reference validation also require the shared runtime validators.",
+            ),
+          ),
+          NavigationDecision: jsonSchema(
+            navigationDecisionSchema.describe(
+              "Future independently versioned navigation proposal. The browser validates current native references and original deadlines, retains interaction authority and independently verifies outcomes. Server timing is a separate clock domain.",
+            ),
+          ),
+        },
+        ...(identityEnabled
+          ? {
               securitySchemes: {
                 NativeBearer: { type: "http" as const, scheme: "bearer" },
                 WebSession: {
@@ -110,9 +128,9 @@ export async function registerServiceApi(
                   name: identityCookieNames(secureCookies).access,
                 },
               },
-            },
-          }
-        : {}),
+            }
+          : {}),
+      },
     },
   });
   const emptyQuery = jsonSchema(z.object({}).strict());

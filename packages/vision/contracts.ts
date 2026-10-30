@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hasPngSignature, readPngDimensions } from "./png";
 export const visualStampSchema = z
   .object({
     requestId: z.string().uuid(),
@@ -79,20 +80,12 @@ export function validatePng(input: RecognitionInput) {
     typeof Buffer !== "undefined"
       ? Buffer.from(input.image, "base64")
       : Uint8Array.from(atob(input.image), (c) => c.charCodeAt(0));
-  if (
-    binary.length > 4194304 ||
-    binary.length < 24 ||
-    [137, 80, 78, 71, 13, 10, 26, 10].some((v, i) => binary[i] !== v)
-  )
+  if (binary.length > 4194304 || binary.length < 24 || !hasPngSignature(binary))
     throw new Error("Expected a PNG of at most four MB");
-  const view = new DataView(
-    binary.buffer,
-    binary.byteOffset,
-    binary.byteLength,
-  );
+  const { width, height } = readPngDimensions(binary);
   if (
-    view.getUint32(16) !== input.width ||
-    view.getUint32(20) !== input.height ||
+    width !== input.width ||
+    height !== input.height ||
     input.width * input.height > 4000000
   )
     throw new Error("PNG dimensions do not match capture metadata");

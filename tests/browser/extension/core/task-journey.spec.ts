@@ -454,10 +454,14 @@ test("model follow-ups receive the original destination and verified progress af
       goal: "Change language to Spanish",
       task: {
         id: initial.journey.id,
-        destination: { value: "Spanish", language: "es" },
         verifiedProgress: [{ label: "Languages", kind: "expand" }],
       },
     });
+    expect(followup.task).not.toHaveProperty("destination");
+    expect(Object.keys(followup.task.verifiedProgress[0]).sort()).toEqual([
+      "kind",
+      "label",
+    ]);
     await app.page.getByRole("link", { name: "Español" }).click();
     await expect
       .poll(async () => (await app.view()).goalPlan?.status)

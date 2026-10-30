@@ -34,6 +34,12 @@ import {
   serviceRequestPolicySchema,
   serviceRequestMetadataSchema,
 } from "../../../packages/navigation-core/contracts-service";
+import {
+  NAVIGATION_CONTRACT_VERSION,
+  NAVIGATION_LIMITS,
+  NAVIGATION_PROTOCOL,
+  NATIVE_BROWSER_VERSION,
+} from "../../../packages/navigation-core/contracts-navigation";
 
 const applications: FastifyInstance[] = [];
 const releaseOperations: (() => void)[] = [];
@@ -471,6 +477,79 @@ test("the handshake has its own small body budget and unsupported media types fa
   expectCorrelation(unsupported);
 });
 
+test.each(["declared-length", "chunked"] as const)(
+  "the actual handshake listener rejects an oversized %s request with a complete safe 413",
+  async (mode) => {
+    const app = await service();
+    const address = await app.listen({ host: "127.0.0.1", port: 0 });
+    let request: ClientRequest | undefined;
+    try {
+      const response = await new Promise<{
+        status?: number;
+        headers: IncomingHttpHeaders;
+        body: string;
+        complete: boolean;
+      }>((resolve, reject) => {
+        request = openRequest(
+          address + "/api/v1/handshake",
+          {
+            method: "POST",
+            agent: false,
+            headers: {
+              "content-type": "application/json",
+              connection: "close",
+              ...(mode === "declared-length"
+                ? { "content-length": "8193" }
+                : { "transfer-encoding": "chunked" }),
+            },
+          },
+          (incoming) => {
+            let body = "";
+            incoming.setEncoding("utf8");
+            incoming.on("data", (chunk: string) => {
+              body += chunk;
+            });
+            incoming.on("error", reject);
+            incoming.on("end", () =>
+              resolve({
+                status: incoming.statusCode,
+                headers: incoming.headers,
+                body,
+                complete: incoming.complete,
+              }),
+            );
+          },
+        );
+        request.setTimeout(2000, () =>
+          request?.destroy(
+            new Error("Body admission did not return a response."),
+          ),
+        );
+        request.on("error", reject);
+        // The declared-length case sends headers only. The chunked case sends
+        // 8,193 actual bytes with no Content-Length, exercising received bytes.
+        request.end(mode === "chunked" ? " ".repeat(8191) + "{}" : undefined);
+      });
+      expect(response.status).toBe(413);
+      expect(response.complete).toBe(true);
+      expect(response.headers.connection).toBe("close");
+      expect(response.headers["cache-control"]).toBe("no-store");
+      expect(
+        serviceErrorEnvelopeSchema.parse(JSON.parse(response.body)),
+      ).toEqual({
+        error: {
+          code: "PAYLOAD_TOO_LARGE",
+          message: "Request exceeds the size limit.",
+          requestId: response.headers["x-request-id"],
+          retryable: false,
+        },
+      });
+    } finally {
+      request?.destroy();
+    }
+  },
+);
+
 test("the service body budget rejects oversized input before a fake operation runs", async () => {
   const app = await service();
   let entered = false;
@@ -734,6 +813,46 @@ test("the service OpenAPI describes live routes independently of legacy APIs", a
   expect(specification.paths["/v2/plans"]).toBeUndefined();
   expect(specification.paths["/api/v1/decisions"]).toBeUndefined();
   expect(specification.paths["/api/v1/account"]).toBeUndefined();
+  const schemas = specification.components.schemas;
+  for (const name of ["NavigationObservation", "NavigationDecision"]) {
+    expect(schemas[name]).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        protocol: { enum: [NAVIGATION_PROTOCOL] },
+        version: { enum: [NAVIGATION_CONTRACT_VERSION] },
+        native: {
+          properties: {
+            kind: { enum: ["browser"] },
+            version: { enum: [NATIVE_BROWSER_VERSION] },
+          },
+        },
+      },
+    });
+    expect(schemas[name].description).toContain(
+      "Future independently versioned",
+    );
+  }
+  expect(schemas.NavigationObservation.properties).toMatchObject({
+    frames: { maxItems: NAVIGATION_LIMITS.maxFrames },
+    regions: { maxItems: NAVIGATION_LIMITS.maxRegions },
+    controls: { maxItems: NAVIGATION_LIMITS.maxControls },
+    images: {
+      maxItems: NAVIGATION_LIMITS.maxImages,
+      items: {
+        properties: {
+          width: { maximum: NAVIGATION_LIMITS.maxImageDimension },
+          height: { maximum: NAVIGATION_LIMITS.maxImageDimension },
+        },
+      },
+    },
+  });
+  expect(
+    schemas.NavigationDecision.properties.decision.anyOf.map(
+      (variant: { properties: { kind: { enum: string[] } } }) =>
+        variant.properties.kind.enum[0],
+    ),
+  ).toEqual(["guide", "request-observation", "clarify", "unsupported"]);
   expectCorrelation(response);
   const example =
     specification.paths["/api/v1/handshake"].post.requestBody.content[

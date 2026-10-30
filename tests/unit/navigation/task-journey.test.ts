@@ -13,7 +13,10 @@ import {
   mergeObservation,
   applyRouteFeedback,
 } from "../../../packages/site-memory/index";
-import { modelContext } from "../../../packages/goal-planner/model-context";
+import {
+  buildNavigationContext,
+  modelContext,
+} from "../../../packages/goal-planner/model-context";
 import type {
   SiteMemory,
   MemoryTransition,
@@ -239,21 +242,31 @@ it("passes bounded verified task context to the model and saves no document IDs 
   const page = discovery.snapshot(),
     task = beginJourney("Change language to Spanish", page.origin);
   task.progress = Array.from({ length: 30 }, (_, i) => ({
-    origin: page.origin,
-    from: "state" + i,
-    to: "state" + (i + 1),
+    origin: "https://PRIVATE_PROGRESS_ORIGIN.invalid",
+    from: "PRIVATE_PROGRESS_FROM" + i,
+    to: "PRIVATE_PROGRESS_TO" + (i + 1),
     signature: "sig",
-    label: "Menu",
+    label: i === 29 ? "" : "Menu",
     kind: "expand",
     durationMs: 1000,
     at: Date.now(),
   }));
   const context = modelContext(page, task.goal, task);
   expect(context.task?.verifiedProgress).toHaveLength(8);
-  expect(context.task?.destination).toMatchObject({
-    value: "Spanish",
-    language: "es",
+  expect(context.goal).toBe("Change language to Spanish");
+  expect(context.task?.verifiedProgress[0]).toEqual({
+    label: "Menu",
+    kind: "expand",
   });
+  const projected = buildNavigationContext(task.goal, task);
+  expect(Object.keys(projected)).toEqual(["goal", "verifiedProgress"]);
+  expect(JSON.stringify(context)).not.toMatch(
+    /PRIVATE_PROGRESS_|"destination"/,
+  );
+  const qualifiedGoal =
+    "Open settings ".repeat(13) + "without deleting my account";
+  expect(buildNavigationContext(qualifiedGoal).goal).toBe(qualifiedGoal.trim());
+  expect(() => buildNavigationContext("x".repeat(1001))).toThrow("1,000");
   expect(JSON.stringify(context)).not.toContain("USER_PRIVATE_SENTINEL");
   const saved = JSON.stringify(saveTask(task));
   expect(saved).not.toContain(page.controls[0].id);

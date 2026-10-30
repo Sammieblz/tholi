@@ -171,7 +171,10 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
   const results = [];
   let phase = "TLS startup",
     expectedStatus,
-    observedStatus;
+    observedStatus,
+    transportError = "none",
+    responseStarted = false,
+    responseComplete = false;
   const tlsAgent = new https.Agent({ keepAlive: true, maxSockets: 16 });
   const plainAgent = new http.Agent({ keepAlive: true, maxSockets: 16 });
   const check = (name) => results.push({ name, passed: true });
@@ -183,19 +186,39 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     method = "GET",
     headers = {},
     body,
+    dedicated = false,
     servername = "api.example.test",
     timeoutMs = 10000,
   } = {}) =>
     new Promise((resolve, reject) => {
       const payload = body === undefined ? undefined : Buffer.from(body);
       const secure = tls && !direct && !website;
+      let timedOut = false,
+        settled = false;
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        transportError = timedOut
+          ? "TIMEOUT"
+          : [
+                "ECONNRESET",
+                "ECONNREFUSED",
+                "EPIPE",
+                "ETIMEDOUT",
+                "ERR_TLS_CERT_ALTNAME_INVALID",
+                "CERT_HAS_EXPIRED",
+              ].includes(error?.code)
+            ? error.code
+            : "OTHER";
+        reject(error);
+      };
       const req = (secure ? https : http).request(
         {
           hostname: direct ? "127.0.0.1" : proxy,
           port: direct ? 8788 : website ? 8081 : tls ? 8443 : 8080,
           method,
           path,
-          agent: secure ? tlsAgent : plainAgent,
+          agent: dedicated ? false : secure ? tlsAgent : plainAgent,
           ...(secure ? { ca, servername, rejectUnauthorized: true } : {}),
           headers: {
             Host: "api.example.test",
@@ -204,24 +227,34 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
           },
         },
         (response) => {
+          if (settled) {
+            response.resume();
+            return;
+          }
+          responseStarted = true;
+          observedStatus = response.statusCode;
           const chunks = [],
             protocol = response.socket?.getProtocol?.();
           response.on("data", (chunk) => chunks.push(chunk));
-          response.on("end", () =>
+          response.on("end", () => {
+            if (settled) return;
+            settled = true;
+            responseComplete = response.complete;
             resolve({
               status: response.statusCode,
               headers: response.headers,
               body: Buffer.concat(chunks).toString("utf8"),
               protocol,
-            }),
-          );
-          response.on("error", reject);
+            });
+          });
+          response.on("error", fail);
         },
       );
-      req.setTimeout(timeoutMs, () =>
-        req.destroy(new Error("Gateway request deadline.")),
-      );
-      req.on("error", reject);
+      req.setTimeout(timeoutMs, () => {
+        timedOut = true;
+        req.destroy(new Error("Gateway request deadline."));
+      });
+      req.on("error", fail);
       req.end(payload);
     });
   // Labels are fixed QA operations. Never attach assertion messages or response
@@ -230,6 +263,9 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     phase = label;
     expectedStatus = expected;
     observedStatus = undefined;
+    transportError = "none";
+    responseStarted = false;
+    responseComplete = false;
     const response = await request(options);
     observedStatus = response.status;
     assert.equal(observedStatus, expectedStatus);
@@ -400,20 +436,42 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
       assert.equal(forbidden.headers["access-control-allow-origin"], undefined);
       privateResponse(forbidden);
       const oversized = await expectResponse(
-        boundary + " body budget",
+        boundary + " declared-length body admission",
         {
           direct,
           path: "/api/v1/support/requests",
           method: "POST",
-          body: Buffer.alloc(512 * 1024 + 1, 32),
-          headers: { "Content-Type": "application/json" },
+          dedicated: true,
+          // Both boundaries reject this declared length before reading a body.
+          // Do not race their early close with an unnecessary bulk upload.
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": 512 * 1024 + 1,
+            Connection: "close",
+          },
         },
         413,
       );
+      assert.equal(responseComplete, true);
       privateResponse(oversized);
+      if (direct) {
+        const requestId = oversized.headers["x-request-id"];
+        assert.match(
+          requestId,
+          /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i,
+        );
+        assert.deepEqual(JSON.parse(oversized.body), {
+          error: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: "Request exceeds the size limit.",
+            requestId,
+            retryable: false,
+          },
+        });
+      }
     }
     check(
-      "actual proxy and direct API enforce authentication, CORS, no-store and body budgets",
+      "actual proxy and direct API enforce authentication, CORS, no-store and declared-length admission",
     );
     for (const base of ["account", "welcome"]) {
       for (const alias of [base, base + "/", base + ".html", base + ".html/"]) {
@@ -478,6 +536,12 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
         (observedStatus ?? "unavailable") +
         "; expected status " +
         (expectedStatus ?? "unavailable") +
+        "; transport " +
+        transportError +
+        "; response started " +
+        responseStarted +
+        "; response complete " +
+        responseComplete +
         ".",
     );
   } finally {

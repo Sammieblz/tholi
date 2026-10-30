@@ -1,6 +1,22 @@
 import type { PageSnapshot, TaskJourney } from "../page-model";
 import { goalScore } from "./index";
-import { sanitizeText } from "../privacy-redaction";
+import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
+import type { NavigationContext } from "../navigation-core/contracts-navigation";
+
+// Only the user's goal and independently verified step summaries leave the
+// journey owner. Checkpoints, field values and browsing paths stay local.
+export function buildNavigationContext(
+  rawGoal: string,
+  task?: Pick<TaskJourney, "progress">,
+): NavigationContext {
+  return {
+    goal: sanitizeGoal(rawGoal),
+    verifiedProgress: (task?.progress || [])
+      .map((step) => ({ label: sanitizeText(step.label), kind: step.kind }))
+      .filter((step) => step.label.length > 0)
+      .slice(-8),
+  };
+}
 
 const MAX_CONTROLS = 96;
 const MAX_CHARACTERS = 24000;
@@ -11,7 +27,8 @@ export function modelContext(
   rawGoal: string,
   task?: TaskJourney,
 ) {
-  const goal = sanitizeText(rawGoal);
+  const context = buildNavigationContext(rawGoal, task);
+  const { goal } = context;
   const terms = goal.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
   const byId = new Map(page.controls.map((c) => [c.id, c]));
   const ranked = page.controls
@@ -97,17 +114,10 @@ export function modelContext(
     task: task
       ? {
           id: task.id,
-          destination: task.objective,
           strategy: task.strategy,
           status: task.status,
           reroutes: task.reroutes,
-          verifiedProgress: task.progress.slice(-8).map((p) => ({
-            label: sanitizeText(p.label),
-            kind: p.kind,
-            origin: p.origin,
-            from: p.from,
-            to: p.to,
-          })),
+          verifiedProgress: context.verifiedProgress,
         }
       : undefined,
     page: {

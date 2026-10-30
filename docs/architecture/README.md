@@ -1,6 +1,7 @@
 # Architecture
 
 - [Navigation, discovery, grounding and verification](navigation.md)
+- [Ephemeral navigation observation and decision contracts](navigation-contracts.md)
 - [Page context and experimental browser language model](page-context.md)
 - [Bundled NLP and indexing](natural-language.md)
 - [Session, document and worker continuity](sessions.md)
