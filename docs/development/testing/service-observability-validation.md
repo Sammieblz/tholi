@@ -114,6 +114,17 @@ volumes and temporary environment. The next run separately verifies the existing
 account owner's removal of unnecessary CSRF headers on read-only GET requests;
 mutation protection and gateway limits stay in force.
 
+Clean source `27e25f9` then passed the complete analytics and layout sequence in
+both browsers. Chromium continued through cookie binding, session renewal,
+revocation and logout, then encountered a gateway 429 during password-recovery
+sign-in. Firefox reached session renewal and revocation before the same limit.
+The unchanged report remains
+`output/qa/service-observability-identity/tholi-smoke-mvv7vo71-6790d241/validation.json`.
+The fixture performs multiple synthetic account lifecycles behind one gateway IP.
+Its next revision schedules those phases against the configured gateway burst
+budget. It does not change production limits, retry rejected requests or remove
+any security or analytics assertions. This attempt remains a failed cohort.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

@@ -20,6 +20,7 @@ import {
   signOutWebsite,
   syntheticWebsiteIdentity,
   waitForWebsiteAccount,
+  waitForIdentityGatewayCapacity,
   WebsiteIdentityError,
 } from "../../support/website-auth";
 import type { BrowserContext } from "@playwright/test";
@@ -67,6 +68,7 @@ test("configured website uses real signup email recovery and retained identity w
       other: 0,
     },
     rateLimitResponses: { json: 0, html: 0, other: 0 },
+    gatewayCapacityWaitMs: { initial: 0, afterAnalytics: 0, beforeRecovery: 0 },
   };
   const saveProgress = () =>
     writeEvidence(
@@ -80,6 +82,11 @@ test("configured website uses real signup email recovery and retained identity w
   contexts.push(context);
   const page = await context.newPage();
   try {
+    stage = progress.operation = "initial gateway capacity schedule";
+    progress.gatewayCapacityWaitMs.initial =
+      await waitForIdentityGatewayCapacity();
+    stage = "account-free installation and practice";
+    progress.operation = "public installation and practice";
     let localAccountRequests = 0;
     let productRequests = 0;
     page.on("response", (response) => {
@@ -328,6 +335,7 @@ test("configured website uses real signup email recovery and retained identity w
     ).toBe(true);
     stage =
       "signed-in account and retained measurements layout keyboard focus and reduced motion";
+    progress.operation = stage;
     await checkAccountLayout(page);
     checks.push(
       "real account and retained measurements fit four widths in both themes with visible keyboard focus and reduced motion",
@@ -389,7 +397,13 @@ test("configured website uses real signup email recovery and retained identity w
     checks.push(
       "real cookie/CSRF analytics collection needs both independent choices; withdrawal purges retained records and Local public pages remain inert",
     );
+    stage = progress.operation =
+      "gateway capacity schedule before session checks";
+    await saveProgress();
+    progress.gatewayCapacityWaitMs.afterAnalytics =
+      await waitForIdentityGatewayCapacity();
     stage = "callback cookie binding and session credential protection";
+    progress.operation = stage;
     await checkCookieBinding(browser, context, callback, environment);
     const cookies = (
       await context.cookies(environment.serviceOrigin + "/api/v1/account")
@@ -411,6 +425,7 @@ test("configured website uses real signup email recovery and retained identity w
       "actual callback rejects foreign cookie binding and completed-flow replay; credentials stay HttpOnly",
     );
     stage = "real session refresh and device revocation";
+    progress.operation = stage;
     await page
       .getByRole("button", { name: "Renew session", exact: true })
       .click();
@@ -462,11 +477,18 @@ test("configured website uses real signup email recovery and retained identity w
       "real refresh retains the session and a revoked second browser loses account access",
     );
     stage = "explicit Tholi and identity-provider sign-out";
+    progress.operation = stage;
     await signOutWebsite(page, environment, true);
     checks.push(
       "Tholi logout and explicitly confirmed provider logout complete separately",
     );
+    stage = progress.operation =
+      "gateway capacity schedule before recovery checks";
+    await saveProgress();
+    progress.gatewayCapacityWaitMs.beforeRecovery =
+      await waitForIdentityGatewayCapacity();
     stage = "real password recovery email and password update";
+    progress.operation = stage;
     const beforeRecovery = await capturedMessageIds(environment, fixture.email);
     await page.goto(environment.webOrigin + "/signin");
     await page
@@ -493,6 +515,7 @@ test("configured website uses real signup email recovery and retained identity w
       "real recovery email changes the password and fresh-browser sign-in preserves account identity",
     );
     stage = "retained realm reconciliation and fresh-browser sign-in";
+    progress.operation = stage;
     reconcileIdentityConfiguration(environment);
     const retainedContext = await identityContext(browser);
     contexts.push(retainedContext);
