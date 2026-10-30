@@ -15,7 +15,9 @@ earlier release evidence. API/extension version remains 0.11.0; website remains
   retried-worker inspection: passed as recorded below.
 - Configured account consent and complete real identity lifecycle: both browsers
   passed as recorded below.
-- Deterministic PR gate and hosted exact-commit checks: pending.
+- Complete deterministic PR gate: 754 passed, recorded below.
+- Hosted exact-head results are recorded on the issue and PR before merge; they
+  are independent of these local reports.
 
 Failed diagnostics and subsequent evidence will remain separately attributed.
 No local fixture result certifies a native permission flow, screen reader,
@@ -168,6 +170,33 @@ Only tests and this technical evidence record changed after compilation. The nex
 gate uses the documented prepared-build path after fresh type checks and full
 manifest verification; it does not rebuild or combine results with this failed
 run. Hosted PR checks still perform their own fresh exact-head build.
+
+## Passing deterministic gate
+
+Clean test source `dbb82ab152f602df98164dea15f062ff03689ebc` passed the complete
+PR gate under run `e284f439-9dda-4f4f-ac16-53a00f432ade`. Fresh type checks passed
+before the prepared-build invocation. The build compiled at
+`863ffa67e2c7885bc8971c83843da851a1a70d0d` remained byte-identical under full
+manifest verification before and after the run. Intervening changes were limited
+to the two exact assertions and this technical validation record.
+
+| Scope | Passed |
+| --- | ---: |
+| Unit | 618 |
+| Extension core | 47 |
+| Browser integration | 20 |
+| Installed Firefox extension | 2 |
+| Extension and website UI | 67 |
+| Total | 754 |
+
+All scopes share the run identity and immutable target digests. Chromium extension
+digest is `292e001a6bef7fca864049c9c277ea144675d01231c3c0020dead061fb6e64d4`;
+Firefox extension digest is
+`da07409678cada217dd93ac41b2618c363ced89c437f3680a2899816914483dc`.
+The ten reports/manifest/timing files are preserved under
+`output/qa/service-observability-ci-e284f439-9dda-4f4f-ac16-53a00f432ade/`.
+Generated tracked acceptance output was restored after copying the fresh report.
+This is PR evidence, not full release certification or authorization to package.
 
 ## UI guidance
 
