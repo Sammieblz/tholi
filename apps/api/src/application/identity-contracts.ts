@@ -33,6 +33,8 @@ export interface ProviderIdentity {
   subject: string;
   providerSessionId?: string;
   issuedAt: Date;
+  /** Only a valid signed verified address; null disables an older contact projection. */
+  verifiedEmail?: string | null;
 }
 export interface IdentityAccount {
   identityId: string;

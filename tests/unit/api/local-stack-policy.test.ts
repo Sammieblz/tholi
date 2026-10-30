@@ -42,18 +42,30 @@ test("identity environment upgrades preserve existing credentials and add missin
   }
 });
 
-test("worker credential upgrade preserves existing secrets and is idempotent", async () => {
+test("worker and support credential upgrades preserve existing secrets and are idempotent", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tholi-worker-env-"));
   const envFile = join(directory, ".env");
   try {
     const original =
       "THOLI_DB_PASSWORD=keep-runtime\nTHOLI_IDENTITY_CLIENT_SECRET_KEY=keep-identity\n";
     await writeFile(envFile, original);
-    initializeLocalEnvironment({ envFile, upgradeWorker: true });
+    initializeLocalEnvironment({
+      envFile,
+      upgradeWorker: true,
+      upgradeSupport: true,
+    });
     const upgraded = await readFile(envFile, "utf8");
     expect(upgraded.startsWith(original)).toBe(true);
     expect(parseEnv(upgraded).THOLI_WORKER_PASSWORD).toMatch(/^[a-f0-9]{48}$/);
-    initializeLocalEnvironment({ envFile, upgradeWorker: true });
+    expect(
+      Buffer.from(parseEnv(upgraded).THOLI_FILE_LINK_SECRET_KEY!, "base64url"),
+    ).toHaveLength(32);
+    expect(parseEnv(upgraded).STORAGE_ACCESS_KEY).toMatch(/^[a-f0-9]{48}$/);
+    initializeLocalEnvironment({
+      envFile,
+      upgradeWorker: true,
+      upgradeSupport: true,
+    });
     expect(await readFile(envFile, "utf8")).toBe(upgraded);
   } finally {
     await rm(envFile, { force: true });
@@ -88,7 +100,7 @@ function composeModel() {
         read_only: true,
         cap_drop: ["ALL"],
         security_opt: ["no-new-privileges:true"],
-        networks: { database: null } as Record<string, null>,
+        networks: { database: null, application: null } as Record<string, null>,
         environment: {
           THOLI_DATABASE_WORKER_URL:
             "postgresql://tholi_worker:synthetic@postgres/tholi",
@@ -100,6 +112,7 @@ function composeModel() {
       },
       oidc: service(),
       mail: service(),
+      storage: service(),
       gateway: { ...service(), networks: { application: null, ingress: null } },
     },
     networks: {
@@ -132,6 +145,7 @@ test("resolved local-stack policy returns only redacted deployment evidence", ()
     "mail",
     "oidc",
     "postgres",
+    "storage",
     "worker",
   ]);
   expect(evidence.ports).toEqual([
@@ -168,9 +182,9 @@ test.each([
     },
   ],
   [
-    "worker with application network",
+    "worker missing application network",
     (config: ReturnType<typeof composeModel>) => {
-      config.services.worker.networks.application = null;
+      delete config.services.worker.networks.application;
     },
   ],
   [

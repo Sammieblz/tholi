@@ -502,6 +502,7 @@ test("the service OpenAPI describes live routes independently of legacy APIs", a
       "plans",
       "jobs",
       "support",
+      "files",
       "saved-data",
       "sync",
       "billing",

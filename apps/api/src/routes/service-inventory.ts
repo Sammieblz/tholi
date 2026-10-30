@@ -15,6 +15,7 @@ export interface ServiceRouteInventoryEntry {
     | "plans"
     | "jobs"
     | "support"
+    | "files"
     | "saved-data"
     | "sync"
     | "billing"
@@ -375,6 +376,50 @@ export const SERVICE_ROUTES = [
     access: "authenticated",
     summary:
       "Submit bounded approved support content through authorized templates and private artifacts.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/account/diagnostic-exports",
+    operationId: "createAccountDiagnosticExport",
+    group: "support",
+    status: "planned",
+    issue: 33,
+    access: "authenticated",
+    summary:
+      "Request an explicit account diagnostic containing approved service metadata only.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/account/files/{fileId}",
+    operationId: "getAccountPrivateFile",
+    group: "files",
+    status: "planned",
+    issue: 33,
+    access: "authenticated",
+    summary:
+      "Read owned private-file status and expiry without revealing storage keys.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/account/files/{fileId}/link",
+    operationId: "createAccountPrivateFileLink",
+    group: "files",
+    status: "planned",
+    issue: 33,
+    access: "authenticated",
+    summary:
+      "Issue a short-lived revision-bound link that still requires account authentication.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/account/files/{fileId}/download",
+    operationId: "downloadAccountPrivateFile",
+    group: "files",
+    status: "planned",
+    issue: 33,
+    access: "authenticated",
+    summary:
+      "Download an owned unexpired diagnostic after current session and file validation.",
   },
   {
     method: "GET",

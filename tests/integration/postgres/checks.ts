@@ -13,6 +13,7 @@ import { PostgresRepositories } from "../../../apps/api/src/database/repositorie
 import { runIdentityChecks } from "./identity-checks";
 import { runAuthorizationChecks } from "./authorization-checks";
 import { runJobChecks } from "./job-checks";
+import { runSupportChecks } from "./support-checks";
 import {
   beginJourney,
   saveTask,
@@ -1318,7 +1319,10 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
 
     await runIdentityChecks(runtime, migration, record);
     await runAuthorizationChecks(runtime, migration, record);
-    if (worker) await runJobChecks(runtime, migration, worker, record);
+    if (worker) {
+      await runJobChecks(runtime, migration, worker, record);
+      await runSupportChecks(runtime, migration, worker, record);
+    }
     return { passed: true as const, checks };
   } finally {
     const cleanup = await Promise.allSettled([

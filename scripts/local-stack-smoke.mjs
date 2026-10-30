@@ -393,6 +393,8 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
             "THOLI_DATABASE_MIGRATION_URL",
             "--env",
             "THOLI_DATABASE_WORKER_URL",
+            "--env",
+            "THOLI_SUPPORT_PROBE_API_URL",
             testImage,
             ...mode,
           ],
@@ -410,6 +412,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
               "tholi_worker",
               settings.THOLI_WORKER_PASSWORD,
             ),
+            THOLI_SUPPORT_PROBE_API_URL: "http://api:8788",
           },
         ),
       );
@@ -435,6 +438,60 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     ]);
     requireCheck(workerProbe.passed);
     check("actual-worker-effect-and-atomic-completion", workerProbe);
+    stage = "actual support mail and private diagnostic lifecycle";
+    const supportProbe = await runPostgresImage([
+      "node",
+      "/app/postgres-check.mjs",
+      "--support-runtime-probe",
+    ]);
+    requireCheck(supportProbe.passed);
+    const { deletedObject, ...supportEvidence } = supportProbe;
+    requireCheck(
+      deletedObject &&
+        /^[a-f0-9-]{36}$/.test(deletedObject.workspaceId) &&
+        /^[a-f0-9-]{36}$/.test(deletedObject.fileId),
+    );
+    const absent = await signedS3Request({
+      endpoint: `http://127.0.0.1:${ports.STORAGE_HOST_PORT}`,
+      accessKey: settings.STORAGE_ACCESS_KEY,
+      secretKey: settings.STORAGE_SECRET_KEY,
+      method: "GET",
+      path: `/tholi-local/exports/${deletedObject.workspaceId}/${deletedObject.fileId}.json`,
+    });
+    requireCheck(
+      absent.status === 404,
+      "The expired diagnostic object is still present in private storage.",
+    );
+    check("actual-support-mail-and-private-diagnostics", supportEvidence);
+    check("expired-diagnostic-object-physically-absent");
+    if (supportProbe.requestId) {
+      const deliveries = await jsonResponse(
+        `http://127.0.0.1:${ports.MAIL_HOST_PORT}/api/v1/messages`,
+      );
+      requireCheck(
+        Array.isArray(deliveries.messages) && deliveries.messages.length <= 20,
+        "Unexpected local capture count.",
+      );
+      let correlated = 0;
+      for (const message of deliveries.messages) {
+        requireCheck(
+          typeof message.ID === "string" && /^[a-zA-Z0-9-]+$/.test(message.ID),
+        );
+        const captured = await jsonResponse(
+          `http://127.0.0.1:${ports.MAIL_HOST_PORT}/api/v1/message/${message.ID}`,
+        );
+        if (
+          typeof captured.Text === "string" &&
+          captured.Text.includes(supportProbe.requestId)
+        )
+          correlated++;
+      }
+      requireCheck(
+        correlated === 2,
+        "The support operator message and verified-account receipt were not both captured.",
+      );
+      check("support-operator-and-account-receipt-captured");
+    }
     stage = "PostgreSQL application backup and restore";
     // Quiesce the only autonomous writer while comparing the restored snapshot.
     await compose(["stop", "worker"], 30000);
@@ -593,7 +650,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       .split(/\s+/)
       .filter(Boolean);
     const containers = JSON.parse(await docker(["inspect", ...ids]));
-    requireCheck(containers.length === 6);
+    requireCheck(containers.length === 7);
     const expected = [
       "api",
       "worker",
@@ -601,6 +658,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "oidc",
       "mail",
       "gateway",
+      "storage",
     ].sort();
     requireCheck(
       JSON.stringify(
@@ -771,7 +829,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       const expandedContainers = JSON.parse(
         await docker(["inspect", ...expandedIds]),
       );
-      report.optionalImages = Object.fromEntries(
+      report.storageAndTelemetryImages = Object.fromEntries(
         expandedContainers
           .filter((item) =>
             ["storage", "telemetry"].includes(
@@ -783,7 +841,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
             { id: item.Image, configured: item.Config.Image },
           ]),
       );
-      requireCheck(Object.keys(report.optionalImages).length === 2);
+      requireCheck(Object.keys(report.storageAndTelemetryImages).length === 2);
     }
     stage = "explicit reset and clean application seed";
     assertOwnedSmokeProject(project, report.project);

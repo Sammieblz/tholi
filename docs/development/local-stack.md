@@ -5,6 +5,7 @@ infrastructure for the [portable backend](../plans/gemini-cloud-and-enterprise.m
 It uses the existing API build and service runtime, with optional account/session
 integration from [#30](service-identity.md). Local extension guidance and the
 optional SQLite/private API remain independent of accounts.
+The configured stack also provides [support mail and private diagnostic files](service-support.md).
 
 ## Prerequisites and startup
 
@@ -40,6 +41,17 @@ The explicit upgrade preserves existing secrets, ports and project settings.
 See [identity setup](service-identity.md#local-setup) for the website service
 origin and browser callback registration.
 
+For a retained environment from before support/private-file integration:
+
+```sh
+npm run local:init -- --upgrade-support true
+npm run local:up
+```
+
+This appends the dedicated file-link key and any missing storage credentials.
+It preserves existing secrets and volumes. The generated 32-byte base64url
+file-link key is separate from the identity flow-encryption key.
+
 The API uses the pinned, non-root image built by `apps/api/Dockerfile` through
 `build:api`, not the extension/model build or a release packager. The image keeps
 the existing API entrypoints and their shared chunks. Its Node/Debian base matches
@@ -49,26 +61,29 @@ identity maintenance with separate SQL credentials and live polling health.
 
 ## Services and trust boundaries
 
-| Service             | Host access                          | Container address          | Persistence                         |
-| ------------------- | ------------------------------------ | -------------------------- | ----------------------------------- |
-| API                 | `http://127.0.0.1:8788/health/ready` | `api:8788`                 | Account/session state in PostgreSQL |
-| Durable worker      | None                                 | SQL-only process           | Job state and outbox in PostgreSQL  |
-| PostgreSQL          | None                                 | `postgres:5432`            | Named PostgreSQL volume             |
-| Local OIDC          | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL    |
-| Mail capture        | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume                |
-| Optional S3 storage | `http://localhost:18333`             | `storage:8333`             | Named storage volume                |
-| Optional telemetry  | None                                 | OTLP HTTP `telemetry:4318` | No durable telemetry store          |
+| Service            | Host access                          | Container address          | Persistence                         |
+| ------------------ | ------------------------------------ | -------------------------- | ----------------------------------- |
+| API                | `http://127.0.0.1:8788/health/ready` | `api:8788`                 | Account/session state in PostgreSQL |
+| Durable worker     | None                                 | SQL-only process           | Job state and outbox in PostgreSQL  |
+| PostgreSQL         | None                                 | `postgres:5432`            | Named PostgreSQL volume             |
+| Local OIDC         | `http://localhost:18080`             | `oidc:8080`                | Dedicated database in PostgreSQL    |
+| Mail capture       | `http://localhost:18025`             | SMTP `mail:1025`           | Named Mailpit volume                |
+| Private S3 storage | `http://localhost:18333`             | `storage:8333`             | Named storage volume                |
+| Optional telemetry | None                                 | OTLP HTTP `telemetry:4318` | No durable telemetry store          |
 
 Ports are adjustable in `.env`; all published ports bind to loopback on the local
-gateway. It proxies only the four fixed application, identity, mail and optional
+gateway. It proxies only the four fixed application, identity, mail and private
 storage destinations. This makes services reachable on Docker Desktop without
 giving those services internet egress. The gateway carries no service credentials
 and exposes no general-purpose forward proxy. Internal Docker networks keep
 database/identity traffic separate from application-facing services and deny
 outbound internet access to those services. No model provider credentials or
-SMTP relay settings pass into the default API. Mail goes only to Mailpit. The
+SMTP relay settings pass into the default API. The durable worker receives
+capture-only SMTP settings; mail goes only to Mailpit. The
 collector has only a local debug sink and no external telemetry destination.
-The optional S3 service requires generated credentials and denies anonymous reads.
+The private S3 service requires generated credentials and denies anonymous reads.
+The seven long-running default services are gateway, API, worker, PostgreSQL,
+OIDC, Mailpit and storage; two one-shot services initialize SQL and identity.
 
 The API runs as a non-root user with a read-only root filesystem, writable tmpfs,
 dropped Linux capabilities and no privilege escalation. Images are pinned to
@@ -134,21 +149,22 @@ same host. The confidential client's exact callback, logout return and internal
 backchannel are reconciled by the seed. Native browser callbacks require their
 own exact registrations, without wildcards.
 
-## Optional profiles and model policy
+## Storage, optional telemetry and model policy
 
 ```sh
 npm run local:up -- --profile storage --profile telemetry
 ```
 
-Storage provides a private local S3-compatible bucket. Telemetry accepts OTLP
-HTTP and writes local debug output; send synthetic data only. Their application
-adapters remain in the storage and observability tickets. Default startup excludes
-both services. Read generated storage credentials from `.env`; do not copy them
-into client bundles.
+Storage is a default dependency consumed by the support/private-file adapter.
+The `--profile storage` option remains accepted for compatibility. Telemetry is
+still optional: it accepts OTLP HTTP and writes local debug output; send synthetic
+data only. Its production observability adapter belongs to the telemetry ticket.
+Read generated storage credentials from `.env`; do not copy them into client bundles.
 
 The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. At this stage
 that is a cloud-free policy, not a navigation endpoint. Configured identity adds
-only accounts and session security to health/discovery. The typed deterministic
+accounts, session security, tenant policy, durable jobs and configured support,
+without cloud navigation. The typed deterministic
 fake and Gemini inference adapters belong
 to [#39](https://github.com/Sammieblz/tholi/issues/39). The legacy private API keeps
 its existing local NLP/OCR behavior independently.
@@ -171,7 +187,7 @@ npm run local:up
 Normal teardown removes containers and networks but retains named volumes.
 PostgreSQL 18 stores its cluster under the versioned directory in the mounted
 `/var/lib/postgresql` volume. Recreating containers must preserve the database,
-realm, captured mail and optional object data. An image upgrade is not a database
+realm, captured mail and private object data. An image upgrade is not a database
 major-version migration; back up and follow the database upgrade procedure.
 
 For a deliberate full local reset:
@@ -181,7 +197,7 @@ npm run local:reset -- --confirm-delete tholi-local
 ```
 
 This deletes **all named data volumes for that Compose project**, including
-identity, database, mail and optional storage. Substitute your actual project
+identity, database, mail and storage. Substitute your actual project
 name if changed. The exact confirmation is required. The command does not remove
 your `.env`. Never run it against a production project. Do not use `down -v` as
 routine teardown. Use separate `--project` and `--env-file` values for independent
@@ -196,7 +212,7 @@ npm run test:local-stack -- --optional
 The smoke command creates its own project and fresh volumes, generates disposable
 credentials, builds the API image and waits for real services. It checks health,
 identity discovery, captured synthetic mail, safe configuration, database retention
-across container recreation, and optional storage/telemetry. It then deletes only
+across container recreation, private storage, support mail and optional telemetry. It then deletes only
 the project and volumes it created. It never resets the developer project.
 Evidence under `output/qa/local-stack/` records source/config/image identities and
 observed results without raw credentials. Cached image layers are allowed;

@@ -8,6 +8,7 @@ import {
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
 import { withTransaction } from "./postgres";
 import { pruneExpiredIdentityBrokers } from "./identity-retention";
+import { ScopedSupport } from "./support-queries";
 import type { JobLease, JobTransaction } from "../application/job-contracts";
 import {
   jobResultSchema,
@@ -247,6 +248,13 @@ class ScopedRepositories {
 
   private get parameters() {
     return [this.scope.workspaceId, this.scope.accountId];
+  }
+
+  async withSupport<T>(
+    work: (queries: ScopedSupport) => Promise<T>,
+  ): Promise<T> {
+    await this.lockWorkspace(true);
+    return work(new ScopedSupport(this.client, this.scope, this));
   }
 
   // Credits and sync stamps share this lock order: workspace, then domain row.

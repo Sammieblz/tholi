@@ -32,6 +32,11 @@ PostgreSQL: upgrades, runtime privileges, scoped transactions, revision/credit
 concurrency, backup/restore and reset. Its test image is separate from production.
 The same suite covers [durable jobs](../service-jobs.md), separate worker
 permissions, competing claims, expired fences, cancellation and atomic results.
+It also owns actual local [support mail and private-file](../service-support.md)
+checks through Mailpit, authenticated S3-compatible storage and mandatory expiry.
+These capture-only checks do not establish external inbox delivery. Focused
+support HTTP and website unit tests retain their existing API/account owners;
+unconfigured website tests continue to exercise the account-free email draft.
 
 Real [portable identity](../service-identity.md) checks are separate opt-in local
 cohorts: `npm run test:identity` exercises native Chrome and Firefox, while

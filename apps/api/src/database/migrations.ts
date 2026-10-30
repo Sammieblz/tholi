@@ -5,6 +5,7 @@ import { serviceData } from "./migrations/002-service-data";
 import { portableIdentity } from "./migrations/003-portable-identity";
 import { tenantAuthorization } from "./migrations/004-tenant-authorization";
 import { durableJobs } from "./migrations/005-durable-jobs";
+import { mailStorageSupport } from "./migrations/006-mail-storage-support";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -33,6 +34,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(3, "portable-identity", portableIdentity),
   migration(4, "tenant-authorization", tenantAuthorization),
   migration(5, "durable-jobs", durableJobs),
+  migration(6, "mail-storage-support", mailStorageSupport),
 ]);
 
 export interface MigrationOptions {
@@ -73,6 +75,24 @@ async function grantWorker(client: PoolClient, role: string) {
     tholi.current_member_role(uuid),tholi.claim_jobs(text,integer,integer,jsonb),
     tholi.heartbeat_job(uuid,uuid,uuid,integer),tholi.fail_job(uuid,uuid,uuid,text,text,integer),
     tholi.broker_prune_candidates(integer,integer),tholi.prune_expired_brokers(integer) TO ${identifier}`);
+  if (
+    (await client.query("SELECT to_regclass('tholi.private_files') AS present"))
+      .rows[0]?.present
+  ) {
+    await client.query(`GRANT SELECT ON tholi.requests,tholi.identity_delivery_contacts,tholi.support_requests,
+      tholi.private_files,tholi.external_effects,tholi.external_attempts TO ${identifier}`);
+    await client.query(
+      `GRANT INSERT ON tholi.external_effects,tholi.external_attempts TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT UPDATE(state,finished_at) ON tholi.external_attempts TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT UPDATE(status,updated_at) ON tholi.requests TO ${identifier}`,
+    );
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.schedule_file_expiry(integer),tholi.prepare_file_cleanup(uuid,uuid,uuid),
+      tholi.finish_external_effect(uuid,uuid,uuid,uuid,text,text,integer),tholi.require_live_external_lease(uuid,uuid,uuid) TO ${identifier}`);
+  }
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {
@@ -291,6 +311,17 @@ async function grantRuntime(client: PoolClient, role: string) {
     await client.query(`GRANT EXECUTE ON FUNCTION tholi.actor_account_id(), tholi.actor_workspace_id(),
       tholi.current_member_role(uuid), tholi.provision_personal_account(uuid,uuid),
       tholi.workspace_credit_totals(uuid) TO ${identifier}`);
+  }
+  if (existing.has("private_files")) {
+    await client.query(
+      `GRANT SELECT,INSERT ON tholi.support_requests,tholi.private_files TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT SELECT,INSERT,UPDATE ON tholi.identity_delivery_contacts TO ${identifier}`,
+    );
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.valid_diagnostic_snapshot(jsonb) TO ${identifier}`,
+    );
   }
 }
 

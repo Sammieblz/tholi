@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -28,6 +28,18 @@ import {
   type RepositoryScope,
 } from "../../../apps/api/src/database/contracts";
 import { createServiceApi } from "../../../apps/api/src/server";
+import { SupportService } from "../../../apps/api/src/application/support";
+import type {
+  ObjectPort,
+  PrivateFile,
+  SupportStore,
+} from "../../../apps/api/src/application/support-contracts";
+import {
+  diagnosticSnapshotSchema,
+  fileLinkSchema,
+  privateFileSchema,
+  supportRequestSchema,
+} from "../../../packages/navigation-core/contracts-support";
 import {
   consentSchema,
   membershipSchema,
@@ -53,7 +65,7 @@ const nativeToken = "n".repeat(43);
 const webToken = "w".repeat(43);
 const bearer = { authorization: `Bearer ${nativeToken}` };
 
-async function fixture() {
+async function fixture(supportEnabled = true) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
     THOLI_SERVICE_ORIGINS: `${webOrigin},https://help.tholi.io`,
@@ -234,10 +246,81 @@ async function fixture() {
   webSession.csrfHash = identityHash(csrf);
   const authorization = new AuthorizationService(repositories);
   const jobs = new JobService(repositories);
+  const snapshot = diagnosticSnapshotSchema.parse({
+    schemaVersion: 1,
+    version: "0.11.0",
+    profile: "service",
+    accountStatus: "active",
+    workspaceKind: "personal",
+    role: "owner",
+    jobs: {
+      queued: 1,
+      running: 0,
+      succeeded: 0,
+      failed: 0,
+      dead: 0,
+      cancelled: 0,
+      uncertain: 0,
+    },
+  });
+  const diagnosticBody = Buffer.from(JSON.stringify(snapshot));
+  const file: PrivateFile = {
+    id: randomUUID(),
+    requestId: randomUUID(),
+    revision: 1n,
+    key: "",
+    bytes: diagnosticBody.byteLength,
+    sha256: createHash("sha256").update(diagnosticBody).digest("hex"),
+    contentType: "application/json",
+    expiresAt: new Date(Date.now() + 60_000),
+    status: "ready",
+  };
+  file.key = `exports/${session.workspaceId}/${file.id}.json`;
+  const supportRecord = {
+    id: randomUUID(),
+    operatorJobId: randomUUID(),
+    receiptJobId: null,
+    expiresAt: new Date(Date.now() + 60_000),
+  };
+  const supportStore: SupportStore = {
+    submit: vi.fn(async () => supportRecord),
+    requestDiagnostic: vi.fn(async () => ({
+      requestId: file.requestId,
+      jobId: randomUUID(),
+      fileId: file.id,
+    })),
+    getFile: vi.fn(async (_scope, id) => (id === file.id ? file : null)),
+    prepareExternal: unexpected,
+    finishExternal: unexpected,
+    prepareCleanup: unexpected,
+    finishCleanup: unexpected,
+    scheduleFileExpiry: unexpected,
+  };
+  const objects: ObjectPort = {
+    put: unexpected,
+    read: vi.fn(async () => diagnosticBody),
+    delete: unexpected,
+    close: vi.fn(async () => {}),
+  };
+  const support = new SupportService(
+    supportStore,
+    objects,
+    {
+      issue: vi.fn(async () => "signed.download-proof"),
+      verify: vi.fn(async () => ({
+        accountId: session.accountId,
+        workspaceId: session.workspaceId,
+        fileId: file.id,
+        revision: "1",
+      })),
+    },
+    { publicOrigin: "https://api.tholi.io", linkLifetimeMs: 60_000 },
+  );
   const app = await createServiceApi(options, [], {
     identity,
     authorization,
     jobs,
+    ...(supportEnabled ? { support } : {}),
   });
   applications.push(app);
   return {
@@ -253,6 +336,13 @@ async function fixture() {
     target,
     consents,
     job,
+    session,
+    supportStore,
+    supportRecord,
+    file,
+    snapshot,
+    objects,
+    diagnosticBody,
     csrf,
     cookie: `__Host-tholi_session=${webToken}`,
   };
@@ -272,6 +362,268 @@ function safeError(
   );
 }
 const change = { role: "admin", status: "active", expectedRevision: "2" };
+
+describe("account support and private file HTTP contracts", () => {
+  const input = {
+    idempotencyKey: "support-request-1",
+    email: "reply@example.test",
+    topic: "Support",
+    subject: "Opening Tholi",
+    message: "Please help me find the browser panel.",
+  };
+  it("rechecks current session authority after object I/O before releasing private bytes", async () => {
+    const { app, file, objects, diagnosticBody, store } = await fixture();
+    let begin!: () => void;
+    let complete!: () => void;
+    const started = new Promise<void>((resolve) => {
+      begin = resolve;
+    });
+    const paused = new Promise<void>((resolve) => {
+      complete = resolve;
+    });
+    vi.mocked(objects.read).mockImplementationOnce(async () => {
+      begin();
+      await paused;
+      return diagnosticBody;
+    });
+    const pending = app
+      .inject({
+        url: `/api/v1/account/files/${file.id}/download?token=signed.proof`,
+        headers: bearer,
+      })
+      .then((response) => response);
+    await started;
+    vi.mocked(store.authenticateSession).mockResolvedValue(null);
+    complete();
+    const response = await pending;
+    safeError(response, 401, "UNAUTHENTICATED");
+    expect(response.payload).not.toContain('"schemaVersion"');
+    expect(response.headers["content-disposition"]).toBeUndefined();
+  });
+  it("advertises only composed support/file handlers and leaves general saved-data export planned", async () => {
+    const { app } = await fixture();
+    const disabled = (await fixture(false)).app;
+    for (const [current, enabled] of [
+      [app, true],
+      [disabled, false],
+    ] as const) {
+      const capabilities = (
+        await current.inject({ url: "/api/v1/capabilities" })
+      ).json();
+      expect(capabilities.capabilities.includes("support-requests")).toBe(
+        enabled,
+      );
+      expect(capabilities.capabilities.includes("private-files")).toBe(enabled);
+      const spec = (
+        await current.inject({ url: "/api/v1/openapi.json" })
+      ).json();
+      const entries = spec["x-tholi-route-inventory"].filter(
+        (route: { issue: number }) => route.issue === 33,
+      );
+      expect(entries).toHaveLength(5);
+      expect(
+        entries.every(
+          (route: { status: string }) =>
+            route.status === (enabled ? "implemented" : "planned"),
+        ),
+      ).toBe(true);
+      expect(Boolean(spec.paths["/api/v1/support/requests"])).toBe(enabled);
+      expect(
+        Boolean(spec.paths["/api/v1/account/files/{fileId}/download"]),
+      ).toBe(enabled);
+      expect(spec.paths["/api/v1/account/saved-data/export"]).toBeUndefined();
+      if (enabled) {
+        expect(
+          spec.paths["/api/v1/support/requests"].post.responses["429"],
+        ).toBeDefined();
+        expect(spec.paths["/api/v1/support/requests"].post.security).toEqual([
+          { NativeBearer: [] },
+          { WebSession: [] },
+        ]);
+      }
+    }
+    expect(
+      (
+        await disabled.inject({
+          method: "POST",
+          url: "/api/v1/support/requests",
+          payload: input,
+        })
+      ).statusCode,
+    ).toBe(404);
+  });
+
+  it("requires the current session and exact website CSRF boundary, rejects invented template/scope fields and reports queued requests with quota headers", async () => {
+    const { app, supportStore, session, cookie, csrf, supportRecord } =
+      await fixture();
+    const url = "/api/v1/support/requests";
+    safeError(
+      await app.inject({ method: "POST", url, payload: input }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    for (const headers of [
+      { cookie, origin: webOrigin },
+      { cookie, "x-tholi-csrf": csrf },
+      { cookie, origin: "https://help.tholi.io", "x-tholi-csrf": csrf },
+    ])
+      safeError(
+        await app.inject({ method: "POST", url, headers, payload: input }),
+        403,
+        "FORBIDDEN",
+      );
+    expect(supportStore.submit).not.toHaveBeenCalled();
+    for (const payload of [
+      { ...input, accountId: randomUUID() },
+      { ...input, template: "custom" },
+      { ...input, to: "unapproved@example.test" },
+      { ...input, subject: "Header\r\nInjected" },
+      { ...input, subject: "Header\tInjected" },
+      { ...input, subject: "Header\u007fInjected" },
+      { ...input, message: "x".repeat(3001) },
+      { ...input, topic: "arbitrary" },
+    ])
+      safeError(
+        await app.inject({ method: "POST", url, headers: bearer, payload }),
+        400,
+        "INVALID_REQUEST",
+      );
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { cookie, origin: webOrigin, "x-tholi-csrf": csrf },
+      payload: input,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(supportRequestSchema.parse(response.json())).toMatchObject({
+      id: supportRecord.id,
+      receiptJobId: null,
+    });
+    expect(supportStore.submit).toHaveBeenCalledWith(
+      { accountId: session.accountId, workspaceId: session.workspaceId },
+      expect.objectContaining(input),
+      expect.any(AbortSignal),
+    );
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(JSON.stringify(response.json())).not.toContain(input.message);
+    vi.mocked(supportStore.submit).mockRejectedValueOnce(
+      new RepositoryError("RATE_LIMITED", "PRIVATE_QUOTA_SENTINEL"),
+    );
+    const limited = await app.inject({
+      method: "POST",
+      url,
+      headers: bearer,
+      payload: input,
+    });
+    safeError(limited, 429, "RATE_LIMITED");
+    expect(limited.headers["retry-after"]).toBe("3600");
+  });
+
+  it("exports only explicitly requested diagnostic metadata and protects private links/downloads with the same account guard", async () => {
+    const { app, file, supportStore, cookie, csrf, snapshot } = await fixture();
+    expect(
+      fileLinkSchema.safeParse({
+        url: "not a URL",
+        expiresAt: file.expiresAt.toISOString(),
+      }).success,
+    ).toBe(false);
+    expect(
+      diagnosticSnapshotSchema.safeParse({
+        ...snapshot,
+        pages: ["private page"],
+      }).success,
+    ).toBe(false);
+    expect(supportStore.requestDiagnostic).not.toHaveBeenCalled();
+    const url = "/api/v1/account/diagnostic-exports";
+    safeError(
+      await app.inject({
+        method: "POST",
+        url,
+        headers: bearer,
+        payload: { idempotencyKey: "export-1", screenshot: "forbidden" },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const created = await app.inject({
+      method: "POST",
+      url,
+      headers: bearer,
+      payload: { idempotencyKey: "export-1" },
+    });
+    expect(created.statusCode).toBe(200);
+    expect(created.json().fileId).toBe(file.id);
+    const path = `/api/v1/account/files/${file.id}`;
+    const metadata = await app.inject({ url: path, headers: bearer });
+    expect(privateFileSchema.parse(metadata.json())).toMatchObject({
+      id: file.id,
+      revision: "1",
+    });
+    expect(metadata.payload).not.toMatch(
+      /PRIVATE_OBJECT|sha256|accountId|workspaceId/,
+    );
+    safeError(
+      await app.inject({
+        method: "POST",
+        url: path + "/link",
+        headers: { cookie, origin: webOrigin },
+        payload: { expectedRevision: "1" },
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    safeError(
+      await app.inject({
+        method: "POST",
+        url: path + "/link",
+        headers: bearer,
+        payload: { expectedRevision: "0" },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const link = await app.inject({
+      method: "POST",
+      url: path + "/link",
+      headers: { cookie, origin: webOrigin, "x-tholi-csrf": csrf },
+      payload: { expectedRevision: "1" },
+    });
+    expect(link.statusCode).toBe(200);
+    const download = new URL(link.json().url);
+    safeError(
+      await app.inject({ url: download.pathname + download.search }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await app.inject({
+        url: download.pathname + download.search,
+        headers: { cookie, origin: "https://help.tholi.io" },
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    safeError(
+      await app.inject({
+        url: download.pathname + download.search + "&key=forged",
+        headers: bearer,
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const response = await app.inject({
+      url: download.pathname + download.search,
+      headers: bearer,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(diagnosticSnapshotSchema.parse(response.json())).toEqual(snapshot);
+    expect(response.headers["content-disposition"]).toBe(
+      'attachment; filename="tholi-diagnostic.json"',
+    );
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+  });
+});
 
 describe("tenant authorization routes", () => {
   it("advertises exactly the six authorization operations with native/cookie security and PATCH preflight", async () => {

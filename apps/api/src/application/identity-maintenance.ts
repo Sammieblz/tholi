@@ -6,8 +6,8 @@ import {
 } from "./authorization-policy";
 import {
   JobHandlerFailure,
+  registeredJobKinds,
   type JobHandler,
-  type JobKind,
 } from "./job-contracts";
 
 const brokerReferences = z.object({ accountId: z.string().uuid() }).strict();
@@ -42,8 +42,4 @@ export const JOB_HANDLERS: readonly JobHandler[] = Object.freeze([
   pruneExpiredBrokers,
 ]);
 /** The operator recovery command uses the same kind/version/replay policy as workers. */
-export const REGISTERED_JOB_KINDS: readonly JobKind[] = Object.freeze(
-  JOB_HANDLERS.map(({ kind, version, replaySafe }) =>
-    Object.freeze({ kind, version, replaySafe }),
-  ),
-);
+export const REGISTERED_JOB_KINDS = registeredJobKinds(JOB_HANDLERS);

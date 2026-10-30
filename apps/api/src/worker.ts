@@ -5,6 +5,11 @@ import { parseWorkerConfig, type Environment } from "./config";
 import { createServiceDatabase } from "./adapters/service-database";
 import { PostgresJobs } from "./database/jobs";
 import { JobWorker } from "./application/job-worker";
+import { JOB_HANDLERS } from "./application/identity-maintenance";
+import { createSupportJobHandlers } from "./application/support-jobs";
+import { PostgresSupport } from "./database/support";
+import { createSmtpMailer } from "./adapters/smtp";
+import { createS3Objects } from "./adapters/s3";
 import {
   isMainModule,
   runExecutable,
@@ -49,13 +54,37 @@ export async function createWorkerRuntime(
   const path =
     config.healthFile === undefined ? undefined : healthPath(config.healthFile);
   const { pool, resource } = await createServiceDatabase(config.database);
+  const transports: { close(): Promise<void> }[] = [];
   let worker: JobWorker;
   try {
-    worker = new JobWorker(new PostgresJobs(pool), {
-      ...config.options,
-      workerId: randomUUID(),
-    });
+    let external: ReturnType<typeof createSupportJobHandlers> = [];
+    if (config.support) {
+      const mail = createSmtpMailer(
+        config.support.mail,
+        config.support.allowLocal,
+      );
+      transports.push(mail);
+      const objects = createS3Objects(
+        config.support.objects,
+        config.support.allowLocal,
+      );
+      transports.push(objects);
+      external = createSupportJobHandlers(
+        new PostgresSupport(pool),
+        mail,
+        objects,
+      );
+    }
+    worker = new JobWorker(
+      new PostgresJobs(pool),
+      {
+        ...config.options,
+        workerId: randomUUID(),
+      },
+      [...JOB_HANDLERS, ...external],
+    );
   } catch (error) {
+    await Promise.allSettled(transports.map((item) => item.close()));
     await resource.close();
     throw error;
   }
@@ -99,6 +128,7 @@ export async function createWorkerRuntime(
         try {
           await worker.close();
         } finally {
+          await Promise.allSettled(transports.map((item) => item.close()));
           await resource.close();
         }
       }

@@ -12,6 +12,7 @@ export type RepositoryErrorCode =
   | "INVALID_INPUT"
   | "CONFLICT"
   | "IDEMPOTENCY_CONFLICT"
+  | "RATE_LIMITED"
   | "INSUFFICIENT_CREDITS";
 
 export class RepositoryError extends Error {
