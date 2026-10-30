@@ -6,14 +6,15 @@ This record belongs to the observability implementation and does not relabel
 earlier release evidence. API/extension version remains 0.11.0; website remains
 0.1.1. No publication, packaging, paid resources or deployment is performed.
 
-## Evidence in progress
+## Acceptance evidence
 
 - Focused configuration, HTTP request correlation and worker cleanup: 69 passed.
 - Final focused telemetry, provider, worker and support owners: 66 passed.
 - Audit and PostgreSQL observer unit contracts: three passed.
 - Real PostgreSQL migration/retention/consent races and actual collector/provider/
   retried-worker inspection: passed as recorded below.
-- Configured account consent controls in real Chromium/Firefox: pending.
+- Configured account consent and complete real identity lifecycle: both browsers
+  passed as recorded below.
 - Deterministic PR gate and hosted exact-commit checks: pending.
 
 Failed diagnostics and subsequent evidence will remain separately attributed.
@@ -124,6 +125,31 @@ The fixture performs multiple synthetic account lifecycles behind one gateway IP
 Its next revision schedules those phases against the configured gateway burst
 budget. It does not change production limits, retry rejected requests or remove
 any security or analytics assertions. This attempt remains a failed cohort.
+
+## Passing configured website
+
+Clean source `6b835e56b7eaffbd2053025600acb349dee161f0` passed both configured
+browser cohorts from 17:06:14 through 17:12:33 UTC. Chromium 156.0.8078.4 and
+Firefox 157.0 each passed all nine check groups against the same immutable
+website digest
+`a325f4d31d64925b781f87956e7da66b30f39cf86c2db27b52c3b4bf83578978`.
+Each scheduled wait was 20,000 ms, derived from the checked-in gateway capacity.
+No browser-observed 429 response occurred. Direct fixture security requests also
+met their unchanged expected outcomes. The report is
+`output/qa/service-observability-identity/tholi-smoke-mvv84st9-1f9e7f21/validation.json`,
+with separate browser and progress records alongside it.
+
+The run established actual registration, local email verification, account access,
+independent account/browser analytics permissions, retained-event export,
+withdrawal and deletion, inert public Local pages, callback binding/replay
+rejection, session renewal/revocation, logout, password recovery, retained identity
+and sign-out across sessions. The signed-in account and retained JSON also passed
+320, 768, 1280 and 1600 px layouts in both themes, keyboard focus, adequate targets
+and reduced motion. Screenshots, video and traces were disabled for this cohort.
+Actual API/worker log rotation passed. Owned containers, volumes and credentials
+were removed; the temporary orchestration script was removed after verification.
+This is configured local Chromium/Firefox evidence, not native Chrome, external
+inbox or managed-cloud certification.
 
 ## UI guidance
 
