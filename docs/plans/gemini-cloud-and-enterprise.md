@@ -92,6 +92,12 @@ Retain existing `/v1` and `/v2` private endpoints and their schemas. Reserve a d
 
 The existing navigation result schema fixes `activity.llmCalls` to zero. Do not return Gemini work as a legacy result or silently widen that contract. Introduce an explicitly negotiated cloud envelope in the existing shared contract owner and update each client validator deliberately. Preserve v1/v2 compatibility tests and private-backend fallback semantics.
 
+The independently versioned [ephemeral navigation contract](../architecture/navigation-contracts.md)
+implements the schema boundary for #36. Its OpenAPI components describe future
+navigation payloads; no decision route or cloud capability is enabled by them.
+Its [validation record](../development/testing/navigation-contracts-validation.md)
+tracks the current milestone separately from inference and masked-capture work.
+
 The new inference contract must carry:
 
 1. An opaque request ID and idempotency key, client kind and supported contract version.
@@ -219,16 +225,16 @@ Treat all observations, saved artifacts, provider responses and webhooks as untr
 
 The following are **initial design envelopes for later implementation and load testing**, not measured capacity or a production sizing recommendation. Configuration can lower them. Raising a limit requires reviewing the dependent database, provider, cost and latency budgets together.
 
-| Resource                       | Initial envelope                                                                                                       | Enforcement owner                                                              |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| API replicas and database pool | At most 4 replicas, pool max 8 each; no eager minimum                                                                  | Deployment cap plus SQL adapter                                                |
-| Durable workers and pool       | At most 2 replicas, pool max 4 each; 2 active handlers per replica                                                     | Deployment cap, dispatcher and SQL adapter                                     |
-| Interactive inference          | 4 active calls per API replica, 1 per account initially; reject excess rather than grow an unbounded queue             | Process admission plus shared account/provider reservation limits              |
-| Model concurrency              | At most 16 across the initial API envelope, or a lower provider/account quota                                          | Shared admission/leases with expiry; deployment maximum is only an outer bound |
-| SQL waits                      | Acquire 2 s, lock 1 s, ordinary statement 5 s, bounded transaction 10 s                                                | SQL adapter and use-case-specific smaller deadlines                            |
-| Interactive service deadline   | Provider budget 20 s within API 25 s, client 30 s and gateway at least 35 s                                            | Shared new-service policy and propagated abort signal                          |
-| New service observation        | Structural JSON max 512 KiB; optional masked image max 2 MiB decoded and 4 megapixels; total encoded request max 4 MiB | Client, gateway, API and model adapter                                         |
-| Worker shutdown                | Stop claiming immediately, drain/cancel within 8 s; recover unfinished leases                                          | Worker runtime and job store                                                   |
+| Resource                       | Initial envelope                                                                                                                      | Enforcement owner                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| API replicas and database pool | At most 4 replicas, pool max 8 each; no eager minimum                                                                                 | Deployment cap plus SQL adapter                                                |
+| Durable workers and pool       | At most 2 replicas, pool max 4 each; 2 active handlers per replica                                                                    | Deployment cap, dispatcher and SQL adapter                                     |
+| Interactive inference          | 4 active calls per API replica, 1 per account initially; reject excess rather than grow an unbounded queue                            | Process admission plus shared account/provider reservation limits              |
+| Model concurrency              | At most 16 across the initial API envelope, or a lower provider/account quota                                                         | Shared admission/leases with expiry; deployment maximum is only an outer bound |
+| SQL waits                      | Acquire 2 s, lock 1 s, ordinary statement 5 s, bounded transaction 10 s                                                               | SQL adapter and use-case-specific smaller deadlines                            |
+| Interactive service deadline   | Provider budget 20 s within API 25 s, client 30 s and gateway at least 35 s                                                           | Shared new-service policy and propagated abort signal                          |
+| New service observation        | Projected structure max 24,000 UTF-8 bytes; optional masked image max 2 MiB decoded and 4 megapixels; total encoded request max 4 MiB | Client, gateway, API and model adapter                                         |
+| Worker shutdown                | Stop claiming immediately, drain/cancel within 8 s; recover unfinished leases                                                         | Worker runtime and job store                                                   |
 
 Use checked units and encoded/decoded image validation. Reject over-limit inputs before model billing. Large export transfers use private storage rather than raising inference limits. Legacy v1/v2 limits and timeouts remain unchanged; do not accidentally certify them against this new envelope.
 

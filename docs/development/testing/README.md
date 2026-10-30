@@ -19,6 +19,10 @@ The [navigation baseline and perception comparison](navigation-baseline.md) is
 the opt-in measurement protocol for roadmap #23. It reuses the installed-extension
 harness and independent outcomes, and does not change release certification.
 
+The [ephemeral navigation-contract validation record](navigation-contracts-validation.md)
+tracks #36 schema, identity/freshness, encoded-budget and OpenAPI checks. Contract
+admission does not establish live model quality or pixel-level privacy masking.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`
