@@ -110,6 +110,39 @@ No production SQL, grants, repository behavior or timing budget changed.
 Independent review passed. Fresh actual PostgreSQL/container validation and a
 new exact-head hosted workflow remain pending for this correction.
 
+## Local stack rerun and HTTP admission probe
+
+The first local rerun used clean source
+`5d0d7ab96f0e3cdf7fe5c89bed198117b489be47`. Actual PostgreSQL migration and
+repository checks passed, including both corrected lease-expiry scenarios.
+The broader smoke then failed at the direct API body-budget probe: the client
+recorded no completed status where 413 was required. Its report is preserved at
+`output/qa/local-stack/tholi-smoke-mvvcjfun-5ac6ddfa/smoke.json`; it confirms owned
+project and volume cleanup. This is not a complete passing stack run.
+
+Independent review found that the existing probe wrote 512 KiB plus one byte
+while Fastify could reject its declared length before reading that upload and
+close the connection. The report did not retain the transport error, so an
+early-response/upload race remains a diagnosis rather than a proven sole cause.
+
+The probe now accurately tests declared-length admission: it declares the same
+oversized length on a dedicated connection without uploading the rejected body,
+and requires a complete actual 413 and `no-store` at both boundaries. The direct
+API must also return the exact safe JSON error with its server request ID;
+Nginx's existing HTML error response remains unchanged. Real raw-body and
+signature-preservation checks still send and verify their payloads.
+
+Two distinct actual-listener regressions use the existing handshake's eight KiB
+route limit. One declares 8,193 bytes without sending them; the other sends
+8,193 actual bytes using chunked encoding without a `Content-Length`. Both
+require a complete 413, safe JSON and `no-store`. The focused service/gateway
+cohort passed all 46 cases, and independent review passed. No production limit,
+route, TLS verification or error policy changed. Bounded transport diagnostics
+now distinguish request errors and response completeness without recording
+headers or bodies. Resets never count as a 413, and no retry was added.
+
+A fresh complete stack rerun and final hosted checks are still required.
+
 The first focused service-contract attempt passed four pure cases and failed 28
 cases at service startup. The future OpenAPI schemas had entered Fastify's AJV
 registry, where the OpenAPI boolean `exclusiveMinimum` is a different dialect
