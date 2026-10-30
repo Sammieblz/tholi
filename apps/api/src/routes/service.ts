@@ -29,6 +29,7 @@ function serviceCapabilities(
   identityEnabled: boolean,
   authorizationEnabled: boolean,
   jobsEnabled: boolean,
+  supportEnabled: boolean,
 ) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -44,6 +45,7 @@ function serviceCapabilities(
         ? ["tenant-authorization", "purpose-consent"]
         : []),
       ...(jobsEnabled ? ["durable-jobs"] : []),
+      ...(supportEnabled ? ["support-requests", "private-files"] : []),
     ],
     availability: {
       authentication: identityEnabled,
@@ -64,11 +66,13 @@ export async function registerServiceApi(
   secureCookies = false,
   authorizationEnabled = false,
   jobsEnabled = false,
+  supportEnabled = false,
 ) {
   const capabilities = serviceCapabilities(
     identityEnabled,
     authorizationEnabled,
     jobsEnabled,
+    supportEnabled,
   );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,

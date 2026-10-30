@@ -181,6 +181,10 @@ export function evaluateAuthorization(
     case "usage.read":
     case "credits.read":
     case "support.request":
+    case "diagnostics.export":
+    case "files.read":
+    case "files.link":
+    case "files.download":
       // Own reads, export, deletion and requested support never consume credits
       // or depend on inference consent. Their domain checks still apply.
       return allowed;

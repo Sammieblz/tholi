@@ -135,6 +135,19 @@ const exchangeInput = () => ({
 });
 
 describe("trusted OIDC provider verification", () => {
+  it.each([
+    ["person@example.test", "person@example.test"],
+    ["not-an-address", null],
+    ["person@example.test\r\nBcc: other@example.test", null],
+  ])(
+    "projects only a valid signed verified delivery address %j",
+    async (email, expected) => {
+      const { provider } = await transport(await signed({ email }));
+      expect((await provider.exchange(exchangeInput())).verifiedEmail).toBe(
+        expected,
+      );
+    },
+  );
   it("verifies a signed ID token, sends bound code/PKCE proof and discards upstream credentials", async () => {
     const { provider, fetcher } = await transport(await signed());
     const result = await provider.exchange(exchangeInput());
@@ -143,6 +156,7 @@ describe("trusted OIDC provider verification", () => {
       subject: "provider-user",
       providerSessionId: "provider-session",
       issuedAt: expect.any(Date),
+      verifiedEmail: null,
     });
     expect(JSON.stringify(result)).not.toMatch(
       /UPSTREAM|access_token|refresh_token/,

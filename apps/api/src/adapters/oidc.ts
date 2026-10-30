@@ -15,6 +15,7 @@ import {
   type IdentityProvider,
 } from "../application/identity-contracts";
 import type { ServiceRequestContext } from "../capabilities";
+import { supportInputSchema } from "../../../../packages/navigation-core/contracts-support";
 
 const LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
 const invalid = () =>
@@ -195,10 +196,13 @@ export function createOidcProvider(
       )
         throw invalid();
       // Access and refresh tokens returned by the provider are deliberately discarded.
+      const email = supportInputSchema.shape.email.safeParse(claims.email);
       return {
         issuer: options.issuer,
         subject: claims.sub!,
         issuedAt: providerTime(claims),
+        verifiedEmail:
+          claims.email_verified === true && email.success ? email.data : null,
         ...(typeof claims.sid === "string"
           ? { providerSessionId: claims.sid }
           : {}),

@@ -186,6 +186,20 @@
 .contact-draft [role="status"]:empty {
   margin: 0;
 }
+.contact-diagnostic {
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
+  margin-top: 36px;
+}
+.contact-diagnostic h2 {
+  font-size: 28px;
+}
+.contact-diagnostic p {
+  font-size: 15px;
+}
+.contact-draft code {
+  overflow-wrap: anywhere;
+}
 @media (max-width: 1000px) {
   .contact-layout {
     gap: 40px;

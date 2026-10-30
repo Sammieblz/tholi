@@ -10,6 +10,8 @@ import {
   validatePrivateConnection,
   validateServiceOptions,
   validateIdentityOptions,
+  validateObjectStorageOptions,
+  validateSmtpOptions,
   type ApiOptions,
 } from "../../../apps/api/src/config";
 import type { IdentityOptions } from "../../../apps/api/src/application/identity-contracts";
@@ -22,6 +24,129 @@ const privateOptions: ApiOptions = {
   database: "data/navigator.sqlite",
   models: "assets/models",
 };
+
+const supportEnvironment = () => ({
+  THOLI_SUPPORT_ENABLED: "true",
+  THOLI_FILE_LINK_SECRET_KEY: Buffer.alloc(32, 5).toString("base64url"),
+  THOLI_OBJECT_ENDPOINT: "https://objects.example.test",
+  THOLI_OBJECT_REGION: "region-1",
+  THOLI_OBJECT_BUCKET: "tholi-private",
+  THOLI_OBJECT_ACCESS_KEY: "synthetic-access",
+  THOLI_OBJECT_SECRET_KEY: "synthetic-secret",
+});
+
+describe("explicit mail and storage composition", () => {
+  it("requires identity for support and keeps SMTP credentials out of the HTTP profile", () => {
+    expect(() => parseServiceConfig(supportEnvironment())).toThrow("identity");
+    const env: Record<string, string> = {
+      ...identityEnvironment(),
+      ...supportEnvironment(),
+    };
+    const configured = parseServiceConfig(env).options;
+    expect(configured.support?.objects.endpoint).toBe(
+      env.THOLI_OBJECT_ENDPOINT,
+    );
+    expect(JSON.stringify(configured)).not.toContain("smtp");
+    expect(
+      parseServiceConfig({ ...env, THOLI_SUPPORT_ENABLED: "false" }).options
+        .support,
+    ).toBeUndefined();
+    expect(() =>
+      parseServiceConfig({
+        ...env,
+        THOLI_FILE_LINK_SECRET_KEY: env.THOLI_IDENTITY_FLOW_SECRET_KEY,
+      }),
+    ).toThrow("dedicated");
+    expect(() =>
+      validateServiceOptions({
+        ...configured,
+        support: {
+          ...configured.support!,
+          options: {
+            ...configured.support!.options,
+            publicOrigin: "https://elsewhere.test",
+          },
+        },
+      }),
+    ).toThrow("API origin");
+    for (const name of [
+      "THOLI_OBJECT_ENDPOINT",
+      "THOLI_OBJECT_ACCESS_KEY",
+      "THOLI_OBJECT_SECRET_KEY",
+      "THOLI_FILE_LINK_SECRET_KEY",
+    ]) {
+      const missing: Record<string, string | undefined> = { ...env };
+      delete missing[name];
+      expect(() => parseServiceConfig(missing)).toThrow();
+    }
+    for (const endpoint of [
+      "http://objects.example.test",
+      "https://user:sentinel@objects.example.test",
+      "https://objects.example.test/prefix",
+      "https://objects.example.test?sentinel=private",
+    ]) {
+      expect(() =>
+        parseServiceConfig({ ...env, THOLI_OBJECT_ENDPOINT: endpoint }),
+      ).toThrow();
+    }
+  });
+
+  it("gives the worker only explicitly enabled transports and confines capture to local development", () => {
+    const database = {
+      THOLI_DATABASE_WORKER_URL: "postgresql://worker:synthetic@postgres/tholi",
+    };
+    expect(parseWorkerConfig(database).support).toBeUndefined();
+    const env = {
+      ...database,
+      ...supportEnvironment(),
+      NODE_ENV: "development",
+      THOLI_OBJECT_ENDPOINT: "http://storage:8333",
+      THOLI_SMTP_HOST: "mail",
+      THOLI_SMTP_PORT: "1025",
+      THOLI_SMTP_LOCAL_CAPTURE: "true",
+      THOLI_SMTP_REQUIRE_TLS: "false",
+      THOLI_SMTP_FROM: "tholi@example.invalid",
+      THOLI_SMTP_SUPPORT_RECIPIENT: "support@example.invalid",
+    };
+    const configured = parseWorkerConfig(env).support!;
+    expect(configured.mail.localCapture).toBe(true);
+    expect(JSON.stringify(configured)).not.toContain("fileLinkSecret");
+    expect(() =>
+      parseWorkerConfig({ ...env, NODE_ENV: "production" }),
+    ).toThrow();
+    expect(() =>
+      parseWorkerConfig({ ...env, THOLI_SMTP_HOST: "external.example.test" }),
+    ).toThrow("isolated local");
+    expect(() =>
+      validateSmtpOptions({ ...configured.mail, localCapture: false }),
+    ).toThrow("TLS");
+    expect(() =>
+      validateSmtpOptions({ ...configured.mail, user: "user" }, true),
+    ).toThrow("together");
+    expect(() =>
+      validateSmtpOptions(
+        {
+          ...configured.mail,
+          from: "valid@example.invalid\r\nBcc: another@example.invalid",
+        },
+        true,
+      ),
+    ).toThrow();
+    expect(() =>
+      validateObjectStorageOptions(
+        { ...configured.objects, maxBytes: 9999999 },
+        true,
+      ),
+    ).toThrow();
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(),
+        ...supportEnvironment(),
+        THOLI_SUPPORT_ENABLED: "yes",
+      }),
+    ).toThrow("availability");
+  });
+});
 
 function identityEnvironment(local = false): Record<string, string> {
   const provider = local

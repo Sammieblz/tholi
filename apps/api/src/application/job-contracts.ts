@@ -69,6 +69,28 @@ export interface JobHandler extends JobKind {
   ): Promise<JobResult>;
 }
 
+/** External adapters run between short fenced transactions owned by their store. */
+export interface ExternalJobHandler extends JobKind {
+  external: true;
+  execute(
+    lease: JobLease,
+    signal: AbortSignal,
+    backoffMs: number,
+  ): Promise<void>;
+  schedule?(input: { limit: number; intervalMs: number }): Promise<number>;
+}
+export type RegisteredJobHandler = JobHandler | ExternalJobHandler;
+
+export function registeredJobKinds(
+  handlers: readonly JobKind[],
+): readonly JobKind[] {
+  return Object.freeze(
+    handlers.map(({ kind, version, replaySafe }) =>
+      Object.freeze({ kind, version, replaySafe }),
+    ),
+  );
+}
+
 /** Only bounded, stable codes may leave a handler; raw failure messages are discarded. */
 export class JobHandlerFailure extends Error {
   constructor(

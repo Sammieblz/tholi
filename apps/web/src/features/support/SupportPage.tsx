@@ -119,7 +119,9 @@ export function SupportPage() {
           <p>
             Tell us which browser and Tholi version you’re using, what you
             expected and what happened instead. A short description is enough to
-            start.
+            start. You can prepare an email draft without an account. Configured
+            account support also offers an optional diagnostic with service
+            metadata and job counts.
           </p>
         </div>
         <SiteLink to="/contact?topic=support" className="web-primary">

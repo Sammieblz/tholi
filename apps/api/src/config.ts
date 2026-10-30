@@ -3,6 +3,12 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import type { DatabaseOptions } from "./database/postgres";
 import type { IdentityOptions } from "./application/identity-contracts";
+import type {
+  ObjectStorageOptions,
+  SmtpOptions,
+  SupportOptions,
+} from "./application/support-contracts";
+import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-support";
 
 export interface ApiOptions {
   token: string;
@@ -16,6 +22,13 @@ export interface ServiceApiOptions {
   origins: string[];
   identity?: IdentityOptions;
   database?: DatabaseOptions;
+  support?: SupportRuntimeOptions;
+}
+
+export interface SupportRuntimeOptions {
+  options: SupportOptions;
+  objects: ObjectStorageOptions;
+  fileLinkSecret: string;
 }
 
 export interface ListenOptions {
@@ -102,13 +115,38 @@ export function validateServiceOptions(
     throw new Error(
       "Identity requires explicit service database configuration.",
     );
-  if (!options.identity) return { origins };
+  if (!options.identity) {
+    if (options.support)
+      throw new Error("Support requires the composed identity profile.");
+    return { origins };
+  }
   const identity = validateIdentityOptions(options.identity);
   if (!origins.includes(identity.webOrigin))
     throw new Error(
       "The identity website must be a configured service origin.",
     );
-  return { origins, identity, database: { ...options.database! } };
+  if (
+    options.support &&
+    (options.support.options.publicOrigin !==
+      new URL(identity.callbackUrl).origin ||
+      options.support.fileLinkSecret === identity.flowEncryptionKey)
+  )
+    throw new Error(
+      "Support requires the configured API origin and a dedicated signing key.",
+    );
+  return {
+    origins,
+    identity,
+    database: { ...options.database! },
+    ...(options.support
+      ? {
+          support: validateSupportRuntime(
+            options.support,
+            !identity.secureCookies,
+          ),
+        }
+      : {}),
+  };
 }
 
 function identityUrl(value: string): URL | undefined {
@@ -136,6 +174,14 @@ const identityUrlSchema = z
 const identityOriginSchema = identityUrlSchema.refine(
   (value) => identityUrl(value)?.origin === value,
 );
+const secretKeySchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43}$/)
+  .refine(
+    (value) =>
+      Buffer.from(value, "base64url").length === 32 &&
+      Buffer.from(value, "base64url").toString("base64url") === value,
+  );
 const identityOptionsSchema = z
   .object({
     issuer: identityUrlSchema,
@@ -163,14 +209,7 @@ const identityOptionsSchema = z
       )
       .min(1)
       .max(16),
-    flowEncryptionKey: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{43}$/)
-      .refine(
-        (value) =>
-          Buffer.from(value, "base64url").length === 32 &&
-          Buffer.from(value, "base64url").toString("base64url") === value,
-      ),
+    flowEncryptionKey: secretKeySchema,
     secureCookies: z.boolean(),
     requireVerifiedEmail: z.boolean(),
     accessLifetimeMs: z
@@ -267,6 +306,217 @@ function environmentValue(env: Environment, name: string): string | undefined {
   return value === undefined ? undefined : requiredText(value, name);
 }
 
+function requiredEnvironment(env: Environment, name: string): string {
+  const value = environmentValue(env, name);
+  if (!value) throw new Error(`Missing ${name}.`);
+  return value;
+}
+
+function environmentBudget(
+  env: Environment,
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+) {
+  const text = environmentValue(env, name);
+  const value =
+    text === undefined ? fallback : /^\d+$/.test(text) ? Number(text) : NaN;
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum)
+    throw new Error(`Invalid ${name} budget.`);
+  return value;
+}
+
+const timeoutSchema = z.number().int().min(1000).max(15000);
+const boundedCredential = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^[^\r\n\0]+$/);
+const mailAddressSchema = z
+  .string()
+  .email()
+  .max(254)
+  .regex(/^[^\r\n\0]+$/);
+const loopbackHost = (host: string) =>
+  ["localhost", "127.0.0.1", "[::1]"].includes(host);
+
+/** Explicit S3-compatible endpoint and credentials, without an ambient cloud chain. */
+export function validateObjectStorageOptions(
+  input: ObjectStorageOptions,
+  allowLocal = false,
+): ObjectStorageOptions {
+  const parsed = z
+    .object({
+      endpoint: identityOriginSchema,
+      region: z
+        .string()
+        .min(1)
+        .max(80)
+        .regex(/^[a-zA-Z0-9-]+$/),
+      bucket: z
+        .string()
+        .min(3)
+        .max(63)
+        .regex(/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/),
+      accessKey: boundedCredential,
+      secretKey: boundedCredential,
+      maxBytes: z.literal(SUPPORT_LIMITS.maxFileBytes),
+      timeoutMs: timeoutSchema,
+    })
+    .strict()
+    .safeParse(input);
+  if (!parsed.success)
+    throw new Error("Invalid private object storage configuration.");
+  const endpoint = new URL(parsed.data.endpoint);
+  if (
+    endpoint.protocol !== "https:" &&
+    !(
+      allowLocal &&
+      (endpoint.hostname === "storage" || loopbackHost(endpoint.hostname))
+    )
+  )
+    throw new Error(
+      "Private object storage requires HTTPS outside local development.",
+    );
+  return parsed.data;
+}
+
+/** Capture is a local-only mode; external SMTP always verifies encrypted transport. */
+export function validateSmtpOptions(
+  input: SmtpOptions,
+  allowLocal = false,
+): SmtpOptions {
+  const parsed = z
+    .object({
+      host: z.string().min(1).max(253),
+      port: z.number().int().min(1).max(65535),
+      secure: z.boolean(),
+      requireTLS: z.boolean(),
+      from: mailAddressSchema,
+      supportRecipient: mailAddressSchema,
+      user: boundedCredential.optional(),
+      password: boundedCredential.optional(),
+      localCapture: z.boolean(),
+      timeoutMs: timeoutSchema,
+    })
+    .strict()
+    .safeParse(input);
+  if (!parsed.success)
+    throw new Error("Invalid notification mail configuration.");
+  const value = parsed.data;
+  parseHost(value.host);
+  if (!!value.user !== !!value.password)
+    throw new Error("SMTP credentials must be configured together.");
+  if (value.localCapture) {
+    if (
+      !allowLocal ||
+      !(value.host === "mail" || loopbackHost(value.host)) ||
+      value.port !== 1025 ||
+      value.user ||
+      value.secure ||
+      value.requireTLS
+    )
+      throw new Error("Mail capture requires the isolated local SMTP service.");
+  } else if (!value.secure && !value.requireTLS) {
+    throw new Error("Notification mail requires verified TLS.");
+  }
+  return value;
+}
+
+function validateSupportRuntime(
+  input: SupportRuntimeOptions,
+  allowLocal: boolean,
+): SupportRuntimeOptions {
+  const options = z
+    .object({
+      publicOrigin: identityOriginSchema,
+      linkLifetimeMs: z
+        .number()
+        .int()
+        .min(1000)
+        .max(SUPPORT_LIMITS.maxLinkLifetimeMs),
+    })
+    .strict()
+    .safeParse(input.options);
+  if (
+    !options.success ||
+    !secretKeySchema.safeParse(input.fileLinkSecret).success
+  )
+    throw new Error("Invalid support service configuration.");
+  const url = new URL(options.data.publicOrigin);
+  if (url.protocol !== "https:" && !(allowLocal && loopbackHost(url.hostname)))
+    throw new Error(
+      "Support service requires HTTPS outside local development.",
+    );
+  return {
+    options: options.data,
+    objects: validateObjectStorageOptions(input.objects, allowLocal),
+    fileLinkSecret: input.fileLinkSecret,
+  };
+}
+
+function supportEnabled(env: Environment): boolean {
+  const enabled = environmentValue(env, "THOLI_SUPPORT_ENABLED");
+  if (enabled !== undefined && !["true", "false"].includes(enabled))
+    throw new Error("Invalid support availability configuration.");
+  return enabled === "true";
+}
+
+function parseObjectStorageConfig(env: Environment) {
+  return validateObjectStorageOptions(
+    {
+      endpoint: requiredEnvironment(env, "THOLI_OBJECT_ENDPOINT"),
+      region: requiredEnvironment(env, "THOLI_OBJECT_REGION"),
+      bucket: requiredEnvironment(env, "THOLI_OBJECT_BUCKET"),
+      accessKey: requiredEnvironment(env, "THOLI_OBJECT_ACCESS_KEY"),
+      secretKey: requiredEnvironment(env, "THOLI_OBJECT_SECRET_KEY"),
+      maxBytes: SUPPORT_LIMITS.maxFileBytes,
+      timeoutMs: environmentBudget(
+        env,
+        "THOLI_OBJECT_TIMEOUT_MS",
+        5000,
+        1000,
+        15000,
+      ),
+    },
+    env.NODE_ENV === "development",
+  );
+}
+
+function parseMailConfig(env: Environment) {
+  const flag = (name: string, fallback: boolean) => {
+    const value = environmentValue(env, name);
+    if (value === undefined) return fallback;
+    if (!["true", "false"].includes(value)) throw new Error(`Invalid ${name}.`);
+    return value === "true";
+  };
+  return validateSmtpOptions(
+    {
+      host: requiredEnvironment(env, "THOLI_SMTP_HOST"),
+      port: parsePort(environmentValue(env, "THOLI_SMTP_PORT"), 587),
+      secure: flag("THOLI_SMTP_SECURE", false),
+      requireTLS: flag("THOLI_SMTP_REQUIRE_TLS", true),
+      from: requiredEnvironment(env, "THOLI_SMTP_FROM"),
+      supportRecipient: requiredEnvironment(
+        env,
+        "THOLI_SMTP_SUPPORT_RECIPIENT",
+      ),
+      user: environmentValue(env, "THOLI_SMTP_USER"),
+      password: environmentValue(env, "THOLI_SMTP_PASSWORD"),
+      localCapture: flag("THOLI_SMTP_LOCAL_CAPTURE", false),
+      timeoutMs: environmentBudget(
+        env,
+        "THOLI_SMTP_TIMEOUT_MS",
+        5000,
+        1000,
+        15000,
+      ),
+    },
+    env.NODE_ENV === "development",
+  );
+}
+
 function parsePort(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   if (!/^\d+$/.test(value))
@@ -347,7 +597,7 @@ export function parseDatabaseConfig(
   return { connectionString, max };
 }
 
-/** Independent SQL-only worker profile. No identity or model credentials needed. */
+/** Independent worker profile. No identity, HTTP-session or model credentials. */
 export function parseWorkerConfig(env: Environment) {
   const budget = (
     name: string,
@@ -355,12 +605,7 @@ export function parseWorkerConfig(env: Environment) {
     minimum: number,
     maximum: number,
   ) => {
-    const text = environmentValue(env, name);
-    const value =
-      text === undefined ? fallback : /^\d+$/.test(text) ? Number(text) : NaN;
-    if (!Number.isSafeInteger(value) || value < minimum || value > maximum)
-      throw new Error(`Invalid ${name} budget.`);
-    return value;
+    return environmentBudget(env, name, fallback, minimum, maximum);
   };
   const leaseMs = budget("THOLI_WORKER_LEASE_MS", 30000, 10000, 120000);
   const heartbeatMs = budget("THOLI_WORKER_HEARTBEAT_MS", 10000, 1000, 30000);
@@ -382,6 +627,15 @@ export function parseWorkerConfig(env: Environment) {
       ),
     },
     healthFile: environmentValue(env, "THOLI_WORKER_HEALTH_FILE"),
+    ...(supportEnabled(env)
+      ? {
+          support: {
+            mail: parseMailConfig(env),
+            objects: parseObjectStorageConfig(env),
+            allowLocal: env.NODE_ENV === "development",
+          },
+        }
+      : {}),
   };
 }
 
@@ -430,11 +684,7 @@ function parseIdentityConfig(env: Environment): IdentityOptions | undefined {
       throw new Error("Incomplete service identity configuration.");
     return undefined;
   }
-  const need = (name: string) => {
-    const value = environmentValue(env, name);
-    if (!value) throw new Error(`Missing ${name}.`);
-    return value;
-  };
+  const need = (name: string) => requiredEnvironment(env, name);
   const webOrigin = need("THOLI_IDENTITY_WEB_ORIGIN");
   const publicOrigin = need("THOLI_SERVICE_PUBLIC_ORIGIN");
   if (!identityOriginSchema.safeParse(publicOrigin).success)
@@ -515,10 +765,36 @@ export function parseServiceConfig(env: Environment) {
       "PORT and THOLI_SERVICE_PORT must agree when both are set.",
     );
   const identity = parseIdentityConfig(env);
+  if (supportEnabled(env) && !identity)
+    throw new Error("Support requires the composed identity profile.");
   return {
     options: validateServiceOptions({
       origins: parseOrigins(env, "THOLI_SERVICE_ORIGINS", true) ?? [],
       ...(identity ? { identity, database: parseDatabaseConfig(env) } : {}),
+      ...(supportEnabled(env)
+        ? {
+            support: {
+              options: {
+                publicOrigin: requiredEnvironment(
+                  env,
+                  "THOLI_SERVICE_PUBLIC_ORIGIN",
+                ),
+                linkLifetimeMs: environmentBudget(
+                  env,
+                  "THOLI_SUPPORT_LINK_LIFETIME_MS",
+                  SUPPORT_LIMITS.maxLinkLifetimeMs,
+                  1000,
+                  SUPPORT_LIMITS.maxLinkLifetimeMs,
+                ),
+              },
+              objects: parseObjectStorageConfig(env),
+              fileLinkSecret: requiredEnvironment(
+                env,
+                "THOLI_FILE_LINK_SECRET_KEY",
+              ),
+            },
+          }
+        : {}),
     }),
     listen: {
       host: parseHost(environmentValue(env, "THOLI_SERVICE_HOST")),

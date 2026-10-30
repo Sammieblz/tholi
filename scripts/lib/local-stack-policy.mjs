@@ -7,6 +7,7 @@ const requiredServices = [
   "oidc",
   "mail",
   "gateway",
+  "storage",
 ];
 const credentialKeys = new Set([
   "GEMINI_API_KEY",
@@ -72,9 +73,10 @@ export function inspectLocalStack(config) {
     "worker and API must use the same application image.",
   );
   requirePolicy(
-    Object.keys(worker.networks || {}).length === 1 &&
-      worker.networks.database !== undefined,
-    "worker requires only the private database network in this milestone.",
+    Object.keys(worker.networks || {}).length === 2 &&
+      worker.networks.database !== undefined &&
+      worker.networks.application !== undefined,
+    "worker requires private database and mail/storage application networks.",
   );
   requirePolicy(
     Object.keys(worker.environment || {}).every(
@@ -84,7 +86,11 @@ export function inspectLocalStack(config) {
           "NODE_OPTIONS",
           "THOLI_DATABASE_WORKER_URL",
           "THOLI_DATABASE_POOL_MAX",
-        ].includes(key) || key.startsWith("THOLI_WORKER_"),
+          "THOLI_SUPPORT_ENABLED",
+        ].includes(key) ||
+        ["THOLI_WORKER_", "THOLI_OBJECT_", "THOLI_SMTP_"].some((prefix) =>
+          key.startsWith(prefix),
+        ),
     ),
     "worker must not receive runtime, migration, identity or provider credentials.",
   );

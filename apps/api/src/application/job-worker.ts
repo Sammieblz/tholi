@@ -1,10 +1,11 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { RepositoryError } from "../database/contracts";
-import { JOB_HANDLERS, REGISTERED_JOB_KINDS } from "./identity-maintenance";
+import { JOB_HANDLERS } from "./identity-maintenance";
 import {
   JobHandlerFailure,
   type JobFailure,
-  type JobHandler,
+  registeredJobKinds,
+  type RegisteredJobHandler,
   type JobLease,
   type JobStore,
   type JobWorkerOptions,
@@ -25,10 +26,13 @@ export class JobWorker {
   private running = false;
   private healthy = false;
   private lastHealthy = 0;
+  private readonly handlers: readonly RegisteredJobHandler[];
+  private readonly kinds: ReturnType<typeof registeredJobKinds>;
 
   constructor(
     private readonly store: JobStore,
     options: JobWorkerOptions,
+    handlers: readonly RegisteredJobHandler[] = JOB_HANDLERS,
   ) {
     if (
       !options.workerId ||
@@ -45,6 +49,16 @@ export class JobWorker {
     )
       throw new Error("The worker configuration is invalid.");
     this.options = Object.freeze({ ...options });
+    if (
+      !handlers.length ||
+      new Set(handlers.map((h) => `${h.kind}:${h.version}`)).size !==
+        handlers.length
+    )
+      throw new Error("The worker registry is invalid.");
+    this.handlers = Object.freeze(
+      handlers.map((handler) => Object.freeze({ ...handler })),
+    );
+    this.kinds = registeredJobKinds(this.handlers);
   }
 
   async start(): Promise<void> {
@@ -100,6 +114,13 @@ export class JobWorker {
             limit: 100,
             intervalMs: this.options.scheduleIntervalMs,
           });
+          for (const handler of this.handlers) {
+            if ("external" in handler && handler.schedule)
+              await handler.schedule({
+                limit: 100,
+                intervalMs: this.options.scheduleIntervalMs,
+              });
+          }
           nextSchedule = Date.now() + this.options.scheduleIntervalMs;
           observedDatabase = true;
         }
@@ -107,7 +128,7 @@ export class JobWorker {
         if (capacity > 0 && !this.shutdown.signal.aborted) {
           const leases = await this.store.claim({
             workerId: this.options.workerId,
-            kinds: REGISTERED_JOB_KINDS,
+            kinds: this.kinds,
             leaseMs: this.options.leaseMs,
             limit: capacity,
           });
@@ -187,7 +208,7 @@ export class JobWorker {
 
   private failure(
     error: unknown,
-    handler: JobHandler | undefined,
+    handler: RegisteredJobHandler | undefined,
     signal: AbortSignal,
     attempts: number,
   ): JobFailure {
@@ -236,7 +257,7 @@ export class JobWorker {
   }
 
   private async execute(lease: JobLease, controller: AbortController) {
-    const handler = JOB_HANDLERS.find(
+    const handler = this.handlers.find(
       (candidate) =>
         candidate.kind === lease.kind && candidate.version === lease.version,
     );
@@ -252,6 +273,14 @@ export class JobWorker {
     const heartbeat = this.heartbeat(lease, controller, finished.signal);
     try {
       controller.signal.throwIfAborted();
+      if ("external" in handler) {
+        await handler.execute(
+          lease,
+          controller.signal,
+          this.backoff(lease.attempts),
+        );
+        return;
+      }
       await this.store.runJob(lease, async (transaction) => {
         controller.signal.throwIfAborted();
         const result = await handler.execute(

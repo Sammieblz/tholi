@@ -57,7 +57,7 @@ export function privacySections(): LegalSection[] {
             service stores your identity link, account and workspace
             identifiers, session and security metadata. Installation and
             practice do not create an account or upload local routes. Contact
-            drafts are handled separately.
+            drafts and optional account support are handled separately.
           </p>
           <p>
             On tholi.io, Cloudflare adds page-view and performance measurements
@@ -345,14 +345,35 @@ export function privacySections(): LegalSection[] {
             period or processing country.
           </p>
           <p>
-            The contact form prepares a draft in page memory; it does not submit
-            your message to a Tholi server or save it in browser storage.
-            Opening an email draft passes its contents to your email app;
-            copying uses your device’s clipboard. Contacting us by email shares
-            the message with the company’s email service. We use correspondence
-            to respond to your request and retain it as needed for that request
-            and applicable obligations; do not send passwords or private
-            browsing captures.
+            Without configured account support, the contact form prepares a
+            draft in page memory; it does not submit your message to a Tholi
+            server or save it in browser storage. Opening an email draft passes
+            its contents to your email app; copying uses your device’s
+            clipboard. Contacting us by email shares the message with the
+            company’s email service. We use correspondence to respond to your
+            request and retain it as needed for that request and applicable
+            obligations; do not send passwords or private browsing captures.
+          </p>
+          <p>
+            When account support is configured and you are signed in, choosing
+            Send request submits the entered name, reply email, topic, subject
+            and message to that service for support processing. The service
+            marks this content expired after 30 days and queues plain-text
+            notifications. Maintenance removes expired content; a stopped worker
+            can delay physical deletion. Receipts use a verified account
+            notification address, when available. A saved request does not
+            confirm inbox delivery. Delivered emails are separate copies
+            retained for the request and applicable obligations.
+          </p>
+          <p>
+            An account diagnostic is optional and exported only when requested.
+            It contains service version, account status and job counts, without
+            browsing pages, screenshots, destinations or session credentials.
+            The private file expires after one hour; links last no more than one
+            minute and still require your signed-in account. Expiry cleanup
+            continues after account access is revoked, although a stopped worker
+            can delay physical deletion. No diagnostic is automatically attached
+            to a support request.
           </p>
           <p>
             The date shown above identifies this notice’s latest update;

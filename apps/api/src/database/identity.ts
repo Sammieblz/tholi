@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { z } from "zod";
 import {
   IDENTITY_CLOCK_TOLERANCE_SECONDS,
   type IdentityAccount,
@@ -90,6 +91,36 @@ async function requireGrant(
     ],
   );
   if (!result.rowCount) throw new IdentityStoreError();
+}
+
+async function projectDeliveryContact(
+  client: PoolClient,
+  account: IdentityAccount,
+  identity: ProviderIdentity,
+) {
+  // Resolving an old proof is not permission to change a delivery destination.
+  // Session creation retains its existing revocation checks independently.
+  try {
+    await requireGrant(client, { ...account, ...identity }, new Date());
+  } catch (error) {
+    if (error instanceof IdentityStoreError) return;
+    throw error;
+  }
+  const email = identity.verifiedEmail ?? null;
+  if (email !== null && !z.string().max(254).email().safeParse(email).success)
+    throw new RepositoryError(
+      "INVALID_INPUT",
+      "Use a verified delivery contact.",
+    );
+  await client.query(
+    `INSERT INTO tholi.identity_delivery_contacts(identity_id,account_id,email,provider_issued_at)
+      VALUES($1,$2,$3,$4) ON CONFLICT(identity_id) DO UPDATE SET
+      email=EXCLUDED.email,provider_issued_at=EXCLUDED.provider_issued_at,
+      revision=tholi.identity_delivery_contacts.revision + CASE WHEN tholi.identity_delivery_contacts.email IS DISTINCT FROM EXCLUDED.email THEN 1 ELSE 0 END
+      WHERE tholi.identity_delivery_contacts.account_id=EXCLUDED.account_id
+        AND tholi.identity_delivery_contacts.provider_issued_at<EXCLUDED.provider_issued_at`,
+    [account.identityId, account.accountId, email, date(identity.issuedAt)],
+  );
 }
 
 type SessionRow = Omit<IdentitySession, "providerSessionId"> & {
@@ -203,7 +234,10 @@ export class PostgresIdentityRepository implements IdentityStore {
             AND m.status = 'active' AND m.role = 'owner'`,
         [identity.issuer, identity.subject],
       );
-      if (result.rows[0]) return result.rows[0];
+      if (result.rows[0]) {
+        await projectDeliveryContact(client, result.rows[0], identity);
+        return result.rows[0];
+      }
       // A revoked account must not be replaced by a fresh identity/account.
       if (linked.rowCount) throw new IdentityStoreError();
       const scope = await provisionAccountOnClient(client, {
@@ -215,7 +249,10 @@ export class PostgresIdentityRepository implements IdentityStore {
         "INSERT INTO tholi.identity_links (id, account_id, issuer, subject) VALUES ($1,$2,$3,$4)",
         [identityId, scope.accountId, identity.issuer, identity.subject],
       );
-      return { identityId, ...scope, revision: "1" };
+      const account = { identityId, ...scope, revision: "1" };
+      await setDatabaseScope(client, scope);
+      await projectDeliveryContact(client, account, identity);
+      return account;
     });
   }
 

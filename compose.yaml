@@ -7,6 +7,14 @@ x-api-image: &api-image
     dockerfile: apps/api/Dockerfile
     target: runtime
 
+x-support-storage: &support-storage
+  THOLI_SUPPORT_ENABLED: "true"
+  THOLI_OBJECT_ENDPOINT: http://storage:8333
+  THOLI_OBJECT_REGION: us-east-1
+  THOLI_OBJECT_BUCKET: tholi-local
+  THOLI_OBJECT_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?Initialize local storage credentials first}
+  THOLI_OBJECT_SECRET_KEY: ${STORAGE_SECRET_KEY:?Initialize local storage credentials first}
+
 services:
   gateway:
     image: nginx/nginx-unprivileged:1.30.6-alpine-slim@sha256:984a21e29bb10d4c0e122374b97b89a2101823a9331e0f3c6c04bc285ccf447f
@@ -50,6 +58,7 @@ services:
     user: "1000:1000"
     command: ["node", "apps/api/dist/service.js"]
     environment:
+      <<: *support-storage
       NODE_ENV: development
       NODE_OPTIONS: --max-old-space-size=192
       THOLI_SERVICE_HOST: 0.0.0.0
@@ -66,6 +75,7 @@ services:
       THOLI_IDENTITY_CLIENT_SECRET_KEY: ${THOLI_IDENTITY_CLIENT_SECRET_KEY:?Initialize local identity credentials first}
       THOLI_IDENTITY_FLOW_SECRET_KEY: ${THOLI_IDENTITY_FLOW_SECRET_KEY:?Initialize local identity credentials first}
       THOLI_SERVICE_PUBLIC_ORIGIN: http://127.0.0.1:${API_HOST_PORT:-8788}
+      THOLI_FILE_LINK_SECRET_KEY: ${THOLI_FILE_LINK_SECRET_KEY:?Upgrade the local environment for support credentials}
       THOLI_IDENTITY_WEB_ORIGIN: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
       THOLI_IDENTITY_CHROMIUM_CALLBACKS: ${THOLI_IDENTITY_CHROMIUM_CALLBACKS:-}
       THOLI_IDENTITY_FIREFOX_CALLBACKS: ${THOLI_IDENTITY_FIREFOX_CALLBACKS:-}
@@ -95,6 +105,7 @@ services:
       postgres: { condition: service_healthy }
       oidc: { condition: service_healthy }
       mail: { condition: service_healthy }
+      storage: { condition: service_healthy }
       database-migrate: { condition: service_completed_successfully }
       identity-configure: { condition: service_completed_successfully }
 
@@ -103,11 +114,19 @@ services:
     user: "1000:1000"
     command: [node, apps/api/dist/worker.js]
     environment:
+      <<: *support-storage
       NODE_ENV: development
       NODE_OPTIONS: --max-old-space-size=192
       THOLI_DATABASE_WORKER_URL: postgresql://tholi_worker:${THOLI_WORKER_PASSWORD:?Upgrade the local environment for worker credentials}@postgres:5432/tholi
       THOLI_WORKER_HEALTH_FILE: /tmp/tholi-worker-health.json
-    networks: [database]
+      THOLI_SMTP_HOST: mail
+      THOLI_SMTP_PORT: "1025"
+      THOLI_SMTP_SECURE: "false"
+      THOLI_SMTP_REQUIRE_TLS: "false"
+      THOLI_SMTP_LOCAL_CAPTURE: "true"
+      THOLI_SMTP_FROM: tholi@example.invalid
+      THOLI_SMTP_SUPPORT_RECIPIENT: support@example.invalid
+    networks: [database, application]
     read_only: true
     tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
     cap_drop: [ALL]
@@ -125,6 +144,8 @@ services:
       start_period: 10s
     depends_on:
       postgres: { condition: service_healthy }
+      mail: { condition: service_healthy }
+      storage: { condition: service_healthy }
       database-migrate: { condition: service_completed_successfully }
 
   # Local operator-owned initialization, never performed by an HTTP replica.
@@ -315,7 +336,6 @@ services:
       start_period: 10s
 
   storage:
-    profiles: [storage]
     image: chrislusf/seaweedfs:4.51@sha256:f7a49e3f3972ebed5be2ed4befa4a0c68eb7bdddba6e692d42729ceb545134b8
     user: "1000:1000"
     command:

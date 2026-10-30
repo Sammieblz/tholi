@@ -32,13 +32,17 @@ export function initializeLocalEnvironment({
   ports = {},
   upgradeIdentity = false,
   upgradeWorker = false,
+  upgradeSupport = false,
 }) {
   let template = readFileSync(resolve(root, ".env.example"), "utf8");
   template = template.replace(
     /^([A-Z_]*(?:_PASSWORD|_SECRET_KEY)|STORAGE_ACCESS_KEY)=.*$/gm,
     (_, name) =>
       `${name}=${
-        name === "THOLI_IDENTITY_FLOW_SECRET_KEY"
+        [
+          "THOLI_IDENTITY_FLOW_SECRET_KEY",
+          "THOLI_FILE_LINK_SECRET_KEY",
+        ].includes(name)
           ? randomBytes(32).toString("base64url")
           : randomBytes(24).toString("hex")
       }`,
@@ -63,7 +67,7 @@ export function initializeLocalEnvironment({
   }
   const target = resolve(envFile);
   mkdirSync(dirname(target), { recursive: true });
-  if (upgradeIdentity || upgradeWorker) {
+  if (upgradeIdentity || upgradeWorker || upgradeSupport) {
     if (!existsSync(target))
       throw new Error("Initialize the local environment before upgrading it.");
     const existing = readFileSync(target, "utf8");
@@ -71,9 +75,17 @@ export function initializeLocalEnvironment({
     const additions = template.split(/\r?\n/).filter((line) => {
       const name = line.slice(0, line.indexOf("="));
       return (
-        ((upgradeIdentity && name.startsWith("THOLI_IDENTITY_")) ||
+        (((upgradeIdentity && name.startsWith("THOLI_IDENTITY_")) ||
           (upgradeWorker && name === "THOLI_WORKER_PASSWORD")) &&
-        !(name in settings)
+          // Support storage reuses the existing private local storage credentials.
+          !(name in settings)) ||
+        (upgradeSupport &&
+          [
+            "THOLI_FILE_LINK_SECRET_KEY",
+            "STORAGE_ACCESS_KEY",
+            "STORAGE_SECRET_KEY",
+          ].includes(name) &&
+          !(name in settings))
       );
     });
     if (additions.length)
@@ -210,6 +222,13 @@ function main(args) {
           );
         options.upgradeWorker = true;
         break;
+      case "--upgrade-support":
+        if (action !== "init" || value !== "true")
+          throw new Error(
+            "Support environment upgrades require init --upgrade-support true.",
+          );
+        options.upgradeSupport = true;
+        break;
       default:
         throw new Error(`Unknown option: ${flags[i]}.`);
     }
@@ -220,7 +239,7 @@ function main(args) {
       envFile: options.envFile ?? resolve(root, ".env"),
     });
     console.log(
-      `${options.upgradeIdentity || options.upgradeWorker ? "Updated missing local settings in" : "Created"} ${result.envFile}. Keep local credentials private.`,
+      `${options.upgradeIdentity || options.upgradeWorker || options.upgradeSupport ? "Updated missing local settings in" : "Created"} ${result.envFile}. Keep local credentials private.`,
     );
     return;
   }

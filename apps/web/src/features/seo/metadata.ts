@@ -58,7 +58,7 @@ export const publicPages: PageMetadata[] = [
   page(
     "/contact",
     "Contact Tholi | Support, feedback and partnerships",
-    "Contact the team behind Tholi for support, feedback or partnerships. Prepare an email draft on the website and send it through your email app.",
+    "Contact the Tholi team for support, feedback or partnerships. Prepare an email draft, or submit a request when signed-in support is configured.",
     "Contact",
     "ContactPage",
   ),

@@ -10,6 +10,7 @@ import type { PrivateCapabilities, RuntimeResource } from "./capabilities";
 import type { IdentityService } from "./application/identity";
 import type { AuthorizationService } from "./application/authorization";
 import type { JobService } from "./application/jobs";
+import type { SupportService } from "./application/support";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
 
@@ -18,6 +19,7 @@ export interface ServiceApiServices {
   identity?: IdentityService;
   authorization?: AuthorizationService;
   jobs?: JobService;
+  support?: SupportService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -51,8 +53,9 @@ export async function createServiceApi(
   let identity = injected.identity;
   let authorization = injected.authorization;
   let jobs = injected.jobs;
+  let support = injected.support;
   const ownedResources = [...resources];
-  if ((authorization || jobs) && !identity)
+  if ((authorization || jobs || support) && !identity)
     throw new Error("Authorization requires the composed identity service.");
   if (identity && !options.identity)
     throw new Error(
@@ -64,11 +67,13 @@ export async function createServiceApi(
     const runtime = await createIdentityRuntime(
       options.identity,
       options.database!,
+      options.support,
     );
     identity = runtime.service;
     authorization = runtime.authorization;
     jobs = runtime.jobs;
-    ownedResources.push(runtime.resource);
+    support = runtime.support;
+    ownedResources.push(...runtime.resources);
   }
   // Extension origins are transport admission, never account identity. Firefox's
   // per-profile origin is not its stable registered OAuth callback.
@@ -136,6 +141,7 @@ export async function createServiceApi(
       options.identity?.secureCookies,
       !!authorization,
       !!jobs,
+      !!support,
     );
     if (identity) {
       const { registerIdentityApi } = await import("./routes/identity");
@@ -148,6 +154,12 @@ export async function createServiceApi(
       if (jobs) {
         const { registerJobsApi } = await import("./routes/jobs");
         await registerJobsApi(app, identity, jobs);
+      }
+      if (support) {
+        const { registerSupportApi } = await import("./routes/support");
+        const { registerFilesApi } = await import("./routes/files");
+        await registerSupportApi(app, identity, support);
+        await registerFilesApi(app, identity, support);
       }
     }
     registerHealth(app, "service", lifecycle);

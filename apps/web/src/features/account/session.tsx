@@ -34,6 +34,12 @@ type AccountContextValue = {
   sessions: () => Promise<z.infer<typeof identitySessionsSchema>>;
   revoke: (id: string) => Promise<void>;
   signOut: (all?: boolean) => Promise<string>;
+  request: <T>(
+    path: `/api/v1/${string}`,
+    schema: z.ZodType<T>,
+    method?: "GET" | "POST" | "DELETE",
+    body?: unknown,
+  ) => Promise<T>;
 };
 const AccountContext = createContext<AccountContextValue | undefined>(
   undefined,
@@ -140,6 +146,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     error,
     session,
     reload,
+    request,
     authorizationUrl: (action) => {
       if (!serviceApiOrigin) return;
       const url = new URL("/api/v1/auth/authorize", serviceApiOrigin);

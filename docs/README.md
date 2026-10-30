@@ -18,6 +18,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Optional accounts, OIDC and cross-client session security](development/service-identity.md)
 - [Workspace authorization, tenant isolation and cloud consent](development/service-authorization.md)
 - [Durable jobs, worker isolation, scheduling and recovery](development/service-jobs.md)
+- [Account support, notification mail and private diagnostic files](development/service-support.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

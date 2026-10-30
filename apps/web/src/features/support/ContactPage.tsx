@@ -1,22 +1,83 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SiteLink, useRouter } from "../../app/router";
+import { serviceApiOrigin } from "../../config/project";
+import { AccountProvider, useAccount } from "../account/session";
 import { legalOperator } from "../legal/operator";
+import { serviceCapabilitiesSchema } from "../../../../../packages/navigation-core/contracts-service";
+import {
+  SUPPORT_LIMITS,
+  SUPPORT_TOPICS,
+  supportInputSchema,
+  supportRequestSchema,
+  type SupportRequest,
+} from "../../../../../packages/navigation-core/contracts-support";
+import { AccountDiagnostic } from "./AccountDiagnostic";
 import "./support.css";
 
-const topics = ["Support", "Feedback", "Partnerships", "Something else"];
 type MessageDraft = { subject: string; body: string; copy: string };
+type Account = ReturnType<typeof useAccount>;
 
 export function ContactPage() {
+  return serviceApiOrigin ? (
+    <AccountProvider>
+      <ConfiguredContact />
+    </AccountProvider>
+  ) : (
+    <ContactForm />
+  );
+}
+function ConfiguredContact() {
+  return <ContactForm account={useAccount()} />;
+}
+function ContactForm({ account }: { account?: Account }) {
   const { search } = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<MessageDraft | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [receipt, setReceipt] = useState<{
+    scope: string;
+    value: SupportRequest;
+  }>();
+  const [capabilities, setCapabilities] = useState<{
+    scope: string;
+    value: string[];
+  }>();
+  const submission = useRef<{ body: string; key: string } | undefined>(
+    undefined,
+  );
+  const scope = account?.session
+    ? `${account.session.account.id}:${account.session.account.workspaceId}:${account.session.session.id}`
+    : "";
+  const request = account?.request;
+  useEffect(() => {
+    let active = true;
+    if (scope && request)
+      void request("/api/v1/capabilities", serviceCapabilitiesSchema)
+        .then((value) => {
+          if (active) setCapabilities({ scope, value: value.capabilities });
+        })
+        .catch(() => {
+          if (active) setCapabilities({ scope, value: [] });
+        });
+    return () => {
+      active = false;
+    };
+  }, [scope, request]);
+  const offered = capabilities?.scope === scope ? capabilities.value : [];
+  const online = !!scope && offered.includes("support-requests");
+  const saved = receipt?.scope === scope ? receipt.value : undefined;
   const draftHeading = useRef<HTMLHeadingElement>(null);
+  const receiptHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (draft) draftHeading.current?.focus();
   }, [draft]);
+  useEffect(() => {
+    if (saved) receiptHeading.current?.focus();
+  }, [saved]);
 
-  const prepare = (event: FormEvent<HTMLFormElement>) => {
+  const prepare = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -27,11 +88,56 @@ export function ContactPage() {
       next.email = "Enter an email address we can reply to.";
     if (!value("subject")) next.subject = "Give your message a short subject.";
     if (!value("message")) next.message = "Tell us what you’d like help with.";
+    const values = {
+      name: value("name"),
+      email: value("email"),
+      topic: value("topic"),
+      subject: value("subject"),
+      message: value("message"),
+    };
+    const payload = supportInputSchema.safeParse({
+      ...values,
+      idempotencyKey: "validation",
+    });
+    if (!payload.success)
+      for (const issue of payload.error.issues) {
+        const field = String(issue.path[0]);
+        next[field] ||= "Check this field and its length.";
+      }
     setErrors(next);
     setCopyStatus("");
+    setSendError("");
     if (Object.keys(next).length) {
       setDraft(null);
       (form.elements.namedItem(Object.keys(next)[0]) as HTMLElement)?.focus();
+      return;
+    }
+    if (online && account && payload.success) {
+      setDraft(null);
+      const body = JSON.stringify(values);
+      if (submission.current?.body !== body)
+        submission.current = { body, key: crypto.randomUUID() };
+      setSending(true);
+      try {
+        const response = await account.request(
+          "/api/v1/support/requests",
+          supportRequestSchema,
+          "POST",
+          {
+            ...payload.data,
+            idempotencyKey: submission.current!.key,
+          },
+        );
+        setReceipt({ scope, value: response });
+      } catch (error) {
+        setSendError(
+          error instanceof Error
+            ? error.message
+            : "Your request could not be saved. Try again when you are ready.",
+        );
+      } finally {
+        setSending(false);
+      }
       return;
     }
     const subject = `[Tholi ${value("topic")}] ${value("subject").replace(/[\r\n]/g, " ")}`;
@@ -77,17 +183,27 @@ export function ContactPage() {
         <div className="contact-form-area">
           <h2>What’s on your mind?</h2>
           <p id="contact-delivery-note" className="contact-delivery-note">
-            Prepare your message here, then send it through your email app.
-            Nothing is sent by this form.
+            {online
+              ? "Send a request through your Tholi account. It is saved and queued for support, which does not confirm email delivery. Receipts use your verified account email."
+              : "Prepare your message here, then send it through your email app. Nothing is sent by this form."}
           </p>
+          {account && !scope && !account.loading && (
+            <p className="contact-field-hint">
+              You can also <SiteLink to="/signin">sign in</SiteLink> to use
+              account support when it is available.
+            </p>
+          )}
           <form
             noValidate
             onSubmit={prepare}
             aria-label="Contact Tholi"
             aria-describedby="contact-delivery-note"
+            aria-busy={sending}
             onInput={() => {
               setDraft(null);
               setCopyStatus("");
+              setReceipt(undefined);
+              setSendError("");
             }}
           >
             <div className="contact-fields-row">
@@ -99,8 +215,22 @@ export function ContactPage() {
                   id="contact-name"
                   name="name"
                   autoComplete="name"
-                  maxLength={80}
+                  maxLength={SUPPORT_LIMITS.name}
+                  disabled={sending}
+                  aria-invalid={!!errors.name}
+                  aria-describedby={
+                    errors.name ? "contact-name-error" : undefined
+                  }
                 />
+                {errors.name && (
+                  <p
+                    id="contact-name-error"
+                    className="contact-field-error"
+                    role="alert"
+                  >
+                    {errors.name}
+                  </p>
+                )}
               </div>
               <div className="contact-field">
                 <label htmlFor="contact-email">
@@ -112,7 +242,8 @@ export function ContactPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  maxLength={254}
+                  maxLength={SUPPORT_LIMITS.email}
+                  disabled={sending}
                   aria-invalid={!!errors.email}
                   aria-describedby={
                     errors.email ? "contact-email-error" : undefined
@@ -134,16 +265,30 @@ export function ContactPage() {
               <select
                 id="contact-topic"
                 name="topic"
+                disabled={sending}
+                aria-invalid={!!errors.topic}
+                aria-describedby={
+                  errors.topic ? "contact-topic-error" : undefined
+                }
                 defaultValue={
                   new URLSearchParams(search).get("topic") === "support"
                     ? "Support"
                     : "Feedback"
                 }
               >
-                {topics.map((topic) => (
+                {SUPPORT_TOPICS.map((topic) => (
                   <option key={topic}>{topic}</option>
                 ))}
               </select>
+              {errors.topic && (
+                <p
+                  id="contact-topic-error"
+                  className="contact-field-error"
+                  role="alert"
+                >
+                  {errors.topic}
+                </p>
+              )}
             </div>
             <div className="contact-field">
               <label htmlFor="contact-subject">
@@ -153,7 +298,8 @@ export function ContactPage() {
                 id="contact-subject"
                 name="subject"
                 required
-                maxLength={120}
+                maxLength={SUPPORT_LIMITS.subject}
+                disabled={sending}
                 aria-invalid={!!errors.subject}
                 aria-describedby={
                   errors.subject ? "contact-subject-error" : undefined
@@ -177,7 +323,8 @@ export function ContactPage() {
                 id="contact-message"
                 name="message"
                 rows={6}
-                maxLength={3000}
+                maxLength={SUPPORT_LIMITS.message}
+                disabled={sending}
                 required
                 aria-invalid={!!errors.message}
                 aria-describedby={`contact-message-hint${errors.message ? " contact-message-error" : ""}`}
@@ -197,14 +344,49 @@ export function ContactPage() {
               )}
             </div>
             <p className="contact-privacy">
-              Your draft stays on this page until you open your email app or
-              copy it.{" "}
+              {online
+                ? "Your submitted message expires after 30 days. Leave out passwords, page contents and other sensitive information."
+                : "Your draft stays on this page until you open your email app or copy it."}{" "}
               <SiteLink to="/privacy">Read our privacy notice</SiteLink>.
             </p>
-            <button type="submit" className="web-primary">
-              Prepare message
+            <button type="submit" className="web-primary" disabled={sending}>
+              {sending
+                ? "Saving request…"
+                : online
+                  ? "Send request"
+                  : "Prepare message"}
             </button>
+            {sending && (
+              <p role="status">
+                Saving your request. Please wait before submitting again.
+              </p>
+            )}
+            {sendError && (
+              <p className="contact-field-error" role="alert">
+                {sendError}
+              </p>
+            )}
           </form>
+          {saved && (
+            <section
+              className="contact-draft"
+              aria-labelledby="contact-saved-title"
+            >
+              <h2 id="contact-saved-title" tabIndex={-1} ref={receiptHeading}>
+                Your request is saved.
+              </h2>
+              <p role="status">
+                Support delivery is queued. This does not confirm that an email
+                reached an inbox.
+              </p>
+              <p>
+                Reference: <code>{saved.id}</code>
+              </p>
+            </section>
+          )}
+          {account && scope && offered.includes("private-files") && (
+            <AccountDiagnostic key={scope} account={account} />
+          )}
           {draft && (
             <section
               className="contact-draft"
