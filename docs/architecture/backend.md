@@ -2,8 +2,9 @@
 
 The current API has two explicit bootstraps in the existing `apps/api` application.
 The [portable backend decision](../plans/gemini-cloud-and-enterprise.md) defines the
-later service architecture. This page describes the runtime foundation implemented
-for [#26](https://github.com/Sammieblz/tholi/issues/26).
+later service architecture. This page covers the runtime foundation from
+[#26](https://github.com/Sammieblz/tholi/issues/26) and service database foundation
+from [#28](https://github.com/Sammieblz/tholi/issues/28).
 
 ## Profiles and entrypoints
 
@@ -18,7 +19,7 @@ ONNX, OCR or their worker adapters. Importing either bootstrap does not listen;
 only running its executable or calling its exported start function does.
 
 `scripts/build-api.mjs` preserves `cli.js`, `server.js`, `inference.js` and `ocr.js`,
-adds `service.js`, and emits shared ESM chunks beside those entrypoints. Dynamic
+adds `service.js` and `database-cli.js`, and emits shared ESM chunks beside those entrypoints. Dynamic
 legacy imports remain lazy in the compiled service. Chunks stay at the output
 root so existing worker URLs and custom inference/sibling OCR locations work.
 The build verifies the output directory and removes obsolete generated JavaScript
@@ -45,10 +46,13 @@ and source maps before emitting a new set. No archive is changed by a build.
   their existing CPU/model responsibilities; they are not durable job workers.
 - `http.ts` owns shared Fastify lifecycle, health and error presentation.
   `runtime.ts` owns listening, signal handlers and the executable drain deadline.
+- `database/` owns the PostgreSQL service schema, scoped repositories, pooled
+  transactions and one-shot operator commands. See
+  [service database setup and boundaries](../development/service-database.md).
+  These repositories have no service HTTP routes and never migrate private SQLite.
 
-No second navigation engine, tenant repository, account implementation or idle
-durable-worker stub is introduced. Later tickets add those service capabilities
-through these owners and their adopted contracts.
+There is one navigation engine and one repository owner per database profile.
+Authentication, service routes and durable worker execution remain later tickets.
 
 The [local container stack](../development/local-stack.md) uses this same build
 and executable, with PostgreSQL, a local OIDC realm and captured mail. Its default

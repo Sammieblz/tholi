@@ -21,6 +21,7 @@ await build({
     "apps/api/src/server.ts",
     "apps/api/src/inference.ts",
     "apps/api/src/ocr.ts",
+    { in: "apps/api/src/database/cli.ts", out: "database-cli" },
   ],
   outdir: out,
   bundle: true,

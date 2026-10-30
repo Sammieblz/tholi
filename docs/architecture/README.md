@@ -7,6 +7,7 @@
 - [Authored fixture routes and registry contracts](authored-routes.md)
 - [Portable backend architecture and service contracts](../plans/gemini-cloud-and-enterprise.md), including local/VM/cloud profiles and legacy compatibility
 - [Current API profiles, runtime ownership and lifecycle](backend.md)
+- [PostgreSQL schema, migrations and scoped repositories](../development/service-database.md)
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 

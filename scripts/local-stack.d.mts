@@ -3,10 +3,12 @@ export function initializeLocalEnvironment(options: {
   project?: string;
   ports?: Record<string, string | number>;
 }): { envFile: string };
-export function localStackArguments(options: {
+export interface LocalStackOptions {
   action: "up" | "down" | "status" | "logs" | "migrate" | "seed" | "reset";
   envFile?: string;
   project?: string;
   selectedProfiles?: string[];
   confirmDelete?: string;
-}): string[];
+}
+export function localStackArguments(options: LocalStackOptions): string[];
+export function localStackCommands(options: LocalStackOptions): string[][];

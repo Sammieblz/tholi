@@ -13,6 +13,10 @@
 !packages/**
 !scripts/
 !scripts/build-api.mjs
+!tests/
+!tests/integration/
+!tests/integration/postgres/
+!tests/integration/postgres/**
 
 # Never copy local dependencies, generated output or secrets from allowed trees.
 **/node_modules

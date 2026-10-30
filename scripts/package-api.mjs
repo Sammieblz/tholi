@@ -73,6 +73,7 @@ for (const dependency of [
   "@fastify/cors",
   "@fastify/swagger",
   "zod-to-json-schema",
+  "pg",
 ])
   dependencies[dependency] =
     lock.packages["node_modules/" + dependency].version;

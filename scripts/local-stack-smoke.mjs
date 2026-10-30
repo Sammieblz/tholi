@@ -5,9 +5,11 @@ import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { parseEnv } from "node:util";
 import {
   initializeLocalEnvironment,
   localStackArguments,
+  localStackCommands,
 } from "./local-stack.mjs";
 import {
   assertOwnedSmokeProject,
@@ -275,7 +277,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       project,
       selectedProfiles,
     }).slice(0, -1);
-  const docker = async (args, timeout = 30000) => {
+  const docker = async (args, timeout = 30000, environment = {}) => {
     try {
       return (
         await execute("docker", args, {
@@ -283,6 +285,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
           encoding: "utf8",
           maxBuffer: 16 * 1024 * 1024,
           timeout,
+          env: { ...process.env, ...environment },
         })
       ).stdout;
     } catch (error) {
@@ -310,6 +313,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     initializeLocalEnvironment({ envFile, project, ports });
     environmentCreated = true;
     const environment = await readFile(envFile, "utf8");
+    const settings = parseEnv(environment);
     for (const line of environment.split(/\r?\n/)) {
       const separator = line.indexOf("=");
       if (
@@ -348,10 +352,122 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       600000,
     );
     check("clean-stack-startup");
+    stage = "real PostgreSQL migrations and repository contracts";
+    const testImage = `${project}-postgres-tests:dev`;
+    await docker(
+      [
+        "build",
+        "--file",
+        "apps/api/Dockerfile",
+        "--target",
+        "postgres-tests",
+        "--tag",
+        testImage,
+        ".",
+      ],
+      600000,
+    );
+    const databaseConnection = (user, password) =>
+      `postgresql://${user}:${encodeURIComponent(password)}@postgres:5432/tholi`;
+    const postgresChecks = JSON.parse(
+      await docker(
+        [
+          "run",
+          "--rm",
+          "--network",
+          config.networks.database.name,
+          "--read-only",
+          "--cap-drop",
+          "ALL",
+          "--security-opt",
+          "no-new-privileges:true",
+          "--memory",
+          "256m",
+          "--pids-limit",
+          "64",
+          "--env",
+          "THOLI_DATABASE_URL",
+          "--env",
+          "THOLI_DATABASE_MIGRATION_URL",
+          testImage,
+        ],
+        120000,
+        {
+          THOLI_DATABASE_URL: databaseConnection(
+            "tholi_runtime",
+            settings.THOLI_DB_PASSWORD,
+          ),
+          THOLI_DATABASE_MIGRATION_URL: databaseConnection(
+            "tholi_migrator",
+            settings.THOLI_MIGRATION_PASSWORD,
+          ),
+        },
+      ),
+    );
+    requireCheck(postgresChecks.passed && postgresChecks.checks.length > 0);
+    check("real-postgres-migrations-and-repositories", postgresChecks);
     stage = "idempotent local database bootstrap and identity seed";
     for (const action of ["migrate", "seed", "migrate", "seed"])
-      await docker(localStackArguments({ action, envFile, project }), 90000);
+      for (const command of localStackCommands({ action, envFile, project }))
+        await docker(command, 90000);
     check("idempotent-bootstrap-and-local-seed");
+    stage = "PostgreSQL application backup and restore";
+    const backup = await compose(
+      [
+        "exec",
+        "-T",
+        "postgres",
+        "sh",
+        "-ec",
+        'PGPASSWORD="$THOLI_MIGRATION_PASSWORD" pg_dump --host=127.0.0.1 --username=tholi_migrator --dbname=tholi --format=custom --file=/tmp/tholi-smoke.dump; psql --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 --command="CREATE DATABASE tholi_restore OWNER tholi_migrator TEMPLATE template0"; PGPASSWORD="$THOLI_MIGRATION_PASSWORD" pg_restore --host=127.0.0.1 --username=tholi_migrator --dbname=tholi_restore --single-transaction --exit-on-error /tmp/tholi-smoke.dump; rm /tmp/tholi-smoke.dump',
+      ],
+      90000,
+    );
+    requireCheck(backup.includes("CREATE DATABASE"));
+    const applicationDigest = `DO $check$ DECLARE entry record; content text; BEGIN
+      CREATE TEMP TABLE restore_digests (name text, digest text);
+      FOR entry IN SELECT tablename FROM pg_tables WHERE schemaname = 'tholi' ORDER BY tablename LOOP
+        EXECUTE format('SELECT md5(COALESCE(jsonb_agg(document ORDER BY document::text)::text, ''[]'')) FROM (SELECT to_jsonb(source_record) AS document FROM tholi.%I source_record) records', entry.tablename) INTO content;
+        INSERT INTO restore_digests VALUES (entry.tablename, content);
+      END LOOP;
+    END $check$;
+    SELECT md5(jsonb_agg(to_jsonb(d) ORDER BY name)::text) FROM restore_digests d;`;
+    const digests = [];
+    for (const database of ["tholi", "tholi_restore"]) {
+      digests.push(
+        (
+          await compose([
+            "exec",
+            "-T",
+            "postgres",
+            "sh",
+            "-ec",
+            'PGPASSWORD="$THOLI_MIGRATION_PASSWORD" psql --host=127.0.0.1 --username=tholi_migrator --dbname="$1" --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$2"',
+            "tholi-restore-check",
+            database,
+            applicationDigest,
+          ])
+        ).trim(),
+      );
+    }
+    requireCheck(
+      /^[a-f0-9]{32}$/.test(digests[0].split(/\r?\n/).at(-1)) &&
+        digests[0] === digests[1],
+      "Restored application records differ from the source database.",
+    );
+    const restored = await compose([
+      "exec",
+      "-T",
+      "postgres",
+      "sh",
+      "-ec",
+      'PGPASSWORD="$THOLI_DB_PASSWORD" psql --host=127.0.0.1 --username=tholi_runtime --dbname=tholi_restore --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="SELECT count(*) = 1 FROM tholi.accounts WHERE id = \'00000000-0000-4000-8000-000000000028\'::uuid"',
+    ]);
+    requireCheck(
+      restored.trim() === "t",
+      "The actual runtime role cannot read restored application records.",
+    );
+    check("application-backup-restore-with-runtime-readback");
     stage = "PostgreSQL role and schema privileges";
     const roleRows = JSON.parse(
       await compose([
@@ -601,6 +717,57 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       );
       requireCheck(Object.keys(report.optionalImages).length === 2);
     }
+    stage = "explicit reset and clean application seed";
+    assertOwnedSmokeProject(project, report.project);
+    await docker(
+      localStackArguments({
+        action: "reset",
+        envFile,
+        project,
+        confirmDelete: project,
+      }),
+      120000,
+    );
+    await compose(
+      ["up", "--detach", "--wait", "--wait-timeout", "240"],
+      300000,
+    );
+    const empty = await compose([
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "tholi",
+      "-Atc",
+      "SELECT to_regclass('tholi.schema_migrations') IS NULL AND to_regclass('public._tholi_smoke') IS NULL;",
+    ]);
+    requireCheck(
+      empty.trim() === "t",
+      "Explicit reset retained the previous database state.",
+    );
+    for (const action of ["migrate", "seed"])
+      for (const command of localStackCommands({ action, envFile, project }))
+        await docker(command, 90000);
+    const seeded = await compose([
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "tholi",
+      "-Atc",
+      "SELECT count(*) = 1 AND bool_and(id = '00000000-0000-4000-8000-000000000028'::uuid) FROM tholi.accounts;",
+    ]);
+    requireCheck(
+      seeded.trim() === "t",
+      "The reset application seed is not the single synthetic account.",
+    );
+    check("explicit-volume-reset-and-fresh-application-seed");
     report.status = "passed";
   } catch (error) {
     report.status = "failed";

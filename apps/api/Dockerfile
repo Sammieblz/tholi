@@ -24,6 +24,13 @@ RUN npm run build:api
 FROM base AS production-dependencies
 RUN npm ci --omit=dev --workspace=apps/api --include-workspace-root=false --no-audit --no-fund
 
+# Real PostgreSQL checks use a disposable image, never the published runtime.
+FROM build AS postgres-tests
+COPY tests/integration/postgres/ ./tests/integration/postgres/
+RUN ./node_modules/.bin/esbuild tests/integration/postgres/run.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=/app/postgres-check.mjs
+USER node
+CMD ["node", "/app/postgres-check.mjs"]
+
 FROM base AS runtime
 ENV NODE_ENV=production \
     THOLI_SERVICE_HOST=0.0.0.0
