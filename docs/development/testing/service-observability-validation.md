@@ -91,6 +91,29 @@ configuration. They do not alter the API/worker, SQL or collector binaries
 exercised by this report. Configured website and final exact-head hosted
 container evidence are collected separately.
 
+## Configured website attempts
+
+The initial configured Chromium and Firefox run at clean source
+`f8ccb3d8bd783fd6d96877bbe054b1d953394064` completed real registration, email
+verification and account access, then failed in the new analytics sequence.
+Its report remains
+`output/qa/service-observability-identity/tholi-smoke-mvv74dh3-bd04fac9/validation.json`,
+16:37:55 through 16:41:47 UTC. The harness now clicks the asynchronous account
+permission control, waits for server-confirmed success and asserts its final
+checked state, rather than requiring an immediate optimistic checkbox change.
+
+The separate run at clean source
+`b0f6b30522cbca2c4391a9e8faffed5aec186d1d` passed Chromium collection, retained
+export, both-theme/four-width layout checks, browser and account withdrawal, and
+deletion. Later account access hit a gateway 429; Firefox also hit 429 during
+export. Its report remains
+`output/qa/service-observability-identity/tholi-smoke-mvv7kc6q-db806806/validation.json`,
+16:50:20 through 16:53:46 UTC. These are failed cohort results. Both attempts
+verified actual API/worker log rotation, then removed only their owned stack,
+volumes and temporary environment. The next run separately verifies the existing
+account owner's removal of unnecessary CSRF headers on read-only GET requests;
+mutation protection and gateway limits stay in force.
+
 ## UI guidance
 
 Applied `.codex/skills/fixing-accessibility/SKILL.md` and

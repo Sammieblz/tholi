@@ -28,6 +28,16 @@ public job DTO. The independent worker restores the origin and creates a fresh
 attempt span. Provider acceptance, handler return, durable acknowledgement and
 independent navigation arrival remain different outcomes.
 
+`jobs.origin_correlation` is durable job metadata, separate from exported
+operational telemetry. It contains only server-generated request, trace, span
+and optional parent-job IDs, remains fixed across retries and currently has no
+automatic expiry. Public job DTOs and product-measurement exports exclude it.
+The API database role has tenant-scoped job access; worker claims return it
+internally. Operator database backups and exports include it. Cancellation
+preserves job history and does not erase this field. Restrict and expire retained
+database copies under the job and backup lifecycle. Future account export and
+deletion must handle this field explicitly.
+
 The queue defaults to 256 records and 256 KiB, with batches of at most 64 records
 and 64 KiB before export encoding. Metric series have a separate fixed ceiling.
 There is one export pump, bounded request/response sizes, bounded retries and

@@ -86,7 +86,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           signal: signal
             ? AbortSignal.any([pending.current.signal, signal])
             : pending.current.signal,
-          headers: csrfToken ? { "X-Tholi-CSRF": csrfToken } : undefined,
+          headers:
+            method !== "GET" && csrfToken
+              ? { "X-Tholi-CSRF": csrfToken }
+              : undefined,
         });
         if (revision !== generation.current)
           throw new Error(

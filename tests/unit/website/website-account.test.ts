@@ -81,7 +81,8 @@ it("keeps the unconfigured account boundary honest and makes no account request"
 it("uses credentialed cookie requests and CSRF for mutations without browser token storage", async () => {
   transport.request
     .mockResolvedValueOnce(session)
-    .mockResolvedValueOnce(session);
+    .mockResolvedValueOnce(session)
+    .mockResolvedValueOnce({ items: [] });
   const local = vi.spyOn(Storage.prototype, "setItem");
   await mount();
   expect(current.session).toEqual(session);
@@ -95,6 +96,12 @@ it("uses credentialed cookie requests and CSRF for mutations without browser tok
     method: "POST",
     body: { clientId: "web" },
     headers: { "X-Tholi-CSRF": session.csrfToken },
+  });
+  await act(async () => current.sessions());
+  expect(transport.request.mock.calls[2][3]).toMatchObject({
+    credentials: "include",
+    method: "GET",
+    headers: undefined,
   });
   expect(local).not.toHaveBeenCalled();
   local.mockRestore();

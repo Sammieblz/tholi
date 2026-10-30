@@ -57,6 +57,16 @@ test("configured website uses real signup email recovery and retained identity w
       export: 0,
       deletion: 0,
     },
+    // Browser-observed requests only; fixture APIRequestContext calls are separate.
+    browserServiceRequests: {
+      get: 0,
+      post: 0,
+      patch: 0,
+      delete: 0,
+      options: 0,
+      other: 0,
+    },
+    rateLimitResponses: { json: 0, html: 0, other: 0 },
   };
   const saveProgress = () =>
     writeEvidence(
@@ -77,6 +87,14 @@ test("configured website uses real signup email recovery and retained identity w
       if (url.origin !== environment.serviceOrigin) return;
       const method = response.request().method();
       const status = response.status();
+      if (status === 429) {
+        const contentType = response.headers()["content-type"] ?? "";
+        if (contentType.startsWith("application/json"))
+          progress.rateLimitResponses.json++;
+        else if (contentType.startsWith("text/html"))
+          progress.rateLimitResponses.html++;
+        else progress.rateLimitResponses.other++;
+      }
       if (method === "GET" && url.pathname === "/api/v1/capabilities")
         progress.analyticsHttpStatus.capabilities = status;
       else if (
@@ -98,6 +116,27 @@ test("configured website uses real signup email recovery and retained identity w
     });
     page.on("request", (request) => {
       const url = new URL(request.url());
+      if (url.origin === environment.serviceOrigin) {
+        switch (request.method()) {
+          case "GET":
+            progress.browserServiceRequests.get++;
+            break;
+          case "POST":
+            progress.browserServiceRequests.post++;
+            break;
+          case "PATCH":
+            progress.browserServiceRequests.patch++;
+            break;
+          case "DELETE":
+            progress.browserServiceRequests.delete++;
+            break;
+          case "OPTIONS":
+            progress.browserServiceRequests.options++;
+            break;
+          default:
+            progress.browserServiceRequests.other++;
+        }
+      }
       if (
         url.origin === environment.serviceOrigin &&
         url.pathname === "/api/v1/auth/callback"
