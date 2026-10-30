@@ -423,89 +423,148 @@ export async function runSupportChecks(
         const lease = await claim(saved.jobId, "file.diagnostic"),
           prepared = await effects.prepareExternal(lease);
         assert.ok(prepared);
-        const expiry = (
-          await migration.query(
-            "UPDATE tholi.jobs SET lease_expires_at=clock_timestamp()+interval '750 milliseconds' WHERE id=$1 RETURNING lease_expires_at",
-            [lease.id],
-          )
-        ).rows[0].lease_expires_at;
         const blocker = await migration.connect();
         let finishing: Promise<boolean> | undefined;
+        let phase = "PROTECTED_LOCK";
         try {
-          await blocker.query("BEGIN");
-          if (status === "committed")
-            await blocker.query(
-              "SELECT id FROM tholi.private_files WHERE id=$1 FOR UPDATE",
-              [saved.fileId],
-            );
-          else
-            await blocker.query(
-              "SELECT id FROM tholi.external_attempts WHERE id=$1 FOR UPDATE",
-              [prepared.attemptId],
-            );
-          finishing = effects.finishExternal(lease, prepared.attemptId, {
-            status,
-            ...(status === "retryable" ? { code: "UNAVAILABLE" as const } : {}),
-            backoffMs: status === "retryable" ? 1000 : 0,
-          });
-          void finishing.catch(() => {});
-          let waiting = false;
-          const observedBy = Date.now() + 500;
-          while (!waiting && Date.now() < observedBy) {
-            waiting = (
-              await blocker.query(`SELECT EXISTS(SELECT FROM pg_locks blocked WHERE NOT blocked.granted AND blocked.locktype='transactionid'
-              AND blocked.transactionid IN(SELECT held.transactionid FROM pg_locks held WHERE held.pid=pg_backend_pid() AND held.granted AND held.locktype='transactionid')) AS waiting`)
-            ).rows[0].waiting;
-            if (!waiting)
-              await new Promise((resolve) => setTimeout(resolve, 5));
-          }
-          assert.equal(
-            waiting,
-            true,
-            "The external finish reached the protected SQL lock before expiry.",
-          );
-          while (
-            !(
+          try {
+            await blocker.query("BEGIN");
+            if (status === "committed")
               await blocker.query(
-                "SELECT clock_timestamp()>$1::timestamptz AS expired",
-                [expiry],
+                "SELECT id FROM tholi.private_files WHERE id=$1 FOR UPDATE",
+                [saved.fileId],
+              );
+            else
+              await blocker.query(
+                "SELECT id FROM tholi.external_attempts WHERE id=$1 FOR UPDATE",
+                [prepared.attemptId],
+              );
+            phase = "ARM_LEASE";
+            // The migration pool owns the blocker. Arm through the existing
+            // actor-scoped connection only after the protected row is locked.
+            const armed = await withTransaction(
+              runtime,
+              (client) =>
+                client.query(
+                  "UPDATE tholi.jobs SET lease_expires_at=clock_timestamp()+interval '750 milliseconds' WHERE workspace_id=$1 AND id=$2",
+                  [scope.workspaceId, lease.id],
+                ),
+              scope,
+            );
+            assert.equal(
+              armed.rowCount,
+              1,
+              `${status}: the fixture must arm its exact live lease.`,
+            );
+            finishing = effects.finishExternal(lease, prepared.attemptId, {
+              status,
+              ...(status === "retryable"
+                ? { code: "UNAVAILABLE" as const }
+                : {}),
+              backoffMs: status === "retryable" ? 1000 : 0,
+            });
+            void finishing.catch(() => {});
+            phase = "LOCK_WAIT";
+            let waiting = false;
+            const observedBy = Date.now() + 500;
+            while (!waiting && Date.now() < observedBy) {
+              waiting = (
+                await blocker.query(`SELECT EXISTS(SELECT FROM pg_locks blocked WHERE NOT blocked.granted AND blocked.locktype='transactionid'
+              AND blocked.transactionid IN(SELECT held.transactionid FROM pg_locks held WHERE held.pid=pg_backend_pid() AND held.granted AND held.locktype='transactionid')) AS waiting`)
+              ).rows[0].waiting;
+              if (!waiting)
+                await new Promise((resolve) => setTimeout(resolve, 5));
+            }
+            assert.equal(
+              waiting,
+              true,
+              `${status}: the finish must reach the protected SQL lock before expiry.`,
+            );
+            phase = "EXPIRE_LEASE";
+            // Compare on the database clock against the original column. A pg
+            // Date round-trip would discard microseconds and release too early.
+            while (
+              !(
+                await blocker.query(
+                  "SELECT clock_timestamp()>=lease_expires_at AS expired FROM tholi.jobs WHERE workspace_id=$1 AND id=$2",
+                  [scope.workspaceId, lease.id],
+                )
+              ).rows[0].expired
+            )
+              await new Promise((resolve) => setTimeout(resolve, 10));
+          } finally {
+            let discard = false;
+            try {
+              await blocker.query("ROLLBACK");
+            } catch (error) {
+              discard = true;
+              throw error;
+            } finally {
+              blocker.release(discard);
+              // Also drain the finisher when the lock witness itself fails.
+              if (finishing) await finishing.catch(() => {});
+            }
+          }
+          phase = "FINISH_RESULT";
+          assert.equal(
+            await finishing,
+            false,
+            `${status}: an expired finish must be refused.`,
+          );
+          phase = "FILE_UNCHANGED";
+          assert.equal(
+            (await api.getFile(scope, saved.fileId))?.status,
+            "pending",
+            `${status}: file publication must roll back.`,
+          );
+          phase = "REQUEST_UNCHANGED";
+          assert.equal(
+            (await readRequest(scope, saved.requestId))?.status,
+            "pending",
+            `${status}: request completion must roll back.`,
+          );
+          phase = "JOB_UNCHANGED";
+          assert.equal(
+            (await readJob(scope, lease.id))?.status,
+            "running",
+            `${status}: the expired lease must not acknowledge its job.`,
+          );
+          phase = "ATTEMPT_UNCHANGED";
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT state FROM tholi.external_attempts WHERE id=$1",
+                [prepared.attemptId],
               )
-            ).rows[0].expired
-          )
-            await new Promise((resolve) => setTimeout(resolve, 10));
-        } finally {
-          await blocker.query("ROLLBACK");
-          blocker.release();
+            ).rows[0].state,
+            "started",
+            `${status}: attempt bookkeeping must roll back.`,
+          );
+          phase = "OUTBOX_UNCHANGED";
+          assert.equal(
+            (
+              await migration.query(
+                "SELECT count(*)::integer AS count FROM tholi.outbox WHERE job_id=$1",
+                [lease.id],
+              )
+            ).rows[0].count,
+            0,
+            `${status}: no completion event may survive.`,
+          );
+          phase = "PREPARE_REFUSED";
+          assert.equal(
+            await effects.prepareExternal(lease),
+            null,
+            `${status}: the expired fence must not prepare another command.`,
+          );
+        } catch (error) {
+          // The outer runner records only a safe error code, never raw values.
+          if ((error as { code?: string })?.code === "ERR_ASSERTION")
+            Object.assign(error as object, {
+              code: `LEASE_ASSERT_${status.toUpperCase()}_${phase}`,
+            });
+          throw error;
         }
-        assert.equal(await finishing, false);
-        assert.equal(
-          (await api.getFile(scope, saved.fileId))?.status,
-          "pending",
-        );
-        assert.equal(
-          (await readRequest(scope, saved.requestId))?.status,
-          "pending",
-        );
-        assert.equal((await readJob(scope, lease.id))?.status, "running");
-        assert.equal(
-          (
-            await migration.query(
-              "SELECT state FROM tholi.external_attempts WHERE id=$1",
-              [prepared.attemptId],
-            )
-          ).rows[0].state,
-          "started",
-        );
-        assert.equal(
-          (
-            await migration.query(
-              "SELECT count(*)::integer AS count FROM tholi.outbox WHERE job_id=$1",
-              [lease.id],
-            )
-          ).rows[0].count,
-          0,
-        );
-        assert.equal(await effects.prepareExternal(lease), null);
       }
     },
   );

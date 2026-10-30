@@ -75,6 +75,41 @@ reports, timing record and manifest are under
 The verified manifest SHA-256 is
 `6e1caccfd0406115327b0acf86f39a00eb14860736a0bb9b1e4ef264965bedce`.
 
+## Initial hosted container failure and fixture correction
+
+[PR #75](https://github.com/Sammieblz/tholi/pull/75)'s initial
+[workflow 41111115550](https://github.com/Sammieblz/tholi/actions/runs/41111115550)
+built successfully at head `090d9e288bdf9d4e86b0cd9b9a469db81c1cfa2d`.
+Its container job failed in the existing real PostgreSQL check for external
+completion when a live lease expires during SQL lock waits. The report recorded
+only `ERR_ASSERTION`, so the exact failing assertion is unknown. No complete
+PostgreSQL or container pass is claimed for that attempt.
+
+The redacted report is preserved at
+`output/qa/hosted-navigation-contracts-failed-41111115550/tholi-smoke-mvvc2lwb-cf348220/smoke.json`.
+Its clean source was GitHub's PR merge
+`cfee9a09f5b71cd16397121cbde6789bd8d84da7`. Artifact `13003158290` was
+downloaded and verified against SHA-256
+`bc487d52d025be819576c42f06dd007ef07d4b969fe63f6400f19def0cde495d`.
+The report confirms cleanup of its owned project and volumes.
+
+Two independent reviews identified concrete fixture defects. The expiry was
+round-tripped through a JavaScript `Date`, which loses PostgreSQL microseconds
+as documented by [node-postgres](https://node-postgres.com/features/types#date--timestamp--timestamptz).
+The short lease also started before blocker setup completed. These defects can
+release the lock too early or consume the intended observation interval; the
+original report does not establish which caused its failure.
+
+The existing test now arms the same 750 ms lease only after the protected row
+is locked, using the existing scoped runtime transaction. It compares database
+time directly against the exact stored expiry. The 500 ms positive lock-wait
+witness and every refusal, rollback and outbox assertion remain intact. Fixed
+assertion-phase codes survive redaction, and cleanup drains pending completion.
+No production SQL, grants, repository behavior or timing budget changed.
+
+Independent review passed. Fresh actual PostgreSQL/container validation and a
+new exact-head hosted workflow remain pending for this correction.
+
 The first focused service-contract attempt passed four pure cases and failed 28
 cases at service startup. The future OpenAPI schemas had entered Fastify's AJV
 registry, where the OpenAPI boolean `exclusiveMinimum` is a different dialect
