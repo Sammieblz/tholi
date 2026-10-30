@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { usePreferences } from "../features/preferences";
 import { usePageMetadata } from "../features/seo/usePageMetadata";
 import { documentationRedirect } from "../features/docs/redirects";
+import { accountPath } from "../features/account/paths";
 import {
   PUBLIC_PAGES,
   type PublicPage,
@@ -76,6 +77,7 @@ export function App() {
   useScrollIntent();
   useSectionReveal(path);
   const technicalReference = documentationRedirect(path, hash);
+  const account = accountPath(path);
   const page = technicalReference ? (
     <TechnicalReferenceRoute destination={technicalReference} />
   ) : path === "/" ? (
@@ -88,8 +90,8 @@ export function App() {
     <SupportPage />
   ) : path === "/contact" ? (
     <ContactPage />
-  ) : ["/signin", "/signup", "/account", "/welcome"].includes(path) ? (
-    <AccountRoute path={path} />
+  ) : account ? (
+    <AccountRoute path={account} />
   ) : path === "/onboarding" ? (
     <OnboardingPage />
   ) : path === "/docs" || path.startsWith("/docs/") ? (

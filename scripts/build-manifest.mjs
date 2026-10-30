@@ -7,6 +7,7 @@ const paths = [
   "dist/extension",
   "dist/extension-firefox",
   "dist/web",
+  "output/deploy/website",
   "apps/api/dist",
   "assets/models",
   "assets/ocr",

@@ -28,6 +28,8 @@ services:
       - "127.0.0.1:${STORAGE_HOST_PORT:-18333}:18333"
     volumes:
       - ./infra/local/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/local/gateway/proxy.conf:/etc/nginx/tholi-proxy.conf:ro
+      - ./infra/local/gateway/api.conf:/etc/nginx/tholi-api.conf:ro
       - ./infra/local/gateway/upstream.conf:/etc/nginx/tholi-upstream.conf:ro
     networks: [ingress, application]
     read_only: true

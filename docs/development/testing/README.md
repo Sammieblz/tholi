@@ -37,6 +37,10 @@ checks through Mailpit, authenticated S3-compatible storage and mandatory expiry
 These capture-only checks do not establish external inbox delivery. Focused
 support HTTP and website unit tests retain their existing API/account owners;
 unconfigured website tests continue to exercise the account-free email draft.
+The same smoke owns actual [gateway and TLS](../service-delivery.md) checks,
+including exact hosts, forwarded-header sanitization, private response policy,
+raw-byte preservation and direct API admission. Synthetic local certificates
+do not establish internet certificate or hosted firewall configuration.
 
 Real [portable identity](../service-identity.md) checks are separate opt-in local
 cohorts: `npm run test:identity` exercises native Chrome and Firefox, while

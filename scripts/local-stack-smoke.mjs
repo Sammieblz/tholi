@@ -15,6 +15,7 @@ import {
   assertOwnedSmokeProject,
   inspectLocalStack,
 } from "./lib/local-stack-policy.mjs";
+import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const execute = promisify(execFile);
@@ -430,6 +431,23 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       for (const command of localStackCommands({ action, envFile, project }))
         await docker(command, 90000);
     check("idempotent-bootstrap-and-local-seed");
+    stage = "actual reverse-proxy, TLS and direct API boundaries";
+    const gatewayChecks = await runGatewayChecks({
+      docker,
+      compose,
+      config,
+      project,
+      directory,
+      envFile,
+    });
+    requireCheck(
+      gatewayChecks.checks.length > 0 &&
+        gatewayChecks.checks.every((result) => result.passed === true),
+      "Gateway transport checks must actually run and pass.",
+    );
+    for (const { name, passed, ...details } of gatewayChecks.checks)
+      check(name, details);
+    report.gatewayConfigurationHashes = gatewayChecks.configurationHashes;
     stage = "actual independent worker effect and acknowledgement";
     const workerProbe = await runPostgresImage([
       "node",

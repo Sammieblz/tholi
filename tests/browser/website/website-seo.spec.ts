@@ -4,7 +4,12 @@ import sharp from "sharp";
 import {
   publicPages,
   absoluteUrl,
+  accountAliases,
 } from "../../../apps/web/src/features/seo/metadata";
+import {
+  createWebsiteDelivery,
+  WEBSITE_CACHE,
+} from "../../../scripts/lib/website-delivery.mjs";
 
 test("search metadata and documentation are present in production HTML without JavaScript", async ({
   browser,
@@ -232,16 +237,31 @@ test("documentation sitemap, crawler guidance and brand assets have real content
   ]);
   const redirects = await readFile("dist/web/_redirects", "utf8");
   for (const suffix of ["", "/", ".html"])
-    expect(redirects).toContain(`/welcome${suffix} /account 301`);
+    expect(redirects).not.toContain(`/welcome${suffix} `);
   const headers = await readFile("dist/web/_headers", "utf8");
-  for (const path of ["signin", "signup", "account"]) {
+  const assets = (await readdir("dist/web/assets")).map(
+    (name) => "assets/" + name,
+  );
+  const delivery = createWebsiteDelivery(
+    assets,
+    publicPages.map((page) => page.path),
+    accountAliases,
+  );
+  expect(headers).toBe(delivery.cloudflareHeaders());
+  expect(
+    await readFile("output/deploy/website/nginx-locations.conf", "utf8"),
+  ).toBe(delivery.nginxLocations());
+  expect(await readdir("dist/web")).not.toContain("nginx-locations.conf");
+  for (const path of ["signin", "signup", "account", "welcome"]) {
     expect(redirects).not.toContain(`/${path} /download`);
     expect(headers).toContain(
-      `/${path}\n  Cache-Control: private, no-store\n  X-Robots-Tag: noindex`,
+      `/${path}/*\n  Cache-Control: ${WEBSITE_CACHE.private}\n  X-Robots-Tag: noindex`,
     );
     expect(locations).not.toContain(`https://tholi.io/${path}`);
-    expect(await readFile(`dist/web/${path}.html`, "utf8")).toContain(
-      'content="noindex, follow"',
+    const html = await readFile(`dist/web/${path}.html`, "utf8");
+    expect(html).toContain('content="noindex, follow"');
+    expect(html).not.toMatch(
+      /csrfToken|accessToken|refreshToken|accountId|sessionId|__Host-tholi/,
     );
   }
   for (const [slug, source] of Object.entries({

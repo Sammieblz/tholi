@@ -12,6 +12,8 @@ import {
   validateIdentityOptions,
   validateObjectStorageOptions,
   validateSmtpOptions,
+  SERVICE_TRANSPORT_DEFAULTS,
+  validateServiceTransportPolicy,
   type ApiOptions,
 } from "../../../apps/api/src/config";
 import type { IdentityOptions } from "../../../apps/api/src/application/identity-contracts";
@@ -33,6 +35,94 @@ const supportEnvironment = () => ({
   THOLI_OBJECT_BUCKET: "tholi-private",
   THOLI_OBJECT_ACCESS_KEY: "synthetic-access",
   THOLI_OBJECT_SECRET_KEY: "synthetic-secret",
+});
+
+describe("service-only transport policy", () => {
+  it("defaults to no trusted proxy and keeps private configuration independent", () => {
+    expect(parseServiceConfig({}).options.transport).toEqual(
+      SERVICE_TRANSPORT_DEFAULTS,
+    );
+    expect(
+      parseServiceConfig({ THOLI_SERVICE_TRUSTED_PROXIES: "" }).options
+        .transport?.trustedProxies,
+    ).toEqual([]);
+    const legacy = parsePrivateConfig({});
+    expect(
+      parsePrivateConfig({
+        THOLI_SERVICE_TRUSTED_PROXIES: "*",
+        THOLI_SERVICE_RATE_LIMIT_MAX: "0",
+      }),
+    ).toEqual(legacy);
+  });
+  it("accepts only explicit bounded literal proxy entries and snapshots caller settings", () => {
+    const trustedProxies = ["127.0.0.1", "::1", "10.0.0.0/8", "2001:db8::/32"];
+    const policy = validateServiceTransportPolicy({ trustedProxies });
+    trustedProxies.push("192.0.2.1");
+    expect(policy.trustedProxies).toHaveLength(4);
+    expect(
+      parseServiceConfig({ THOLI_SERVICE_TRUSTED_PROXIES: "127.0.0.1, ::1" })
+        .options.transport?.trustedProxies,
+    ).toEqual(["127.0.0.1", "::1"]);
+    for (const entries of [
+      true,
+      1,
+      "loopback",
+      ["loopback"],
+      ["*"],
+      ["localhost"],
+      ["0.0.0.0/0"],
+      ["::/0"],
+      ["::/32"],
+      ["::ffff:0:0/96"],
+      ["10.0.0.0/1"],
+      ["127.0.0.1/33"],
+      ["127.0.0.1/032"],
+      ["127.0.0.1", "127.0.0.1"],
+      Array.from({ length: 33 }, (_, i) => `192.0.2.${i}`),
+    ])
+      expect(() =>
+        validateServiceTransportPolicy({ trustedProxies: entries as string[] }),
+      ).toThrow();
+  });
+  it("validates every direct and environment budget before service construction", () => {
+    for (const transport of [null, false, 1, "", []])
+      expect(() =>
+        validateServiceOptions({ origins: [], transport: transport as never }),
+      ).toThrow("transport");
+    for (const [name, value] of Object.entries({
+      rateLimitMax: 0,
+      rateLimitWindowMs: 999,
+      rateLimitMaxClients: 65537,
+      headersTimeoutMs: 0,
+      requestTimeoutMs: 24999,
+      connectionTimeoutMs: 25000,
+      keepAliveTimeoutMs: 0,
+      maxRequestsPerSocket: 0,
+      maxHeaderBytes: 65536,
+    }))
+      expect(() =>
+        validateServiceOptions({ origins: [], transport: { [name]: value } }),
+      ).toThrow("transport");
+    for (const [key, value] of Object.entries({
+      THOLI_SERVICE_RATE_LIMIT_MAX: "0",
+      THOLI_SERVICE_RATE_LIMIT_WINDOW_MS: "1e3",
+      THOLI_SERVICE_RATE_LIMIT_MAX_CLIENTS: "65537",
+      THOLI_SERVICE_HEADERS_TIMEOUT_MS: "0",
+      THOLI_SERVICE_REQUEST_TIMEOUT_MS: "24999",
+      THOLI_SERVICE_CONNECTION_TIMEOUT_MS: "25000",
+      THOLI_SERVICE_KEEP_ALIVE_TIMEOUT_MS: "-1",
+      THOLI_SERVICE_MAX_REQUESTS_PER_SOCKET: "1.5",
+      THOLI_SERVICE_MAX_HEADER_BYTES: "65536",
+      THOLI_SERVICE_TRUSTED_PROXIES: "127.0.0.1,",
+    }))
+      expect(() => parseServiceConfig({ [key]: value })).toThrow();
+    expect(() =>
+      validateServiceTransportPolicy({
+        trustedProxies: [],
+        arbitrary: true,
+      } as never),
+    ).toThrow();
+  });
 });
 
 describe("explicit mail and storage composition", () => {
@@ -322,7 +412,7 @@ describe("API configuration profiles", () => {
         NAVIGATOR_EXTENSION_ORIGINS: chrome,
       }),
     ).toEqual({
-      options: { origins: [] },
+      options: { origins: [], transport: SERVICE_TRANSPORT_DEFAULTS },
       listen: { host: "127.0.0.1", port: 8788 },
     });
   });
@@ -337,7 +427,10 @@ describe("API configuration profiles", () => {
         THOLI_SERVICE_ORIGINS: "https://tholi.io, http://localhost:5173",
       }),
     ).toEqual({
-      options: { origins: ["https://tholi.io", "http://localhost:5173"] },
+      options: {
+        origins: ["https://tholi.io", "http://localhost:5173"],
+        transport: SERVICE_TRANSPORT_DEFAULTS,
+      },
       listen: { host: "0.0.0.0", port: 8080 },
     });
     expect(parseServiceConfig({ THOLI_SERVICE_HOST: "::1" }).listen.host).toBe(

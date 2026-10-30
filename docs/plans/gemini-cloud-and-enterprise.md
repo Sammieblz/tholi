@@ -198,6 +198,11 @@ Use [production OIDC-provider configuration](https://www.keycloak.org/server/con
 
 ### Gateway, CDN and optional edge functions
 
+The implemented portable delivery policy and local/VM references are maintained
+in [gateway, CDN and TLS delivery](../development/service-delivery.md). That
+record distinguishes application protection from operator-owned hosted ingress,
+and explicitly defers edge functions until a transport constraint needs one.
+
 The public website/assets can remain on Cloudflare. Cache immutable public assets by content/version. Never cache authenticated APIs, session callbacks, private exports, credit balances or personal HTML at the CDN; use explicit private/no-store policies and cache keys for public content only.
 
 The gateway handles TLS, trusted proxy headers, coarse IP/request/body limits, routing and platform DDoS protections. The API still validates credentials, session state, scopes, consent, payloads, quotas and idempotency. Restrict direct-origin access where possible; correctly validate proxy chains so client-supplied forwarding headers cannot spoof identity or bypass limits. Forward cancellation and preserve raw webhook bytes for signature verification.

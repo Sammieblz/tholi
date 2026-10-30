@@ -19,7 +19,10 @@ import {
   startRuntime,
   startManagedRuntime,
 } from "../../../apps/api/src/runtime";
-import type { ApiOptions } from "../../../apps/api/src/config";
+import {
+  SERVICE_TRANSPORT_DEFAULTS,
+  type ApiOptions,
+} from "../../../apps/api/src/config";
 
 vi.mock("../../../apps/api/src/server", () => ({
   createApi: vi.fn(),
@@ -356,7 +359,10 @@ describe("API bootstrap and shutdown", () => {
       factory,
       { signals },
     );
-    expect(factory).toHaveBeenCalledExactlyOnceWith({ origins: [] });
+    expect(factory).toHaveBeenCalledExactlyOnceWith({
+      origins: [],
+      transport: SERVICE_TRANSPORT_DEFAULTS,
+    });
     expect(app.listen).toHaveBeenCalledWith({ host: "127.0.0.1", port: 8080 });
     await runtime.shutdown();
   });

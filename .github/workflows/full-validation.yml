@@ -41,6 +41,7 @@ jobs:
             assets/models
             assets/ocr
             output/build-manifest.json
+            output/deploy/website
   tests:
     needs: build
     runs-on: windows-latest
