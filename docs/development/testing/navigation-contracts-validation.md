@@ -28,8 +28,8 @@ TypeScript and synchronized version checks passed after correcting a literal
 version type in the new test fixture. An independent source review found no
 remaining contract blocker. This is working-tree feedback, not release evidence.
 The production build and complete `test:ci` passed as recorded below. Exact-head
-hosted PR checks remain a separate pending gate. No previous milestone's run is
-claimed as current evidence.
+hosted PR checks remain a separate merge gate, recorded in PR #75. No previous
+milestone's run is claimed as current evidence.
 
 The first complete gate, source `6bc43a5e2fae6661fba5e2613d743ca85829ec2e`
 and run `5ff69dd7-d24e-4074-b6f9-da776e6c1208`, passed its fresh build, types
@@ -107,8 +107,8 @@ witness and every refusal, rollback and outbox assertion remain intact. Fixed
 assertion-phase codes survive redaction, and cleanup drains pending completion.
 No production SQL, grants, repository behavior or timing budget changed.
 
-Independent review passed. Fresh actual PostgreSQL/container validation and a
-new exact-head hosted workflow remain pending for this correction.
+Independent review passed. The complete local stack result for this correction
+is recorded below; final exact-head hosted checks remain a separate merge gate.
 
 ## Local stack rerun and HTTP admission probe
 
@@ -141,7 +141,39 @@ route, TLS verification or error policy changed. Bounded transport diagnostics
 now distinguish request errors and response completeness without recording
 headers or bodies. Resets never count as a 413, and no retry was added.
 
-A fresh complete stack rerun and final hosted checks are still required.
+The complete stack rerun is recorded below. The final exact-head hosted check
+set, including fresh container evidence, must pass before merge and is recorded
+in PR #75.
+
+## Complete local stack after the QA corrections
+
+Clean source `d6bbfec7fa348b967dc2adaa97904ced831f2d51` passed all 58 actual
+PostgreSQL groups and all 28 complete stack checks. The run began at
+`2026-10-30T19:21:45.073Z` and finished at `2026-10-30T19:30:16.530Z`.
+Its redacted report is
+`output/qa/local-stack/tholi-smoke-mvvcz241-dd72e677/smoke.json`.
+
+The run verified the corrected expiry fences, complete real proxy/direct API
+413 responses, TLS and raw-byte preservation, actual worker effects, mail
+capture, private objects, backup/restore, restart retention, role/pool budgets
+and explicit volume reset with a fresh seed. Actual collector checks inspected
+69 records, verified failed-provider correlation and a worker retry on attempt
+two, and found no privacy sentinel. Raw telemetry records were not retained.
+The report confirms cleanup of its owned project and volumes.
+
+The collector artifact SHA-256 is
+`a56f79c6bf3f7330641b2a699285f276a933f4657355d9553a4636a1b1da7301`;
+the metrics artifact SHA-256 is
+`770da683cf33415333d681fcd67045937477cabc19001bdb544b99e5848a21bd`.
+Whole-project types passed after the final QA source changes, and the earlier
+immutable application build manifest still verified afterward. No production
+code changed in either QA correction.
+
+The earlier complete local browser/unit cohort remains 787 checks at its stated
+source and run. The two later actual-listener regressions are covered by the
+separate 46-case focused cohort and the final hosted workflow; they are not
+retroactively added to the earlier local count. Final hosted run IDs, exact
+head checks and container artifacts are recorded in PR #75 and issue #36.
 
 The first focused service-contract attempt passed four pure cases and failed 28
 cases at service startup. The future OpenAPI schemas had entered Fastify's AJV
