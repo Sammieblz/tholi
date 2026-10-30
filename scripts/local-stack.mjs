@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
@@ -26,11 +26,21 @@ function projectName(value) {
 }
 
 /** Create local-only credentials once. Never overwrite existing state or print secrets. */
-export function initializeLocalEnvironment({ envFile, project, ports = {} }) {
+export function initializeLocalEnvironment({
+  envFile,
+  project,
+  ports = {},
+  upgradeIdentity = false,
+}) {
   let template = readFileSync(resolve(root, ".env.example"), "utf8");
   template = template.replace(
     /^([A-Z_]*(?:_PASSWORD|_SECRET_KEY)|STORAGE_ACCESS_KEY)=.*$/gm,
-    (_, name) => `${name}=${randomBytes(24).toString("hex")}`,
+    (_, name) =>
+      `${name}=${
+        name === "THOLI_IDENTITY_FLOW_SECRET_KEY"
+          ? randomBytes(32).toString("base64url")
+          : randomBytes(24).toString("hex")
+      }`,
   );
   const overrides = {
     ...(project ? { COMPOSE_PROJECT_NAME: projectName(project) } : {}),
@@ -52,6 +62,23 @@ export function initializeLocalEnvironment({ envFile, project, ports = {} }) {
   }
   const target = resolve(envFile);
   mkdirSync(dirname(target), { recursive: true });
+  if (upgradeIdentity) {
+    if (!existsSync(target))
+      throw new Error("Initialize the local environment before upgrading it.");
+    const existing = readFileSync(target, "utf8");
+    const settings = parseEnv(existing);
+    const additions = template.split(/\r?\n/).filter((line) => {
+      const name = line.slice(0, line.indexOf("="));
+      return name.startsWith("THOLI_IDENTITY_") && !(name in settings);
+    });
+    if (additions.length)
+      writeFileSync(
+        target,
+        `${existing}${existing.endsWith("\n") ? "" : "\n"}${additions.join("\n")}\n`,
+        { mode: 0o600 },
+      );
+    return { envFile: target };
+  }
   writeFileSync(target, template, { flag: "wx", mode: 0o600 });
   return { envFile: target };
 }
@@ -164,6 +191,13 @@ function main(args) {
       case "--confirm-delete":
         options.confirmDelete = value;
         break;
+      case "--upgrade-identity":
+        if (action !== "init" || value !== "true")
+          throw new Error(
+            "Identity environment upgrades require init --upgrade-identity true.",
+          );
+        options.upgradeIdentity = true;
+        break;
       default:
         throw new Error(`Unknown option: ${flags[i]}.`);
     }
@@ -174,7 +208,7 @@ function main(args) {
       envFile: options.envFile ?? resolve(root, ".env"),
     });
     console.log(
-      `Created ${result.envFile}. Local credentials were generated; keep this file private.`,
+      `${options.upgradeIdentity ? "Updated missing identity settings in" : "Created"} ${result.envFile}. Keep local credentials private.`,
     );
     return;
   }

@@ -100,15 +100,40 @@ export const publicPages: PageMetadata[] = [
     "OnboardingPage",
     false,
   ),
+  page(
+    "/signin",
+    "Sign in | Tholi",
+    "Sign in through the configured Tholi identity provider. Local guidance remains available without an account.",
+    "Sign in",
+    "AccountRoute",
+    false,
+  ),
+  page(
+    "/signup",
+    "Sign up | Tholi",
+    "Create a Tholi account through the configured identity provider. An account is optional for local guidance.",
+    "Sign up",
+    "AccountRoute",
+    false,
+  ),
+  page(
+    "/account",
+    "Account and security | Tholi",
+    "Review your Tholi account sessions and manage access on your browsers and devices.",
+    "Account",
+    "AccountRoute",
+    false,
+  ),
 ];
-export const retiredAccountPaths = ["/signin", "/signup", "/welcome"];
+export const accountRedirects = {
+  "/welcome": "/account",
+  "/welcome/": "/account",
+  "/welcome.html": "/account",
+};
 export function metadataForPath(value: string): PageMetadata {
   const path = new URL(value, publicOrigin).pathname.replace(/\/+$/, "") || "/";
-  if (retiredAccountPaths.includes(path))
-    return {
-      ...publicPages.find((p) => p.path === "/download")!,
-      index: false,
-    };
+  if (path === "/welcome")
+    return publicPages.find((p) => p.path === "/account")!;
   return (
     publicPages.find((p) => p.path === path) ??
     page(

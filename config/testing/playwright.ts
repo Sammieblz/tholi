@@ -81,6 +81,30 @@ const projects: Project[] = [
       : { grepInvert: /all website routes reflow|scroll companion stays/ }),
   }),
 ];
+if (browserGroup === "identity")
+  projects.push(
+    project("native-identity", "identity", "identity", {
+      testMatch: "auth.spec.ts",
+      timeout: 240_000,
+      use: { trace: "off", screenshot: "off", video: "off" },
+    }),
+  );
+if (browserGroup === "identity-web")
+  for (const browserName of ["chromium", "firefox"] as const)
+    projects.push(
+      project(`identity-web-${browserName}`, "identity-web", "identity", {
+        testMatch: "web.spec.ts",
+        timeout: 300_000,
+        use: {
+          browserName,
+          actionTimeout: 15_000,
+          navigationTimeout: 30_000,
+          trace: "off",
+          screenshot: "off",
+          video: "off",
+        },
+      }),
+    );
 if (browserGroup === "navigation-baseline")
   projects.push(
     project("navigation-baseline", "navigation-baseline", "live", {
@@ -136,7 +160,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   projects,
-  reporter: [["list"], [resolve("tests/support/browser-reporter.ts")]],
+  reporter: ["identity", "identity-web"].includes(browserGroup || "")
+    ? [["list"]]
+    : [["list"], [resolve("tests/support/browser-reporter.ts")]],
   webServer: [
     ...(![
       "live",
@@ -145,6 +171,8 @@ export default defineConfig({
       "brands",
       "browser-performance",
       "acceptance-firefox",
+      "identity",
+      "identity-web",
     ].includes(browserGroup || "")
       ? [
           {
@@ -157,7 +185,7 @@ export default defineConfig({
           },
         ]
       : []),
-    ...(!browserGroup || browserGroup === "ui"
+    ...(!browserGroup || ["ui", "identity-web"].includes(browserGroup)
       ? [
           {
             command: `node node_modules/vite/bin/vite.js preview --config apps/web/vite.config.ts --host 127.0.0.1 --port ${port} --strictPort`,

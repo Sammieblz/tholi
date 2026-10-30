@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
+import { parseEnv } from "node:util";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import {
@@ -9,7 +10,37 @@ import {
 import {
   localStackArguments,
   localStackCommands,
+  initializeLocalEnvironment,
 } from "../../../scripts/local-stack.mjs";
+
+test("identity environment upgrades preserve existing credentials and add missing settings once", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-identity-env-"));
+  const envFile = join(directory, ".env");
+  try {
+    const old =
+      "COMPOSE_PROJECT_NAME=tholi-existing\nTHOLI_DB_PASSWORD=keep-this-local-value\nTHOLI_WEB_ORIGIN=http://127.0.0.1:5188\n";
+    await writeFile(envFile, old);
+    expect(() => initializeLocalEnvironment({ envFile })).toThrow();
+    initializeLocalEnvironment({ envFile, upgradeIdentity: true });
+    const upgraded = await readFile(envFile, "utf8");
+    expect(upgraded.startsWith(old)).toBe(true);
+    const env = parseEnv(upgraded);
+    expect(env.THOLI_DB_PASSWORD).toBe("keep-this-local-value");
+    expect(env.THOLI_WEB_ORIGIN).toBe("http://127.0.0.1:5188");
+    expect(env.THOLI_IDENTITY_CLIENT_SECRET_KEY).toMatch(/^[a-f0-9]{48}$/);
+    expect(
+      Buffer.from(env.THOLI_IDENTITY_FLOW_SECRET_KEY ?? "", "base64url"),
+    ).toHaveLength(32);
+    expect(env.THOLI_IDENTITY_CHROMIUM_CALLBACKS).toMatch(
+      /^https:\/\/.*\.chromiumapp\.org\/$/,
+    );
+    initializeLocalEnvironment({ envFile, upgradeIdentity: true });
+    expect(await readFile(envFile, "utf8")).toBe(upgraded);
+  } finally {
+    await rm(envFile, { force: true });
+    await rmdir(directory);
+  }
+});
 
 function composeModel() {
   const image = "registry.test/local:1@sha256:" + "a".repeat(64);

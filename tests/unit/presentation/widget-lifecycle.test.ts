@@ -90,6 +90,49 @@ afterEach(() => {
     .forEach((element) => element.remove());
 });
 
+it("account RPC accepts only the exact privileged panel and never waits for journey work", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const auth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const operation = vi
+    .spyOn(auth, "serviceAuthCommand")
+    .mockResolvedValue({ configured: false });
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  const enqueue = vi.fn(() => new Promise(() => {}));
+  registerMessages({ session, enqueue } as any);
+  const handle = listen.mock.calls[0][0];
+  for (const untrusted of [
+    sender,
+    { ...sender, url: api.runtime.getURL("widget.html") },
+    {
+      ...sender,
+      id: "other-extension",
+      url: api.runtime.getURL("sidepanel.html"),
+    },
+    { ...sender, url: api.runtime.getURL("sidepanel.html") + "?spoof=1" },
+  ]) {
+    const respond = vi.fn();
+    handle({ type: "AUTH_STATUS" }, untrusted, respond);
+    expect(respond.mock.calls[0][0].error).toBeTruthy();
+  }
+  expect(operation).not.toHaveBeenCalled();
+  const respond = vi.fn();
+  expect(
+    handle(
+      { type: "AUTH_STATUS" },
+      { ...sender, url: api.runtime.getURL("sidepanel.html") },
+      respond,
+    ),
+  ).toBe(true);
+  await vi.waitFor(() =>
+    expect(respond).toHaveBeenCalledWith({ configured: false }),
+  );
+  expect(enqueue).not.toHaveBeenCalled();
+});
+
 it("Pause and Stop bypass a blocked routine queue and unresponsive page without accepting stale controls", async () => {
   const { api, session, sender } = environment();
   const listen = vi.fn();

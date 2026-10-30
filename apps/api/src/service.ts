@@ -33,6 +33,6 @@ if (isMainModule(import.meta.url))
       exit: (code) => process.exit(code),
     });
     console.log(
-      "Tholi service is listening; health and API discovery are available. Account and cloud navigation services are not enabled.",
+      "Tholi service is listening. Query /api/v1/capabilities for enabled services.",
     );
   });

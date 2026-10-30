@@ -5,6 +5,7 @@
   "description": "Your next step, made clear. Local website guidance while you stay in control.",
   "permissions": [
     "activeTab",
+    "identity",
     "tabs",
     "scripting",
     "sidePanel",

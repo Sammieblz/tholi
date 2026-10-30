@@ -346,12 +346,13 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     report.configuration = inspectLocalStack(config);
     safeProject = true;
     check("resolved-compose-safety");
-    stage = "clean stack build and startup";
+    // The contract suite must own a fresh schema before the API starts using it.
+    // Full startup subsequently runs the same dedicated migration initializer.
+    stage = "fresh PostgreSQL startup";
     await compose(
-      ["up", "--build", "--detach", "--wait", "--wait-timeout", "240"],
+      ["up", "--detach", "--wait", "--wait-timeout", "240", "postgres"],
       600000,
     );
-    check("clean-stack-startup");
     stage = "real PostgreSQL migrations and repository contracts";
     const testImage = `${project}-postgres-tests:dev`;
     await docker(
@@ -406,6 +407,12 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     );
     requireCheck(postgresChecks.passed && postgresChecks.checks.length > 0);
     check("real-postgres-migrations-and-repositories", postgresChecks);
+    stage = "clean stack build and startup";
+    await compose(
+      ["up", "--build", "--detach", "--wait", "--wait-timeout", "240"],
+      600000,
+    );
+    check("clean-stack-startup");
     stage = "idempotent local database bootstrap and identity seed";
     for (const action of ["migrate", "seed", "migrate", "seed"])
       for (const command of localStackCommands({ action, envFile, project }))
@@ -522,7 +529,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
         live.status === "ok" &&
         Array.isArray(live.capabilities) &&
         live.capabilities.length === 0,
-      "API does not match the health-only service profile.",
+      "API does not match the service process health contract.",
     );
     stage = "host API readiness";
     requireCheck(
@@ -742,7 +749,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "-d",
       "tholi",
       "-Atc",
-      "SELECT to_regclass('tholi.schema_migrations') IS NULL AND to_regclass('public._tholi_smoke') IS NULL;",
+      "SELECT to_regclass('tholi.schema_migrations') IS NOT NULL AND to_regclass('public._tholi_smoke') IS NULL AND NOT EXISTS (SELECT FROM tholi.accounts);",
     ]);
     requireCheck(
       empty.trim() === "t",

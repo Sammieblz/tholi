@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { identityAndScope } from "./migrations/001-identity-and-scope";
 import { serviceData } from "./migrations/002-service-data";
+import { portableIdentity } from "./migrations/003-portable-identity";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -27,6 +28,7 @@ function migration(
 export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(1, "identity-and-scope", identityAndScope),
   migration(2, "service-data", serviceData),
+  migration(3, "portable-identity", portableIdentity),
 ]);
 
 export interface MigrationOptions {
@@ -50,6 +52,7 @@ const mutableTables = [
   "workspaces",
   "memberships",
   "sessions",
+  "session_refresh_tokens",
   "consents",
   "requests",
   "entitlements",
@@ -173,8 +176,9 @@ async function grantRuntime(client: PoolClient, role: string) {
   );
   const existing = new Set(rows.map((row) => row.table_name));
   await client.query(`GRANT USAGE ON SCHEMA tholi TO ${identifier}`);
-  // No DELETE, TRUNCATE, DDL or future-table default grant. Saved data is
-  // tombstoned; privileged erasure and RLS policy are later authorization work.
+  // Durable application tables get no DELETE, TRUNCATE, DDL or future-table
+  // default grant. Saved data is tombstoned; bounded ephemeral identity cleanup
+  // is granted separately below. Privileged erasure and RLS remain later work.
   for (const table of mutableTables) {
     if (existing.has(table))
       await client.query(
@@ -190,6 +194,17 @@ async function grantRuntime(client: PoolClient, role: string) {
   for (const table of ["schema_migrations", "credit_ledger"]) {
     if (existing.has(table))
       await client.query(`GRANT SELECT ON tholi.${table} TO ${identifier}`);
+  }
+  // Only short-lived flow/broker/event rows can be removed by the HTTP runtime.
+  for (const table of [
+    "identity_flows",
+    "identity_brokers",
+    "identity_logout_events",
+  ]) {
+    if (existing.has(table))
+      await client.query(
+        `GRANT SELECT, INSERT, DELETE ON tholi.${table} TO ${identifier}`,
+      );
   }
 }
 

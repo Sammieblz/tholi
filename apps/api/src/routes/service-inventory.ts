@@ -130,7 +130,7 @@ export const SERVICE_ROUTES = [
     operationId: "updateCurrentAccount",
     group: "account",
     status: "planned",
-    issue: 30,
+    issue: 60,
     access: "authenticated",
     summary:
       "Update permitted account fields using the expected account revision.",
@@ -155,6 +155,17 @@ export const SERVICE_ROUTES = [
     access: "authenticated",
     summary:
       "Revoke an owned session without trusting a supplied account identifier.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/auth/backchannel-logout",
+    operationId: "receiveProviderLogout",
+    group: "identity",
+    status: "planned",
+    issue: 30,
+    access: "provider",
+    summary:
+      "Verify issuer-bound signed provider logout and revoke the matching session families.",
   },
   {
     method: "POST",

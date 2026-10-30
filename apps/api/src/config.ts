@@ -1,6 +1,8 @@
 import { isIP } from "node:net";
 import { resolve } from "node:path";
+import { z } from "zod";
 import type { DatabaseOptions } from "./database/postgres";
+import type { IdentityOptions } from "./application/identity-contracts";
 
 export interface ApiOptions {
   token: string;
@@ -12,6 +14,8 @@ export interface ApiOptions {
 
 export interface ServiceApiOptions {
   origins: string[];
+  identity?: IdentityOptions;
+  database?: DatabaseOptions;
 }
 
 export interface ListenOptions {
@@ -93,7 +97,169 @@ export function validateServiceOptions(
 ): ServiceApiOptions {
   if (!options || typeof options !== "object")
     throw new Error("Invalid service configuration.");
-  return { origins: validateOrigins(options.origins, true) };
+  const origins = validateOrigins(options.origins, true);
+  if (!!options.identity !== !!options.database)
+    throw new Error(
+      "Identity requires explicit service database configuration.",
+    );
+  if (!options.identity) return { origins };
+  const identity = validateIdentityOptions(options.identity);
+  if (!origins.includes(identity.webOrigin))
+    throw new Error(
+      "The identity website must be a configured service origin.",
+    );
+  return { origins, identity, database: { ...options.database! } };
+}
+
+function identityUrl(value: string): URL | undefined {
+  try {
+    return new URL(value);
+  } catch {
+    return undefined;
+  }
+}
+const identityUrlSchema = z
+  .string()
+  .url()
+  .max(2048)
+  .refine((value) => {
+    const url = identityUrl(value);
+    return (
+      !!url &&
+      ["http:", "https:"].includes(url.protocol) &&
+      !url.username &&
+      !url.password &&
+      !url.hash &&
+      !url.search
+    );
+  });
+const identityOriginSchema = identityUrlSchema.refine(
+  (value) => identityUrl(value)?.origin === value,
+);
+const identityOptionsSchema = z
+  .object({
+    issuer: identityUrlSchema,
+    authorizationEndpoint: identityUrlSchema,
+    tokenEndpoint: identityUrlSchema,
+    jwksUri: identityUrlSchema,
+    endSessionEndpoint: identityUrlSchema,
+    clientId: z.string().min(1).max(100),
+    clientSecret: z.string().min(32).max(512),
+    callbackUrl: identityUrlSchema,
+    webOrigin: identityOriginSchema,
+    clients: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .min(1)
+              .max(80)
+              .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+            kind: z.enum(["web", "extension", "desktop"]),
+            redirectUris: z.array(identityUrlSchema).min(1).max(8),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(16),
+    flowEncryptionKey: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{43}$/)
+      .refine(
+        (value) =>
+          Buffer.from(value, "base64url").length === 32 &&
+          Buffer.from(value, "base64url").toString("base64url") === value,
+      ),
+    secureCookies: z.boolean(),
+    requireVerifiedEmail: z.boolean(),
+    accessLifetimeMs: z
+      .number()
+      .int()
+      .min(60000)
+      .max(15 * 60000),
+    sessionLifetimeMs: z
+      .number()
+      .int()
+      .min(5 * 60000)
+      .max(12 * 60 * 60000),
+  })
+  .strict();
+
+export function validateIdentityOptions(
+  input: IdentityOptions,
+): IdentityOptions {
+  const result = identityOptionsSchema.safeParse(input);
+  if (!result.success)
+    throw new Error("Invalid service identity configuration.");
+  const options = result.data;
+  const urls = [
+    options.issuer,
+    options.authorizationEndpoint,
+    options.tokenEndpoint,
+    options.jwksUri,
+    options.endSessionEndpoint,
+    options.callbackUrl,
+    options.webOrigin,
+  ];
+  const loopback = (host: string) =>
+    ["localhost", "127.0.0.1", "[::1]"].includes(host);
+  const local =
+    !options.secureCookies &&
+    [options.issuer, options.callbackUrl, options.webOrigin].every((value) =>
+      loopback(new URL(value).hostname),
+    );
+  for (const value of urls) {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" &&
+      !(local && (loopback(url.hostname) || url.hostname === "oidc"))
+    )
+      throw new Error(
+        "Identity transport requires verified HTTPS outside local development.",
+      );
+  }
+  if (!options.secureCookies && !local)
+    throw new Error(
+      "Insecure identity cookies are limited to loopback development.",
+    );
+  const webUrl = new URL(options.webOrigin);
+  const callbackUrl = new URL(options.callbackUrl);
+  if (
+    webUrl.protocol !== callbackUrl.protocol ||
+    !(
+      webUrl.hostname === callbackUrl.hostname ||
+      (!local &&
+        (webUrl.hostname.endsWith(`.${callbackUrl.hostname}`) ||
+          callbackUrl.hostname.endsWith(`.${webUrl.hostname}`)))
+    )
+  )
+    throw new Error(
+      "Cookie authentication requires matching local hosts or a shared website/API domain topology.",
+    );
+  if (
+    new URL(options.callbackUrl).pathname !== "/api/v1/auth/callback" ||
+    options.accessLifetimeMs > options.sessionLifetimeMs
+  )
+    throw new Error("Invalid identity callback or session lifetime.");
+  const ids = new Set<string>();
+  for (const client of options.clients) {
+    if (ids.has(client.id))
+      throw new Error("Identity client IDs must be distinct.");
+    ids.add(client.id);
+    if (new Set(client.redirectUris).size !== client.redirectUris.length)
+      throw new Error("Identity client callbacks must be distinct.");
+    for (const redirect of client.redirectUris) {
+      const url = new URL(redirect);
+      if (url.protocol !== "https:" && !(local && loopback(url.hostname)))
+        throw new Error("Identity callback requires HTTPS or local loopback.");
+      if (client.kind === "web" && url.origin !== options.webOrigin)
+        throw new Error(
+          "Website returns must remain on the configured website.",
+        );
+    }
+  }
+  return options;
 }
 
 function environmentValue(env: Environment, name: string): string | undefined {
@@ -207,6 +373,83 @@ export function validatePrivateConnection(value: unknown): {
   };
 }
 
+function parseIdentityConfig(env: Environment): IdentityOptions | undefined {
+  const issuer = environmentValue(env, "THOLI_IDENTITY_ISSUER");
+  if (!issuer) {
+    if (
+      Object.entries(env).some(
+        ([key, value]) => key.startsWith("THOLI_IDENTITY_") && value,
+      )
+    )
+      throw new Error("Incomplete service identity configuration.");
+    return undefined;
+  }
+  const need = (name: string) => {
+    const value = environmentValue(env, name);
+    if (!value) throw new Error(`Missing ${name}.`);
+    return value;
+  };
+  const webOrigin = need("THOLI_IDENTITY_WEB_ORIGIN");
+  const publicOrigin = need("THOLI_SERVICE_PUBLIC_ORIGIN");
+  if (!identityOriginSchema.safeParse(publicOrigin).success)
+    throw new Error("The public service URL must be an exact origin.");
+  const clients: IdentityOptions["clients"][number][] = [
+    {
+      id: "web",
+      kind: "web",
+      redirectUris: [`${webOrigin}/account`, `${webOrigin}/download`],
+    },
+  ];
+  for (const [id, name] of [
+    ["extension-chromium", "THOLI_IDENTITY_CHROMIUM_CALLBACKS"],
+    ["extension-firefox", "THOLI_IDENTITY_FIREFOX_CALLBACKS"],
+  ]) {
+    const redirects = env[name]
+      ?.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (redirects?.length)
+      clients.push({ id, kind: "extension", redirectUris: redirects });
+  }
+  const customClients = environmentValue(env, "THOLI_IDENTITY_CLIENTS");
+  let selectedClients = clients;
+  if (customClients) {
+    try {
+      selectedClients = JSON.parse(customClients);
+    } catch {
+      throw new Error("Invalid registered identity clients.");
+    }
+  }
+  const lifetime = (name: string, fallback: number) => {
+    const value = environmentValue(env, name);
+    return value === undefined
+      ? fallback
+      : /^\d+$/.test(value)
+        ? Number(value)
+        : NaN;
+  };
+  return validateIdentityOptions({
+    issuer,
+    authorizationEndpoint: need("THOLI_IDENTITY_AUTHORIZATION_ENDPOINT"),
+    tokenEndpoint: need("THOLI_IDENTITY_TOKEN_ENDPOINT"),
+    jwksUri: need("THOLI_IDENTITY_JWKS_URI"),
+    endSessionEndpoint: need("THOLI_IDENTITY_LOGOUT_ENDPOINT"),
+    clientId: need("THOLI_IDENTITY_CLIENT_ID"),
+    clientSecret: need("THOLI_IDENTITY_CLIENT_SECRET_KEY"),
+    callbackUrl: `${publicOrigin}/api/v1/auth/callback`,
+    webOrigin,
+    clients: selectedClients,
+    flowEncryptionKey: need("THOLI_IDENTITY_FLOW_SECRET_KEY"),
+    secureCookies: env.NODE_ENV !== "development",
+    requireVerifiedEmail: true,
+    accessLifetimeMs: lifetime("THOLI_IDENTITY_ACCESS_LIFETIME_MS", 5 * 60000),
+    sessionLifetimeMs: lifetime(
+      "THOLI_IDENTITY_SESSION_LIFETIME_MS",
+      12 * 60 * 60000,
+    ),
+  });
+}
+
 export function parseServiceConfig(env: Environment) {
   // This composition root has no live model adapter yet. Fail closed instead of
   // accepting an opt-in flag or a budget that this version cannot enforce.
@@ -225,9 +468,11 @@ export function parseServiceConfig(env: Environment) {
     throw new Error(
       "PORT and THOLI_SERVICE_PORT must agree when both are set.",
     );
+  const identity = parseIdentityConfig(env);
   return {
     options: validateServiceOptions({
       origins: parseOrigins(env, "THOLI_SERVICE_ORIGINS", true) ?? [],
+      ...(identity ? { identity, database: parseDatabaseConfig(env) } : {}),
     }),
     listen: {
       host: parseHost(environmentValue(env, "THOLI_SERVICE_HOST")),

@@ -46,6 +46,7 @@ export function GuidanceHeader(
                   <Popover.Title>
                     {props.widget ? "Widget controls" : "Make Tholi yours"}
                   </Popover.Title>
+                  {!props.widget && props.account}
                   {props.widget && (
                     <>
                       <div

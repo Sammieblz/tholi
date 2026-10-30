@@ -56,7 +56,20 @@ services:
       THOLI_SERVICE_PORT: "8788"
       THOLI_SERVICE_ORIGINS: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
       THOLI_MODEL_PROVIDER: fake
-    networks: [application]
+      THOLI_DATABASE_URL: postgresql://tholi_runtime:${THOLI_DB_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
+      THOLI_IDENTITY_ISSUER: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local
+      THOLI_IDENTITY_AUTHORIZATION_ENDPOINT: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local/protocol/openid-connect/auth
+      THOLI_IDENTITY_TOKEN_ENDPOINT: http://oidc:8080/realms/tholi-local/protocol/openid-connect/token
+      THOLI_IDENTITY_JWKS_URI: http://oidc:8080/realms/tholi-local/protocol/openid-connect/certs
+      THOLI_IDENTITY_LOGOUT_ENDPOINT: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local/protocol/openid-connect/logout
+      THOLI_IDENTITY_CLIENT_ID: tholi-service
+      THOLI_IDENTITY_CLIENT_SECRET_KEY: ${THOLI_IDENTITY_CLIENT_SECRET_KEY:?Initialize local identity credentials first}
+      THOLI_IDENTITY_FLOW_SECRET_KEY: ${THOLI_IDENTITY_FLOW_SECRET_KEY:?Initialize local identity credentials first}
+      THOLI_SERVICE_PUBLIC_ORIGIN: http://127.0.0.1:${API_HOST_PORT:-8788}
+      THOLI_IDENTITY_WEB_ORIGIN: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
+      THOLI_IDENTITY_CHROMIUM_CALLBACKS: ${THOLI_IDENTITY_CHROMIUM_CALLBACKS:-}
+      THOLI_IDENTITY_FIREFOX_CALLBACKS: ${THOLI_IDENTITY_FIREFOX_CALLBACKS:-}
+    networks: [application, database]
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m,mode=1777
@@ -82,8 +95,54 @@ services:
       postgres: { condition: service_healthy }
       oidc: { condition: service_healthy }
       mail: { condition: service_healthy }
+      database-migrate: { condition: service_completed_successfully }
+      identity-configure: { condition: service_completed_successfully }
 
-  # Operator-only commands. Neither credential is injected into the HTTP service.
+  # Local operator-owned initialization, never performed by an HTTP replica.
+  database-migrate:
+    <<: *api-image
+    user: "1000:1000"
+    command: [node, apps/api/dist/database-cli.js, migrate]
+    environment:
+      THOLI_DATABASE_MIGRATION_URL: postgresql://tholi_migrator:${THOLI_MIGRATION_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
+      THOLI_DATABASE_RUNTIME_ROLE: tholi_runtime
+    networks: [database]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 1
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  identity-configure:
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
+    entrypoint: [bash, /opt/keycloak/data/seed.sh]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: tholi-local-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${OIDC_ADMIN_PASSWORD:?Initialize the local environment first}
+      OIDC_TEST_PASSWORD: ${OIDC_TEST_PASSWORD:?Initialize the local environment first}
+      OIDC_ADMIN_URL: http://oidc:8080
+      THOLI_IDENTITY_CLIENT_SECRET_KEY: ${THOLI_IDENTITY_CLIENT_SECRET_KEY:?Initialize local identity credentials first}
+      THOLI_SERVICE_PUBLIC_ORIGIN: http://127.0.0.1:${API_HOST_PORT:-8788}
+      THOLI_WEB_ORIGIN: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
+    volumes:
+      - ./infra/local/oidc/tholi-local-realm.json:/opt/keycloak/data/import/tholi-local-realm.json:ro
+      - ./infra/local/oidc/seed.sh:/opt/keycloak/data/seed.sh:ro
+    networks: [application]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1
+    depends_on:
+      oidc: { condition: service_healthy }
+
+  # Operator-only commands. Migration credentials never enter the HTTP service.
   database-tools:
     <<: *api-image
     profiles: [tools]
@@ -172,6 +231,9 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       OIDC_TEST_PASSWORD: ${OIDC_TEST_PASSWORD:?Initialize the local environment first}
+      THOLI_IDENTITY_CLIENT_SECRET_KEY: ${THOLI_IDENTITY_CLIENT_SECRET_KEY:?Initialize local identity credentials first}
+      THOLI_SERVICE_PUBLIC_ORIGIN: http://127.0.0.1:${API_HOST_PORT:-8788}
+      THOLI_WEB_ORIGIN: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
     volumes:
       - ./infra/local/oidc/tholi-local-realm.json:/opt/keycloak/data/import/tholi-local-realm.json:ro
       - ./infra/local/oidc/seed.sh:/opt/keycloak/data/seed.sh:ro

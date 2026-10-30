@@ -47,11 +47,11 @@ const ContactPage = lazy(() =>
     default: module.ContactPage,
   })),
 );
-function RetiredAccountRoute() {
-  const { go } = useRouter();
-  useEffect(() => go("/download", { replace: true }), [go]);
-  return <div role="status">Opening installation options…</div>;
-}
+const AccountRoute = lazy(() =>
+  import("../features/account/AccountRoute").then((module) => ({
+    default: module.AccountRoute,
+  })),
+);
 function TechnicalReferenceRoute({ destination }: { destination: string }) {
   useEffect(() => window.location.replace(destination), [destination]);
   return (
@@ -88,8 +88,8 @@ export function App() {
     <SupportPage />
   ) : path === "/contact" ? (
     <ContactPage />
-  ) : ["/signin", "/signup", "/welcome"].includes(path) ? (
-    <RetiredAccountRoute />
+  ) : ["/signin", "/signup", "/account", "/welcome"].includes(path) ? (
+    <AccountRoute path={path} />
   ) : path === "/onboarding" ? (
     <OnboardingPage />
   ) : path === "/docs" || path.startsWith("/docs/") ? (

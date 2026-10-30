@@ -36,6 +36,8 @@ export type GuidanceProps = {
   primary?: ReactNode;
   details?: ReactNode;
   advanced?: ReactNode;
+  /** Optional trusted-client account controls. The shared presentation has no credentials or browser access. */
+  account?: ReactNode;
   widget?: boolean;
   onExpand?: (focusComposer?: boolean) => void;
   onMoveAside?: () => void;

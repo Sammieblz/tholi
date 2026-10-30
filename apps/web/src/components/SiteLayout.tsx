@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu, Xmark } from "iconoir-react";
 import { SiteLink, useRouter } from "../app/router";
-import { repositoryUrl } from "../config/project";
+import { repositoryUrl, serviceApiOrigin } from "../config/project";
 import { legalOperator } from "../features/legal/operator";
 import websiteRelease from "../../release.json";
 import { InstallLink } from "../features/downloads/downloads";
@@ -114,6 +114,14 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       >
         Docs
       </SiteLink>
+      {serviceApiOrigin && (
+        <SiteLink
+          to="/account"
+          aria-current={path === "/account" ? "page" : undefined}
+        >
+          Account
+        </SiteLink>
+      )}
     </>
   );
   return (

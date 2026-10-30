@@ -10,6 +10,7 @@ import {
   verifyDatabase,
 } from "../../../apps/api/src/database/migrations";
 import { PostgresRepositories } from "../../../apps/api/src/database/repositories";
+import { runIdentityChecks } from "./identity-checks";
 import {
   beginJourney,
   saveTask,
@@ -82,6 +83,11 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await client.query("INSERT INTO tholi.accounts (id) VALUES ($1)", [
             accountId,
           ]);
+          const foundationSessionId = randomUUID();
+          await client.query(
+            "INSERT INTO tholi.sessions (id,account_id,token_hash,expires_at) VALUES ($1,$2,$3,$4)",
+            [foundationSessionId, accountId, Buffer.alloc(32, 1), future()],
+          );
           await migrateDatabase(client, { runtimeRole: "tholi_runtime" });
           assert.equal(
             (
@@ -92,6 +98,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
             ).rows[0].count,
             1,
           );
+          const historicalSession = (
+            await client.query(
+              "SELECT status,revoked_at FROM tholi.sessions WHERE id = $1",
+              [foundationSessionId],
+            )
+          ).rows[0];
+          assert.equal(historicalSession.status, "revoked");
+          assert.ok(historicalSession.revoked_at instanceof Date);
           const before = (
             await client.query(
               "SELECT version, name, checksum, applied_at FROM tholi.schema_migrations ORDER BY version",
@@ -1289,6 +1303,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
       },
     );
 
+    await runIdentityChecks(runtime, migration, record);
     return { passed: true as const, checks };
   } finally {
     const cleanup = await Promise.allSettled([

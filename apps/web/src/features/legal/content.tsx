@@ -50,10 +50,14 @@ export function privacySections(): LegalSection[] {
             rather than a connection to your installed extension.
           </p>
           <p>
-            The public website has no sign-up, sign-in or account management
-            service. Installation and optional practice do not create a Tholi
-            account or store your name, email, password or onboarding progress.
-            Contact drafts are handled separately as described below.
+            Account access is optional and available only when a trusted Tholi
+            identity service is configured. Sign-up, sign-in, recovery and email
+            verification redirect to that service's identity provider. Tholi
+            does not collect your password in its website forms. The account
+            service stores your identity link, account and workspace
+            identifiers, session and security metadata. Installation and
+            practice do not create an account or upload local routes. Contact
+            drafts are handled separately.
           </p>
           <p>
             On tholi.io, Cloudflare adds page-view and performance measurements
@@ -321,12 +325,13 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
-            This website has no production account service, hosted inference or
-            advertising integration. The optional extension backend described
-            above is a separate connection you configure. Links to GitHub and
-            other websites leave Tholi and are governed by those services.
-            Browser stores also process installation and store account
-            information under their own policies.
+            Optional account access uses the configured Tholi service and its
+            identity provider. No hosted inference, cloud saved data, paid plans
+            or advertising integration is available in this release. The
+            optional extension backend described above is a separate connection
+            you configure. Links to GitHub and other websites leave Tholi and
+            are governed by those services. Browser stores also process
+            installation and store account information under their own policies.
           </p>
           <p>
             Cloudflare Pages hosts tholi.io and delivers its assets. Cloudflare
@@ -384,9 +389,10 @@ export function termsSections(): LegalSection[] {
             control access as described in the privacy notice.
           </p>
           <p>
-            The website and local extension require no Tholi account. The
-            website does not offer registration, paid subscriptions, cloud
-            synchronization or an authentication service.
+            Local guidance, installation and website practice require no Tholi
+            account. Where an identity service is configured, optional accounts
+            let you manage sign-in sessions. Paid subscriptions, cloud guidance
+            and cloud synchronization are not available in this release.
           </p>
         </>
       ),
@@ -498,7 +504,7 @@ export function termsSections(): LegalSection[] {
             described in those notices.
           </p>
           <p>
-            Future paid services, real accounts or cloud inference would need
+            Future paid services, cloud saved data or cloud inference would need
             their own accurate terms and disclosures before activation.
           </p>
           <p>
@@ -626,15 +632,55 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
                   </td>
                   <td>Only after preferences are allowed.</td>
                 </tr>
+                <tr>
+                  <th scope="row">
+                    <code>__Host-tholi_session</code>
+                    <br />
+                    <code>__Host-tholi_refresh</code>
+                  </th>
+                  <td>
+                    Essential HttpOnly credentials on a configured account
+                    service. They are issued only when you sign in and are
+                    unavailable to website scripts.
+                  </td>
+                  <td>
+                    Until the configured account session expires or you sign
+                    out.
+                  </td>
+                  <td>
+                    Required for optional account access, independent of
+                    appearance and analytics choices.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">
+                    <code>__Host-tholi_flow</code>
+                  </th>
+                  <td>
+                    Essential HttpOnly binding for an explicit sign-in redirect
+                    on the configured account service.
+                  </td>
+                  <td>Up to five minutes during sign-in.</td>
+                  <td>Only while an account sign-in flow is in progress.</td>
+                </tr>
               </tbody>
             </table>
           </div>
           <p>
-            Both cookies are first-party and host-only, use <code>Path=/</code>{" "}
-            and <code>SameSite=Lax</code>, and are marked <code>Secure</code> on
-            HTTPS. The HTTP localhost preview cannot use a Secure-only cookie.
-            These cookies are readable by the website; they are not
-            authentication tokens.
+            Both website preference cookies are first-party and host-only, use{" "}
+            <code>Path=/</code> and <code>SameSite=Lax</code>, and are marked{" "}
+            <code>Secure</code> on HTTPS. The HTTP localhost preview cannot use
+            a Secure-only cookie. These cookies are readable by the website;
+            they are not authentication tokens.
+          </p>
+          <p>
+            Production account cookies use the <code>__Host-</code> prefix,{" "}
+            <code>Secure</code>, <code>HttpOnly</code> and{" "}
+            <code>SameSite=Lax</code>. Local HTTP development uses the
+            unprefixed names and an API-scoped path. Blocking essential cookies
+            prevents website account access; installation and local guidance
+            remain available. The identity provider has its own cookies and
+            policy.
           </p>
         </>
       ),
@@ -701,8 +747,14 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
       children: (
         <>
           <p>
-            The public website does not use account sessions or store account
-            details. Earlier website demonstrations may have left a{" "}
+            Configured account access uses essential HttpOnly session, refresh
+            and short-lived sign-in flow cookies on the account service. These
+            cookies are not controlled by optional appearance or analytics
+            choices. Tholi's website does not put account tokens in local or
+            session storage. Sign-out revokes Tholi sessions; your identity
+            provider may keep its own session. Native extension tokens stay in
+            protected background settings, separate from website cookies and
+            page scripts. Earlier website demonstrations may have left a{" "}
             <code>tholi-demo-account</code> entry in browser-session storage.
             This version does not read or write it. You can remove that legacy
             entry with your browser’s site-data controls; session restoration

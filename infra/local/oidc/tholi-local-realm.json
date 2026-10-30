@@ -3,9 +3,10 @@
   "displayName": "Tholi local development",
   "enabled": true,
   "sslRequired": "none",
-  "registrationAllowed": false,
-  "resetPasswordAllowed": false,
-  "loginWithEmailAllowed": false,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "verifyEmail": true,
   "duplicateEmailsAllowed": false,
   "smtpServer": {
     "host": "mail",

@@ -60,10 +60,11 @@ describe("website search metadata contracts", () => {
     expect(metadataForPath("/docs/no-such-article").index).toBe(false);
     expect(metadataForPath("/no-such-page").index).toBe(false);
     expect(metadataForPath("/onboarding").index).toBe(false);
-    for (const path of ["/signin", "/signup", "/welcome"]) {
-      expect(metadataForPath(path).path).toBe("/download");
+    for (const path of ["/signin", "/signup", "/account"]) {
+      expect(metadataForPath(path).path).toBe(path);
       expect(metadataForPath(path).index).toBe(false);
     }
+    expect(metadataForPath("/welcome").path).toBe("/account");
     expect(
       articleCatalog.every((article) =>
         publicPages.some((page) => page.path === `/docs/${article.slug}`),

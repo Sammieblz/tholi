@@ -23,26 +23,39 @@ import {
 } from "../../../../packages/navigation-core/contracts-service";
 import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
+import { identityCookieNames } from "./identity-cookies";
 
-const capabilities = serviceCapabilitiesSchema.parse({
-  protocol: SERVICE_PROTOCOL,
-  version: SERVICE_CONTRACT_VERSION,
-  implementationVersion: apiPackage.version,
-  supportedVersions: [SERVICE_CONTRACT_VERSION],
-  capabilities: ["capabilities", "handshake", "openapi"],
-  availability: {
-    authentication: false,
-    accountData: false,
-    decisions: false,
-    billing: false,
-  },
-  limits: SERVICE_LIMITS,
-});
+function serviceCapabilities(identityEnabled: boolean) {
+  return serviceCapabilitiesSchema.parse({
+    protocol: SERVICE_PROTOCOL,
+    version: SERVICE_CONTRACT_VERSION,
+    implementationVersion: apiPackage.version,
+    supportedVersions: [SERVICE_CONTRACT_VERSION],
+    capabilities: [
+      "capabilities",
+      "handshake",
+      "openapi",
+      ...(identityEnabled ? ["authentication", "account-security"] : []),
+    ],
+    availability: {
+      authentication: identityEnabled,
+      accountData: identityEnabled,
+      decisions: false,
+      billing: false,
+    },
+    limits: SERVICE_LIMITS,
+  });
+}
 
 const jsonSchema = (schema: z.ZodTypeAny) =>
   zodToJsonSchema(schema, { target: "openApi3" });
 
-export async function registerServiceApi(app: FastifyInstance) {
+export async function registerServiceApi(
+  app: FastifyInstance,
+  identityEnabled = false,
+  secureCookies = false,
+) {
+  const capabilities = serviceCapabilities(identityEnabled);
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,
     PageQuery: servicePageQuerySchema,
@@ -64,6 +77,20 @@ export async function registerServiceApi(app: FastifyInstance) {
           "Service contract version, independent of product releases and the legacy private /v1 and /v2 profiles. Only executable paths are available; x-tholi-route-inventory identifies planned work.",
       },
       security: [],
+      ...(identityEnabled
+        ? {
+            components: {
+              securitySchemes: {
+                NativeBearer: { type: "http" as const, scheme: "bearer" },
+                WebSession: {
+                  type: "apiKey" as const,
+                  in: "cookie" as const,
+                  name: identityCookieNames(secureCookies).access,
+                },
+              },
+            },
+          }
+        : {}),
     },
   });
   const emptyQuery = jsonSchema(z.object({}).strict());
@@ -128,7 +155,15 @@ export async function registerServiceApi(app: FastifyInstance) {
           if (route.operationId === "getServiceOpenApi")
             return {
               ...app.swagger(),
-              "x-tholi-route-inventory": SERVICE_ROUTES,
+              "x-tholi-route-inventory": SERVICE_ROUTES.map((entry) => ({
+                ...entry,
+                status: app.hasRoute({
+                  method: entry.method,
+                  url: entry.path.replace(/\{([^}]+)\}/g, ":$1"),
+                })
+                  ? "implemented"
+                  : "planned",
+              })),
             };
           const result = negotiateService(
             serviceHandshakeInputSchema.parse(request.body),
