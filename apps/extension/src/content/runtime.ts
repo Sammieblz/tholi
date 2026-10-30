@@ -351,8 +351,23 @@ if (!host[marker]) {
         return;
       }
       if (message.type === "GET_PAGE") {
+        const page = message.regionObservation
+          ? coach?.observeRegion(
+              message.regionObservation.regionId,
+              message.regionObservation.scanId,
+              message.regionObservation.pageRevision,
+            )
+          : coach?.getPage(message.query, message.planningIntent);
+        if (message.regionObservation && !page) {
+          respond({ error: "This region is unavailable in the current scan." });
+          return;
+        }
         respond({
-          page: coach?.getPage(message.query, message.planningIntent),
+          page,
+          perception:
+            message.planningIntent?.phase === "end"
+              ? undefined
+              : coach?.getPerception(page),
           view: coach?.view,
         });
         return;
@@ -365,7 +380,7 @@ if (!host[marker]) {
             ? { sessionId, nonce: frameNonce }
             : undefined,
         );
-        coach?.frameAccess(message.origins, message.limit);
+        coach?.frameAccess(message.origins, message.limit, message.omissions);
         respond({ ok: true });
         return;
       }
@@ -386,6 +401,9 @@ if (!host[marker]) {
           message.documentId,
           message.tabId,
           message.page,
+          message.parentFrameId,
+          message.perception,
+          message.deferRefresh,
         );
         respond({ ok: true });
         return;

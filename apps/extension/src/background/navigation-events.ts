@@ -6,7 +6,7 @@ import {
   sessionLocked,
   type PinnedSession,
 } from "../../../../packages/route-registry/session";
-import { stopFrames } from "./frame-coordinator";
+import { stopFrames, invalidatePagePerception } from "./frame-coordinator";
 
 interface Context {
   enqueue: <T>(operation: () => Promise<T>) => Promise<T>;
@@ -28,6 +28,9 @@ interface Context {
 }
 
 export function registerNavigationEvents(context: Context) {
+  api.tabs.onZoomChange.addListener(({ tabId }) => {
+    if (tabId === context.session?.tabId) invalidatePagePerception();
+  });
   api.tabs.onRemoved.addListener((tabId) => {
     void context.enqueue(async () => {
       if (context.session?.tabId === tabId) {
@@ -137,6 +140,7 @@ export function registerNavigationEvents(context: Context) {
   });
 
   api.webNavigation.onCommitted.addListener((details) => {
+    if (details.tabId === context.session?.tabId) invalidatePagePerception();
     if (details.frameId !== 0) return;
     void context.enqueue(async () => {
       const start = context.navigationStarts.get(details.tabId);

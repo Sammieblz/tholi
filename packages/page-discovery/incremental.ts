@@ -12,10 +12,12 @@ const observationText =
 /** DOM-only scheduler. It never clicks, reads input values or retains page text. */
 export class IncrementalControlIndex {
   readonly elements = new Set<HTMLElement>();
+  readonly surfaces = new Set<HTMLElement>();
   readonly roots = new Set<Document | ShadowRoot>();
   readonly dirty = new Set<HTMLElement>();
   complete = false;
   saturated = false;
+  surfaceSaturated = false;
   slices: number[] = [];
   private walkers: TreeWalker[] = [];
   private queued = new WeakSet<Node>();
@@ -37,6 +39,9 @@ export class IncrementalControlIndex {
     { root: Document | ShadowRoot; ids: string[] }
   >();
   constructor(public limit = 5000) {}
+  get active() {
+    return !this.stopped;
+  }
   setLimit(limit: number) {
     this.limit = Math.max(1, Math.min(5000, limit));
     for (const e of [...this.elements].slice(this.limit)) {
@@ -83,8 +88,11 @@ export class IncrementalControlIndex {
   setPriority(element?: HTMLElement) {
     this.priority = element;
   }
-  reconcile() {
-    this.enqueue(document.documentElement, true);
+  reconcile(root: Element = document.documentElement) {
+    if (root === document.documentElement) this.surfaceSaturated = false;
+    if (root instanceof HTMLElement && this.elements.has(root))
+      this.dirty.add(root);
+    this.enqueue(root, true);
     clearTimeout(this.timer);
     this.timer = undefined;
     this.drain();
@@ -100,6 +108,11 @@ export class IncrementalControlIndex {
     this.changed = true;
   }
   private add(e: HTMLElement) {
+    if (e.matches(surfaceSelector) && !e.closest(ownedUi)) {
+      if (this.surfaces.size < 5000 || this.surfaces.has(e))
+        this.surfaces.add(e);
+      else this.surfaceSaturated = true;
+    }
     if (
       (!e.matches(controlSelector + ', [role="slider"]') &&
         !customInteraction(e)) ||
@@ -158,7 +171,12 @@ export class IncrementalControlIndex {
     }
   }
   private priorityRank(e: HTMLElement) {
-    if (e === this.priority || e === document.activeElement) return 6;
+    if (
+      e === this.priority ||
+      this.priority?.contains(e) ||
+      e === document.activeElement
+    )
+      return 6;
     const popup = e.closest(
       'dialog[open],[role="dialog"],[role="menu"],[role="listbox"],[popover]:popover-open',
     );
@@ -251,7 +269,8 @@ export class IncrementalControlIndex {
         } else this.mark(e as HTMLElement);
         if (
           r.type === "attributes" &&
-          e.matches(controlSelector + ', [role="slider"]')
+          (e.matches(controlSelector + ', [role="slider"]') ||
+            e.matches(surfaceSelector))
         ) {
           this.add(e as HTMLElement);
           this.dirty.add(e as HTMLElement);
@@ -301,7 +320,14 @@ export class IncrementalControlIndex {
     this.observers.set(root, observer);
   }
   private enqueue(root: Element, foreground = false) {
-    if (this.queued.has(root) || this.stopped || root.closest(ownedUi)) return;
+    if (this.stopped || root.closest(ownedUi)) return;
+    if (this.queued.has(root)) {
+      if (foreground) {
+        const index = this.walkers.findIndex((walker) => walker.root === root);
+        if (index > 0) this.walkers.unshift(...this.walkers.splice(index, 1));
+      }
+      return;
+    }
     // Plain ticking text has no controls to index. Receipts and semantic
     // headings still invalidate observation even when they contain no buttons.
     if (
@@ -343,6 +369,7 @@ export class IncrementalControlIndex {
       }
       if (node.closest("#internet-navigator-overlay,[data-tholi-ui]")) continue;
       this.add(node);
+      if (this.elements.has(node)) this.dirty.add(node);
       if (node.shadowRoot) {
         this.attach(node.shadowRoot);
         for (const child of node.shadowRoot.children) this.enqueue(child);
@@ -350,13 +377,17 @@ export class IncrementalControlIndex {
     }
     this.slices.push(performance.now() - start);
     if (this.slices.length > 1000) this.slices.shift();
-    const complete = !this.walkers.length && !this.saturated;
+    const complete =
+      !this.walkers.length && !this.saturated && !this.surfaceSaturated;
     if (complete !== this.complete) this.changed = true;
     this.complete = complete;
     this.scheduleFlush();
     if (this.walkers.length) this.schedule();
   }
   private prune() {
+    for (const element of this.surfaces)
+      if (!element.isConnected || !element.matches(surfaceSelector))
+        this.surfaces.delete(element);
     for (const e of this.elements)
       if (!e.isConnected) {
         this.trackReferences(e, true);
@@ -419,6 +450,8 @@ export class IncrementalControlIndex {
     this.observers.clear();
     this.roots.clear();
     this.elements.clear();
+    this.surfaces.clear();
+    this.surfaceSaturated = false;
     this.dirty.clear();
     this.priority = undefined;
     this.references.clear();

@@ -12,6 +12,12 @@ import {
 import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
 import { StructureIndex } from "./structure";
+import {
+  discoveryPerceptionSchema,
+  PERCEPTION_LIMITS,
+  type DiscoveryPerception,
+} from "./perception";
+import { navigationDomViewportSchema } from "../navigation-core/contracts-navigation";
 import { interactionRisk } from "./interaction-risk";
 import { formContext } from "./form-context";
 import {
@@ -35,6 +41,8 @@ export interface BoundControl {
 }
 const candidates = controlSelector + ',[role="slider"]';
 const headingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"],legend';
+const popupSelector =
+  'dialog,[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover]';
 export function publicPath(url: URL): string {
   return url.pathname
     .split("/")
@@ -344,12 +352,18 @@ export class PageDiscovery {
   private query = "";
   private surfaceIds = new WeakMap<Element, string>();
   private surfaceCounter = 0;
-  private surfaceId(e: HTMLElement) {
-    const surface = e.closest(surfaceSelector) || document.body;
+  private latestPage?: PageSnapshot;
+  private latestPerception?: DiscoveryPerception;
+  private regionElements = new Map<string, Element>();
+  private elementSurfaceId(surface: Element) {
     let id = this.surfaceIds.get(surface);
     if (!id)
       this.surfaceIds.set(surface, (id = "surface-" + ++this.surfaceCounter));
     return id;
+  }
+  private surfaceId(e: HTMLElement) {
+    const surface = e.closest(surfaceSelector) || document.body;
+    return this.elementSurfaceId(surface);
   }
   observe(callback: () => void) {
     this.incremental ||= new IncrementalControlIndex();
@@ -358,6 +372,8 @@ export class PageDiscovery {
       this.incremental?.stop();
       this.semanticCache.clear();
       this.bindings.clear();
+      this.latestPage = this.latestPerception = undefined;
+      this.regionElements.clear();
     };
   }
   setQuery(query: string) {
@@ -376,7 +392,51 @@ export class PageDiscovery {
   invalidate() {
     this.incremental?.invalidate();
   }
+  snapshotWithPerception() {
+    const page = this.snapshot();
+    return { page, perception: this.getPerception(page) };
+  }
+  getPerception(page: PageSnapshot): DiscoveryPerception | undefined {
+    return page === this.latestPage &&
+      this.latestPerception?.pageRevision === page.revision
+      ? this.latestPerception
+      : undefined;
+  }
+  observeRegion(regionId: string, scanId: string, pageRevision: number) {
+    const current = this.latestPerception,
+      element = this.regionElements.get(regionId);
+    if (
+      !current ||
+      !this.incremental?.active ||
+      current.scanId !== scanId ||
+      current.pageRevision !== pageRevision ||
+      !current.regions.some((region) => region.id === regionId) ||
+      !element?.isConnected ||
+      element.ownerDocument !== document ||
+      element.closest(
+        '[contenteditable],[data-sensitive="true"],#internet-navigator-overlay,[data-tholi-ui]',
+      ) ||
+      isSensitiveElement(element)
+    )
+      return;
+    let root = element.getRootNode();
+    while (root instanceof ShadowRoot) {
+      if (
+        root.mode !== "open" ||
+        !root.host.isConnected ||
+        root.host.shadowRoot !== root
+      )
+        return;
+      root = root.host.getRootNode();
+    }
+    if (root !== document) return;
+    this.incremental.setPriority(element as HTMLElement);
+    this.incremental.reconcile(element);
+    return this.snapshotWithPerception();
+  }
   snapshot(): PageSnapshot {
+    this.latestPage = this.latestPerception = undefined;
+    this.regionElements.clear();
     this.bindings.clear();
     const elements: HTMLElement[] = [];
     const popups: HTMLElement[] = [];
@@ -387,33 +447,41 @@ export class PageDiscovery {
     const scopeHeadings = new Map<Element, Element | undefined>();
     const scan = (root: Document | ShadowRoot) => {
       roots.push(root);
-      elements.push(...root.querySelectorAll<HTMLElement>(candidates));
-      popups.push(
-        ...root.querySelectorAll<HTMLElement>(
-          '[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover]',
-        ),
-      );
-      for (const node of root.querySelectorAll("*"))
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      for (
+        let node = walker.nextNode() as HTMLElement | null;
+        node;
+        node = walker.nextNode() as HTMLElement | null
+      ) {
+        if (node.closest("#internet-navigator-overlay,[data-tholi-ui]"))
+          continue;
+        if (node.matches(candidates)) elements.push(node);
+        if (node.matches(popupSelector)) popups.push(node);
         if (
           node.shadowRoot &&
           !node.closest("#internet-navigator-overlay,[data-tholi-ui]")
         )
           scan(node.shadowRoot);
+      }
     };
     if (this.incremental) {
       elements.push(...this.incremental.elements);
       roots.push(...this.incremental.roots);
-      for (const root of roots)
-        popups.push(
-          ...root.querySelectorAll<HTMLElement>(
-            'dialog,[role="dialog"],[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover]',
-          ),
-        );
+      popups.push(
+        ...[...this.incremental.surfaces].filter((element) =>
+          element.matches(popupSelector),
+        ),
+      );
       for (const e of this.semanticCache.keys())
         if (!e.isConnected || !this.incremental.elements.has(e))
           this.semanticCache.delete(e);
     } else scan(document);
-    const structureIndex = new StructureIndex(roots);
+    const structureIndex = new StructureIndex(
+      roots,
+      elements.filter((element) =>
+        element.matches('h1,h2,h3,h4,h5,h6,[role="heading"]'),
+      ),
+    );
     const activeModal = popups
       .filter(
         (p) =>
@@ -449,7 +517,7 @@ export class PageDiscovery {
           ? undefined
           : presented(e, geometrySnapshot);
         const rect = this.incremental
-          ? e.getBoundingClientRect()
+          ? geometrySnapshot.rect(e)
           : geometry
             ? clippedRect(geometry, geometrySnapshot)
             : undefined;
@@ -553,7 +621,7 @@ export class PageDiscovery {
             selected: !!e.options[i]?.selected,
             enabled: !!e.options[i] && !e.options[i].disabled,
           }));
-        const r = (geometry || e).getBoundingClientRect();
+        const r = geometrySnapshot.rect(geometry || e);
         control.visible = !!geometry;
         control.enabled =
           !e.matches(":disabled") &&
@@ -595,7 +663,7 @@ export class PageDiscovery {
           !hit.closest("#internet-navigator-overlay,[data-tholi-ui]");
         if (control.occluded) control.visible = false;
         if (cached.destination) {
-          const d = cached.destination.getBoundingClientRect();
+          const d = geometrySnapshot.rect(cached.destination);
           control.sectionVisible =
             !!presented(cached.destination) &&
             fullyUnclipped(cached.destination, geometrySnapshot) &&
@@ -749,8 +817,10 @@ export class PageDiscovery {
       let label = rawLabel;
       if (kind === "choice" && context)
         label = sanitizeText(context + ": " + label);
-      const rect = (geometry || e).getBoundingClientRect();
-      const sectionRect = destination?.getBoundingClientRect();
+      const rect = geometrySnapshot.rect(geometry || e);
+      const sectionRect = destination
+        ? geometrySnapshot.rect(destination)
+        : undefined;
       const sectionHeading =
         destination &&
         (destination.closest<HTMLElement>(headingSelector) ||
@@ -1206,7 +1276,7 @@ export class PageDiscovery {
       const s = surfaces.get(c.surfaceId || "page");
       if (s) s.projected++;
     }
-    return {
+    const page: PageSnapshot = {
       origin: base.origin,
       path,
       pageKey,
@@ -1232,5 +1302,124 @@ export class PageDiscovery {
       indexedControls: Math.min(5000, elements.length),
       screen,
     };
+    this.latestPage = page;
+    this.latestPerception = this.capturePerception(
+      page,
+      structureIndex,
+      geometrySnapshot,
+    );
+    return page;
+  }
+  private capturePerception(
+    page: PageSnapshot,
+    structure: StructureIndex,
+    geometry: GeometrySnapshot,
+  ): DiscoveryPerception | undefined {
+    const visual = window.visualViewport;
+    if (!visual) return;
+    const viewport = {
+      width: innerWidth,
+      height: innerHeight,
+      scrollX,
+      scrollY,
+      devicePixelRatio,
+      visualViewport: {
+        offsetLeft: visual.offsetLeft,
+        offsetTop: visual.offsetTop,
+        pageLeft: visual.pageLeft,
+        pageTop: visual.pageTop,
+        width: visual.width,
+        height: visual.height,
+        scale: visual.scale,
+      },
+    };
+    if (!navigationDomViewportSchema.safeParse(viewport).success) return;
+    const regions = new Map<string, DiscoveryPerception["regions"][number]>(),
+      omittedRegions = new Set<Element>(),
+      controls: DiscoveryPerception["controls"] = [];
+    let controlRegions = 0,
+      hierarchyTruncated = false,
+      regionBudgetExceeded = false;
+    for (const control of page.controls) {
+      const binding = this.bindings.get(control.id);
+      if (!binding?.element.isConnected) {
+        controlRegions++;
+        continue;
+      }
+      const { chain, truncated } = structure.perceptionOf(
+          binding.element,
+          geometry,
+        ),
+        additional = chain.filter(
+          ({ element }) => !regions.has(this.elementSurfaceId(element)),
+        );
+      hierarchyTruncated ||= truncated;
+      regionBudgetExceeded ||=
+        regions.size + additional.length > PERCEPTION_LIMITS.regions;
+      let regionId: string | undefined;
+      if (
+        truncated ||
+        regions.size + additional.length > PERCEPTION_LIMITS.regions
+      ) {
+        controlRegions++;
+        for (const { element } of additional) omittedRegions.add(element);
+      } else {
+        let parentId: string | undefined;
+        for (const { element, region } of chain) {
+          const id = this.elementSurfaceId(element);
+          if (!regions.has(id)) {
+            regions.set(id, {
+              id,
+              ...region,
+              ...(parentId ? { parentId } : {}),
+            });
+            this.regionElements.set(id, element);
+          }
+          omittedRegions.delete(element);
+          parentId = id;
+        }
+        regionId = parentId;
+      }
+      const box = clippedRect(binding.geometry, geometry);
+      controls.push({
+        controlId: control.id,
+        ...(regionId ? { regionId } : {}),
+        ...(box
+          ? {
+              bounds: {
+                x: box.left,
+                y: box.top,
+                width: box.width,
+                height: box.height,
+              },
+            }
+          : {}),
+      });
+    }
+    const partial =
+      page.partial ||
+      hierarchyTruncated ||
+      omittedRegions.size > 0 ||
+      controlRegions > 0;
+    const result = discoveryPerceptionSchema.safeParse({
+      version: 1,
+      scanId: crypto.randomUUID(),
+      pageRevision: page.revision,
+      viewport,
+      regions: [...regions.values()],
+      controls,
+      omissions: {
+        regions: omittedRegions.size,
+        controlRegions,
+        hierarchyTruncated,
+        partial,
+        reasons: [
+          ...(page.partial ? ["partial-scan"] : []),
+          ...(regionBudgetExceeded ? ["budget"] : []),
+          ...(hierarchyTruncated ? ["unsupported"] : []),
+        ],
+      },
+    });
+    return result.success ? result.data : undefined;
   }
 }

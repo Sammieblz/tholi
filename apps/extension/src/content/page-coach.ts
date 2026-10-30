@@ -72,6 +72,11 @@ import { taskWords } from "../../../../packages/goal-planner/task-intent";
 import type { SessionView } from "../../../../packages/shared-types/index";
 import { frameElement } from "./frame-visibility";
 import { compose as composeService } from "./observation-composition";
+import type {
+  BrowserPerception,
+  ComposedDiscoveryPerception,
+  DiscoveryPerception,
+} from "../../../../packages/page-discovery/perception";
 import { verified as verifiedService } from "./outcome-verification";
 import {
   completeQueuedTask as completeQueuedTaskService,
@@ -206,6 +211,9 @@ export class PageCoach {
       get frames() {
         return owner.frames;
       },
+      get frameOmissions() {
+        return owner.frameOmissions;
+      },
       set frames(value: PageCoach["frames"]) {
         owner.frames = value;
       },
@@ -264,8 +272,24 @@ export class PageCoach {
   private inputHandoff?: BoundControl;
   private frames = new Map<
     number,
-    { documentId: string; tabId: number; page: PageSnapshot }
+    {
+      documentId: string;
+      tabId: number;
+      parentFrameId: number;
+      page: PageSnapshot;
+      perception?: DiscoveryPerception;
+    }
   >();
+  private frameOmissions: BrowserPerception["omissions"] = {
+    frames: 0,
+    regions: 0,
+    controls: 0,
+    hierarchyTruncated: false,
+    partial: false,
+    reasons: [],
+  };
+  private latestPerception?: ComposedDiscoveryPerception;
+  private perceptionPage?: PageSnapshot;
   private compositionStarted = false;
   private compositionRevision = 0;
   private compositionFingerprint = "";
@@ -392,10 +416,14 @@ export class PageCoach {
     if (this.view.history.at(-1) !== id)
       this.view.history = [...this.view.history, id].slice(-30);
   }
-  private refresh() {
+  private refresh(observed?: {
+    page: PageSnapshot;
+    perception?: DiscoveryPerception;
+  }) {
     if (!["running", "waiting"].includes(this.view.status)) return;
     const previousPage = this.view.page;
-    const page = this.compose(this.discovery.snapshot());
+    const pair = observed || this.discovery.snapshotWithPerception();
+    const page = this.compose(pair.page, pair.perception);
     this.view.page = page;
     this.view.liveDiagnostics = updateObservation(
       page,
@@ -1442,12 +1470,46 @@ export class PageCoach {
     this.requestReplan();
     this.publish(this.view);
   }
-  private compose(local: PageSnapshot): PageSnapshot {
-    return composeService(this.serviceContext(), local);
+  private compose(
+    local: PageSnapshot,
+    perception?: DiscoveryPerception,
+  ): PageSnapshot {
+    const result = composeService(this.serviceContext(), local, perception);
+    this.latestPerception = result.perception;
+    this.perceptionPage = result.page;
+    return result.page;
   }
-  frameAccess(origins: string[], limit: number) {
+  getPerception(page?: PageSnapshot) {
+    return page &&
+      page === this.perceptionPage &&
+      page.revision === this.latestPerception?.pageRevision
+      ? this.latestPerception
+      : undefined;
+  }
+  observeRegion(regionId: string, scanId: string, pageRevision: number) {
+    if (this.view.status !== "running") return;
+    const pair = this.discovery.observeRegion(regionId, scanId, pageRevision);
+    if (!pair) return;
+    this.refresh(pair);
+    return this.view.page;
+  }
+  frameAccess(
+    origins: string[],
+    limit: number,
+    omissions?: BrowserPerception["omissions"],
+  ) {
     this.frames.clear();
     this.frameVisibilityStates.clear();
+    this.latestPerception = undefined;
+    this.perceptionPage = undefined;
+    this.frameOmissions = omissions || {
+      frames: 0,
+      regions: 0,
+      controls: 0,
+      hierarchyTruncated: false,
+      partial: false,
+      reasons: [],
+    };
     this.view.frameAccess = origins;
     this.discovery.setLimit(limit);
     this.refresh();
@@ -1457,13 +1519,22 @@ export class PageCoach {
     documentId: string,
     tabId: number,
     page: PageSnapshot,
+    parentFrameId: number,
+    perception?: DiscoveryPerception,
+    deferRefresh = false,
   ) {
     if (this.view.status !== "running") return;
     const old = this.frames.get(frameId);
     if (old?.documentId === documentId && old.page.revision > page.revision)
       return;
-    this.frames.set(frameId, { documentId, tabId, page });
-    this.refresh();
+    this.frames.set(frameId, {
+      documentId,
+      tabId,
+      page,
+      parentFrameId,
+      perception,
+    });
+    if (!deferRefresh) this.refresh();
   }
   frameVisibility(
     frameId: number,
@@ -1571,6 +1642,8 @@ export class PageCoach {
     return { view: this.view };
   }
   pause() {
+    this.latestPerception = undefined;
+    this.perceptionPage = undefined;
     if (this.view.request) this.view.request = pauseQueue(this.view.request);
     this.record("canceled", "guidance-cleared");
     this.teardown();
@@ -1602,6 +1675,8 @@ export class PageCoach {
       this.replan();
   }
   stop(reason = "Navigation stopped.") {
+    this.latestPerception = undefined;
+    this.perceptionPage = undefined;
     if (this.view.journey?.workflow)
       this.view.journey.workflow.status = "canceled";
     if (this.view.request) this.view.request = stopQueue(this.view.request);

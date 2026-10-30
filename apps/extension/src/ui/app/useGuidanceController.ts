@@ -330,6 +330,7 @@ export function useGuidanceController(widget = false) {
             safeGoal,
             controller.signal,
             beginJourney(safeGoal, page.origin, saved?.strategy || strategy),
+            pageContext.perception,
           );
         } catch (error) {
           if (controller.signal.aborted) return;
@@ -408,6 +409,7 @@ export function useGuidanceController(widget = false) {
           task.goal,
           controller.signal,
           current.journey,
+          current.perception,
         );
         if (controller.signal.aborted) return;
         const latest = await api.runtime.sendMessage({

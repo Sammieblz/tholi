@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { afterEach, expect, test, vi } from "vitest";
 import {
+  buildModelProjection,
+  buildNavigationObservation,
+} from "../../../packages/goal-planner/model-context";
+import type { PageSnapshot } from "../../../packages/page-model";
+import type { BrowserPerception } from "../../../packages/page-discovery/perception";
+import {
   NAVIGATION_CONTRACT_VERSION,
   NAVIGATION_LIMITS,
   NAVIGATION_PROTOCOL,
@@ -10,6 +16,7 @@ import {
   navigationDecisionSchema,
   navigationObservationSchema,
   nativeBrowserReferenceSchema,
+  navigationProjectionBytes,
   type NavigationDecision,
   type NavigationObservation,
   type NavigationValidationContext,
@@ -17,6 +24,212 @@ import {
 
 const png = readFileSync("tests/fixtures/vision/light.png").toString("base64");
 afterEach(() => vi.unstubAllGlobals());
+
+function producerFixture() {
+  const observed = observation();
+  const controls = Array.from({ length: 3 }, (_, index) => ({
+    id: `w0000000000000001-${index + 1}`,
+    signature: `signature-${index}`,
+    role: "button",
+    label: `Preferences ${index}`,
+    context: "Workspace",
+    group: "Controls",
+    kind: "action" as const,
+    visible: true,
+    enabled: true,
+    inViewport: true,
+    revealIds: [] as string[],
+    risk: "ordinary" as const,
+  }));
+  const page: PageSnapshot = {
+    origin: "https://public.example",
+    path: "/workspace",
+    pageKey: "page",
+    stateKey: "state",
+    templateKey: "template",
+    fingerprint: "fingerprint",
+    revision: 4,
+    language: "en",
+    layout: "wide",
+    partial: false,
+    indexedControls: controls.length,
+    controls,
+  };
+  const regions: BrowserPerception["regions"] = controls.flatMap((_, index) =>
+    Array.from({ length: 12 }, (_, depth) => ({
+      id: `f0:region-${index}-${depth}`,
+      frameId: 0,
+      parentId: depth ? `f0:region-${index}-${depth - 1}` : undefined,
+      role: depth ? "region" : "dialog",
+      label: depth === 11 ? undefined : `Workspace ${index} area ${depth}`,
+      ...(depth === 11
+        ? {
+            scroll: {
+              horizontal: false,
+              vertical: true,
+              left: 0,
+              top: 20,
+              clientWidth: 250,
+              clientHeight: 60,
+              scrollWidth: 250,
+              scrollHeight: 500,
+            },
+          }
+        : {}),
+    })),
+  );
+  const perception: BrowserPerception = {
+    version: 1,
+    pageRevision: page.revision,
+    native: observed.native,
+    frames: observed.frames.map((frame) => ({
+      ...frame,
+      scanId: "10000000-0000-4000-8000-000000000004",
+      pageRevision: page.revision,
+    })),
+    regions,
+    controlRegions: controls.map((control, index) => ({
+      reference: { ...observed.native, controlId: control.id },
+      regionId: `f0:region-${index}-11`,
+      bounds: { x: 10, y: 10, width: 100, height: 20 },
+    })),
+    coverage: [
+      {
+        frameId: 0,
+        indexedControls: controls.length,
+        snapshotControls: controls.length,
+        regions: 0,
+        controlRegions: 0,
+        hierarchyTruncated: false,
+        partial: false,
+        reasons: [],
+      },
+    ],
+    omissions: {
+      frames: 0,
+      regions: 0,
+      controls: 0,
+      hierarchyTruncated: false,
+      partial: false,
+      reasons: [],
+    },
+  };
+  return { observed, page, perception };
+}
+
+test("the producer retains complete region ancestry and real scroll evidence under the shared region budget", () => {
+  const { observed, page, perception } = producerFixture();
+  const result = buildNavigationObservation(page, "Preferences", {
+    stamp: observed.stamp,
+    observedAtMs: observed.observedAtMs,
+    deadlineAtMs: observed.deadlineAtMs,
+    perception,
+  });
+  expect(result.observation).not.toBeNull();
+  const produced = result.observation!;
+  expect(navigationObservationSchema.safeParse(produced).success).toBe(true);
+  expect(produced.controls).toHaveLength(2);
+  expect(produced.regions).toHaveLength(24);
+  expect(produced.omissions).toMatchObject({
+    controls: 1,
+    regions: 12,
+    reasons: ["budget"],
+  });
+  const regionIds = new Set(produced.regions.map((region) => region.id));
+  expect(
+    produced.regions.every(
+      (region) => !region.parentId || regionIds.has(region.parentId),
+    ),
+  ).toBe(true);
+  expect(
+    produced.controls.every((control) => regionIds.has(control.regionId!)),
+  ).toBe(true);
+  expect(produced.regions.filter((region) => region.scroll)).toHaveLength(2);
+  expect(result.report.projectionBytes).toBe(
+    navigationProjectionBytes(produced),
+  );
+  expect(result.report.counts).toMatchObject({
+    indexedCandidates: 3,
+    snapshotControls: 3,
+    composedControls: 3,
+    projectedControls: 2,
+    compositionOmittedControls: 0,
+    modelOmittedControls: 1,
+  });
+});
+
+test("legacy and navigation projections share sanitized evidence without exporting cloud paths or form keys", () => {
+  const { observed, page, perception } = producerFixture();
+  page.controls = page.controls.slice(0, 1);
+  perception.controlRegions = perception.controlRegions.slice(0, 1);
+  page.indexedControls = 1;
+  perception.coverage[0].indexedControls = 1;
+  perception.coverage[0].snapshotControls = 1;
+  page.controls[0].description = "Contact someone@example.test";
+  page.controls[0].context = "Read https://private.example.test/secret";
+  page.controls[0].form = { key: "PRIVATE_FORM_KEY", authentication: "login" };
+  page.controls[0].destination = {
+    origin: page.origin,
+    path: "/PRIVATE_DESTINATION",
+    key: "private",
+  };
+  const legacy = buildModelProjection(
+    page,
+    "Preferences",
+    undefined,
+    perception,
+  );
+  const result = buildNavigationObservation(page, "Preferences", {
+    stamp: observed.stamp,
+    observedAtMs: observed.observedAtMs,
+    deadlineAtMs: observed.deadlineAtMs,
+    perception,
+  });
+  expect(result.observation).not.toBeNull();
+  expect(result.observation!.controls[0].description).toBe(
+    legacy.context.controls[0].description,
+  );
+  expect(result.observation!.controls[0].context).toBe(
+    legacy.context.controls[0].context,
+  );
+  expect(JSON.stringify(result.observation)).not.toMatch(
+    /someone@example|private\.example|PRIVATE_FORM_KEY|PRIVATE_DESTINATION/,
+  );
+  expect(JSON.stringify(result.report)).not.toMatch(
+    /Preferences|Workspace|native:root-document/,
+  );
+});
+
+test("missing, stale and invalid native perception cannot fall back to URL identity for a navigation observation", () => {
+  const { observed, page, perception } = producerFixture();
+  const input = {
+    stamp: observed.stamp,
+    observedAtMs: observed.observedAtMs,
+    deadlineAtMs: observed.deadlineAtMs,
+    perception,
+  };
+  const stale = buildNavigationObservation(page, "Preferences", {
+    ...input,
+    perception: { ...perception, pageRevision: page.revision + 1 },
+  });
+  expect(stale.observation).toBeNull();
+  expect(stale.report.reasons).toContain("stale-perception");
+  const absent = buildNavigationObservation(page, "Preferences", {
+    ...input,
+    perception: undefined as unknown as BrowserPerception,
+  });
+  expect(absent.observation).toBeNull();
+  expect(absent.report.counts.projectedControls).toBeNull();
+  expect(absent.report.reasons).toContain("missing-perception");
+  const invalid = structuredClone(perception);
+  invalid.controlRegions[0].reference.documentId = "wrong-native-document";
+  expect(
+    buildNavigationObservation(page, "Preferences", {
+      ...input,
+      perception: invalid,
+    }).observation,
+  ).toBeNull();
+});
 
 function observation(): NavigationObservation {
   const native: NavigationObservation["native"] = {
