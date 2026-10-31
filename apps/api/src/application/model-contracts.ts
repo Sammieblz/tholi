@@ -138,37 +138,4 @@ export class ModelError extends Error {
   }
 }
 
-/** Abort-safe waits for model calls and their credential/token preflights. */
-export function awaitModelOperation<T>(
-  operation: () => Promise<T> | T,
-  signal: AbortSignal,
-  interrupted: () => ModelError,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(interrupted());
-      return;
-    }
-    let finished = false;
-    const settle = (complete: () => void) => {
-      if (finished) return;
-      finished = true;
-      signal.removeEventListener("abort", aborted);
-      complete();
-    };
-    const aborted = () => settle(() => reject(interrupted()));
-    signal.addEventListener("abort", aborted, { once: true });
-    // Attach both handlers before invocation. Even ignored aborts, synchronous
-    // throws and late provider rejections cannot escape this bounded wait.
-    void Promise.resolve()
-      .then(() => {
-        if (signal.aborted) throw interrupted();
-        return operation();
-      })
-      .then(
-        (value) => (signal.aborted ? aborted() : settle(() => resolve(value))),
-        (error: unknown) =>
-          signal.aborted ? aborted() : settle(() => reject(error)),
-      );
-  });
-}
+export { awaitAbortableOperation as awaitModelOperation } from "../../../../packages/navigation-core/abort";

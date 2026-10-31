@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+import {
+  SERVICE_LIMITS,
+  SERVICE_TIMEOUT_HEADER,
+} from "../../../packages/navigation-core/contracts-service";
+import {
+  NAVIGATION_FAKE_CAPABILITY,
+  NAVIGATION_TRANSPORT_CAPABILITY,
+} from "../../../packages/navigation-core/contracts-navigation";
+import {
+  navigationModelObservation,
+  navigationModelValidation,
+  navigationModelCapture,
+} from "../../support/navigation-model-fixture";
 const privateStore = vi.hoisted(() => ({
   getPrivateSetting: vi.fn(),
   setPrivateSetting: vi.fn(),
@@ -57,7 +70,10 @@ afterEach(() => {
   vi.resetModules();
 });
 function json(value: unknown, status = 200) {
-  return new Response(JSON.stringify(value), { status });
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 it("requests only account host and authentication consent directly in the user gesture", async () => {
@@ -175,4 +191,624 @@ it("switching the service origin cancels an in-flight account exchange and disca
       ([, value]) => !value.tokens,
     ),
   ).toBe(true);
+});
+
+function inferenceFixture(images = false) {
+  const stored = {
+    origin,
+    tokens,
+    inference: {
+      profile: "fake",
+      enabled: true,
+      images,
+      accountId: account.id,
+      workspaceId: account.workspaceId,
+    },
+  };
+  saved = stored;
+  const capabilities = {
+    protocol: "tholi-service",
+    version: 1,
+    implementationVersion: "0.11.0",
+    supportedVersions: [1],
+    capabilities: [NAVIGATION_TRANSPORT_CAPABILITY, NAVIGATION_FAKE_CAPABILITY],
+    availability: {
+      authentication: true,
+      accountData: false,
+      decisions: true,
+      billing: false,
+    },
+    limits: SERVICE_LIMITS,
+  };
+  const policies = {
+    workspaceId: account.workspaceId,
+    role: "owner",
+    allowedActions: ["consents.read", "consents.write"],
+    consentPolicies: [
+      { purpose: "cloud_inference", policyVersion: "3" },
+      { purpose: "image_transmission", policyVersion: "4" },
+    ],
+  };
+  const consents = {
+    items: [
+      {
+        id: "00000000-0000-4000-8000-000000000011",
+        purpose: "cloud_inference",
+        policyVersion: "3",
+        granted: true,
+        revision: "1",
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000012",
+        purpose: "image_transmission",
+        policyVersion: "4",
+        granted: images,
+        revision: "1",
+      },
+    ],
+  };
+  const observation = navigationModelObservation();
+  if (images) navigationModelCapture(observation);
+  const validation = navigationModelValidation(observation);
+  const input = {
+    profile: "fake" as const,
+    requestId: "00000000-0000-4000-8000-000000000019",
+    observation,
+    validation,
+    policy: { timeoutMs: 25000 },
+  };
+  const decision = {
+    protocol: observation.protocol,
+    version: observation.version,
+    stamp: observation.stamp,
+    native: observation.native,
+    decision: {
+      kind: "guide",
+      reference: observation.controls[0].reference,
+      message: "Follow the highlighted control.",
+    },
+  };
+  const response = {
+    requestId: input.requestId,
+    status: "completed",
+    replayed: false,
+    decision,
+  };
+  fetchMock.mockImplementation(async (url, init) => {
+    const path = new URL(url).pathname;
+    if (path === "/api/v1/capabilities") return json(capabilities);
+    if (path.endsWith("/policies")) return json(policies);
+    if (path.endsWith("/consents")) {
+      if (init.method === "POST") {
+        const body = JSON.parse(init.body);
+        const consent = consents.items.find(
+          (item) => item.purpose === body.purpose,
+        )!;
+        Object.assign(consent, {
+          policyVersion: body.policyVersion,
+          granted: body.granted,
+          revision: String(BigInt(consent.revision) + 1n),
+        });
+        return json(consent);
+      }
+      return json(consents);
+    }
+    if (path.endsWith("/decisions")) return json(response);
+    if (path.endsWith("/cancel"))
+      return json({
+        requestId: input.requestId,
+        status: "pending",
+        cancelRequested: true,
+        cancellationConfirmed: false,
+      });
+    if (path.endsWith(`/decisions/${input.requestId}`))
+      return json({ requestId: input.requestId, status: "completed" });
+    if (path === "/api/v1/account") return json({ account, session });
+    throw new Error("Unexpected fixture request");
+  });
+  return {
+    stored,
+    capabilities,
+    policies,
+    consents,
+    input,
+    response,
+    decision,
+    validation,
+  };
+}
+
+it("saves explicit fake-profile processing/image consents for the current account without exposing tokens", async () => {
+  const f = inferenceFixture();
+  saved = { origin, tokens };
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const result = await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: true,
+    images: true,
+  });
+  expect(result).toEqual({
+    configured: true,
+    profile: "fake",
+    enabled: true,
+    images: true,
+    serverConsentUpdated: true,
+  });
+  expect(saved).toMatchObject({
+    inference: {
+      profile: "fake",
+      accountId: account.id,
+      workspaceId: account.workspaceId,
+      enabled: true,
+      images: true,
+    },
+  });
+  const posted = fetchMock.mock.calls.filter(
+    ([url, init]) =>
+      String(url).endsWith("/consents") && init.method === "POST",
+  );
+  expect(posted.map(([, init]) => JSON.parse(init.body))).toContainEqual({
+    purpose: "image_transmission",
+    policyVersion: "4",
+    granted: true,
+    expectedRevision: "1",
+  });
+  expect(JSON.stringify(result)).not.toContain(tokens.accessToken);
+  expect(JSON.stringify(result)).not.toContain(tokens.refreshToken);
+  expect(
+    f.consents.items.find((item) => item.purpose === "image_transmission")
+      ?.granted,
+  ).toBe(true);
+});
+
+it("account changes never inherit another account's inference choice", async () => {
+  inferenceFixture(true);
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await serviceAuthCommand({
+    type: "AUTH_CONFIGURE",
+    origin: "https://new-service.example.test",
+  });
+  expect(saved).toEqual({ origin: "https://new-service.example.test" });
+  await expect(
+    serviceAuthCommand({ type: "AUTH_INFERENCE_STATUS" }),
+  ).resolves.toEqual({
+    configured: false,
+    profile: "fake",
+    enabled: false,
+    images: false,
+  });
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("authenticated navigation sends one bounded original attempt after current consents and the final capture guard", async () => {
+  const f = inferenceFixture(true);
+  const events: string[] = [];
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) => {
+    events.push(
+      new URL(url).pathname.endsWith("/decisions") ? "decision" : "metadata",
+    );
+    return original(url, init);
+  });
+  const guard = vi.fn(async () => {
+    events.push("capture");
+  });
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  await expect(
+    backendNavigation(f.input, () => f.validation, guard),
+  ).resolves.toEqual(f.response);
+  const decisions = fetchMock.mock.calls.filter(([url]) =>
+    String(url).endsWith("/decisions"),
+  );
+  expect(decisions).toHaveLength(1);
+  expect(events.slice(-2)).toEqual(["capture", "decision"]);
+  expect(JSON.parse(decisions[0][1].body)).toEqual(f.input);
+  expect(f.input.requestId).not.toBe(f.input.observation.stamp.requestId);
+  expect(decisions[0][1].headers.Authorization).toBe(
+    `Bearer ${tokens.accessToken}`,
+  );
+  expect(guard).toHaveBeenCalledOnce();
+});
+
+it.each(["original-binding", "changed-request-clock"])(
+  "%s cannot use a fresh-looking current context to authorize an invalid original request",
+  async (kind) => {
+    const f = inferenceFixture();
+    const current = structuredClone(f.validation);
+    if (kind === "original-binding")
+      f.input.validation.currentNative.documentId = "another-document";
+    else current.requestStartedAtMs++;
+    const { backendNavigation } =
+      await import("../../../apps/extension/src/platform/backend-client");
+    await expect(
+      backendNavigation(
+        f.input,
+        () => current,
+        vi.fn(async () => {}),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  },
+);
+
+it("a later current context cannot extend the original request deadline", async () => {
+  const f = inferenceFixture();
+  const current = structuredClone(f.validation);
+  f.input.validation.requestDeadlineMs = current.nowMs + 500;
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  await expect(
+    backendNavigation(
+      f.input,
+      () => current,
+      vi.fn(async () => {}),
+    ),
+  ).resolves.toEqual(f.response);
+  const [, request] = fetchMock.mock.calls.find(([url]) =>
+    String(url).endsWith("/decisions"),
+  )!;
+  const timeout = Number(request.headers[SERVICE_TIMEOUT_HEADER]);
+  expect(timeout).toBeGreaterThan(0);
+  expect(timeout).toBeLessThanOrEqual(500);
+  expect(JSON.parse(request.body).validation).toEqual(f.input.validation);
+});
+
+it.each(["capture", "response"])(
+  "original expiry at %s rejects the request even when current context advertises a later deadline",
+  async (phase) => {
+    const f = inferenceFixture();
+    const current = structuredClone(f.validation);
+    f.input.validation.requestDeadlineMs = current.nowMs + 500;
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (phase === "response" && String(url).endsWith("/decisions"))
+        current.nowMs = f.input.validation.requestDeadlineMs;
+      return original(url, init);
+    });
+    const { backendNavigation } =
+      await import("../../../apps/extension/src/platform/backend-client");
+    await expect(
+      backendNavigation(
+        f.input,
+        () => current,
+        async () => {
+          if (phase === "capture")
+            current.nowMs = f.input.validation.requestDeadlineMs;
+        },
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith("/decisions"),
+      ),
+    ).toHaveLength(phase === "capture" ? 0 : 1);
+  },
+);
+
+it.each(["server-revoked", "live-upgrade"])(
+  "%s during the final authenticated settings wait blocks page transmission",
+  async (kind) => {
+    const f = inferenceFixture();
+    let release!: () => void;
+    let reads = 0;
+    privateStore.getPrivateSetting.mockImplementation(async () => {
+      if (++reads === 2)
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      return saved;
+    });
+    const { backendNavigation } =
+      await import("../../../apps/extension/src/platform/backend-client");
+    const guard = vi.fn(async () => {});
+    const operation = backendNavigation(f.input, () => f.validation, guard);
+    const rejected = expect(operation).rejects.toThrow();
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    if (kind === "server-revoked") f.consents.items[0].granted = false;
+    else f.capabilities.capabilities = [NAVIGATION_TRANSPORT_CAPABILITY];
+    release();
+    await rejected;
+    expect(guard).not.toHaveBeenCalled();
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith("/decisions"),
+      ),
+    ).toHaveLength(0);
+  },
+);
+
+it("credential rotation during the final native guard prevents an upload using the old bearer", async () => {
+  const f = inferenceFixture();
+  const rotated = {
+    ...tokens,
+    accessToken: "b".repeat(43),
+    refreshToken: "s".repeat(43),
+  };
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) =>
+    String(url).endsWith("/auth/refresh") ? json(rotated) : original(url, init),
+  );
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await expect(
+    backendNavigation(
+      f.input,
+      () => f.validation,
+      async () => {
+        await serviceAuthCommand({ type: "AUTH_REFRESH" });
+      },
+    ),
+  ).rejects.toThrow();
+  expect(saved).toMatchObject({ tokens: rotated });
+  expect(
+    fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/decisions")),
+  ).toHaveLength(0);
+});
+
+it.each(["local-off", "image-off", "server-revoked", "live-upgrade"])(
+  "%s blocks inference data without changing the legacy connection",
+  async (kind) => {
+    const f = inferenceFixture(true);
+    if (kind === "local-off")
+      f.stored.inference.enabled = f.stored.inference.images = false;
+    if (kind === "image-off") f.stored.inference.images = false;
+    if (kind === "server-revoked") f.consents.items[0].granted = false;
+    if (kind === "live-upgrade")
+      f.capabilities.capabilities = [NAVIGATION_TRANSPORT_CAPABILITY];
+    const { backendNavigation } =
+      await import("../../../apps/extension/src/platform/backend-client");
+    await expect(
+      backendNavigation(
+        f.input,
+        () => f.validation,
+        vi.fn(async () => {}),
+      ),
+    ).rejects.toThrow();
+    expect(
+      fetchMock.mock.calls.every(
+        ([url]) => !String(url).endsWith("/decisions"),
+      ),
+    ).toBe(true);
+    expect(privateStore.setPrivateSetting).not.toHaveBeenCalled();
+  },
+);
+
+it("caller cancellation while protected settings ignore abort settles the transport and prevents late egress", async () => {
+  const f = inferenceFixture();
+  let release!: (value: unknown) => void;
+  privateStore.getPrivateSetting.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const controller = new AbortController();
+  const operation = backendNavigation(
+    f.input,
+    () => f.validation,
+    vi.fn(async () => {}),
+    controller.signal,
+  );
+  const rejected = expect(operation).rejects.toMatchObject({
+    code: "CANCELLED",
+  });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  controller.abort();
+  await rejected;
+  release(saved);
+  await Promise.resolve();
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("capture invalidation after consent preflight prevents the context upload", async () => {
+  const f = inferenceFixture(true);
+  const controller = new AbortController();
+  const guard = vi.fn(async () => {
+    controller.abort();
+  });
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  await expect(
+    backendNavigation(f.input, () => f.validation, guard, controller.signal),
+  ).rejects.toMatchObject({ code: "CANCELLED" });
+  expect(guard).toHaveBeenCalledOnce();
+  expect(
+    fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/decisions")),
+  ).toHaveLength(0);
+});
+
+it("local disable immediately aborts an in-flight span and reports unconfirmed remote withdrawal accurately", async () => {
+  const f = inferenceFixture();
+  let release!: (value: Response) => void;
+  fetchMock.mockImplementation((url) =>
+    String(url).endsWith("/capabilities")
+      ? new Promise<Response>((resolve) => {
+          release = resolve;
+        })
+      : Promise.reject(new Error("SYNTHETIC_OFFLINE")),
+  );
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const operation = backendNavigation(
+    f.input,
+    () => f.validation,
+    vi.fn(async () => {}),
+  );
+  const rejected = expect(operation).rejects.toMatchObject({
+    code: "CANCELLED",
+  });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  const disabled = await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: false,
+    images: false,
+  });
+  await rejected;
+  expect(disabled).toMatchObject({
+    enabled: false,
+    images: false,
+    serverConsentUpdated: false,
+  });
+  expect(saved).not.toHaveProperty("inference");
+  release(json(f.capabilities));
+  await Promise.resolve();
+  expect(
+    fetchMock.mock.calls.every(([url]) => !String(url).endsWith("/decisions")),
+  ).toBe(true);
+});
+
+it("status and cancellation remain account-scoped metadata operations without repeating generation", async () => {
+  const f = inferenceFixture();
+  const { backendNavigationStatus, cancelBackendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  expect(await backendNavigationStatus(f.input.requestId)).toEqual({
+    requestId: f.input.requestId,
+    status: "completed",
+  });
+  expect(await cancelBackendNavigation(f.input.requestId)).toEqual({
+    requestId: f.input.requestId,
+    status: "pending",
+    cancelRequested: true,
+    cancellationConfirmed: false,
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  expect(fetchMock.mock.calls[1][1].body).toBe("{}");
+});
+
+it("native permission revocation during capability discovery prevents subsequent context transmission", async () => {
+  const f = inferenceFixture(true);
+  let release!: (value: Response) => void;
+  fetchMock.mockImplementationOnce(
+    () =>
+      new Promise<Response>((resolve) => {
+        release = resolve;
+      }),
+  );
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const guard = vi.fn(async () => {});
+  const operation = backendNavigation(f.input, () => f.validation, guard);
+  const rejected = expect(operation).rejects.toThrow();
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  contains.mockResolvedValue(false);
+  release(json(f.capabilities));
+  await rejected;
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(guard).not.toHaveBeenCalled();
+});
+
+it.each(["credits", "storage"])(
+  "%s exhaustion is surfaced without checkout, fallback or an automatic generation retry",
+  async (reason) => {
+    const f = inferenceFixture();
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) =>
+      String(url).endsWith("/decisions")
+        ? json(
+            {
+              error: {
+                code: "QUOTA_EXCEEDED",
+                message: `${reason} allowance exhausted.`,
+                requestId: f.input.requestId,
+                retryable: false,
+              },
+            },
+            429,
+          )
+        : original(url, init),
+    );
+    const { backendNavigation } =
+      await import("../../../apps/extension/src/platform/backend-client");
+    await expect(
+      backendNavigation(
+        f.input,
+        () => f.validation,
+        vi.fn(async () => {}),
+      ),
+    ).rejects.toMatchObject({
+      code: "QUOTA_EXCEEDED",
+      status: 429,
+      retryable: false,
+    });
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith("/decisions"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      fetchMock.mock.calls.every(([url]) => !String(url).includes("checkout")),
+    ).toBe(true);
+  },
+);
+
+it("a changed logical context rejects a late valid provider proposal", async () => {
+  const f = inferenceFixture();
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) => {
+    if (String(url).endsWith("/decisions"))
+      f.validation.currentStamp.contextGeneration++;
+    return original(url, init);
+  });
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  await expect(
+    backendNavigation(
+      f.input,
+      () => f.validation,
+      vi.fn(async () => {}),
+    ),
+  ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  expect(
+    fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/decisions")),
+  ).toHaveLength(1);
+});
+
+it("serialized token refresh cannot restore a concurrently disabled inference choice", async () => {
+  const f = inferenceFixture(true);
+  const expiring = {
+    ...tokens,
+    expiresAt: new Date(Date.now() - 1000).toISOString(),
+  };
+  f.stored.tokens = expiring;
+  let release!: (value: Response) => void;
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) =>
+    String(url).endsWith("/auth/refresh")
+      ? new Promise<Response>((resolve) => {
+          release = resolve;
+        })
+      : original(url, init),
+  );
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const rotating = serviceAuthCommand({ type: "AUTH_REFRESH" });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  const disabling = serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: false,
+    images: false,
+  });
+  await vi.waitFor(() => expect(saved).not.toHaveProperty("inference"));
+  const rotated = {
+    ...tokens,
+    accessToken: "b".repeat(43),
+    refreshToken: "s".repeat(43),
+  };
+  release(json(rotated));
+  await Promise.all([rotating, disabling]);
+  expect(saved).toMatchObject({ tokens: rotated });
+  expect(saved).not.toHaveProperty("inference");
 });

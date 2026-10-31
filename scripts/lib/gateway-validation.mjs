@@ -153,7 +153,8 @@ async function fixtureServer({ marker }) {
         JSON.stringify({
           url: request.url,
           headers: request.headers,
-          body: body.toString("hex"),
+          body: body.length <= 512 * 1024 ? body.toString("hex") : undefined,
+          bodyBytes: body.length,
           signatureMatches:
             signature === request.headers["x-tholi-qa-signature"],
         }),
@@ -181,18 +182,20 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
   const request = ({
     direct = false,
     website = false,
+    policyFixture = false,
     tls = true,
     path = "/health/live",
     method = "GET",
     headers = {},
     body,
+    chunked = false,
     dedicated = false,
     servername = "api.example.test",
     timeoutMs = 10000,
   } = {}) =>
     new Promise((resolve, reject) => {
       const payload = body === undefined ? undefined : Buffer.from(body);
-      const secure = tls && !direct && !website;
+      const secure = tls && !direct && !website && !policyFixture;
       let timedOut = false,
         settled = false;
       const fail = (error) => {
@@ -215,7 +218,15 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
       const req = (secure ? https : http).request(
         {
           hostname: direct ? "127.0.0.1" : proxy,
-          port: direct ? 8788 : website ? 8081 : tls ? 8443 : 8080,
+          port: direct
+            ? 8788
+            : website
+              ? 8081
+              : policyFixture
+                ? 8082
+                : tls
+                  ? 8443
+                  : 8080,
           method,
           path,
           agent: dedicated ? false : secure ? tlsAgent : plainAgent,
@@ -223,7 +234,10 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
           headers: {
             Host: "api.example.test",
             ...headers,
-            ...(payload ? { "Content-Length": payload.length } : {}),
+            ...(payload && !chunked
+              ? { "Content-Length": payload.length }
+              : {}),
+            ...(chunked ? { "Transfer-Encoding": "chunked" } : {}),
           },
         },
         (response) => {
@@ -255,7 +269,11 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
         req.destroy(new Error("Gateway request deadline."));
       });
       req.on("error", fail);
-      req.end(payload);
+      if (chunked && payload) {
+        for (let offset = 0; offset < payload.length; offset += 65536)
+          req.write(payload.subarray(offset, offset + 65536));
+        req.end();
+      } else req.end(payload);
     });
   // Labels are fixed QA operations. Never attach assertion messages or response
   // headers/bodies, which can contain credentials or provider details.
@@ -391,6 +409,104 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
       "upstream application Retry-After remains authoritative without duplicate gateway values",
     );
 
+    // This internal listener includes the actual API gateway policy but uses the
+    // existing byte-echo fixture as its fixed upstream. These are ingress-bound
+    // checks, separate from the real application's identity/model admission.
+    const decisions =
+      "/api/v1/workspaces/00000000-0000-4000-8000-000000000001/decisions";
+    const upload = Buffer.alloc(4 * 1024 * 1024, 0x20);
+    const admittedUpload = await expectResponse(
+      "decision POST ingress allowance",
+      {
+        policyFixture: true,
+        path: decisions,
+        method: "POST",
+        body: upload,
+        headers: { "Content-Type": "application/json" },
+      },
+      200,
+    );
+    privateResponse(admittedUpload);
+    assert.equal(JSON.parse(admittedUpload.body).bodyBytes, upload.length);
+    const tooLarge = await expectResponse(
+      "decision POST ingress upper bound",
+      {
+        policyFixture: true,
+        path: decisions,
+        method: "POST",
+        dedicated: true,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": 4 * 1024 * 1024 + 1,
+          Connection: "close",
+        },
+      },
+      413,
+    );
+    privateResponse(tooLarge);
+    const oversizedStream = await expectResponse(
+      "decision POST ingress rejects oversized chunked uploads",
+      {
+        policyFixture: true,
+        path: decisions,
+        method: "POST",
+        chunked: true,
+        dedicated: true,
+        body: Buffer.alloc(upload.length + 1, 0x20),
+        headers: { "Content-Type": "application/json", Connection: "close" },
+      },
+      413,
+    );
+    privateResponse(oversizedStream);
+    for (const path of [
+      "/api/v1/account",
+      decisions + "/00000000-0000-4000-8000-000000000002/cancel",
+      "/api/v1/workspaces/not-a-uuid/decisions",
+      decisions + "/",
+    ]) {
+      const ordinary = await expectResponse(
+        "ordinary ingress allowance remains bounded",
+        {
+          policyFixture: true,
+          path,
+          method: "POST",
+          dedicated: true,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": 512 * 1024 + 1,
+            Connection: "close",
+          },
+        },
+        413,
+      );
+      privateResponse(ordinary);
+    }
+    for (const method of ["GET", "OPTIONS"]) {
+      for (const chunked of [false, true]) {
+        const unsupportedBody = await expectResponse(
+          "non-POST decision ingress rejects request bodies",
+          {
+            policyFixture: true,
+            path: decisions,
+            method,
+            chunked,
+            body: "synthetic",
+          },
+          413,
+        );
+        privateResponse(unsupportedBody);
+      }
+    }
+    const bodylessOptions = await expectResponse(
+      "decision ingress preserves bodyless OPTIONS forwarding",
+      { policyFixture: true, path: decisions, method: "OPTIONS" },
+      200,
+    );
+    privateResponse(bodylessOptions);
+    check(
+      "actual shared API gateway policy permits bounded decision POST uploads only and retains ordinary route limits and bodyless OPTIONS",
+    );
+
     for (const direct of [false, true]) {
       const boundary = direct ? "direct API" : "TLS proxy";
       const denied = await expectResponse(
@@ -404,22 +520,24 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
       );
       privateResponse(denied);
       assert.notEqual(denied.headers["x-request-id"], "attacker-controlled");
-      const preflight = await expectResponse(
-        boundary + " allowed CORS preflight",
-        {
-          direct,
-          path: "/api/v1/support/requests",
-          method: "OPTIONS",
-          headers: {
-            Origin: origin,
-            "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "Content-Type",
+      for (const path of ["/api/v1/support/requests", decisions]) {
+        const preflight = await expectResponse(
+          boundary + " allowed CORS preflight",
+          {
+            direct,
+            path,
+            method: "OPTIONS",
+            headers: {
+              Origin: origin,
+              "Access-Control-Request-Method": "POST",
+              "Access-Control-Request-Headers": "Content-Type",
+            },
           },
-        },
-        204,
-      );
-      assert.equal(preflight.headers["access-control-allow-origin"], origin);
-      privateResponse(preflight);
+          204,
+        );
+        assert.equal(preflight.headers["access-control-allow-origin"], origin);
+        privateResponse(preflight);
+      }
       const forbidden = await expectResponse(
         boundary + " denied CORS preflight",
         {
@@ -682,7 +800,8 @@ export async function runGatewayChecks({
     );
     const qa = qaApi.replace(
       /\}\s*$/,
-      "    server {\n        listen 8081;\n        server_name api.example.test;\n        root /usr/share/tholi-qa;\n        include /etc/nginx/tholi-website.conf;\n    }\n}\n",
+      "    server {\n        listen 8081;\n        server_name api.example.test;\n        root /usr/share/tholi-qa;\n        include /etc/nginx/tholi-website.conf;\n    }\n" +
+        "    server {\n        listen 8082;\n        server_name api.example.test;\n        set $tholi_upstream api:18889;\n        include /etc/nginx/tholi-api.conf;\n    }\n}\n",
     );
     await writeFile(join(temporary, "nginx.conf"), qa, { mode: 0o644 });
     const start = `${source(fixtureServer)}(${JSON.stringify({ marker })}).catch(()=>process.exitCode=1);`;

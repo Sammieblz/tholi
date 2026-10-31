@@ -40,6 +40,7 @@ export interface ServiceApiOptions {
   identity?: IdentityOptions;
   database?: DatabaseOptions;
   support?: SupportRuntimeOptions;
+  navigation?: { provider: "fake" };
 }
 
 /** Replica-local delivery limits, separate from identity, account and credit authority. */
@@ -308,11 +309,25 @@ export function validateServiceOptions(
   const observability = options.observability
     ? validateObservabilityOptions(options.observability, "tholi-api")
     : undefined;
+  let navigation: ServiceApiOptions["navigation"];
+  if (options.navigation !== undefined) {
+    const parsed = z
+      .object({ provider: z.literal("fake") })
+      .strict()
+      .safeParse(options.navigation);
+    if (!parsed.success)
+      throw new Error("Invalid navigation transport configuration.");
+    navigation = parsed.data;
+  }
   if (!!options.identity !== !!options.database)
     throw new Error(
       "Identity requires explicit service database configuration.",
     );
   if (!options.identity) {
+    if (navigation)
+      throw new Error(
+        "Navigation transport requires the composed identity profile.",
+      );
     if (options.support)
       throw new Error("Support requires the composed identity profile.");
     return { origins, transport, ...(observability ? { observability } : {}) };
@@ -337,6 +352,7 @@ export function validateServiceOptions(
     identity,
     ...(observability ? { observability } : {}),
     database: { ...options.database! },
+    ...(navigation ? { navigation } : {}),
     ...(options.support
       ? {
           support: validateSupportRuntime(
@@ -952,8 +968,18 @@ export function parseServiceConfig(env: Environment) {
   const model = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
   if (model !== "fake")
     throw new Error(
-      "The HTTP service remains cloud-free. Live adapters are restricted to the approved model experiment; authenticated inference transport is milestone #40.",
+      "The HTTP service remains cloud-free. Live HTTP adapters require production quota admission; use the separately approved model experiment.",
     );
+  const navigation = environmentValue(
+    env,
+    "THOLI_NAVIGATION_TRANSPORT_ENABLED",
+  );
+  if (
+    navigation !== undefined &&
+    navigation !== "true" &&
+    navigation !== "false"
+  )
+    throw new Error("Invalid navigation transport availability configuration.");
   const platformPort = environmentValue(env, "PORT");
   const servicePort = environmentValue(env, "THOLI_SERVICE_PORT");
   if (
@@ -1005,6 +1031,9 @@ export function parseServiceConfig(env: Environment) {
           : [],
       },
       ...(identity ? { identity, database: parseDatabaseConfig(env) } : {}),
+      ...(navigation === "true"
+        ? { navigation: { provider: "fake" as const } }
+        : {}),
       ...(supportEnabled(env)
         ? {
             support: {

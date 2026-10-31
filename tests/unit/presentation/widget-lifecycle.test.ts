@@ -1,6 +1,8 @@
 import type { Runtime } from "../../../apps/extension/src/platform/api";
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import type { PinnedSession } from "../../../packages/route-registry/session";
 import { dockIntent } from "../../../apps/extension/src/ui/widget/presentation-state";
 import { contentMessageSchema } from "../../../packages/route-schema/index";
@@ -131,6 +133,136 @@ it("account RPC accepts only the exact privileged panel and never waits for jour
     expect(respond).toHaveBeenCalledWith({ configured: false }),
   );
   expect(enqueue).not.toHaveBeenCalled();
+});
+
+it("inference configuration fences capture immediately outside a blocked routine queue", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const auth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const operation = vi
+    .spyOn(auth, "serviceAuthCommand")
+    .mockImplementation(() => new Promise(() => {}));
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  const cancelVision = vi.fn();
+  const enqueue = vi.fn(() => new Promise(() => {}));
+  registerMessages({ session, cancelVision, enqueue } as any);
+  const handle = listen.mock.calls[0][0];
+  const command = {
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: false,
+    images: false,
+  };
+  handle(command, sender, vi.fn());
+  expect(cancelVision).not.toHaveBeenCalled();
+  expect(operation).not.toHaveBeenCalled();
+  handle(
+    command,
+    { ...sender, url: api.runtime.getURL("sidepanel.html") },
+    vi.fn(),
+  );
+  expect(cancelVision).toHaveBeenCalledOnce();
+  expect(operation).toHaveBeenCalledWith(command);
+  expect(enqueue).not.toHaveBeenCalled();
+});
+
+it("inference choices keep the native request in the enabling gesture and disabling never requests another grant", async () => {
+  const { api } = environment();
+  const events: string[] = [];
+  const request = vi.fn(async () => {
+    events.push("permission");
+    return true;
+  });
+  Object.assign(api, { permissions: { request } });
+  const origin = "https://service.example.test";
+  const rpc = vi.fn(
+    async (message: { type: string; enabled?: boolean; images?: boolean }) => {
+      if (message.type === "AUTH_STATUS")
+        return {
+          configured: true,
+          origin,
+          account: {
+            id,
+            workspaceId: "00000000-0000-4000-8000-000000000002",
+            revision: "1",
+          },
+          session: {
+            id,
+            clientId: "extension-chromium",
+            clientKind: "extension",
+            expiresAt: new Date(Date.now() + 60000).toISOString(),
+          },
+        };
+      if (message.type === "AUTH_INFERENCE_STATUS")
+        return {
+          configured: true,
+          profile: "fake",
+          enabled: false,
+          images: false,
+        };
+      if (message.type === "AUTH_INFERENCE_CONFIGURE") {
+        events.push(message.enabled ? "enable" : "disable");
+        return {
+          configured: true,
+          profile: "fake",
+          enabled: !!message.enabled,
+          images: !!message.images,
+          serverConsentUpdated: true,
+        };
+      }
+      throw new Error("Unexpected fixture command");
+    },
+  );
+  Object.assign(api.runtime, { sendMessage: rpc });
+  const { AccountSettings } =
+    await import("../../../apps/extension/src/ui/features/account/AccountSettings");
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const reactGlobals = globalThis as typeof globalThis & {
+    IS_REACT_ACT_ENVIRONMENT?: boolean;
+  };
+  const previousAct = reactGlobals.IS_REACT_ACT_ENVIRONMENT;
+  reactGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+  try {
+    await act(async () => root.render(createElement(AccountSettings)));
+    const fieldset = container.querySelector<HTMLFieldSetElement>(
+      ".tholi-inference-settings",
+    )!;
+    expect(fieldset).not.toBeNull();
+    const checkbox = fieldset.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    const described = checkbox.getAttribute("aria-describedby")!;
+    expect(document.getElementById(described)?.textContent).toContain(
+      "consent",
+    );
+    await act(async () => checkbox.click());
+    expect(request).not.toHaveBeenCalled();
+    const save = [...fieldset.querySelectorAll("button")].find(
+      (button) => button.textContent === "Save inference choices",
+    )!;
+    await act(async () => {
+      save.click();
+      expect(request).toHaveBeenCalledOnce();
+      expect(events).toEqual(["permission"]);
+    });
+    expect(events).toEqual(["permission", "enable"]);
+    expect(request).toHaveBeenCalledWith({ origins: [origin + "/*"] });
+    await act(async () => checkbox.click());
+    expect(events).toEqual(["permission", "enable", "disable"]);
+    expect(request).toHaveBeenCalledOnce();
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "withdrawal confirmed",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    reactGlobals.IS_REACT_ACT_ENVIRONMENT = previousAct;
+  }
 });
 
 it("Pause and Stop bypass a blocked routine queue and unresponsive page without accepting stale controls", async () => {

@@ -711,6 +711,74 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     );
 
     await record(
+      "conditional request completion cannot overwrite cancellation from another replica",
+      async () => {
+        const scope = await provision();
+        const { request } = await repositories.transaction(scope, (scoped) =>
+          scoped.beginRequest({
+            operation: "navigation-decisions.v1",
+            idempotencyKey: randomUUID(),
+            payloadHash: "d".repeat(64),
+          }),
+        );
+        let observed!: () => void, release!: () => void;
+        const pendingRead = new Promise<void>((resolve) => {
+          observed = resolve;
+        });
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const completion = repositories.transaction(scope, async (scoped) => {
+          assert.equal(
+            (await scoped.getRequest(request.id))?.status,
+            "pending",
+          );
+          observed();
+          await held;
+          return scoped.setRequestStatus(request.id, "completed", "pending");
+        });
+        const rejected = assert.rejects(completion, { code: "CONFLICT" });
+        try {
+          await pendingRead;
+          const cancelled = await repositories.transaction(scope, (scoped) =>
+            scoped.setRequestStatus(request.id, "uncertain", "pending"),
+          );
+          assert.equal(cancelled.status, "uncertain");
+        } finally {
+          release();
+        }
+        await rejected;
+        assert.equal(
+          (
+            await repositories.transaction(scope, (scoped) =>
+              scoped.getRequest(request.id),
+            )
+          )?.status,
+          "uncertain",
+        );
+        // Existing reconciliation callers retain their unconditional transition.
+        await repositories.transaction(scope, (scoped) =>
+          scoped.setRequestStatus(request.id, "completed"),
+        );
+        await assert.rejects(
+          () =>
+            repositories.transaction(scope, (scoped) =>
+              scoped.setRequestStatus(request.id, "uncertain", "pending"),
+            ),
+          { code: "CONFLICT" },
+        );
+        assert.equal(
+          (
+            await repositories.transaction(scope, (scoped) =>
+              scoped.getRequest(request.id),
+            )
+          )?.status,
+          "completed",
+        );
+      },
+    );
+
+    await record(
       "concurrent credit reservations cannot overspend and settlement is idempotent",
       async () => {
         const scope = await provision();

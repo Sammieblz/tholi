@@ -14,8 +14,8 @@ export const identityErrorResponses = Object.fromEntries(
     { $ref: "ServiceError#" },
   ]),
 );
-const jsonSchema = (schema: z.ZodTypeAny) =>
-  zodToJsonSchema(schema, { target: "openApi3" });
+const jsonSchema = (schema: z.ZodTypeAny, target: "openApi3" | "jsonSchema7") =>
+  zodToJsonSchema(schema, { target });
 
 /** Shared HTTP credential delivery; application services never inspect headers or cookies. */
 export function createIdentityAccess(service: IdentityService) {
@@ -102,6 +102,7 @@ export function identityRouteSchema(
     protected?: boolean;
     tags?: string[];
   } = {},
+  target: "openApi3" | "jsonSchema7" = "openApi3",
 ) {
   return {
     operationId,
@@ -131,11 +132,11 @@ export function identityRouteSchema(
           },
         }
       : {}),
-    querystring: jsonSchema(input.query ?? z.object({}).strict()),
-    ...(input.body ? { body: jsonSchema(input.body) } : {}),
+    querystring: jsonSchema(input.query ?? z.object({}).strict(), target),
+    ...(input.body ? { body: jsonSchema(input.body, target) } : {}),
     response: {
       ...identityErrorResponses,
-      ...(input.response ? { 200: jsonSchema(input.response) } : {}),
+      ...(input.response ? { 200: jsonSchema(input.response, target) } : {}),
     },
   };
 }

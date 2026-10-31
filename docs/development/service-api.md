@@ -33,9 +33,10 @@ Configuring the [optional identity profile](service-identity.md) adds the
 service also advertises `tenant-authorization` and `purpose-consent` for its
 registered workspace, membership and consent operations. Its authentication and
 accountData availability flags describe these current account capabilities.
-Cloud-saved data, inference, credits and billing remain planned; decisions and
-billing availability stay false. There are no successful placeholder decision
-endpoints.
+Cloud-saved data, credit enforcement and billing remain later milestones. By
+default, decisions and billing availability stay false. Explicitly enabling the
+fake navigation transport adds the registered decision routes described below;
+this does not enable paid inference or grant a cloud plan.
 
 The executable OpenAPI document contains the request example above, bounded
 schemas and common error definitions. Its `paths` describe registered operations
@@ -50,7 +51,71 @@ not executable paths or a commitment that the feature is available.
 Configured services also expose actor-private [job status and cancellation](service-jobs.md).
 The `durable-jobs` capability indicates these registered routes. Dispatch and
 operator recovery run independently of HTTP; no public enqueue or retry endpoint
-is available. Inference and billing availability remain false.
+is available. Job capabilities do not enable inference or billing.
+
+## Opt-in development navigation transport
+
+`THOLI_NAVIGATION_TRANSPORT_ENABLED=true` enables the existing service profile's
+fake navigation adapter. Identity and PostgreSQL must be configured, and
+`THOLI_MODEL_PROVIDER` must remain `fake`. The default is disabled, including in
+Compose. Live Vertex inference remains an operator experiment until durable cost
+controls are implemented; this flag cannot select it.
+
+The configured service advertises both `navigation-decisions` and
+`fake-navigation-model`, with `availability.decisions: true`. Clients require
+both capabilities and send an explicit `profile: "fake"`. Changing a provider or
+advertising a new capability cannot silently upgrade that consent. A successful
+handshake still grants no identity, site permission or processing consent.
+
+| Operation            | Route                                                              | Result                                                                                 |
+| -------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Request a proposal   | `POST /api/v1/workspaces/:workspaceId/decisions`                   | Original validated proposal, or status-only idempotent replay                          |
+| Read request status  | `GET /api/v1/workspaces/:workspaceId/decisions/:requestId`         | Actor-private request status, without page data or a saved proposal                    |
+| Request cancellation | `POST /api/v1/workspaces/:workspaceId/decisions/:requestId/cancel` | Cancellation intent with `cancellationConfirmed: false`; requires an empty JSON object |
+
+The request contains an independent transport UUID, the original Nav1 observation
+and validation clocks, and the bounded shared request policy. It preserves the
+logical browser request UUID, native document identity and original deadline.
+Only the exact UUID-scoped decision collection POST accepts up to 4 MiB of encoded
+JSON; the ordinary API ceiling remains 512 KiB. The observation retains its
+24,000-byte projected-structure, 2 MiB decoded PNG and four-megapixel limits.
+Navigation responses are limited to 32 KiB. The client, actual gateway and API
+each enforce their own boundary.
+
+In the extension's existing account settings, development transmission requires
+a signed-in account, selected authorized workspace, explicit page-context consent
+and current native website/service access. Masked images require their separate
+choice and `image.transmit` consent. The account/workspace-bound choices are off
+by default and do not inherit private-backend consent. Server processing uses
+the existing `inference.request` purpose. Disabling, signing out or revoking access
+stops new observation egress and aborts active client waits. Failed server consent
+withdrawal is reported separately from the immediately disabled local choice.
+
+The existing platform transport owns credentials and the last native capture
+check. Credentials never enter observation bodies or content/page scripts. Each
+send rechecks capabilities, processing consents, local choices and grants. The
+API authenticates before accepting the larger body, then revalidates identity,
+workspace membership and purpose before model work and before releasing a
+proposal. Loopback HTTP supports local Compose; VM and hosted origins require
+HTTPS and explicit native permission. No unavailable endpoint triggers fallback,
+checkout, a second provider or automatic upload of the local collection.
+
+The request ledger uses `navigation-decisions.v1` under the existing
+workspace/actor-scoped idempotency owner. It persists metadata and a canonical
+command hash, not observations, images or proposals. Identical replays return
+status only; different content under the same key is rejected. Neither side
+automatically retries inference. A shortened deadline includes time spent in
+authentication and final transmission checks. Cancellation can record uncertain
+work and abort the local operation, but never proves cross-replica/provider
+cancellation, zero billing or a completed installation/task.
+
+This milestone exposes transport to the trusted background owner. Integration
+with the single journey and its independent outcome verification is #41;
+expanded status/recovery presentation is #42. It does not enable automatic cloud
+guidance for ordinary users. Existing account-scoped errors preserve revoked
+access, unavailable service and exhausted credit/storage conditions without
+opening payment flows. Server-authoritative plans and durable cost enforcement
+remain #44 and #58.
 
 ## Validation, errors and privacy
 
@@ -61,9 +126,9 @@ validating real HTTP responses with the same schemas. No legacy backend client
 is silently switched to this profile.
 
 JSON bodies reject unknown fields and type coercion. The service JSON ceiling is
-512 KiB; the small handshake has an 8 KiB ceiling. Each later route must declare
-its smaller purpose-specific bounds. The multimodal envelope and its separate
-image/request budgets belong to #36. An unknown query field is rejected on the
+512 KiB; the small handshake has an 8 KiB ceiling. The explicitly enabled
+navigation POST alone has the larger bounded envelope described above. Other
+routes retain their purpose-specific limits. An unknown query field is rejected on the
 discovery routes. HTTP pagination accepts canonical integer query strings, with
 an explicit parser rather than global AJV coercion; pages contain at most 100
 items and cursors contain at most 512 URL-safe characters. Cursors are opaque to
@@ -143,8 +208,10 @@ become a durable replay queue.
 Future workspace/domain mutations use the existing repository request ledger, not process-local
 deduplication. The identity is `(workspace, actor, operation/version, key)`, bound
 to a server-computed canonical-command SHA-256 hash. Canonicalization occurs
-after strict validation, includes the operation version, and excludes transport
-metadata. Replay with different command content is 409 `IDEMPOTENCY_CONFLICT`.
+after strict validation and includes the operation version. HTTP correlation IDs
+and forwarding headers are not command data. Navigation binds the complete
+validated command, including its independent request UUID and original clocks.
+Replay with different command content is 409 `IDEMPOTENCY_CONFLICT`.
 An identical replay reads the committed request/result state; an uncertain
 external effect requires reconciliation, not an automatic second billable call.
 The ledger, mutation and outbox updates belong in one scoped transaction where
@@ -163,3 +230,5 @@ read, export and deletion permissions stay separate from inference credits.
 
 See [the #29 validation record](testing/service-api-validation.md). These checks
 do not certify an archive, enable a paid provider or deploy a service.
+The [#40 transport record](testing/inference-transport-validation.md) separately
+tracks the explicitly enabled fake navigation routes and their client guards.

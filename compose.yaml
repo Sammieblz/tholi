@@ -79,6 +79,7 @@ services:
       THOLI_SERVICE_PORT: "8788"
       THOLI_SERVICE_ORIGINS: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
       THOLI_MODEL_PROVIDER: fake
+      THOLI_NAVIGATION_TRANSPORT_ENABLED: ${THOLI_NAVIGATION_TRANSPORT_ENABLED:-false}
       THOLI_DATABASE_URL: postgresql://tholi_runtime:${THOLI_DB_PASSWORD:?Initialize the local environment first}@postgres:5432/tholi
       THOLI_IDENTITY_ISSUER: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local
       THOLI_IDENTITY_AUTHORIZATION_ENDPOINT: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local/protocol/openid-connect/auth

@@ -1,5 +1,6 @@
 import type { SavedTask } from "../../../../packages/page-model";
 import type { DatabaseScope } from "./postgres";
+import type { ServiceRequestStatus } from "../../../../packages/navigation-core/contracts-service";
 import type {
   JobErrorCode,
   JobResult,
@@ -53,7 +54,7 @@ export interface Consent {
   revision: bigint;
 }
 
-export type RequestStatus = "pending" | "completed" | "failed" | "uncertain";
+export type RequestStatus = ServiceRequestStatus;
 export interface ServiceRequest {
   id: string;
   operation: string;

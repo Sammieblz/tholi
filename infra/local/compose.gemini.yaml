@@ -1,5 +1,7 @@
 # Explicit future opt-in only. The current service rejects this provider even
-# with these settings. No live adapter, credentials or egress are enabled here.
+# with these settings. The separately approved operator adapter does not enable
+# live HTTP inference; customer quota/credit admission is still required. No
+# credentials or external egress are enabled by this placeholder.
 services:
   api:
     profiles: [gemini]

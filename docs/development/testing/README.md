@@ -37,6 +37,11 @@ deterministic proposals, shared reference admission, the bounded Vertex adapter
 and single-use operator approvals. Injected provider tests do not establish live
 availability, billing, retention or navigation quality. Ordinary CI stays cloud-free.
 
+The [inference-transport validation record](inference-transport-validation.md)
+tracks #40's opt-in fake service, final browser transmission guards, authenticated
+HTTP, request metadata and cancellation races. Transport checks do not establish
+live provider quality, cloud-plan availability or release certification.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`

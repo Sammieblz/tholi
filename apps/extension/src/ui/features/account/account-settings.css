@@ -1,4 +1,5 @@
-.tholi-account-settings {
+.tholi-account-settings,
+.tholi-inference-settings {
   margin: 16px 0;
   padding: 16px 0;
   border: 0;
@@ -19,7 +20,7 @@
   font-weight: 600;
   margin-bottom: 8px;
 }
-.tholi-account-settings input {
+.tholi-account-settings input:not([type="checkbox"]) {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -38,6 +39,18 @@
 }
 .tholi-account-settings button {
   min-height: 44px;
+}
+.tholi-account-settings .tholi-inference-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  line-height: 1.6;
+}
+.tholi-inference-choice input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+  padding: 0;
 }
 .tholi-account-id {
   overflow-wrap: anywhere;

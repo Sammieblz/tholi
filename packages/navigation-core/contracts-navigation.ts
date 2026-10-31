@@ -2,7 +2,11 @@ import { z } from "zod";
 import { controlId, controlSchema, progressSchema } from "../page-model";
 import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
 import { inspectPngData } from "../vision/png";
-import { SERVICE_LIMITS } from "./contracts-service";
+import {
+  SERVICE_LIMITS,
+  serviceRequestPolicySchema,
+  serviceRequestStatusSchema,
+} from "./contracts-service";
 
 export const NAVIGATION_PROTOCOL = "tholi-navigation";
 export const NAVIGATION_CONTRACT_VERSION = 1;
@@ -648,7 +652,7 @@ export type NavigationContext = z.infer<typeof navigationContextSchema>;
 export type NavigationObservation = z.infer<typeof navigationObservationSchema>;
 export type NavigationDecision = z.infer<typeof navigationDecisionSchema>;
 
-const validationContextSchema = z
+export const navigationValidationContextSchema = z
   .object({
     currentStamp: navigationStampSchema,
     currentNative: nativeBrowserReferenceSchema,
@@ -659,7 +663,7 @@ const validationContextSchema = z
   })
   .strict();
 export type NavigationValidationContext = z.infer<
-  typeof validationContextSchema
+  typeof navigationValidationContextSchema
 >;
 export type NavigationJoinResult =
   | {
@@ -734,7 +738,7 @@ export function validateNavigationObservationContext(
   const observed = navigationObservationSchema.safeParse(rawObservation);
   if (!observed.success)
     return { accepted: false, reason: "INVALID_OBSERVATION" };
-  const checked = validationContextSchema.safeParse(rawContext);
+  const checked = navigationValidationContextSchema.safeParse(rawContext);
   if (!checked.success) return { accepted: false, reason: "INVALID_CONTEXT" };
   return (
     rejectNavigationContext(observed.data, checked.data) || {
@@ -756,7 +760,7 @@ export function joinNavigationDecision(
     return { accepted: false, reason: "INVALID_OBSERVATION" };
   const proposed = navigationDecisionSchema.safeParse(rawDecision);
   if (!proposed.success) return { accepted: false, reason: "INVALID_DECISION" };
-  const checked = validationContextSchema.safeParse(rawContext);
+  const checked = navigationValidationContextSchema.safeParse(rawContext);
   if (!checked.success) return { accepted: false, reason: "INVALID_CONTEXT" };
   const observation = observed.data,
     response = proposed.data;
@@ -788,3 +792,69 @@ export function joinNavigationDecision(
     return { accepted: false, reason: "UNKNOWN_REFERENCE" };
   return { accepted: true, decision: response };
 }
+
+export const NAVIGATION_TRANSPORT_CAPABILITY = "navigation-decisions";
+export const NAVIGATION_FAKE_CAPABILITY = "fake-navigation-model";
+export const NAVIGATION_TRANSPORT_OPERATION = "navigation-decisions.v1";
+export const NAVIGATION_TRANSPORT_LIMITS = Object.freeze({
+  maxBodyBytes: NAVIGATION_LIMITS.maxEnvelopeBytes,
+  maxResponseBytes: 32768,
+});
+
+/** The caller's clock and original identities are never replaced by server time. */
+export const navigationTransportInputSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    profile: z.literal("fake"),
+    observation: navigationObservationSchema,
+    validation: navigationValidationContextSchema,
+    policy: serviceRequestPolicySchema.default({}),
+  })
+  .strict();
+export type NavigationTransportInput = z.infer<
+  typeof navigationTransportInputSchema
+>;
+
+export const navigationRequestStatusSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    status: serviceRequestStatusSchema,
+  })
+  .strict();
+export type NavigationRequestStatus = z.infer<
+  typeof navigationRequestStatusSchema
+>;
+
+/** Replays acknowledge owned work; they never restart inference or cache page data. */
+export const navigationTransportResponseSchema = navigationRequestStatusSchema
+  .extend({
+    replayed: z.boolean(),
+    decision: navigationDecisionSchema.optional(),
+  })
+  .strict()
+  .superRefine((response, context) => {
+    if (
+      (response.decision !== undefined &&
+        (response.status !== "completed" || response.replayed)) ||
+      (!response.replayed &&
+        (response.status !== "completed" || response.decision === undefined))
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Only the original completed request may return a proposal.",
+      });
+  });
+export type NavigationTransportResponse = z.infer<
+  typeof navigationTransportResponseSchema
+>;
+
+/** Acknowledged intent does not prove that a provider stopped or charged nothing. */
+export const navigationCancellationSchema = navigationRequestStatusSchema
+  .extend({
+    cancelRequested: z.boolean(),
+    cancellationConfirmed: z.literal(false),
+  })
+  .strict();
+export type NavigationCancellation = z.infer<
+  typeof navigationCancellationSchema
+>;

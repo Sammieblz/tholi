@@ -275,6 +275,15 @@ export type ServiceRequestMetadata = z.infer<
   typeof serviceRequestMetadataSchema
 >;
 
+/** Durable request progress is distinct from a model proposal or browser arrival. */
+export const serviceRequestStatusSchema = z.enum([
+  "pending",
+  "completed",
+  "failed",
+  "uncertain",
+]);
+export type ServiceRequestStatus = z.infer<typeof serviceRequestStatusSchema>;
+
 /** Destination names are intent. #30/#50 resolve an approved registered return. */
 export const serviceReturnIntentSchema = z
   .object({
