@@ -15,6 +15,7 @@ import type { ProductAnalyticsService } from "./application/analytics";
 import type { Observability } from "./application/observability";
 import type { NavigationTransportService } from "./application/navigation";
 import type { CreditService } from "./application/quotas";
+import type { PlanService } from "./application/plans";
 import { createObservability } from "./adapters/observability";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
@@ -29,6 +30,7 @@ export interface ServiceApiServices {
   observability?: Observability;
   navigation?: NavigationTransportService;
   credits?: CreditService;
+  plans?: PlanService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -93,9 +95,16 @@ async function createServiceRuntime(
   let analytics = injected.analytics;
   let navigation = injected.navigation;
   let credits = injected.credits;
+  let plans = injected.plans;
   const ownedResources = [...resources];
   if (
-    (authorization || jobs || support || analytics || navigation || credits) &&
+    (authorization ||
+      jobs ||
+      support ||
+      analytics ||
+      navigation ||
+      credits ||
+      plans) &&
     !identity
   )
     throw new Error("Authorization requires the composed identity service.");
@@ -124,6 +133,7 @@ async function createServiceRuntime(
       options.support,
       observer,
       !!options.navigation,
+      options.plans?.environment,
     ).catch(async (error) => {
       await observer.close();
       throw error;
@@ -135,6 +145,7 @@ async function createServiceRuntime(
     analytics = runtime.analytics;
     navigation = runtime.navigation;
     credits = runtime.credits;
+    plans = runtime.plans;
     ownedResources.push(...runtime.resources);
   }
   // Accept late completions during drain, then flush after application resources close.
@@ -213,6 +224,7 @@ async function createServiceRuntime(
         !!navigation,
         navigation?.evaluationMetadata,
         !!credits,
+        !!plans,
       );
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
@@ -243,6 +255,10 @@ async function createServiceRuntime(
         if (credits) {
           const { registerCreditsApi } = await import("./routes/credits");
           await registerCreditsApi(app, identity, credits);
+        }
+        if (plans) {
+          const { registerPlansApi } = await import("./routes/plans");
+          await registerPlansApi(app, identity, plans);
         }
       }
       registerHealth(app, "service", lifecycle);

@@ -13,6 +13,7 @@ import {
   createInferenceReconciliationHandler,
   INFERENCE_RECONCILIATION_JOB_KIND,
 } from "../../../apps/api/src/application/quotas";
+import { inferenceFixture } from "./inference-fixture";
 
 /** Durable accounting checks reuse the smoke database and its scoped repositories. */
 export async function runQuotaChecks(
@@ -114,52 +115,7 @@ export async function runQuotaChecks(
          global_provider_usd_micros=$2,revision=revision+1 WHERE singleton`,
       [limits.requests ?? 100000n, limits.cost ?? 100000n],
     );
-  const reserveDecision = (
-    scope: RepositoryScope,
-    policyVersion: string,
-    journeyId = randomUUID(),
-    owner = repositories,
-  ) =>
-    owner.transaction(scope, async (scoped) => {
-      const { request } = await scoped.beginRequest({
-        operation: NAVIGATION_TRANSPORT_OPERATION,
-        idempotencyKey: randomUUID(),
-        payloadHash: "b".repeat(64),
-      });
-      return scoped.reserveInference({
-        requestId: request.id,
-        journeyId,
-        policyVersion,
-        expiresAt: new Date(Date.now() + 20000),
-      });
-    });
-  const dispatch = (scope: RepositoryScope, held: InferenceReservation) =>
-    repositories.transaction(scope, (scoped) =>
-      scoped.markInferenceDispatched({
-        id: held.id,
-        claimToken: held.claimToken,
-      }),
-    );
-  const finish = (
-    held: InferenceReservation,
-    input: Omit<
-      Parameters<PostgresRepositories["finishInference"]>[0],
-      "id" | "claimToken"
-    >,
-  ) =>
-    repositories.finishInference({
-      id: held.id,
-      claimToken: held.claimToken,
-      ...(input.resolution === "not-sent"
-        ? {
-            inputUnits: 0n,
-            outputUnits: 0n,
-            providerUsdMicros: 0n,
-            chargedCredits: 0n,
-          }
-        : {}),
-      ...input,
-    });
+  const { reserveDecision, dispatch, finish } = inferenceFixture(repositories);
   const reported = (cost = 6n, chargedCredits = 1n) => ({
     resolution: "reported" as const,
     outcome: "completed" as const,

@@ -1,6 +1,7 @@
 import type { SavedTask } from "../../../../packages/page-model";
 import type { DatabaseScope } from "./postgres";
 import type { ServiceRequestStatus } from "../../../../packages/navigation-core/contracts-service";
+import type { EffectiveProductPlan } from "../../../../packages/navigation-core/contracts-plans";
 import type {
   JobErrorCode,
   JobResult,
@@ -152,6 +153,7 @@ export interface InferenceReservation {
   maxCredits: bigint;
   expiresAt: Date;
   policy: InferencePolicy;
+  effectivePlan: EffectiveProductPlan | null;
 }
 
 export interface FinishInferenceInput {

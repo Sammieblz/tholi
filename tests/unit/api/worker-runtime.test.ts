@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseWorkerConfig } from "../../../apps/api/src/config";
 import type { ManagedApplication } from "../../../apps/api/src/runtime";
 import { createWorkerRuntime, startWorker } from "../../../apps/api/src/worker";
+import { PostgresRepositories } from "../../../apps/api/src/database/repositories";
+import type { FreePlanRefills } from "../../../apps/api/src/application/plans";
 
 const boundaries = vi.hoisted(() => ({
   database: vi.fn(),
@@ -26,8 +28,8 @@ vi.mock("../../../apps/api/src/application/job-worker", () => ({
     close = boundaries.close;
     ready = () => false;
     lastHealthyAt = () => 0;
-    constructor() {
-      boundaries.constructed();
+    constructor(...args: unknown[]) {
+      boundaries.constructed(...args);
       if (boundaries.failConstruction)
         throw new Error("PRIVATE_CONSTRUCTOR_SENTINEL");
     }
@@ -61,6 +63,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const directory of directories.splice(0)) {
     const target = resolve(directory);
     if (
@@ -74,6 +77,31 @@ afterEach(async () => {
 });
 
 describe("worker composition cleanup", () => {
+  it.each([undefined, "production", "development"])(
+    "funds development Free periods only in the explicit development worker (%s)",
+    async (nodeEnvironment) => {
+      const refill = vi
+        .spyOn(PostgresRepositories.prototype, "refillFreePlans")
+        .mockResolvedValue(2);
+      const application = await createWorkerRuntime(
+        parseWorkerConfig({ ...environment, NODE_ENV: nodeEnvironment }),
+      );
+      try {
+        const maintenance = boundaries.constructed.mock.calls[0][4] as
+          FreePlanRefills | undefined;
+        if (nodeEnvironment === "development") {
+          expect(await maintenance?.refillFreePlans({ limit: 100 })).toBe(2);
+          expect(refill).toHaveBeenCalledWith({ limit: 100 });
+        } else {
+          expect(maintenance).toBeUndefined();
+          expect(refill).not.toHaveBeenCalled();
+        }
+      } finally {
+        await application.close();
+      }
+    },
+  );
+
   it("rejects an invalid health path before allocating the database", async () => {
     const config = parseWorkerConfig(environment);
     await expect(

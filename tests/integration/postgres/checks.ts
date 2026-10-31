@@ -16,6 +16,7 @@ import { runJobChecks } from "./job-checks";
 import { runSupportChecks } from "./support-checks";
 import { runObservabilityChecks } from "./observability-checks";
 import { runQuotaChecks } from "./quotas-checks";
+import { runPlanChecks } from "./plans-checks";
 import {
   beginJourney,
   saveTask,
@@ -1622,6 +1623,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     );
 
     await runQuotaChecks(runtime, migration, record, worker);
+    await runPlanChecks(runtime, migration, record, worker);
     await runIdentityChecks(runtime, migration, record);
     await runAuthorizationChecks(runtime, migration, record);
     if (worker) {

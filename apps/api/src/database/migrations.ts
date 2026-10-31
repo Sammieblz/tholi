@@ -8,6 +8,7 @@ import { durableJobs } from "./migrations/005-durable-jobs";
 import { mailStorageSupport } from "./migrations/006-mail-storage-support";
 import { portableObservability } from "./migrations/007-observability";
 import { inferenceAccounting } from "./migrations/008-inference-accounting";
+import { productPlans } from "./migrations/009-product-plans";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -39,6 +40,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(6, "mail-storage-support", mailStorageSupport),
   migration(7, "portable-observability", portableObservability),
   migration(8, "inference-accounting", inferenceAccounting),
+  migration(9, "product-plans", productPlans),
 ]);
 
 export interface MigrationOptions {
@@ -116,6 +118,16 @@ async function grantWorker(client: PoolClient, role: string) {
   )
     await client.query(`GRANT EXECUTE ON FUNCTION tholi.schedule_inference_reconciliation(integer,integer),
       tholi.reconcile_inference(uuid,uuid,uuid,uuid),tholi.inference_health() TO ${identifier}`);
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.refill_free_plans(integer)') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.refill_free_plans(integer) TO ${identifier}`,
+    );
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {
@@ -363,6 +375,13 @@ async function grantRuntime(client: PoolClient, role: string) {
       tholi.record_inference_outcome(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text),
       tholi.finish_inference(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text),
       tholi.inference_usage(uuid,uuid),tholi.refund_inference(uuid,uuid,text,bigint) TO ${identifier}`);
+  }
+  if (existing.has("free_program_enrollments")) {
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.read_product_catalog(),tholi.read_effective_product_plan(),
+      tholi.enroll_free() TO ${identifier}`);
+    await client.query(
+      `GRANT SELECT ON tholi.free_program_enrollments,tholi.free_program_grants TO ${identifier}`,
+    );
   }
 }
 

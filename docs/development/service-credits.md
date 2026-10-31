@@ -16,8 +16,10 @@ The composed service uses the immutable `fake-development-v1` policy and the
 existing `tholi-deterministic-v1` adapter. One validated generated proposal costs
 one development credit, with a maximum reservation of one credit. The fake
 provider costs zero USD. This is a test policy, not a published plan or paid
-price. No account is granted credits automatically by this milestone. #58 owns
-the plan catalog, grant quantities and real charging policy.
+price. This accounting milestone alone grants no credits. The
+[product catalog](service-plans.md) adds explicit development Free enrollment and
+bounded periodic refills through this same ledger. Production charging and grant
+quantities remain unavailable pending quality and cost evidence.
 
 The policy allows no automatic model retries, one image, at most 32768 input
 tokens and 2048 output/thinking tokens, and eight decisions per journey. Durable

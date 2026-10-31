@@ -458,6 +458,33 @@ function identityEnvironment(local = false): Record<string, string> {
 }
 
 describe("API configuration profiles", () => {
+  it("enables fixture plan funding only in the explicit development profile", () => {
+    expect(parseServiceConfig(identityEnvironment()).options.plans).toEqual({
+      environment: "production",
+    });
+    expect(parseServiceConfig(identityEnvironment(true)).options.plans).toEqual(
+      { environment: "development" },
+    );
+    expect(
+      parseServiceConfig({ ...identityEnvironment(), NODE_ENV: undefined })
+        .options.plans,
+    ).toEqual({ environment: "production" });
+    const database = {
+      THOLI_DATABASE_WORKER_URL:
+        "postgresql://worker:synthetic@localhost/tholi",
+    };
+    expect(parseWorkerConfig(database).productEnvironment).toBe("production");
+    expect(
+      parseWorkerConfig({ ...database, NODE_ENV: "development" })
+        .productEnvironment,
+    ).toBe("development");
+    expect(() =>
+      validateServiceOptions({
+        origins: [],
+        plans: { environment: "development" },
+      }),
+    ).toThrow("identity");
+  });
   it("isolates worker credentials and bounds concurrency, lease, heartbeat and connection budgets", () => {
     const env = {
       THOLI_DATABASE_WORKER_URL:

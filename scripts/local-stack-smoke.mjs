@@ -441,6 +441,26 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       600000,
     );
     check("clean-stack-startup");
+    stage = "actual development product catalog";
+    const catalog = await jsonResponse(
+      `http://127.0.0.1:${ports.API_HOST_PORT}/api/v1/plans`,
+    );
+    const freePlan = catalog.plans?.find((plan) => plan.mode === "free-cloud");
+    requireCheck(
+      catalog.environment === "development" &&
+        freePlan?.availability?.reason === "development-fixture" &&
+        freePlan.developmentAllowance?.amount === "6" &&
+        catalog.plans
+          .filter((plan) => plan.mode === "paid")
+          .every(
+            (plan) =>
+              plan.availability.available === false &&
+              plan.pricing.amount === null &&
+              plan.productionAllowance === null,
+          ),
+      "The composed local API did not publish the bounded development catalog.",
+    );
+    check("development-product-catalog-without-paid-availability");
     stage = "idempotent local database bootstrap and identity seed";
     for (const action of ["migrate", "seed", "migrate", "seed"])
       for (const command of localStackCommands({ action, envFile, project }))
