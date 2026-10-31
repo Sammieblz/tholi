@@ -10,6 +10,10 @@ durable reservations, grant expiry, shared budgets and metadata-only reconciliat
 Its fake and synthetic charged-provider checks remain separate from live billing
 evidence and the deferred perception quality gate.
 
+The [product plan validation record](product-plans-validation.md) tracks the
+versioned catalog, development Free enrollment, shared allowance enforcement and
+storage limits. Production prices and cloud plans remain unavailable.
+
 Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |

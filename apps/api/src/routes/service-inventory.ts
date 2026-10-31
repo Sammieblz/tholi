@@ -335,6 +335,17 @@ export const SERVICE_ROUTES = [
       "Read server-resolved plan access independently of client plan-selection intent.",
   },
   {
+    method: "POST",
+    path: "/api/v1/workspaces/{workspaceId}/entitlements/free",
+    operationId: "enrollWorkspaceFreePlan",
+    group: "plans",
+    status: "planned",
+    issue: 58,
+    access: "authenticated",
+    summary:
+      "Enroll an authorized personal workspace in the available server-defined Free allowance without checkout or client-supplied grants.",
+  },
+  {
     method: "GET",
     path: "/api/v1/workspaces/{workspaceId}/jobs",
     operationId: "listWorkspaceJobs",

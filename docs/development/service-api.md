@@ -34,8 +34,10 @@ service also advertises `tenant-authorization` and `purpose-consent` for its
 registered workspace, membership and consent operations. Its authentication and
 accountData availability flags describe these current account capabilities.
 The composed accounting service adds [credit and usage reads](service-credits.md)
-and durable development inference limits. Cloud-saved data, production plans and
-billing remain later milestones. By default, decisions and billing availability
+and durable development inference limits. The composed [product catalog](service-plans.md)
+describes Local and unavailable production cloud tiers, with authenticated fake
+Free enrollment only in development. Cloud-saved-data routes and billing remain
+later milestones. By default, decisions and billing availability
 stay false. Explicitly enabling the
 fake navigation transport adds the registered decision routes described below;
 this does not enable paid inference or grant a cloud plan.
@@ -63,7 +65,8 @@ fake navigation adapter. Identity and PostgreSQL must be configured, and
 Compose. Live Vertex inference remains a separately authorized operator experiment;
 the deferred quality comparison and production rollout gates still apply. This
 flag cannot select a live provider. Ordinary fake inference uses the durable
-development policy and requires explicitly provisioned test credits.
+development policy and requires explicitly provisioned test credits or explicit
+development Free enrollment through the product catalog.
 
 The separate loopback-only [operator comparison runtime](testing/perception-comparison.md)
 reuses these authenticated routes with explicit `profile: "operator-evaluation"`

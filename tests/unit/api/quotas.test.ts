@@ -27,13 +27,17 @@ import {
 import { AUTHORIZATION_CONSENT_POLICIES } from "../../../packages/navigation-core/contracts-authorization";
 import { fakeDevelopmentChargingPolicy } from "../../../packages/navigation-core/contracts-credits";
 import { navigationTransportInputSchema } from "../../../packages/navigation-core/contracts-navigation";
+import { createEffectiveProductPlanFixture } from "../../support/product-plan-fixture";
 import {
   navigationModelObservation,
   navigationModelValidation,
 } from "../../support/navigation-model-fixture";
 import type { JobLease } from "../../../apps/api/src/application/job-contracts";
 
-function fixture(model: NavigationModel = createFakeNavigationModel()) {
+function fixture(
+  model: NavigationModel = createFakeNavigationModel(),
+  environment: "development" | "production" = "production",
+) {
   const accountId = randomUUID(),
     workspaceId = randomUUID(),
     requestId = randomUUID(),
@@ -111,7 +115,7 @@ function fixture(model: NavigationModel = createFakeNavigationModel()) {
       items: [],
     })),
     getInferencePolicy: vi.fn(async () => policy),
-    reserveInference: vi.fn(async () => ({
+    reserveInference: vi.fn<QuotaTransaction["reserveInference"]>(async () => ({
       id: randomUUID(),
       requestId,
       claimToken: "private-server-hold-capability",
@@ -119,6 +123,7 @@ function fixture(model: NavigationModel = createFakeNavigationModel()) {
       maxCredits: 1n,
       expiresAt: new Date(context.deadlineAt),
       policy,
+      effectivePlan: null,
     })),
     markInferenceDispatched: vi.fn<QuotaTransaction["markInferenceDispatched"]>(
       async () => {},
@@ -148,7 +153,12 @@ function fixture(model: NavigationModel = createFakeNavigationModel()) {
   } satisfies QuotaRepositories;
   const transactions = vi.spyOn(repositories, "transaction");
   const revalidate = vi.fn(async () => {}),
-    quota = createNavigationQuotaPolicy(repositories, model),
+    quota = createNavigationQuotaPolicy(
+      repositories,
+      model,
+      undefined,
+      environment,
+    ),
     prepare = () =>
       quota.prepare(input, {
         principal: { accountId },
@@ -210,6 +220,85 @@ test("a validated fake proposal settles one development credit once without clai
   expect(f.repositories.finishInference.mock.calls[0][0]).not.toHaveProperty(
     "decision",
   );
+});
+
+test("the admitted product plan bounds the same model invocation without changing its charging policy", async () => {
+  const f = fixture(undefined, "development"),
+    held = await f.tx.reserveInference({
+      requestId: f.requestId,
+      journeyId: f.input.observation.stamp.journeyId,
+      policyVersion: f.policy.version,
+      expiresAt: new Date(f.context.deadlineAt),
+    });
+  f.tx.reserveInference.mockClear();
+  const effective = createEffectiveProductPlanFixture();
+  held.effectivePlan = createEffectiveProductPlanFixture({
+    caps: { ...effective.caps!, maxImages: 0 },
+  });
+  f.tx.reserveInference.mockResolvedValueOnce(held);
+  const infer = vi.spyOn(f.model, "infer"),
+    { operation, result } = await propose(f);
+  expect(infer.mock.calls[0][0].budget).toMatchObject({
+    maxInputTokens: 8192,
+    maxOutputTokens: 512,
+    maxImages: 0,
+  });
+  expect(f.tx.reserveInference).toHaveBeenCalledWith(
+    expect.objectContaining({ policyVersion: "fake-development-v1" }),
+  );
+  await operation.finish(result);
+  expect(f.repositories.finishInference.mock.calls[0][0]).toMatchObject({
+    resolution: "reported",
+    chargedCredits: 1n,
+    providerUsdMicros: 0n,
+  });
+});
+
+test("an inactive product admission cannot regain the never-enrolled manual budget", async () => {
+  const f = fixture(undefined, "development"),
+    held = await f.tx.reserveInference({
+      requestId: f.requestId,
+      journeyId: f.input.observation.stamp.journeyId,
+      policyVersion: f.policy.version,
+      expiresAt: new Date(f.context.deadlineAt),
+    });
+  f.tx.reserveInference.mockClear();
+  held.effectivePlan = createEffectiveProductPlanFixture({
+    status: "inactive",
+    periodStart: "2026-01-01T00:00:00Z",
+    periodEnd: "2026-01-02T00:00:00Z",
+    caps: null,
+  });
+  f.tx.reserveInference.mockResolvedValueOnce(held);
+  const infer = vi.spyOn(f.model, "infer");
+  await expect(f.prepare()).rejects.toMatchObject({
+    statusCode: 429,
+    code: "QUOTA_EXCEEDED",
+  });
+  expect(infer).not.toHaveBeenCalled();
+  expect(f.tx.markInferenceDispatched).not.toHaveBeenCalled();
+  expect(f.repositories.finishInference).not.toHaveBeenCalled();
+});
+
+test("production rejects an existing development Free admission before dispatch without changing manual development profiles", async () => {
+  const f = fixture(),
+    held = await f.tx.reserveInference({
+      requestId: f.requestId,
+      journeyId: f.input.observation.stamp.journeyId,
+      policyVersion: f.policy.version,
+      expiresAt: new Date(f.context.deadlineAt),
+    });
+  f.tx.reserveInference.mockClear();
+  held.effectivePlan = createEffectiveProductPlanFixture();
+  f.tx.reserveInference.mockResolvedValueOnce(held);
+  const infer = vi.spyOn(f.model, "infer");
+  await expect(f.prepare()).rejects.toMatchObject({
+    statusCode: 503,
+    code: "UNAVAILABLE",
+  });
+  expect(infer).not.toHaveBeenCalled();
+  expect(f.tx.markInferenceDispatched).not.toHaveBeenCalled();
+  expect(f.repositories.finishInference).not.toHaveBeenCalled();
 });
 
 test("durable disable immediately before dispatch preserves its safe error and releases known no-send", async () => {

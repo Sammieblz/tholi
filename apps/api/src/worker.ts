@@ -88,6 +88,7 @@ export async function createWorkerRuntime(
         observer,
       );
     }
+    const repositories = new PostgresRepositories(pool);
     worker = new JobWorker(
       new PostgresJobs(pool),
       {
@@ -96,10 +97,13 @@ export async function createWorkerRuntime(
       },
       [
         ...JOB_HANDLERS,
-        createInferenceReconciliationHandler(new PostgresRepositories(pool)),
+        createInferenceReconciliationHandler(repositories),
         ...external,
       ],
       observer,
+      config.productEnvironment === "development"
+        ? { refillFreePlans: (input) => repositories.refillFreePlans(input) }
+        : undefined,
     );
   } catch (error) {
     await Promise.allSettled(transports.map((item) => item.close()));

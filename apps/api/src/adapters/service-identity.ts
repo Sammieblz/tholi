@@ -22,6 +22,7 @@ import {
   createNavigationQuotaPolicy,
 } from "../application/quotas";
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
+import { PlanService } from "../application/plans";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -30,6 +31,7 @@ export async function createIdentityRuntime(
   supportOptions?: SupportRuntimeOptions,
   observer?: Observability,
   navigationEnabled = false,
+  planEnvironment: "development" | "production" = "production",
 ) {
   const { pool, resource } = await createServiceDatabase(database, observer);
   const resources: RuntimeResource[] = [resource];
@@ -43,6 +45,7 @@ export async function createIdentityRuntime(
     const authorization = new AuthorizationService(repositories);
     const jobs = new JobService(repositories);
     const analytics = new ProductAnalyticsService(repositories);
+    const plans = new PlanService(repositories, planEnvironment);
     const credits = new CreditService(
       repositories,
       fakeDevelopmentChargingPolicy,
@@ -56,6 +59,7 @@ export async function createIdentityRuntime(
             repositories,
             model,
             fakeDevelopmentChargingPolicy,
+            planEnvironment,
           ),
         )
       : undefined;
@@ -85,6 +89,7 @@ export async function createIdentityRuntime(
       jobs,
       support,
       analytics,
+      plans,
       credits,
       navigation,
       repositories,

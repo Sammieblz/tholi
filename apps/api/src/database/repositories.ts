@@ -6,6 +6,14 @@ import {
   type SavedTask,
 } from "../../../../packages/page-model";
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
+import {
+  productCatalogSchema,
+  effectiveProductPlanSchema,
+  freeEnrollmentSchema,
+  type ProductCatalog,
+  type EffectiveProductPlan,
+  type FreeEnrollment,
+} from "../../../../packages/navigation-core/contracts-plans";
 import { withTransaction, databaseObservability } from "./postgres";
 import { appendSecurityAudit } from "./audit";
 import {
@@ -230,6 +238,27 @@ const inferenceUsage = (row: InferenceUsageRow): InferenceUsage => ({
 /** Pool lifetime belongs to the runtime. Callbacks contain database work only. */
 export class PostgresRepositories {
   constructor(private readonly pool: Pool) {}
+
+  async readPlanCatalog(): Promise<ProductCatalog> {
+    const result = await this.pool.query<{ catalog: unknown }>(
+      "SELECT tholi.read_product_catalog() AS catalog",
+    );
+    return productCatalogSchema.parse(result.rows[0]?.catalog);
+  }
+
+  async refillFreePlans(input: { limit: number }): Promise<number> {
+    input = snapshot(input);
+    try {
+      return (
+        await this.pool.query<{ refilled: number }>(
+          "SELECT tholi.refill_free_plans($1) AS refilled",
+          [limit(input.limit)],
+        )
+      ).rows[0].refilled;
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
 
   /** A persisted receipt makes a known outcome recoverable after an accounting outage. */
   async finishInference(raw: FinishInferenceInput): Promise<InferenceUsage> {
@@ -489,6 +518,35 @@ class ScopedRepositories {
     );
     if (!found.rowCount)
       throw new RepositoryError("FORBIDDEN", "The workspace is unavailable.");
+  }
+
+  private async lockAccount() {
+    const result = await this.client.query(
+      "SELECT id FROM tholi.accounts WHERE id=$1 AND status='active' FOR UPDATE",
+      [this.scope.accountId],
+    );
+    if (!result.rowCount)
+      throw new RepositoryError("FORBIDDEN", "The account is unavailable.");
+  }
+
+  async readEffectivePlan(): Promise<EffectiveProductPlan | null> {
+    const result = await this.client.query<{ effective: unknown }>(
+      "SELECT tholi.read_effective_product_plan() AS effective",
+    );
+    return effectiveProductPlanSchema
+      .nullable()
+      .parse(result.rows[0]?.effective);
+  }
+
+  async enrollFree(): Promise<FreeEnrollment> {
+    try {
+      const result = await this.client.query<{ enrollment: unknown }>(
+        "SELECT tholi.enroll_free() AS enrollment",
+      );
+      return freeEnrollmentSchema.parse(result.rows[0]?.enrollment);
+    } catch (error) {
+      return accountingError(error);
+    }
   }
 
   async getAccount(): Promise<Account> {
@@ -1126,7 +1184,19 @@ class ScopedRepositories {
       );
       const row = result.rows[0];
       if (!row) conflict();
-      return { ...row, maxCredits: BigInt(row.maxCredits), policy };
+      const capturedPlan = await this.client.query<{ plan: unknown }>(
+        "SELECT plan_snapshot AS plan FROM tholi.inference_reservations WHERE id=$1",
+        [row.id],
+      );
+      const effectivePlan = effectiveProductPlanSchema
+        .nullable()
+        .parse(capturedPlan.rows[0]?.plan);
+      return {
+        ...row,
+        maxCredits: BigInt(row.maxCredits),
+        policy,
+        effectivePlan,
+      };
     } catch (error) {
       return accountingError(error);
     }
@@ -1397,6 +1467,9 @@ class ScopedRepositories {
     const parsed = savedTaskSchema.safeParse(input.content);
     if (!parsed.success) invalid("Only a supported saved route can be stored.");
     const content = parameterizedTask(parsed.data);
+    // Product storage is account-bounded across workspaces. Match accounting's
+    // account-before-workspace order before the existing sync/row mutation.
+    await this.lockAccount();
     await this.lockWorkspace();
     const stamp = await this.nextSyncRevision();
     const values = [
@@ -1405,24 +1478,28 @@ class ScopedRepositories {
       JSON.stringify(content),
       stamp,
     ];
-    const result =
-      input.expectedRevision === 0n
-        ? await this.client.query<ArtifactRow>(
-            `INSERT INTO tholi.saved_artifacts
+    try {
+      const result =
+        input.expectedRevision === 0n
+          ? await this.client.query<ArtifactRow>(
+              `INSERT INTO tholi.saved_artifacts
              (workspace_id, owner_account_id, id, kind, content, sync_revision)
            VALUES ($1, $2, $3, 'saved_route', $4::jsonb, $5)
            ON CONFLICT DO NOTHING RETURNING ${artifactColumns}`,
-            values,
-          )
-        : await this.client.query<ArtifactRow>(
-            `UPDATE tholi.saved_artifacts SET content = $4::jsonb,
+              values,
+            )
+          : await this.client.query<ArtifactRow>(
+              `UPDATE tholi.saved_artifacts SET content = $4::jsonb,
              sync_revision = $5, revision = revision + 1, updated_at = now()
            WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3
              AND revision = $6 AND deleted_at IS NULL RETURNING ${artifactColumns}`,
-            [...values, input.expectedRevision.toString()],
-          );
-    if (!result.rows[0]) conflict();
-    return artifact(result.rows[0]);
+              [...values, input.expectedRevision.toString()],
+            );
+      if (!result.rows[0]) conflict();
+      return artifact(result.rows[0]);
+    } catch (error) {
+      return accountingError(error);
+    }
   }
 
   async tombstoneArtifact(

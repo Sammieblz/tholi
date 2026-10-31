@@ -1,6 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { RepositoryError } from "../database/contracts";
 import { JOB_HANDLERS } from "./identity-maintenance";
+import type { FreePlanRefills } from "./plans";
 import { jobStatusSchema } from "../../../../packages/navigation-core/contracts-jobs";
 import {
   NO_OBSERVABILITY,
@@ -41,6 +42,7 @@ export class JobWorker {
     options: JobWorkerOptions,
     handlers: readonly RegisteredJobHandler[] = JOB_HANDLERS,
     private readonly observer: Observability = NO_OBSERVABILITY,
+    private readonly freePlanRefills?: FreePlanRefills,
   ) {
     if (
       !options.workerId ||
@@ -142,6 +144,8 @@ export class JobWorker {
                     intervalMs: this.options.scheduleIntervalMs,
                   });
               }
+              if (this.freePlanRefills && !this.shutdown.signal.aborted)
+                await this.freePlanRefills.refillFreePlans({ limit: 100 });
               if (this.store.health && this.observer.enabled) {
                 try {
                   const rows = await this.store.health();

@@ -41,6 +41,7 @@ export interface ServiceApiOptions {
   database?: DatabaseOptions;
   support?: SupportRuntimeOptions;
   navigation?: { provider: "fake" };
+  plans?: { environment: "development" | "production" };
 }
 
 /** Replica-local delivery limits, separate from identity, account and credit authority. */
@@ -309,6 +310,13 @@ export function validateServiceOptions(
   const observability = options.observability
     ? validateObservabilityOptions(options.observability, "tholi-api")
     : undefined;
+  const plans =
+    options.plans === undefined
+      ? undefined
+      : z
+          .object({ environment: z.enum(["development", "production"]) })
+          .strict()
+          .parse(options.plans);
   let navigation: ServiceApiOptions["navigation"];
   if (options.navigation !== undefined) {
     const parsed = z
@@ -324,6 +332,8 @@ export function validateServiceOptions(
       "Identity requires explicit service database configuration.",
     );
   if (!options.identity) {
+    if (plans)
+      throw new Error("Product plans require the composed identity profile.");
     if (navigation)
       throw new Error(
         "Navigation transport requires the composed identity profile.",
@@ -352,6 +362,7 @@ export function validateServiceOptions(
     identity,
     ...(observability ? { observability } : {}),
     database: { ...options.database! },
+    ...(plans ? { plans } : {}),
     ...(navigation ? { navigation } : {}),
     ...(options.support
       ? {
@@ -828,6 +839,10 @@ export function parseWorkerConfig(env: Environment) {
     throw new Error("Worker heartbeat must be less than half its lease.");
   return {
     database: parseDatabaseConfig(env, "worker"),
+    productEnvironment:
+      env.NODE_ENV === "development"
+        ? ("development" as const)
+        : ("production" as const),
     observability: parseObservabilityConfig(env, "tholi-worker"),
     options: {
       concurrency: budget("THOLI_WORKER_CONCURRENCY", 2, 1, 2),
@@ -1030,7 +1045,16 @@ export function parseServiceConfig(env: Environment) {
           ? trustedProxies.split(",").map((entry) => entry.trim())
           : [],
       },
-      ...(identity ? { identity, database: parseDatabaseConfig(env) } : {}),
+      ...(identity
+        ? {
+            identity,
+            database: parseDatabaseConfig(env),
+            plans: {
+              environment:
+                env.NODE_ENV === "development" ? "development" : "production",
+            },
+          }
+        : {}),
       ...(navigation === "true"
         ? { navigation: { provider: "fake" as const } }
         : {}),

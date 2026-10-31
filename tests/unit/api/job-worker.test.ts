@@ -11,6 +11,7 @@ import {
   REGISTERED_JOB_KINDS,
 } from "../../../apps/api/src/application/identity-maintenance";
 import { JobWorker } from "../../../apps/api/src/application/job-worker";
+import type { FreePlanRefills } from "../../../apps/api/src/application/plans";
 import { RepositoryError } from "../../../apps/api/src/database/contracts";
 import type { JobResult } from "../../../packages/navigation-core/contracts-jobs";
 import { createObservability } from "../../../apps/api/src/adapters/observability";
@@ -34,7 +35,11 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function fixture(count = 1, observer: Observability = NO_OBSERVABILITY) {
+function fixture(
+  count = 1,
+  observer: Observability = NO_OBSERVABILITY,
+  freePlanRefills?: FreePlanRefills,
+) {
   const account = { id: randomUUID(), status: "active" as const, revision: 1n };
   const workspace = {
     id: randomUUID(),
@@ -92,6 +97,7 @@ function fixture(count = 1, observer: Observability = NO_OBSERVABILITY) {
     },
     undefined,
     observer,
+    freePlanRefills,
   );
   workers.push(worker);
   return {
@@ -116,6 +122,23 @@ function expectRetryBudget(backoffMs: number) {
 }
 
 describe("durable job worker", () => {
+  it("bounds Free refill maintenance in the existing sequential scheduling tick", async () => {
+    const completed = deferred<number>(),
+      refillFreePlans = vi.fn<FreePlanRefills["refillFreePlans"]>(
+        () => completed.promise,
+      ),
+      f = fixture(0, NO_OBSERVABILITY, { refillFreePlans });
+    await f.worker.start();
+    await until(() => expect(refillFreePlans).toHaveBeenCalledOnce());
+    expect(refillFreePlans).toHaveBeenCalledWith({ limit: 100 });
+    expect(f.store.claim).not.toHaveBeenCalled();
+    completed.resolve(3);
+    await until(() => expect(f.store.claim).toHaveBeenCalled());
+    await f.worker.close();
+    expect(refillFreePlans).toHaveBeenCalledOnce();
+    expect(f.store.scheduleBrokerPruning).toHaveBeenCalledOnce();
+  });
+
   it.each([false, true])(
     "reports SQL accounting aggregates without inventing a success denominator (unsafe precision: %s)",
     async (unsafe) => {

@@ -45,6 +45,17 @@ import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-n
 import { ModelError } from "../../../apps/api/src/application/model-contracts";
 import { CreditService } from "../../../apps/api/src/application/quotas";
 import {
+  PlanService,
+  type PlanRepositories,
+} from "../../../apps/api/src/application/plans";
+import {
+  productCatalogSchema,
+  productEntitlementsSchema,
+  freeEnrollmentSchema,
+  type EffectiveProductPlan,
+} from "../../../packages/navigation-core/contracts-plans";
+import { createProductCatalogFixture } from "../../support/product-plan-fixture";
+import {
   creditHistoryPageSchema,
   creditUsagePageSchema,
   fakeDevelopmentChargingPolicy,
@@ -115,6 +126,7 @@ async function fixture(
   navigationModel?: NavigationModel,
   evaluationFactory?: (session: IdentitySession) => NavigationEvaluationPolicy,
   creditsEnabled = false,
+  plansEnvironment?: "development" | "production",
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -141,7 +153,7 @@ async function fixture(
   const account = { id: randomUUID(), status: "active" as const, revision: 1n };
   const workspace = {
     id: randomUUID(),
-    kind: "organization" as const,
+    kind: "organization" as "personal" | "organization",
     ownerAccountId: account.id,
     revision: 1n,
   };
@@ -158,6 +170,7 @@ async function fixture(
     revision: 2n,
   };
   const consents: Consent[] = [];
+  let effectivePlan: EffectiveProductPlan | null = null;
   const navigationRequests = new Map<string, ServiceRequest>();
   const job: Job & { leaseOwner: string; leaseToken: string } = {
     id: randomUUID(),
@@ -180,6 +193,31 @@ async function fixture(
     leaseToken: "PRIVATE_FENCE_SENTINEL",
   };
   const scoped = {
+    readEffectivePlan: vi.fn(async () => effectivePlan),
+    listEntitlements: vi.fn(async () => []),
+    enrollFree: vi.fn(async () => {
+      const catalog = createProductCatalogFixture();
+      const plan = catalog.plans.find((item) => item.mode === "free-cloud")!;
+      const replayed = effectivePlan !== null;
+      effectivePlan ??= {
+        catalogVersion: catalog.catalogVersion,
+        planId: plan.id,
+        planVersion: plan.version,
+        status: "active",
+        periodStart: "2026-10-31T00:00:00Z",
+        periodEnd: "2026-11-01T00:00:00Z",
+        caps: plan.developmentAllowance!.caps,
+      };
+      return {
+        effective: effectivePlan,
+        grant: {
+          id: account.id,
+          amount: plan.developmentAllowance!.amount,
+          expiresAt: effectivePlan.periodEnd,
+        },
+        replayed,
+      };
+    }),
     getAccount: vi.fn(async () => account),
     getWorkspace: vi.fn(async () => workspace),
     getMembership: vi.fn(async () => membership),
@@ -345,6 +383,7 @@ async function fixture(
     ),
   };
   const repositories = {
+    readPlanCatalog: vi.fn(async () => createProductCatalogFixture()),
     listWorkspaces: vi.fn(async () => [workspace]),
     async transaction<T>(
       scope: RepositoryScope,
@@ -354,7 +393,7 @@ async function fixture(
         throw new RepositoryError("FORBIDDEN", "PRIVATE_SCOPE_SENTINEL");
       return work(scoped);
     },
-  } satisfies AuthorizationRepositories;
+  } satisfies AuthorizationRepositories & PlanRepositories;
   vi.spyOn(repositories, "transaction");
   const session: IdentitySession = {
     id: randomUUID(),
@@ -520,6 +559,9 @@ async function fixture(
               fakeDevelopmentChargingPolicy,
             ),
           }
+        : {}),
+      ...(plansEnvironment
+        ? { plans: new PlanService(repositories, plansEnvironment) }
         : {}),
     },
   );
@@ -1815,6 +1857,204 @@ describe("account support and private file HTTP contracts", () => {
     );
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
+  });
+});
+
+describe("product plans", () => {
+  it("publishes production availability without prices or fixture allowances and describes actual operations", async () => {
+    const f = await fixture(
+      false,
+      false,
+      undefined,
+      undefined,
+      false,
+      "production",
+    );
+    const response = await f.app.inject({ url: "/api/v1/plans" });
+    expect(response.statusCode).toBe(200);
+    const catalog = productCatalogSchema.parse(response.json());
+    expect(catalog.environment).toBe("production");
+    expect(catalog.plans.find((plan) => plan.mode === "local")).toMatchObject({
+      requiresAccount: false,
+      availability: { available: true },
+    });
+    for (const plan of catalog.plans.filter((plan) => plan.mode !== "local")) {
+      expect(plan.availability.available).toBe(false);
+      expect(plan.productionAllowance).toBeNull();
+      expect(plan.developmentAllowance).toBeNull();
+      if (plan.mode === "paid")
+        expect(plan.pricing).toEqual({ status: "unpublished", amount: null });
+    }
+    expect(f.repositories.transaction).not.toHaveBeenCalled();
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json();
+    expect(capabilities.capabilities).toContain("product-plans");
+    expect(capabilities.availability.billing).toBe(false);
+    const spec = (await f.app.inject({ url: "/api/v1/openapi.json" })).json();
+    expect(spec.paths["/api/v1/plans"].get.security).toEqual([]);
+    expect(
+      spec.paths["/api/v1/workspaces/{workspaceId}/entitlements/free"].post
+        .security,
+    ).toEqual([{ NativeBearer: [] }, { WebSession: [] }]);
+    for (const operationId of [
+      "listPublishedPlans",
+      "getWorkspaceEntitlements",
+      "enrollWorkspaceFreePlan",
+    ])
+      expect(
+        spec["x-tholi-route-inventory"].find(
+          (entry: { operationId: string }) => entry.operationId === operationId,
+        ).status,
+      ).toBe("implemented");
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/entitlements/free`,
+        headers: bearer,
+        payload: {},
+      }),
+      503,
+      "UNAVAILABLE",
+    );
+    expect(f.scoped.enrollFree).not.toHaveBeenCalled();
+  });
+
+  it("requires current personal-owner authority, strict server-derived enrollment and cookie CSRF", async () => {
+    const f = await fixture(
+      false,
+      false,
+      undefined,
+      undefined,
+      false,
+      "development",
+    );
+    const base = `/api/v1/workspaces/${f.workspace.id}/entitlements`;
+    safeError(
+      await f.app.inject({ method: "POST", url: base + "/free", payload: {} }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/free",
+        headers: bearer,
+        payload: {},
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(f.scoped.enrollFree).not.toHaveBeenCalled();
+    f.workspace.kind = "personal";
+    for (const payload of [
+      { planId: "paid-cloud" },
+      { amount: "9000" },
+      { environment: "development" },
+    ])
+      safeError(
+        await f.app.inject({
+          method: "POST",
+          url: base + "/free",
+          headers: bearer,
+          payload,
+        }),
+        400,
+        "INVALID_REQUEST",
+      );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/free",
+        headers: { cookie: f.cookie, origin: webOrigin },
+        payload: {},
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/free",
+        headers: {
+          cookie: f.cookie,
+          origin: "https://help.tholi.io",
+          "x-tholi-csrf": f.csrf,
+        },
+        payload: {},
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    const enrolled = await f.app.inject({
+      method: "POST",
+      url: base + "/free",
+      headers: { cookie: f.cookie, origin: webOrigin, "x-tholi-csrf": f.csrf },
+      payload: {},
+    });
+    expect(enrolled.statusCode).toBe(200);
+    expect(freeEnrollmentSchema.parse(enrolled.json()).replayed).toBe(false);
+    const replay = await f.app.inject({
+      method: "POST",
+      url: base + "/free",
+      headers: bearer,
+      payload: {},
+    });
+    expect(freeEnrollmentSchema.parse(replay.json()).replayed).toBe(true);
+    const entitlement = await f.app.inject({ url: base, headers: bearer });
+    expect(entitlement.statusCode).toBe(200);
+    expect(
+      productEntitlementsSchema.parse(entitlement.json()).effective?.status,
+    ).toBe("active");
+    expect(entitlement.headers["cache-control"]).toBe("no-store");
+    safeError(
+      await f.app.inject({
+        url: base.replace(f.workspace.id, randomUUID()),
+        headers: bearer,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(
+      (
+        await f.app.inject({
+          method: "POST",
+          url: base,
+          headers: bearer,
+          payload: { planId: "paid-cloud" },
+        })
+      ).statusCode,
+    ).toBe(404);
+  });
+
+  it("keeps plan discovery absent without composition and rejects forged public query selectors", async () => {
+    const uncomposed = await fixture(false, false);
+    expect(
+      (await uncomposed.app.inject({ url: "/api/v1/plans" })).statusCode,
+    ).toBe(404);
+    const f = await fixture(
+      false,
+      false,
+      undefined,
+      undefined,
+      false,
+      "development",
+    );
+    safeError(
+      await f.app.inject({ url: "/api/v1/plans?environment=development" }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const response = await f.app.inject({ url: "/api/v1/plans" });
+    expect(
+      productCatalogSchema
+        .parse(response.json())
+        .plans.find((plan) => plan.mode === "free-cloud"),
+    ).toMatchObject({
+      requiresAccount: true,
+      availability: { available: true, reason: "development-fixture" },
+      pricing: { status: "free", amount: "0" },
+    });
   });
 });
 

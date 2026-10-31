@@ -9,6 +9,7 @@ import {
   type ChargingPolicy,
 } from "../../../../packages/navigation-core/contracts-credits";
 import type { NavigationModel, ServiceRequestContext } from "../capabilities";
+import { effectiveProductPlanSchema } from "../../../../packages/navigation-core/contracts-plans";
 import type {
   CreditBalance,
   CreditHistoryEntry,
@@ -156,6 +157,7 @@ export function createNavigationQuotaPolicy(
   repositories: QuotaRepositories,
   model: NavigationModel,
   rawPolicy: ChargingPolicy = fakeDevelopmentChargingPolicy,
+  environment: "development" | "production" = "production",
 ): NavigationInferencePolicy {
   const policy = publishedPolicy(rawPolicy);
   return {
@@ -194,6 +196,23 @@ export function createNavigationQuotaPolicy(
             held.expiresAt.getTime() !== scope.context.deadlineAt
           )
             throw new ModelError("CONFIGURATION");
+          if (held.effectivePlan !== null) {
+            if (environment !== "development")
+              throw new AuthorizationError(
+                503,
+                "UNAVAILABLE",
+                "Product cloud processing is unavailable in this deployment.",
+              );
+            const effective = effectiveProductPlanSchema.parse(
+              held.effectivePlan,
+            );
+            if (effective.status !== "active")
+              throw new AuthorizationError(
+                429,
+                "QUOTA_EXCEEDED",
+                "The cloud allowance is inactive.",
+              );
+          }
           return structuredClone(held);
         },
         scope.context,
@@ -210,9 +229,20 @@ export function createNavigationQuotaPolicy(
       let completed: Promise<void> | undefined;
       const operation: NavigationInferenceOperation = {
         budget: {
-          maxInputTokens: policy.maxInputTokens,
-          maxOutputTokens: policy.maxOutputTokens,
-          maxImages: policy.maxImages,
+          maxInputTokens: Math.min(
+            policy.maxInputTokens,
+            reservation.effectivePlan?.caps?.maxInputTokens ??
+              policy.maxInputTokens,
+          ),
+          maxOutputTokens: Math.min(
+            policy.maxOutputTokens,
+            reservation.effectivePlan?.caps?.maxOutputTokens ??
+              policy.maxOutputTokens,
+          ),
+          maxImages: Math.min(
+            policy.maxImages,
+            reservation.effectivePlan?.caps?.maxImages ?? policy.maxImages,
+          ),
         },
         model: {
           async infer(request, context) {
