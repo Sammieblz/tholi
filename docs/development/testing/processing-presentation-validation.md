@@ -51,9 +51,27 @@ consent remain separate from this development service choice.
 | Shared Guide accessibility and persistent recovery               | Passed: 14 focused shared-UI checks                                                              |
 | Installed Chromium and Firefox                                   | Focused Chrome processing and six retained proposal regressions passed; two Firefox cases passed |
 | Keyboard, themes, narrow layout and reduced motion               | Focused installed checks and three existing layout owners passed; captured layouts inspected     |
-| TypeScript, production build and complete `test:ci`              | Pending                                                                                          |
-| Required hosted checks                                           | Required before merge                                                                            |
+| TypeScript, production build and complete `test:ci`              | Passed: 1,117 checks on matching verified artifacts                                              |
+| Required hosted checks                                           | All eight passed for code head `3409478e`; final head checked before merge                       |
 | Native permission prompts, actual OAuth and screen-reader speech | Not performed for this milestone; remain pending                                                 |
+
+Complete PR cohort `e5d20247-0367-413c-9f02-21d9b8b3dd8e` passed all 1,117
+checks: 970 unit, 56 Chromium core, 20 integration, four native Firefox and 67 UI.
+The coordinator verified the immutable build before running the complete scope.
+Its manifest SHA-256 is
+`28fb5ce4761261496d93a30df3f7f42fbf54a84b3f61a72630475247aff55f25`.
+Chromium and Firefox digests are
+`0d821d8a4cf20505363e42962a8c42fad4f053dba8d52c673b6fc309e4800d89` and
+`adc4e768f9a2d1be5eccfb3edddbc0e4a44dda71d40ea7ea57fb5566ba477abc`.
+All eight reports remain under that cohort's `output/qa/processing-42-ci/`
+directory. Earlier focused failures remain separate.
+
+All eight required hosted checks passed for code commit
+`3409478ef17ba892527665707ad7c7e74ee7324b` in
+[workflow 41179011411](https://github.com/Sammieblz/tholi/actions/runs/41179011411).
+The evidence-only commit requires its own hosted head check before merge. No
+production artifact changed when recording results. All 23 preserved release-file
+checksums still match; no archive was packaged or overwritten.
 
 The first fresh-build focused cohort
 `c9b1942a-600a-4b44-b705-0a2f792deba5` passed eight of nine Chromium cases, two
