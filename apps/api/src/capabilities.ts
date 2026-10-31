@@ -1,5 +1,7 @@
 import type { KnowledgeStore } from "../../../packages/navigation-core/storage";
 import type { SiteMemory } from "../../../packages/page-model";
+import type { NavigationObservation } from "../../../packages/navigation-core/contracts-navigation";
+import type { ModelBudget, ModelUsage } from "./application/model-contracts";
 import type {
   RecognitionInput,
   VisualObservation,
@@ -29,6 +31,14 @@ export interface LocalInference {
     input: unknown,
     signal?: AbortSignal,
   ): Promise<unknown>;
+}
+
+/** Untrusted proposal boundary, separate from legacy local NLP/OCR and HTTP. */
+export interface NavigationModel {
+  infer(
+    input: { observation: NavigationObservation; budget: ModelBudget },
+    context: ServiceRequestContext,
+  ): Promise<{ proposal: unknown; usage: ModelUsage }>;
 }
 
 export interface LocalWorkers extends LocalInference, RuntimeResource {

@@ -1,5 +1,5 @@
 import { BlockList, isIP } from "node:net";
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { z } from "zod";
 import type { DatabaseOptions } from "./database/postgres";
 import type { IdentityOptions } from "./application/identity-contracts";
@@ -15,6 +15,15 @@ import {
   validateObservabilityOptions,
   type ObservabilityOptions,
 } from "./application/observability";
+import {
+  MODEL_LIMITS,
+  resolveModelBudget,
+  type ModelBudget,
+} from "./application/model-contracts";
+import {
+  validateVertexModelOptions,
+  type VertexModelOptions,
+} from "./adapters/vertex-navigation-model";
 
 export interface ApiOptions {
   token: string;
@@ -132,6 +141,68 @@ export interface ListenOptions {
 }
 
 export type Environment = Readonly<Record<string, string | undefined>>;
+
+export type ModelExperimentConfig = {
+  budget: ModelBudget;
+  timeoutMs: number;
+} & (
+  | { provider: "fake" }
+  | { provider: "vertex"; options: VertexModelOptions; stateDirectory: string }
+);
+
+/** Explicit experiment composition; ordinary HTTP/Compose remains cloud-free. */
+export function parseModelExperimentConfig(
+  env: Environment,
+): ModelExperimentConfig {
+  const provider = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
+  if (provider !== "fake" && provider !== "vertex")
+    throw new Error("Unsupported model experiment provider.");
+  const suffixes = {
+    maxInputTokens: "MAX_INPUT_TOKENS",
+    maxOutputTokens: "MAX_OUTPUT_TOKENS",
+    maxResponseBytes: "MAX_RESPONSE_BYTES",
+    maxImages: "MAX_IMAGES",
+    maxImageBytes: "MAX_IMAGE_BYTES",
+    maxImagePixels: "MAX_IMAGE_PIXELS",
+  } as const;
+  const budget = resolveModelBudget(
+    Object.fromEntries(
+      Object.entries(suffixes).map(([key, suffix]) => [
+        key,
+        environmentBudget(
+          env,
+          `THOLI_MODEL_${suffix}`,
+          MODEL_LIMITS[key as keyof typeof suffixes],
+          key === "maxImages" ? 0 : 1,
+          MODEL_LIMITS[key as keyof typeof suffixes],
+        ),
+      ]),
+    ),
+  );
+  const timeoutMs = environmentBudget(
+    env,
+    "THOLI_MODEL_TIMEOUT_MS",
+    20000,
+    1000,
+    MODEL_LIMITS.maxDeadlineMs,
+  );
+  if (provider === "fake") return { provider, budget, timeoutMs };
+  const options = validateVertexModelOptions({
+    api: requiredEnvironment(env, "THOLI_MODEL_API"),
+    project: requiredEnvironment(env, "THOLI_MODEL_PROJECT"),
+    location: requiredEnvironment(env, "THOLI_MODEL_REGION"),
+    model: requiredEnvironment(env, "THOLI_MODEL_ID"),
+    retentionProfile: requiredEnvironment(env, "THOLI_MODEL_RETENTION_PROFILE"),
+  });
+  const configuredState = requiredEnvironment(
+    env,
+    "THOLI_MODEL_EXPERIMENT_STATE_DIR",
+  );
+  if (!isAbsolute(configuredState))
+    throw new Error("Model experiment state requires an absolute directory.");
+  const stateDirectory = resolve(configuredState);
+  return { provider, options, budget, timeoutMs, stateDirectory };
+}
 
 /** Explicit, bounded telemetry. Ambient provider credentials and metadata are ignored. */
 export function parseObservabilityConfig(
@@ -876,12 +947,12 @@ function parseIdentityConfig(env: Environment): IdentityOptions | undefined {
 }
 
 export function parseServiceConfig(env: Environment) {
-  // This composition root has no live model adapter yet. Fail closed instead of
-  // accepting an opt-in flag or a budget that this version cannot enforce.
+  // The operator experiment is separate. HTTP inference requires the explicit
+  // authenticated and consented transport milestone before any live adapter.
   const model = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
   if (model !== "fake")
     throw new Error(
-      "Only the cloud-free fake model policy is available. Live inference and enforced spending limits require the model adapter milestone (#39).",
+      "The HTTP service remains cloud-free. Live adapters are restricted to the approved model experiment; authenticated inference transport is milestone #40.",
     );
   const platformPort = environmentValue(env, "PORT");
   const servicePort = environmentValue(env, "THOLI_SERVICE_PORT");

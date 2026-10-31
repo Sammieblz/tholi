@@ -22,6 +22,7 @@ await build({
     "apps/api/src/server.ts",
     "apps/api/src/inference.ts",
     "apps/api/src/ocr.ts",
+    "apps/api/src/model-experiment.ts",
     { in: "apps/api/src/database/cli.ts", out: "database-cli" },
   ],
   outdir: out,

@@ -679,22 +679,11 @@ export type NavigationJoinResult =
         | "INELIGIBLE_REFERENCE";
     };
 
-/** A proposal never changes local authority or establishes task completion. */
-export function joinNavigationDecision(
-  rawDecision: unknown,
-  rawObservation: unknown,
-  rawContext: NavigationValidationContext,
-): NavigationJoinResult {
-  const observed = navigationObservationSchema.safeParse(rawObservation);
-  if (!observed.success)
-    return { accepted: false, reason: "INVALID_OBSERVATION" };
-  const proposed = navigationDecisionSchema.safeParse(rawDecision);
-  if (!proposed.success) return { accepted: false, reason: "INVALID_DECISION" };
-  const checked = validationContextSchema.safeParse(rawContext);
-  if (!checked.success) return { accepted: false, reason: "INVALID_CONTEXT" };
-  const observation = observed.data;
-  const response = proposed.data;
-  const context = checked.data;
+function rejectNavigationContext(
+  observation: NavigationObservation,
+  context: NavigationValidationContext,
+  response?: NavigationDecision,
+): Extract<NavigationJoinResult, { accepted: false }> | undefined {
   if (
     context.requestDeadlineMs <= context.requestStartedAtMs ||
     context.requestDeadlineMs - context.requestStartedAtMs >
@@ -705,14 +694,15 @@ export function joinNavigationDecision(
     return { accepted: false, reason: "INVALID_CONTEXT" };
   if (
     !sameStamp(observation.stamp, context.currentStamp) ||
-    !sameStamp(response.stamp, context.currentStamp) ||
+    (response && !sameStamp(response.stamp, context.currentStamp)) ||
     nativeReferenceKey(observation.native) !==
       nativeReferenceKey(context.currentNative) ||
-    nativeReferenceKey(response.native) !==
-      nativeReferenceKey(context.currentNative)
+    (response &&
+      nativeReferenceKey(response.native) !==
+        nativeReferenceKey(context.currentNative))
   )
     return { accepted: false, reason: "STALE_CONTEXT" };
-  const timing = response.serverTiming;
+  const timing = response?.serverTiming;
   const deadline = Math.min(
     observation.deadlineAtMs,
     context.requestDeadlineMs,
@@ -728,6 +718,50 @@ export function joinNavigationDecision(
         context.serverNowMs >= timing.expiresAtMs))
   )
     return { accepted: false, reason: "EXPIRED" };
+}
+
+/** Check actual submitted observation/context before incurring model work. */
+export function validateNavigationObservationContext(
+  rawObservation: unknown,
+  rawContext: NavigationValidationContext,
+):
+  | {
+      accepted: true;
+      observation: NavigationObservation;
+      context: NavigationValidationContext;
+    }
+  | Extract<NavigationJoinResult, { accepted: false }> {
+  const observed = navigationObservationSchema.safeParse(rawObservation);
+  if (!observed.success)
+    return { accepted: false, reason: "INVALID_OBSERVATION" };
+  const checked = validationContextSchema.safeParse(rawContext);
+  if (!checked.success) return { accepted: false, reason: "INVALID_CONTEXT" };
+  return (
+    rejectNavigationContext(observed.data, checked.data) || {
+      accepted: true,
+      observation: observed.data,
+      context: checked.data,
+    }
+  );
+}
+
+/** A proposal never changes local authority or establishes task completion. */
+export function joinNavigationDecision(
+  rawDecision: unknown,
+  rawObservation: unknown,
+  rawContext: NavigationValidationContext,
+): NavigationJoinResult {
+  const observed = navigationObservationSchema.safeParse(rawObservation);
+  if (!observed.success)
+    return { accepted: false, reason: "INVALID_OBSERVATION" };
+  const proposed = navigationDecisionSchema.safeParse(rawDecision);
+  if (!proposed.success) return { accepted: false, reason: "INVALID_DECISION" };
+  const checked = validationContextSchema.safeParse(rawContext);
+  if (!checked.success) return { accepted: false, reason: "INVALID_CONTEXT" };
+  const observation = observed.data,
+    response = proposed.data;
+  const rejected = rejectNavigationContext(observation, checked.data, response);
+  if (rejected) return rejected;
   const decision = response.decision;
   if (decision.kind === "guide") {
     const control = observation.controls.find(

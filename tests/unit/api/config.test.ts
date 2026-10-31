@@ -7,6 +7,7 @@ import {
   parseWorkerConfig,
   parseDatabaseConfig,
   parseServiceConfig,
+  parseModelExperimentConfig,
   validateApiOptions,
   validatePrivateConnection,
   validateServiceOptions,
@@ -18,6 +19,7 @@ import {
   type ApiOptions,
 } from "../../../apps/api/src/config";
 import type { IdentityOptions } from "../../../apps/api/src/application/identity-contracts";
+import { MODEL_LIMITS } from "../../../apps/api/src/application/model-contracts";
 
 const chrome = "chrome-extension://" + "a".repeat(32);
 const firefox = "moz-extension://12345678-1234-1234-1234-123456789abc";
@@ -36,6 +38,88 @@ const supportEnvironment = () => ({
   THOLI_OBJECT_BUCKET: "tholi-private",
   THOLI_OBJECT_ACCESS_KEY: "synthetic-access",
   THOLI_OBJECT_SECRET_KEY: "synthetic-secret",
+});
+
+describe("explicit operator model configuration", () => {
+  const vertexEnvironment = () => ({
+    THOLI_MODEL_PROVIDER: "vertex",
+    THOLI_MODEL_API: "v1",
+    THOLI_MODEL_PROJECT: "tholi-model-fixture",
+    THOLI_MODEL_REGION: "global",
+    THOLI_MODEL_ID: "gemini-3.8-flash",
+    THOLI_MODEL_RETENTION_PROFILE: "provider-default-acknowledged",
+    THOLI_MODEL_EXPERIMENT_STATE_DIR: resolve("output/model-config-fixture"),
+  });
+  it("defaults to fake without inspecting ambient provider secrets or state", () => {
+    const config = parseModelExperimentConfig({
+      GOOGLE_APPLICATION_CREDENTIALS: "UNREAD_PRIVATE_PATH",
+      THOLI_MODEL_EXPERIMENT_STATE_DIR: "ignored-relative-path",
+    });
+    expect(config).toEqual(parseModelExperimentConfig({}));
+    expect(config.provider).toBe("fake");
+    expect(config).not.toHaveProperty("stateDirectory");
+    expect(config.budget.maxInputTokens).toBe(MODEL_LIMITS.maxInputTokens);
+    expect(config.timeoutMs).toBe(20000);
+  });
+  it("allows only lower bounded experiment budgets and explicit exact provider configuration", () => {
+    expect(
+      parseModelExperimentConfig({
+        ...vertexEnvironment(),
+        THOLI_MODEL_MAX_INPUT_TOKENS: "4",
+        THOLI_MODEL_MAX_OUTPUT_TOKENS: "5",
+        THOLI_MODEL_MAX_IMAGES: "0",
+        THOLI_MODEL_TIMEOUT_MS: "1000",
+      }),
+    ).toMatchObject({
+      provider: "vertex",
+      options: {
+        api: "v1",
+        project: "tholi-model-fixture",
+        location: "global",
+        model: "gemini-3.8-flash",
+        retentionProfile: "provider-default-acknowledged",
+      },
+      budget: { maxInputTokens: 4, maxOutputTokens: 5, maxImages: 0 },
+      timeoutMs: 1000,
+    });
+  });
+  it.each([
+    ["THOLI_MODEL_PROVIDER", "gemini"],
+    ["THOLI_MODEL_PROVIDER", ""],
+    ["THOLI_MODEL_API", "v1beta1"],
+    ["THOLI_MODEL_API", "https://private.example"],
+    ["THOLI_MODEL_PROJECT", "../other"],
+    ["THOLI_MODEL_REGION", "us-central1"],
+    ["THOLI_MODEL_ID", "latest"],
+    ["THOLI_MODEL_RETENTION_PROFILE", "zero-retention"],
+    ["THOLI_MODEL_EXPERIMENT_STATE_DIR", "relative/state"],
+    ["THOLI_MODEL_MAX_INPUT_TOKENS", "32769"],
+    ["THOLI_MODEL_MAX_OUTPUT_TOKENS", "2049"],
+    ["THOLI_MODEL_MAX_RESPONSE_BYTES", "32769"],
+    ["THOLI_MODEL_MAX_IMAGES", "2"],
+    ["THOLI_MODEL_MAX_IMAGE_BYTES", "2097153"],
+    ["THOLI_MODEL_MAX_IMAGE_PIXELS", "4000001"],
+    ["THOLI_MODEL_TIMEOUT_MS", "25001"],
+    ["THOLI_MODEL_TIMEOUT_MS", "999"],
+    ["THOLI_MODEL_MAX_INPUT_TOKENS", "1.5"],
+    ["THOLI_MODEL_MAX_INPUT_TOKENS", "-1"],
+  ])("rejects invalid model experiment %s=%s", (name, value) => {
+    expect(() =>
+      parseModelExperimentConfig({ ...vertexEnvironment(), [name]: value }),
+    ).toThrow();
+  });
+  it.each([
+    "THOLI_MODEL_API",
+    "THOLI_MODEL_PROJECT",
+    "THOLI_MODEL_REGION",
+    "THOLI_MODEL_ID",
+    "THOLI_MODEL_RETENTION_PROFILE",
+    "THOLI_MODEL_EXPERIMENT_STATE_DIR",
+  ])("requires explicit %s for a live experiment", (name) => {
+    const env: Record<string, string> = vertexEnvironment();
+    delete env[name];
+    expect(() => parseModelExperimentConfig(env)).toThrow();
+  });
 });
 
 describe("service-only transport policy", () => {

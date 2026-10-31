@@ -11,6 +11,41 @@ Adopt one modular Fastify API, a separately runnable durable-job worker, Postgre
 
 Issue #25 changes documentation only. The profiles, ports and hosted routes described below are adopted design requirements, not implemented capabilities. No infrastructure is provisioned, model quality claimed, account flow enabled or production configuration approved here. Website `0.1.1` and extension/API `0.11.0` remain unchanged.
 
+## Current execution scope
+
+The latest user instruction authorizes the remaining backend, cloud and website
+roadmap work while excluding desktop implementation. This is an execution-scope
+amendment, not a new implementation or validation claim. The adopted ADR and its
+dated evidence retain their historical meaning; current capability and acceptance
+evidence belongs to each subsequent issue and pull request.
+
+- [#54](https://github.com/Sammieblz/tholi/issues/54) is deferred to a separate
+  desktop plan. Keep it open and outside this execution scope. Do not implement
+  an OS agent, native observation/action driver, desktop installer or native
+  updater as part of this backend track.
+- [#53](https://github.com/Sammieblz/tholi/issues/53) remains in scope for
+  feasibility, architecture and versioned client/service contracts only. Define
+  authenticated IPC, permission, identity, policy, data and usage boundaries so a
+  later desktop client can reuse the backend. A reviewed specification does not
+  certify an implemented desktop client or native permissions.
+- [#55](https://github.com/Sammieblz/tholi/issues/55) follows #53 for backend and
+  browser enterprise controls, rather than waiting for the excluded #54
+  prototype. Extend existing organization/workspace identity, roles, cloud-use
+  and application policy, audit/export, retention and deployment-policy owners.
+  Enforce supported controls in the API and current browser clients; describe
+  future native-device and update behavior as contracts with implementation and
+  conformance evidence deferred to the desktop plan.
+- [#56](https://github.com/Sammieblz/tholi/issues/56) and
+  [#57](https://github.com/Sammieblz/tholi/issues/57) continue after the scoped
+  enterprise milestone. Their browser/shared-service model and research work
+  does not authorize a desktop prototype. Native identifiers remain separately
+  versioned and must never masquerade as browser document identities.
+
+The matching GitHub dependencies and scope notes must record this amendment.
+Customer evidence, approved data, cost controls, independent outcome verification
+and each milestone's deployment/release gates remain required. The server never
+acquires an active browser or future native journey or action authority.
+
 ## Goals and ownership
 
 The cloud service should improve page perception and navigation without forcing larger models onto every user's device. Gemini is the first planned remote model adapter. Model identifiers, regions, credentials and budgets remain configuration, with evaluation gates before release. There is no promise that one model understands every web application.
