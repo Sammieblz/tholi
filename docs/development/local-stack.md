@@ -182,6 +182,19 @@ requires separate exact-data and bounded-spending approval, ADC and a durable
 single-use approval store. Its reservation is separate from the production
 quota/credit ledger in [#44](https://github.com/Sammieblz/tholi/issues/44).
 
+For the separately admitted [#43 comparison](testing/perception-comparison.md),
+`infra/local/compose.evaluation.yaml` adds a fixed-destination SQL proxy for
+a host Node operator runtime. It inherits the pinned gateway image and security
+settings, while PostgreSQL stays exclusively on the internal database network.
+Choose a free `THOLI_EVALUATION_POSTGRES_PORT`
+and explicitly add this overlay to the disposable local project's Compose command.
+The proxy's SQL port binds only `127.0.0.1`; ordinary Compose publishes no SQL port.
+Compose 2.24.4 or newer is required for the explicit override fields.
+Use the existing runtime database role, identity configuration and normal PKCE
+sign-in. Do not copy migration credentials into the operator runtime. This is a
+development connection profile, not a VM/cloud configuration or production
+inference profile. The normal API, worker and local guidance remain cloud-free.
+
 ## Stop, retain or delete data
 
 ```sh

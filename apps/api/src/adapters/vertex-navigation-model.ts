@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { NavigationModel, ServiceRequestContext } from "../capabilities";
 import {
@@ -34,7 +35,11 @@ export function validateVertexModelOptions(input: unknown): VertexModelOptions {
 }
 export interface VertexModelDependencies {
   accessToken(signal: AbortSignal): Promise<string>;
-  beforeSend(signal: AbortSignal, phase: "count" | "generate"): Promise<void>;
+  beforeSend(
+    signal: AbortSignal,
+    phase: "count" | "generate",
+    requestSha256: string,
+  ): Promise<void>;
   authorizeGeneration(
     signal: AbortSignal,
     budget: { inputTokens: number; maxOutputTokens: number },
@@ -106,6 +111,21 @@ const proposalSchema = providerSchema(
     $refStrategy: "none",
   }),
 );
+
+/** Exact source-owned definitions used by operator provenance, without copying prompts. */
+export function vertexNavigationProvenance() {
+  const hash = (value: unknown) =>
+    createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return {
+    promptSha256: hash({ systemInstruction, proposalSchema }),
+    observationSchemaSha256: hash(
+      zodToJsonSchema(navigationObservationSchema, {
+        target: "jsonSchema7",
+        $refStrategy: "none",
+      }),
+    ),
+  };
+}
 
 /** One explicit v1 REST adapter. Composition owns ADC and experiment permits. */
 export function createVertexNavigationModel(
@@ -303,6 +323,7 @@ export function createVertexNavigationModel(
             dependencies.beforeSend(
               signal,
               method === "countTokens" ? "count" : "generate",
+              createHash("sha256").update(requestBody).digest("hex"),
             ),
           );
           current();

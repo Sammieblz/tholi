@@ -56,6 +56,33 @@ export async function createServiceApi(
   resources: RuntimeResource[] = [],
   injected: ServiceApiServices = {},
 ) {
+  return createServiceRuntime(input, resources, injected, false);
+}
+
+/** Operator entrypoint only; ordinary environment startup cannot select this. */
+export async function createOperatorEvaluationApi(
+  input: ServiceApiOptions,
+  resources: RuntimeResource[],
+  injected: ServiceApiServices,
+) {
+  if (
+    injected.navigation?.provider !== "operator-evaluation" ||
+    !injected.navigation.evaluationMetadata ||
+    !injected.identity ||
+    !injected.authorization
+  )
+    throw new Error(
+      "Operator evaluation requires its admitted authenticated composition.",
+    );
+  return createServiceRuntime(input, resources, injected, true);
+}
+
+async function createServiceRuntime(
+  input: ServiceApiOptions,
+  resources: RuntimeResource[],
+  injected: ServiceApiServices,
+  operatorEvaluation: boolean,
+) {
   const options = validateServiceOptions(input);
   let identity = injected.identity;
   let authorization = injected.authorization;
@@ -73,7 +100,9 @@ export async function createServiceApi(
     throw new Error(
       "Identity injection requires an explicit identity profile.",
     );
-  if (navigation && !options.navigation)
+  if (navigation?.provider === "operator-evaluation" && !operatorEvaluation)
+    throw new Error("Operator evaluation cannot use ordinary service startup.");
+  if (navigation && !options.navigation && !operatorEvaluation)
     throw new Error(
       "Navigation injection requires the explicit fake transport profile.",
     );
@@ -178,6 +207,7 @@ export async function createServiceApi(
         !!support,
         !!analytics,
         !!navigation,
+        navigation?.evaluationMetadata,
       );
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");

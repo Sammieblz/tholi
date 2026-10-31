@@ -19,6 +19,7 @@ RUN npm ci --no-audit --no-fund
 COPY apps/api/src/ ./apps/api/src/
 COPY packages/ ./packages/
 COPY scripts/build-api.mjs ./scripts/build-api.mjs
+COPY scripts/artifact-files.mjs ./scripts/artifact-files.mjs
 RUN npm run build:api
 
 FROM base AS production-dependencies

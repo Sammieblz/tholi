@@ -1058,6 +1058,25 @@ export class PageCoach {
   applyNavigationProposal(message: NavigationProposalMessage) {
     this.refresh();
     const { binding, decision } = message;
+    if (
+      message.profile === "operator-evaluation"
+        ? !message.evaluation ||
+          message.evaluation.generation === undefined ||
+          !message.transportRequestId
+        : message.evaluation !== undefined
+    )
+      return { error: "The proposal processing binding is incomplete." };
+    const processing = {
+      profile: message.profile,
+      ...(message.evaluation ? { evaluation: message.evaluation } : {}),
+      ...(message.transportRequestId
+        ? { transportRequestId: message.transportRequestId }
+        : {}),
+    };
+    const source =
+      message.profile === "operator-evaluation"
+        ? "Operator evaluation"
+        : "Development service";
     const request = this.view.request,
       journey = this.view.journey,
       page = this.view.page,
@@ -1096,7 +1115,7 @@ export class PageCoach {
       fenceLocalRecovery();
       this.clearTarget();
       this.view.serviceNavigation = {
-        profile: "fake",
+        ...processing,
         requestId: binding.requestId,
         state:
           decision.kind === "request-observation" ? "pending" : decision.kind,
@@ -1119,10 +1138,10 @@ export class PageCoach {
         issue: decision.kind === "clarify" ? "ambiguous" : "no-match",
         reason:
           decision.kind === "clarify"
-            ? `Development service clarification: ${decision.question}`
+            ? `${source} clarification: ${decision.question}`
             : decision.kind === "unsupported"
-              ? `Development service could not guide this step: ${decision.reason}`
-              : "The development service requested another observation. Your destination is retained; check the current page before trying again.",
+              ? `${source} could not guide this step: ${decision.reason}`
+              : `${source} requested another observation. Your destination is retained; check the current page before trying again.`,
       };
       this.view.instruction = this.view.goalPlan.reason;
       this.state("choosing");
@@ -1154,10 +1173,10 @@ export class PageCoach {
     // final task evidence. Existing exploration/outcome handling replans next.
     const previousService = this.view.serviceNavigation;
     this.view.serviceNavigation = {
-      profile: "fake",
+      ...processing,
       requestId: binding.requestId,
       state: "guiding",
-      message: "A development service proposed the highlighted control.",
+      message: `${source} proposed the highlighted control.`,
     };
     this.view.goalPlan = {
       ...plan,
@@ -1175,7 +1194,7 @@ export class PageCoach {
           outcome: "Verify the website's declared control result.",
         },
       ],
-      reason: "A development service proposed this known control.",
+      reason: `${source} proposed this known control.`,
     };
     const selected = this.select(control.id, undefined, false);
     if ("error" in selected) {
@@ -1262,13 +1281,17 @@ export class PageCoach {
   ) {
     if (this.view.status !== "running")
       return { error: "Resume navigation before choosing a control." };
+    const proposalPrefix =
+      this.view.serviceNavigation?.profile === "operator-evaluation"
+        ? "Operator evaluation proposal. "
+        : "Development proposal. ";
     const target = this.discovery.bindings.get(id);
     const external = this.view.page?.controls.find(
       (c) => c.id === id && c.reference?.frameId,
     );
     if (external) {
       const instruction =
-        (!usePlanInstruction ? "Development proposal. " : "") +
+        (!usePlanInstruction ? proposalPrefix : "") +
         "Use the highlighted control in the embedded application. Its result will be checked.";
       if (!usePlanInstruction && this.view.goalPlan) {
         this.view.goalPlan.reason = instruction;
@@ -1371,7 +1394,7 @@ export class PageCoach {
           ? `Enter “${value}” using the highlighted field and the website's controls. Input contents are not read.`
           : `Use the highlighted “${target.control.label}” control to choose “${value}”. The requested state is checked.`;
     if (!usePlanInstruction && this.view.goalPlan) {
-      this.view.instruction = "Development proposal. " + this.view.instruction;
+      this.view.instruction = proposalPrefix + this.view.instruction;
       this.view.goalPlan.reason = this.view.instruction;
     }
     this.overlay.show(target.geometry, this.view.instruction, {
@@ -1634,6 +1657,80 @@ export class PageCoach {
       page.revision === this.latestPerception?.pageRevision
       ? this.latestPerception
       : undefined;
+  }
+  /** Fresh scans may reallocate objects without changing the captured evidence. */
+  captureCurrent(page: PageSnapshot) {
+    const capturedDocument = document,
+      { revision, fingerprint, stateKey } = page;
+    let checkedPage: PageSnapshot | undefined,
+      checkedPerception: ComposedDiscoveryPerception | undefined,
+      checkedEvidence: string | undefined;
+    const pageEvidence = () => {
+      const current = this.view.page,
+        perception = this.getPerception(current);
+      if (!current || !perception) return;
+      if (current !== checkedPage || perception !== checkedPerception) {
+        checkedPage = current;
+        checkedPerception = perception;
+        checkedEvidence = JSON.stringify(
+          {
+            revision: current.revision,
+            fingerprint: current.fingerprint,
+            stateKey: current.stateKey,
+            perception,
+          },
+          // Scan IDs identify individual reads. Retain actual frame and
+          // geometry evidence, comparing each fresh snapshot only once.
+          (key, value) => (key === "scanId" ? undefined : value),
+        );
+      }
+      return checkedEvidence;
+    };
+    const taskEvidence = () => {
+      const request = this.view.request,
+        journey = this.view.journey,
+        pending = journey?.workflow?.pendingAction;
+      return JSON.stringify({
+        request: request && {
+          id: request.id,
+          status: request.status,
+          active: request.active,
+          task: request.tasks[request.active],
+        },
+        journey: journey && {
+          id: journey.id,
+          status: journey.status,
+          contextRevision: journey.workflow?.revision,
+          contextStatus: journey.workflow?.status,
+          pendingAction: pending && {
+            milestone: pending.milestone,
+            signature: pending.signature,
+            controlId: pending.controlId,
+            frameId: pending.frameId,
+            acted: pending.acted,
+            startedAt: pending.startedAt,
+            beforeRevision: pending.beforeRevision,
+            beforeFingerprint: pending.beforeFingerprint,
+            beforeDocumentId: pending.beforeDocumentId,
+            final: pending.final,
+          },
+          progress: journey.progress,
+          totalVerified: journey.totalVerified,
+        },
+        verifiedSteps: this.view.verifiedSteps,
+      });
+    };
+    const captured = this.view.page === page ? pageEvidence() : undefined,
+      capturedTask = taskEvidence();
+    return () =>
+      document === capturedDocument &&
+      this.view.status === "running" &&
+      this.view.page?.revision === revision &&
+      this.view.page.fingerprint === fingerprint &&
+      this.view.page.stateKey === stateKey &&
+      captured !== undefined &&
+      pageEvidence() === captured &&
+      taskEvidence() === capturedTask;
   }
   observeRegion(regionId: string, scanId: string, pageRevision: number) {
     if (this.view.status !== "running") return;

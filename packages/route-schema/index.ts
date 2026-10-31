@@ -3,6 +3,8 @@ import {
   nativeBrowserReferenceSchema,
   navigationProposalSchema,
   navigationServiceStateSchema,
+  navigationProcessingProfileSchema,
+  navigationEvaluationContextSchema,
 } from "../navigation-core/contracts-navigation";
 import {
   requestSchema,
@@ -47,7 +49,9 @@ export const navigationProposalMessageSchema = z
     sessionId: z.string().uuid(),
     binding: navigationProposalBindingSchema,
     decision: navigationProposalSchema,
-    profile: z.literal("fake"),
+    profile: navigationProcessingProfileSchema,
+    evaluation: navigationEvaluationContextSchema.optional(),
+    transportRequestId: z.string().uuid().optional(),
   })
   .strict();
 export type NavigationProposalMessage = z.infer<

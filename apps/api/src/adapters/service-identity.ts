@@ -71,6 +71,7 @@ export async function createIdentityRuntime(
       support,
       analytics,
       navigation,
+      repositories,
       resources,
       resource,
     };

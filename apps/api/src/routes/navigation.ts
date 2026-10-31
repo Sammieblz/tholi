@@ -47,7 +47,9 @@ export async function registerNavigationApi(
         if (mutating) mutation(request, current.session, current.bearer);
         if (
           current.session.id !== initial.session.id ||
-          current.session.accountId !== initial.session.accountId
+          current.session.accountId !== initial.session.accountId ||
+          current.session.clientId !== initial.session.clientId ||
+          current.session.clientKind !== initial.session.clientKind
         )
           throw new ApiError(
             401,

@@ -7,7 +7,10 @@ import {
   type PinnedSession,
 } from "../../../../packages/route-registry/session";
 import { stopFrames, invalidatePagePerception } from "./frame-coordinator";
-import { cancelServiceInference } from "../platform/service-auth";
+import {
+  cancelServiceInference,
+  revokeServiceEvaluation,
+} from "../platform/service-auth";
 
 interface Context {
   enqueue: <T>(operation: () => Promise<T>) => Promise<T>;
@@ -60,6 +63,7 @@ export function registerNavigationEvents(context: Context) {
   api.tabs.onDetached.addListener((tabId) => invalidatePinned(tabId));
   api.tabs.onAttached.addListener((tabId) => invalidatePinned(tabId));
   api.permissions.onRemoved.addListener(() => {
+    revokeServiceEvaluation();
     cancelServiceInference();
     // A capture carries no retained permission catalog. Revocation fences its
     // current span immediately, before the serialized journey queue can run.

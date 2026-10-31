@@ -2,8 +2,10 @@
 
 Operator guide for [issue #39](https://github.com/Sammieblz/tholi/issues/39).
 The deterministic fake and an explicitly approved Vertex experiment share one
-application contract. Ordinary HTTP/Compose startup remains fake-only until
-the browser transmission and consent milestone. This guide does not enable cloud
+application contract. Ordinary HTTP/Compose startup remains fake-only. The
+separate [perception comparison](testing/perception-comparison.md) uses an
+explicit, authenticated operator runtime and its own exact-plan approval.
+This guide does not enable consumer cloud
 navigation, certify model quality or authorize a paid call. Recorded checks and
 remaining gates are in the [validation record](testing/model-adapters-validation.md).
 
@@ -28,7 +30,37 @@ Selecting a service model must not eagerly start its local model workers.
 Browser transmission/consent is [#40](https://github.com/Sammieblz/tholi/issues/40);
 integration with the single journey owner is
 [#41](https://github.com/Sammieblz/tholi/issues/41). An adapter alone does not
-enable either capability.
+enable either capability. The implemented development transport keeps the fake
+profile explicit; it cannot silently select Vertex.
+
+## Bounded browser comparison
+
+Issue #43 reuses those routes and the existing model port through
+`apps/api/src/model-evaluation.ts`. It accepts only a loopback listener, a declared
+operator account/workspace/client, current purpose-specific consent and the exact
+reviewed plan. The application continues to own native observations, target
+binding and independent arrival verification. No journey or OS authority moves
+to the service.
+
+`npm run model:evaluation` requires `THOLI_EVALUATION_PLAN_FILE` and an absolute
+`THOLI_EVALUATION_STATE_DIRECTORY`, alongside the existing local identity and SQL
+configuration. Vertex additionally requires `THOLI_EVALUATION_APPROVAL_FILE` for
+new explicit data and spending approval. Keep `THOLI_MODEL_PROVIDER=fake` in the
+ordinary service configuration; the separate admitted plan selects the operator
+provider. No environment flag upgrades consumer processing.
+
+Preparation checks actual build files and source/prompt/schema/capture/protocol
+hashes. Every generation reserves its worst-case liability before dispatch;
+validated measured usage must be durably recorded before headroom is released.
+Unknown usage or failed writes retain liability and stop the run. CountTokens
+and generation dispatch intents record exact serialized-body hashes without
+payloads; an intent is not provider receipt. Fake runs load no ADC or provider.
+
+After shutdown, `npm run model:evaluation -- --audit /absolute/journal.jsonl`
+performs a read-only audit. It never starts a server, resumes a claim or loads
+credentials. An open journal remains provisional. Follow the
+[comparison protocol](testing/perception-comparison.md) for collection and final
+reporting. Passing fake fixtures cannot establish model quality or complete #43.
 
 ## Reviewed provider profile
 

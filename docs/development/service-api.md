@@ -61,6 +61,13 @@ fake navigation adapter. Identity and PostgreSQL must be configured, and
 Compose. Live Vertex inference remains an operator experiment until durable cost
 controls are implemented; this flag cannot select it.
 
+The separate loopback-only [operator comparison runtime](testing/perception-comparison.md)
+reuses these authenticated routes with explicit `profile: "operator-evaluation"`
+and the `operator-navigation-evaluation` capability. It requires an exact plan,
+temporary client activation and separate live approval. Public capability metadata
+is discovery, not authentication or spending authority. Ordinary startup rejects
+this composition, and the fake consumer choice cannot select it.
+
 The configured service advertises both `navigation-decisions` and
 `fake-navigation-model`, with `availability.decisions: true`. Clients require
 both capabilities and send an explicit `profile: "fake"`. Changing a provider or

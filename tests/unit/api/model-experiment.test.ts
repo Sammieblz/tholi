@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
   realpath,
@@ -19,7 +20,22 @@ import {
   runModelExperiment,
 } from "../../../apps/api/src/model-experiment";
 import { createGoogleModelAccessToken } from "../../../apps/api/src/adapters/google-model-auth";
-import { NAVIGATION_LIMITS } from "../../../packages/navigation-core/contracts-navigation";
+import {
+  openOperatorEvaluation,
+  readOperatorEvaluationAudit,
+  type OperatorEvaluationRuntime,
+} from "../../../apps/api/src/operator-evaluation";
+import {
+  ModelError,
+  resolveModelBudget,
+} from "../../../apps/api/src/application/model-contracts";
+import { createEvaluationPolicy } from "../../../apps/api/src/model-evaluation";
+import { operatorEvaluationPlanFixture } from "../../support/operator-evaluation-fixture";
+import { operatorEvaluationPlanSchema } from "../../../packages/navigation-core/contracts-evaluation";
+import {
+  NAVIGATION_LIMITS,
+  navigationTransportInputSchema,
+} from "../../../packages/navigation-core/contracts-navigation";
 import {
   navigationModelCapture,
   navigationModelObservation,
@@ -46,12 +62,14 @@ vi.mock("google-auth-library", () => {
   };
 });
 const directories: string[] = [];
+const evaluations: OperatorEvaluationRuntime[] = [];
 const fixtureNow = Date.parse("2026-10-31T12:00:00Z");
 afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   sdk.options.mockClear();
   sdk.token.mockReset();
+  for (const evaluation of evaluations.splice(0)) await evaluation.close();
   for (const directory of directories.splice(0)) {
     const actual = await realpath(directory),
       parent = await realpath(tmpdir());
@@ -538,3 +556,577 @@ test("ADC coalesces one signal and aborts an uncooperative SDK without accepting
   lateFailure(Error("SYNTHETIC_PRIVATE_LATE_SDK_ERROR"));
   await Promise.resolve();
 });
+
+async function batchFixture(provider: "fake" | "vertex" = "vertex") {
+  const app = await fixture();
+  const plan = operatorEvaluationPlanFixture({ provider, now: fixtureNow });
+  const planFile = join(app.directory, "evaluation-plan.json");
+  const planJson = JSON.stringify(plan, null, 2);
+  const planSha256 = createHash("sha256").update(planJson).digest("hex");
+  await writeFile(planFile, planJson);
+  const approval = {
+    version: 1,
+    id: randomUUID(),
+    planSha256,
+    approvedAtMs: fixtureNow,
+    expiresAtMs: fixtureNow + 60000,
+    approvedData: true,
+    approvedSpending: true,
+    allowanceUsdMicros: 4900000,
+  };
+  if (provider === "vertex")
+    await writeFile(app.approvalFile, JSON.stringify(approval));
+  const start = async (approved = provider === "vertex") => {
+    const runtime = await openOperatorEvaluation({
+      planFile,
+      stateDirectory: app.stateDirectory,
+      ...(approved ? { approvalFile: app.approvalFile } : {}),
+    });
+    evaluations.push(runtime);
+    return runtime;
+  };
+  const trials = plan.trials.filter((trial) => trial.arm !== "local");
+  const binding = (index = 0, generation: 0 | 1 = 0) => ({
+    planSha256,
+    trialId: trials[index].id,
+    generation,
+  });
+  return {
+    ...app,
+    plan,
+    planFile,
+    planJson,
+    planSha256,
+    approval,
+    start,
+    trials,
+    binding,
+  };
+}
+const vertexUsage = (promptTokens = 32768, outputTokens = 2048) => ({
+  provider: "vertex" as const,
+  source: "measured" as const,
+  model: "gemini-3.8-flash",
+  promptTokens,
+  outputTokens,
+  thoughtTokens: 0,
+  cachedTokens: 0,
+  totalTokens: promptTokens + outputTokens,
+});
+
+async function policyFixture(provider: "fake" | "vertex" = "fake") {
+  const app = await batchFixture(provider);
+  const runtime = await app.start();
+  const controller = new AbortController();
+  const observation = structuredClone(app.observation);
+  observation.context.goal = app.plan.cases[0].goal;
+  observation.images = [];
+  const input = navigationTransportInputSchema.parse({
+    profile: "operator-evaluation",
+    requestId: randomUUID(),
+    evaluation: app.binding(),
+    observation,
+    validation: navigationModelValidation(observation),
+    policy: { timeoutMs: 1000 },
+  });
+  const scope = {
+    principal: {
+      accountId: app.plan.operator.accountId,
+      clientId: "extension-chromium",
+      clientKind: "extension" as const,
+    },
+    workspaceId: app.plan.operator.workspaceId,
+    context: {
+      requestId: randomUUID(),
+      deadlineAt: fixtureNow + 10000,
+      signal: controller.signal,
+    },
+    revalidate: vi.fn(async () => {}),
+  };
+  return {
+    ...app,
+    runtime,
+    input,
+    scope,
+    controller,
+    policy: createEvaluationPolicy(runtime),
+  };
+}
+
+test("operator policy rejects actor, goal and arm image mismatches before acquiring spending", async () => {
+  const app = await policyFixture();
+  const claim = vi.spyOn(app.runtime, "claim");
+  const wrongGoal = structuredClone(app.input);
+  wrongGoal.observation.context.goal = "Not the frozen goal";
+  const wrongImages = structuredClone(app.input);
+  wrongImages.observation.images = app.observation.images;
+  const missingImages = structuredClone(app.input);
+  if (missingImages.profile === "operator-evaluation")
+    missingImages.evaluation = app.binding(1);
+  for (const [input, scope] of [
+    [
+      app.input,
+      {
+        ...app.scope,
+        principal: { ...app.scope.principal, accountId: randomUUID() },
+      },
+    ],
+    [app.input, { ...app.scope, workspaceId: randomUUID() }],
+    [
+      app.input,
+      {
+        ...app.scope,
+        principal: { ...app.scope.principal, clientId: "extension-firefox" },
+      },
+    ],
+    [wrongGoal, app.scope],
+    [wrongImages, app.scope],
+    [missingImages, app.scope],
+  ] as const)
+    await expect(app.policy.prepare(input, scope)).rejects.toMatchObject({
+      code: "CONFIGURATION",
+    });
+  expect(claim).not.toHaveBeenCalled();
+  expect(app.scope.revalidate).not.toHaveBeenCalled();
+  expect(app.runtime.audit().claimedGenerations).toBe(0);
+});
+
+test("operator fake policy uses admitted budgets and phase binding without ADC, and halted settlement prevents release", async () => {
+  const app = await policyFixture();
+  const fetcher = vi.fn(() => {
+    throw Error("Unexpected provider access");
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const operation = await app.policy.prepare(app.input, app.scope);
+  expect(operation.budget).toMatchObject({
+    maxInputTokens: 32768,
+    maxOutputTokens: 2048,
+    maxImages: 0,
+  });
+  const result = await operation.model.infer(
+    {
+      observation: app.input.observation,
+      budget: resolveModelBudget(operation.budget),
+    },
+    app.scope.context,
+  );
+  expect(app.runtime.audit()).toMatchObject({
+    provider: "fake",
+    claimedGenerations: 1,
+    authorizedGenerations: 1,
+    countDispatchIntents: 0,
+    generationDispatchIntents: 1,
+  });
+  expect(app.scope.revalidate.mock.calls.length).toBeGreaterThanOrEqual(3);
+  const realAudit = app.runtime.audit();
+  vi.spyOn(app.runtime, "audit").mockImplementation(() => ({
+    ...realAudit,
+    stopped: "invalid-usage",
+  }));
+  await expect(operation.finish({ usage: result.usage })).rejects.toMatchObject(
+    { code: "INVALID_USAGE" },
+  );
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(sdk.options).not.toHaveBeenCalled();
+  await app.runtime.close();
+  expect(
+    (await readOperatorEvaluationAudit(app.runtime.journalFile))
+      .reservedUsdMicros,
+  ).toBe(0);
+});
+
+test("operator policy settles an acquired but undispatched cancelled claim as no-send", async () => {
+  const app = await policyFixture("vertex");
+  const operation = await app.policy.prepare(app.input, app.scope);
+  expect(app.runtime.audit().reservedUsdMicros).toBe(64512);
+  app.controller.abort();
+  let failure: ModelError | undefined;
+  try {
+    await operation.model.infer(
+      {
+        observation: app.input.observation,
+        budget: resolveModelBudget(operation.budget),
+      },
+      app.scope.context,
+    );
+  } catch (error) {
+    if (error instanceof ModelError) failure = error;
+    else throw error;
+  }
+  expect(failure?.code).toBe("CANCELLED");
+  await operation.finish({ error: failure });
+  const audit = app.runtime.audit();
+  expect(audit).toMatchObject({
+    reservedUsdMicros: 0,
+    settledUsdMicros: 0,
+    countDispatchIntents: 0,
+    generationDispatchIntents: 0,
+    unresolvedGenerations: 0,
+  });
+  expect(audit.records.at(-1)?.event).toMatchObject({
+    type: "finished",
+    outcome: "not-sent",
+  });
+  expect(sdk.options).not.toHaveBeenCalled();
+});
+
+test("operator policy rejects a known input canary before provider work and journals only the safety flag", async () => {
+  const app = await policyFixture("vertex");
+  app.input.observation.controls[0].label = "EVALUATION_PRIVATE_SENTINEL";
+  await expect(app.policy.prepare(app.input, app.scope)).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+  });
+  const audit = app.runtime.audit();
+  expect(audit).toMatchObject({
+    stopped: "privacy",
+    knownSentinelLeaks: 1,
+    countDispatchIntents: 0,
+    generationDispatchIntents: 0,
+    reservedUsdMicros: 0,
+  });
+  expect(JSON.stringify(audit)).not.toContain("EVALUATION_PRIVATE_SENTINEL");
+  expect(sdk.options).not.toHaveBeenCalled();
+});
+
+test("operator policy contains a known output canary without persisting or treating it as intentional refusal", async () => {
+  const fake =
+    await import("../../../apps/api/src/adapters/fake-navigation-model");
+  const original = fake.createFakeNavigationModel();
+  vi.spyOn(fake, "createFakeNavigationModel").mockReturnValue({
+    async infer(input, context) {
+      const result = await original.infer(input, context);
+      return {
+        ...result,
+        proposal: {
+          kind: "unsupported",
+          reason: "EVALUATION_PRIVATE_SENTINEL",
+        },
+      };
+    },
+  });
+  const app = await policyFixture();
+  const operation = await app.policy.prepare(app.input, app.scope);
+  let failure: ModelError | undefined;
+  try {
+    await operation.model.infer(
+      {
+        observation: app.input.observation,
+        budget: resolveModelBudget(operation.budget),
+      },
+      app.scope.context,
+    );
+  } catch (error) {
+    if (error instanceof ModelError) failure = error;
+    else throw error;
+  }
+  expect(failure?.code).toBe("INVALID_OUTPUT");
+  await operation.finish({ error: failure, usage: failure?.usage });
+  const audit = app.runtime.audit();
+  expect(audit).toMatchObject({
+    stopped: "privacy",
+    knownSentinelLeaks: 1,
+    settledUsdMicros: 0,
+    reservedUsdMicros: 0,
+  });
+  expect(audit.records.at(-2)?.event).toMatchObject({
+    type: "finished",
+    outcome: "reported",
+    errorCode: "INVALID_OUTPUT",
+  });
+  expect(JSON.stringify(audit)).not.toContain("EVALUATION_PRIVATE_SENTINEL");
+  expect(
+    audit.records.flatMap(({ event }) =>
+      event.type === "finished" ? [event.proposalKind] : [],
+    ),
+  ).toEqual([undefined]);
+});
+
+test("operator dry runs are truthful fake reports, preserve frozen cohorts and never start ADC or Google requests", async () => {
+  const app = await batchFixture("fake");
+  const fetcher = vi.fn(() => {
+    throw Error("Unexpected cloud request");
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const runtime = await app.start();
+  const claim = await runtime.claim(app.binding(), "c".repeat(64));
+  await runtime.authorizeGeneration(claim, new AbortController().signal);
+  await expect(
+    runtime.beforeSend(
+      claim,
+      new AbortController().signal,
+      "count",
+      "c".repeat(64),
+    ),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.beforeSend(
+    claim,
+    new AbortController().signal,
+    "generate",
+    "d".repeat(64),
+  );
+  await runtime.finish(claim, {
+    outcome: "reported",
+    proposalKind: "unsupported",
+    usage: {
+      provider: "fake",
+      source: "fake",
+      model: "tholi-deterministic-v1",
+      promptTokens: 0,
+      outputTokens: 0,
+      thoughtTokens: 0,
+      cachedTokens: 0,
+      totalTokens: 0,
+    },
+  });
+  expect(runtime.audit()).toMatchObject({
+    provider: "fake",
+    settledUsdMicros: 0,
+    reservedUsdMicros: 0,
+    countDispatchIntents: 0,
+    generationDispatchIntents: 1,
+  });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(sdk.options).not.toHaveBeenCalled();
+  expect(
+    operatorEvaluationPlanSchema.safeParse({
+      ...app.plan,
+      cases: app.plan.cases.slice(1),
+    }).success,
+  ).toBe(false);
+  const cases = structuredClone(app.plan.cases);
+  Object.assign(cases[0], { expectedTarget: "oracle-must-not-enter-plan" });
+  expect(
+    operatorEvaluationPlanSchema.safeParse({ ...app.plan, cases }).success,
+  ).toBe(false);
+});
+
+test("operator live admission needs a new exact-plan approval and refuses consumed claims without network use", async () => {
+  const app = await batchFixture();
+  await expect(app.start(false)).rejects.toMatchObject({
+    code: "CONFIGURATION",
+  });
+  await writeFile(
+    app.approvalFile,
+    JSON.stringify({ ...app.approval, planSha256: "f".repeat(64) }),
+  );
+  await expect(app.start()).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await writeFile(app.approvalFile, JSON.stringify(app.approval));
+  const runtime = await app.start();
+  await expect(app.start()).rejects.toMatchObject({ code: "CONFIGURATION" });
+  expect(runtime.audit().claimedGenerations).toBe(0);
+  expect(app.fetcher).not.toHaveBeenCalled();
+  expect(sdk.options).not.toHaveBeenCalled();
+});
+
+test("operator dispatch intents bind exact body hashes and cannot repeat or generate before counted authorization", async () => {
+  const app = await batchFixture();
+  const runtime = await app.start();
+  const claim = await runtime.claim(app.binding(), "c".repeat(64));
+  const signal = new AbortController().signal;
+  await expect(
+    runtime.beforeSend(claim, signal, "generate", "d".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.beforeSend(claim, signal, "count", "e".repeat(64));
+  await expect(
+    runtime.beforeSend(claim, signal, "count", "e".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await expect(
+    runtime.beforeSend(claim, signal, "generate", "d".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.authorizeGeneration(claim, signal);
+  await runtime.beforeSend(claim, signal, "generate", "d".repeat(64));
+  await expect(
+    runtime.beforeSend(claim, signal, "generate", "d".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.finish(claim, {
+    outcome: "reported",
+    usage: vertexUsage(4, 3),
+    proposalKind: "unsupported",
+  });
+  await runtime.close();
+  const audit = await readOperatorEvaluationAudit(runtime.journalFile);
+  expect(audit).toMatchObject({
+    countDispatchIntents: 1,
+    generationDispatchIntents: 1,
+    authorizedGenerations: 1,
+  });
+  expect(
+    audit.records.flatMap(({ event }) =>
+      event.type === "dispatch-intent" ? [event.requestSha256] : [],
+    ),
+  ).toEqual(["e".repeat(64), "d".repeat(64)]);
+  expect(app.fetcher).not.toHaveBeenCalled();
+  expect(sdk.options).not.toHaveBeenCalled();
+});
+
+test("operator reservations settle measured cost before reuse and stop at the aggregate allowance", async () => {
+  const app = await batchFixture();
+  const runtime = await app.start();
+  const signal = new AbortController().signal;
+  const first = await runtime.claim(app.binding(), "d".repeat(64));
+  expect(runtime.audit()).toMatchObject({
+    settledUsdMicros: 0,
+    reservedUsdMicros: 64512,
+  });
+  await runtime.authorizeGeneration(first, signal);
+  await runtime.finish(first, {
+    outcome: "reported",
+    usage: vertexUsage(100, 10),
+    proposalKind: "unsupported",
+  });
+  expect(runtime.audit()).toMatchObject({
+    settledUsdMicros: 225,
+    reservedUsdMicros: 0,
+  });
+  for (let index = 1; index <= 75; index++) {
+    const claim = await runtime.claim(app.binding(index), "d".repeat(64));
+    await runtime.authorizeGeneration(claim, signal);
+    await runtime.finish(claim, {
+      outcome: "reported",
+      usage: vertexUsage(),
+      proposalKind: "unsupported",
+    });
+  }
+  expect(runtime.audit().settledUsdMicros).toBe(225 + 75 * 64512);
+  await expect(
+    runtime.claim(app.binding(76), "d".repeat(64)),
+  ).rejects.toMatchObject({ code: "BUDGET_EXCEEDED" });
+  expect(runtime.audit()).toMatchObject({
+    stopped: "budget",
+    claimedGenerations: 76,
+    reservedUsdMicros: 0,
+  });
+  await runtime.close();
+  const audit = await readOperatorEvaluationAudit(runtime.journalFile);
+  expect(audit).toMatchObject({
+    closed: true,
+    stopped: "budget",
+    settledUsdMicros: 225 + 75 * 64512,
+  });
+  expect(audit.liabilityUsdMicros).toBeLessThanOrEqual(4900000);
+});
+
+test("operator claims and finalization are one-shot; uncertain results retain liability and stop the run", async () => {
+  const app = await batchFixture();
+  const runtime = await app.start();
+  const claim = await runtime.claim(app.binding(), "e".repeat(64));
+  const signal = new AbortController().signal;
+  await expect(runtime.beforeSend({ ...claim }, signal)).rejects.toMatchObject({
+    code: "CONFIGURATION",
+  });
+  await expect(
+    runtime.claim(app.binding(), "e".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.authorizeGeneration(claim, signal);
+  await expect(
+    runtime.authorizeGeneration(claim, signal),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  const finish = runtime.finish(claim, {
+    outcome: "unknown",
+    error: new ModelError("UNAVAILABLE", { outcome: "unknown" }),
+  });
+  expect(runtime.finish(claim, { outcome: "not-sent" })).toBe(finish);
+  await finish;
+  expect(runtime.audit()).toMatchObject({
+    stopped: "unknown",
+    reservedUsdMicros: 64512,
+    settledUsdMicros: 0,
+  });
+  await expect(
+    runtime.claim(app.binding(1), "e".repeat(64)),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.close();
+  expect(
+    (await readOperatorEvaluationAudit(runtime.journalFile)).reservedUsdMicros,
+  ).toBe(64512);
+});
+
+test("operator hooks recheck original approval bytes and interrupted claims never resume as free work", async () => {
+  const app = await batchFixture();
+  const runtime = await app.start();
+  const claim = await runtime.claim(app.binding(), "f".repeat(64));
+  await writeFile(app.approvalFile, JSON.stringify(app.approval) + " ");
+  await expect(
+    runtime.beforeSend(claim, new AbortController().signal),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  await runtime.close();
+  const audit = await readOperatorEvaluationAudit(runtime.journalFile);
+  expect(audit).toMatchObject({
+    unresolvedGenerations: 1,
+    reservedUsdMicros: 64512,
+  });
+  await expect(app.start()).rejects.toMatchObject({ code: "CONFIGURATION" });
+  const original = await readFile(runtime.journalFile, "utf8");
+  await writeFile(runtime.journalFile, original.slice(0, -1));
+  await expect(
+    readOperatorEvaluationAudit(runtime.journalFile),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+});
+
+test("operator journal sync failure forbids further dispatch or optimistic settlement", async () => {
+  const app = await batchFixture();
+  const runtime = await app.start();
+  const claim = await runtime.claim(app.binding(), "a".repeat(64));
+  const probe = await open(join(app.directory, "prototype-probe"), "w");
+  const prototype = Object.getPrototypeOf(probe);
+  await probe.close();
+  vi.spyOn(prototype, "sync").mockRejectedValueOnce(
+    Error("PRIVATE_JOURNAL_FAILURE"),
+  );
+  await expect(
+    runtime.authorizeGeneration(claim, new AbortController().signal),
+  ).rejects.toMatchObject({ code: "CONFIGURATION", outcome: "unknown" });
+  await expect(
+    runtime.beforeSend(claim, new AbortController().signal),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  expect(() => runtime.audit()).toThrow("The model configuration is invalid.");
+  await runtime.close();
+  const audit = await readOperatorEvaluationAudit(runtime.journalFile);
+  expect(audit).toMatchObject({
+    unresolvedGenerations: 1,
+    reservedUsdMicros: 64512,
+  });
+  expect(JSON.stringify(audit)).not.toContain("PRIVATE_JOURNAL_FAILURE");
+});
+
+test.each(["missing-usage", "over-reservation", "privacy"] as const)(
+  "operator %s stops without inventing a free or successful outcome",
+  async (scenario) => {
+    const app = await batchFixture();
+    const runtime = await app.start();
+    const claim = await runtime.claim(app.binding(), "b".repeat(64));
+    await runtime.authorizeGeneration(claim, new AbortController().signal);
+    await runtime.finish(
+      claim,
+      scenario === "privacy"
+        ? {
+            outcome: "not-sent",
+            knownSentinelLeak: true,
+            error: new ModelError("INVALID_INPUT"),
+          }
+        : {
+            outcome: "reported",
+            usage:
+              scenario === "missing-usage"
+                ? undefined
+                : vertexUsage(32769, 2048),
+            error: new ModelError("INVALID_OUTPUT"),
+            proposalKind: "unsupported",
+          },
+    );
+    const audit = runtime.audit();
+    expect(audit.stopped).toBe(
+      scenario === "missing-usage" ? "invalid-usage" : scenario,
+    );
+    expect(
+      audit.records.flatMap(({ event }) =>
+        event.type === "finished" ? [event.proposalKind] : [],
+      ),
+    ).toEqual([undefined]);
+    if (scenario === "missing-usage")
+      expect(audit.reservedUsdMicros).toBe(64512);
+    if (scenario === "over-reservation")
+      expect(audit.settledUsdMicros).toBeGreaterThan(64512);
+    if (scenario === "privacy") expect(audit.knownSentinelLeaks).toBe(1);
+  },
+);

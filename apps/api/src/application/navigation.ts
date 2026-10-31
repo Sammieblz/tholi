@@ -32,7 +32,9 @@ import {
   navigationTransportResponseSchema,
   navigationRequestStatusSchema,
   navigationCancellationSchema,
+  type NavigationTransportInput,
 } from "../../../../packages/navigation-core/contracts-navigation";
+import type { OperatorEvaluationMetadata } from "../../../../packages/navigation-core/contracts-evaluation";
 import type { ServiceRequest, RequestStatus } from "../database/contracts";
 import type { IdentitySession } from "./identity-contracts";
 import {
@@ -362,7 +364,8 @@ export interface NavigationRequestTransaction extends AuthorizationContextReader
 }
 type NavigationRequestRepositories =
   AuthorizedRepositories<NavigationRequestTransaction>;
-type NavigationPrincipal = Pick<IdentitySession, "accountId">;
+export type NavigationPrincipal = Pick<IdentitySession, "accountId"> &
+  Partial<Pick<IdentitySession, "clientId" | "clientKind">>;
 type RevalidateNavigationIdentity = () => Promise<void>;
 const navigationRequestLimit = 32;
 const missingNavigationRequest = () =>
@@ -372,16 +375,46 @@ const missingNavigationRequest = () =>
     "The navigation request is unavailable.",
   );
 
+/** Operator admission returns the existing model port, never browser authority. */
+export interface NavigationEvaluationOperation {
+  model: NavigationModel;
+  budget: Partial<ModelBudget>;
+  finish(result: {
+    usage?: ModelUsage;
+    decision?: NavigationDecision;
+    error?: unknown;
+  }): Promise<void>;
+}
+export interface NavigationEvaluationPolicy {
+  readonly metadata: OperatorEvaluationMetadata;
+  prepare(
+    input: NavigationTransportInput,
+    scope: {
+      principal: NavigationPrincipal;
+      workspaceId: string;
+      context: ServiceRequestContext;
+      revalidate: () => Promise<void>;
+    },
+  ): Promise<NavigationEvaluationOperation>;
+}
+
 /** Scoped request metadata is durable; observations and proposals remain ephemeral. */
 export class NavigationTransportService {
-  readonly provider = "fake" as const;
+  readonly provider: "fake" | "operator-evaluation";
   private readonly active = new Map<string, AbortController>();
   private admitting = 0;
 
   constructor(
     private readonly repositories: NavigationRequestRepositories,
     private readonly model: NavigationModel,
-  ) {}
+    private readonly evaluation?: NavigationEvaluationPolicy,
+  ) {
+    this.provider = evaluation ? "operator-evaluation" : "fake";
+  }
+
+  get evaluationMetadata() {
+    return this.evaluation?.metadata;
+  }
 
   private key(
     principal: NavigationPrincipal,
@@ -462,6 +495,12 @@ export class NavigationTransportService {
     revalidate: RevalidateNavigationIdentity,
   ) {
     const input = navigationTransportInputSchema.parse(raw);
+    if (input.profile !== this.provider)
+      throw new AuthorizationError(
+        409,
+        "COMPATIBILITY_MISMATCH",
+        "The requested navigation profile is unavailable.",
+      );
     const elapsedStart = performance.now(),
       started = Date.now();
     const remaining =
@@ -528,6 +567,23 @@ export class NavigationTransportService {
     let admitted = true,
       claimed = false;
     const key = this.key(principal, workspaceId, input.requestId);
+    let evaluationOperation: NavigationEvaluationOperation | undefined;
+    let finalizationAttempted = false;
+    const finish = async (
+      result: Parameters<NavigationEvaluationOperation["finish"]>[0],
+    ) => {
+      if (!evaluationOperation || finalizationAttempted) return;
+      // A failed/uncertain durable write is never automatically retried or
+      // treated as released spending. The owner retains that liability.
+      finalizationAttempted = true;
+      // Accounting starts even when the caller has already stopped waiting.
+      // Its durable owner serializes this one attempt and retains uncertain liability.
+      const finalization = Promise.resolve().then(() =>
+        evaluationOperation!.finish(result),
+      );
+      void finalization.catch(() => {});
+      await awaitModelOperation(() => finalization, signal, interrupted);
+    };
     try {
       await identity();
       const claim = await this.scoped(
@@ -569,26 +625,57 @@ export class NavigationTransportService {
       this.active.set(key, controller);
       this.admitting--;
       admitted = false;
-      await identity();
-      await this.scoped(
-        principal,
-        workspaceId,
-        operation,
-        async (repository) => {
-          if (
-            (await this.owned(repository, input.requestId)).status !== "pending"
-          )
-            throw new ModelError("CANCELLED", { outcome: "unknown" });
-        },
-        input.observation.images.length > 0,
-        true,
-      );
-      alive();
-      const result = await createNavigationModelService(this.model).propose(
+      const guard = async () => {
+        await identity();
+        await this.scoped(
+          principal,
+          workspaceId,
+          operation,
+          async (repository) => {
+            if (
+              (await this.owned(repository, input.requestId)).status !==
+              "pending"
+            )
+              throw new ModelError("CANCELLED", { outcome: "unknown" });
+          },
+          input.observation.images.length > 0,
+          true,
+        );
+        alive();
+      };
+      await guard();
+      if (this.evaluation) {
+        const preparation = this.evaluation.prepare(input, {
+          principal,
+          workspaceId,
+          context: operation,
+          revalidate: guard,
+        });
+        void preparation
+          .then(async (prepared) => {
+            if (signal.aborted && !evaluationOperation) {
+              // A bounded HTTP response can precede a slow durable claim. It
+              // still gets one cleanup attempt and can never dispatch a model.
+              await prepared.finish({ error: interrupted() });
+            }
+          })
+          .catch(() => {});
+        evaluationOperation = await awaitModelOperation(
+          () => preparation,
+          signal,
+          interrupted,
+        );
+        await guard();
+      }
+      const result = await createNavigationModelService(
+        evaluationOperation?.model ?? this.model,
+      ).propose(
         input.observation,
         current,
         operation,
+        evaluationOperation?.budget,
       );
+      await finish({ usage: result.usage, decision: result.decision });
       await identity();
       await this.scoped(
         principal,
@@ -618,6 +705,17 @@ export class NavigationTransportService {
         decision: result.decision,
       });
     } catch (error) {
+      let failure = error;
+      try {
+        await finish({
+          error,
+          ...(error instanceof ModelError && error.usage
+            ? { usage: error.usage }
+            : {}),
+        });
+      } catch (settlementError) {
+        failure = settlementError;
+      }
       if (claimed) {
         // Cleanup records no page data and never retries inference. Revocation or
         // database failure may leave pending metadata; that still forbids replay.
@@ -649,7 +747,7 @@ export class NavigationTransportService {
             interrupted,
           ).catch(() => {});
       }
-      throw error;
+      throw failure;
     } finally {
       clearTimeout(timer);
       if (admitted) this.admitting--;

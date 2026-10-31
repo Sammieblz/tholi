@@ -1,7 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { buildProvenance } from "./build-provenance";
-export type CaseResult = { id: string; status: string; [key: string]: unknown };
+import type { ComparisonAttachment } from "../../packages/acceptance-metrics";
+export type CaseResult = {
+  id: string;
+  status: string;
+  comparison?: ComparisonAttachment;
+  [key: string]: unknown;
+};
 export function completeCases(expected: string[], cases: CaseResult[]) {
   return (
     expected.length > 0 &&

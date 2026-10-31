@@ -773,6 +773,58 @@ it("inference choices keep native access in the enabling gesture, preserve the c
   );
 });
 
+it.each(["Local", "images"])(
+  "temporary operator evaluation is labelled honestly and %s withdrawal uses the existing Local owner",
+  async (action) => {
+    await withAccountSettings(
+      {
+        reply: (message) =>
+          message.type === "AUTH_INFERENCE_STATUS"
+            ? {
+                configured: true,
+                profile: "operator-evaluation",
+                enabled: true,
+                images: true,
+                evaluation: {
+                  profile: "operator-evaluation",
+                  planSha256: "a".repeat(64),
+                  provider: "vertex",
+                  runtimeManifestSha256: "b".repeat(64),
+                  expiresAtMs: Date.now() + 60000,
+                  trialId: crypto.randomUUID(),
+                  arm: "multimodal",
+                },
+              }
+            : undefined,
+      },
+      async ({ container, local, connected, images, request, rpc }) => {
+        expect(container.textContent).toContain(
+          "Temporary operator evaluation",
+        );
+        expect(container.textContent).toContain("Vertex, multimodal");
+        expect(connected.checked).toBe(false);
+        expect(
+          container.querySelector<HTMLInputElement>(
+            'input[value="operator-evaluation"]',
+          )?.checked,
+        ).toBe(true);
+        await act(async () => (action === "Local" ? local : images).click());
+        expect(rpc).toHaveBeenLastCalledWith({
+          type: "AUTH_INFERENCE_CONFIGURE",
+          profile: "fake",
+          enabled: false,
+          images: false,
+        });
+        expect(local.checked).toBe(true);
+        expect(container.textContent).not.toContain(
+          "Temporary operator evaluation",
+        );
+        expect(request).not.toHaveBeenCalled();
+      },
+    );
+  },
+);
+
 it.each(["native access", "service consent"])(
   "Local immediately fences a pending first enable during %s and ignores its late result",
   async (phase) => {

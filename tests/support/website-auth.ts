@@ -282,11 +282,20 @@ export async function signInWebsite(
   await page
     .getByRole("link", { name: "Continue to sign in", exact: true })
     .click();
+  await completeLocalProviderSignIn(page, environment, username, password);
+  return waitForWebsiteAccount(page, environment);
+}
+/** Shared local provider form for website sign-in and ordinary operator PKCE. */
+export async function completeLocalProviderSignIn(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  username: string,
+  password: string,
+) {
   await page.waitForURL((url) => url.origin === environment.providerOrigin);
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password);
   await page.locator("#kc-login").click();
-  return waitForWebsiteAccount(page, environment);
 }
 /** Keycloak defers initial password setup until verified email; recovery uses the same real form. */
 export async function setWebsitePassword(page: Page, password: string) {
