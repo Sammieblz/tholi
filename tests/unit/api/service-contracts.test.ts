@@ -829,9 +829,7 @@ test("the service OpenAPI describes live routes independently of legacy APIs", a
         },
       },
     });
-    expect(schemas[name].description).toContain(
-      "Future independently versioned",
-    );
+    expect(schemas[name].description).toContain("Independently versioned");
   }
   expect(schemas.NavigationObservation.properties).toMatchObject({
     frames: { maxItems: NAVIGATION_LIMITS.maxFrames },

@@ -16,11 +16,31 @@ import type {
   SavedTask,
   SiteMemory,
 } from "../../../../packages/page-model/index";
+import {
+  joinNavigationDecision,
+  navigationCancellationSchema,
+  navigationRequestStatusSchema,
+  navigationTransportInputSchema,
+  navigationTransportResponseSchema,
+  validateNavigationObservationContext,
+  type NavigationTransportInput,
+  type NavigationValidationContext,
+} from "../../../../packages/navigation-core/contracts-navigation";
+import { awaitAbortableOperation } from "../../../../packages/navigation-core/abort";
+import { ServiceClientError } from "../../../../packages/navigation-core/service-client";
+import {
+  cancelServiceInference,
+  serviceAuthorizedRequest,
+  serviceInferenceAccess,
+  serviceInferencePreflight,
+  serviceInferenceSignal,
+} from "./service-auth";
 type Settings = { url: string; token: string; enabled: boolean };
 const planning = new Set<AbortController>();
 export function cancelBackendPlanning() {
   for (const controller of planning) controller.abort();
   planning.clear();
+  cancelServiceInference();
 }
 export async function backendSettings(): Promise<Settings> {
   return (
@@ -194,4 +214,223 @@ export async function backendOcr(
   });
   if (!response.ok) throw new Error("Backend OCR unavailable");
   return response.json();
+}
+
+/** Explicit service transport; legacy private NLP/OCR never selects this path. */
+export async function backendNavigation(
+  raw: NavigationTransportInput,
+  current: () => NavigationValidationContext,
+  beforeSend: () => Promise<void>,
+  callerSignal?: AbortSignal,
+) {
+  const parsed = navigationTransportInputSchema.safeParse(raw);
+  if (!parsed.success)
+    throw new ServiceClientError(
+      "INVALID_REQUEST",
+      0,
+      "The navigation request is invalid.",
+    );
+  const input = parsed.data;
+  const original = validateNavigationObservationContext(
+    input.observation,
+    input.validation,
+  );
+  if (!original.accepted)
+    throw new ServiceClientError(
+      "INVALID_REQUEST",
+      0,
+      "The original navigation context is invalid.",
+    );
+  const currentContext = () => {
+    const latest = current();
+    if (
+      latest.requestStartedAtMs !== input.validation.requestStartedAtMs ||
+      latest.nowMs < input.validation.nowMs
+    )
+      throw new ServiceClientError(
+        "INVALID_REQUEST",
+        0,
+        "The original navigation clock changed.",
+      );
+    return {
+      ...latest,
+      requestDeadlineMs: Math.min(
+        input.validation.requestDeadlineMs,
+        latest.requestDeadlineMs,
+      ),
+    };
+  };
+  const initial = currentContext();
+  const admitted = validateNavigationObservationContext(
+    input.observation,
+    initial,
+  );
+  if (!admitted.accepted)
+    throw new ServiceClientError(
+      "INVALID_REQUEST",
+      0,
+      "Fresh navigation context is required.",
+    );
+  const remaining = Math.min(
+    input.policy.timeoutMs,
+    input.observation.deadlineAtMs - initial.nowMs,
+    initial.requestDeadlineMs - initial.nowMs,
+  );
+  if (remaining < 1)
+    throw new ServiceClientError(
+      "DEADLINE_EXCEEDED",
+      0,
+      "The navigation deadline expired.",
+    );
+  const started = performance.now();
+  const deadline = AbortSignal.timeout(Math.floor(remaining));
+  // Start the original clock and identity spans before any storage/auth await.
+  const signal = AbortSignal.any([
+    deadline,
+    serviceInferenceSignal(),
+    ...(callerSignal ? [callerSignal] : []),
+  ]);
+  const interrupted = () =>
+    new ServiceClientError(
+      deadline.aborted ? "DEADLINE_EXCEEDED" : "CANCELLED",
+      0,
+      deadline.aborted
+        ? "The navigation deadline expired."
+        : "The navigation request was cancelled.",
+    );
+  const check = () => {
+    signal.throwIfAborted();
+    const context = validateNavigationObservationContext(
+      input.observation,
+      currentContext(),
+    );
+    if (!context.accepted)
+      throw new ServiceClientError(
+        "INVALID_REQUEST",
+        0,
+        "The navigation context changed.",
+      );
+  };
+  return awaitAbortableOperation(
+    async () => {
+      const images = input.observation.images.length > 0;
+      const binding = await serviceInferenceAccess(images);
+      check();
+      const response = await serviceAuthorizedRequest(
+        (account) => `/api/v1/workspaces/${account.workspaceId}/decisions`,
+        navigationTransportResponseSchema,
+        "POST",
+        input,
+        {
+          signal,
+          profile: "navigation",
+          timeoutMs: Math.max(
+            1,
+            Math.floor(remaining - (performance.now() - started)),
+          ),
+          beforeSend: async (connected) => {
+            const fresh = await serviceInferencePreflight(images, signal);
+            if (
+              fresh.origin !== binding.origin ||
+              connected.origin !== binding.origin ||
+              fresh.account.id !== binding.account.id ||
+              connected.account.id !== binding.account.id ||
+              fresh.account.workspaceId !== binding.account.workspaceId ||
+              connected.account.workspaceId !== binding.account.workspaceId
+            )
+              throw new ServiceClientError(
+                "FORBIDDEN",
+                0,
+                "The inference account connection changed.",
+              );
+            check();
+            // Native capture freshness is the last asynchronous operation. Its
+            // owner performs masking, current grants and actual document checks.
+            await beforeSend();
+            check();
+          },
+        },
+      );
+      check();
+      if (response.requestId !== input.requestId)
+        throw new ServiceClientError(
+          "INVALID_RESPONSE",
+          0,
+          "The inference response belongs to another request.",
+        );
+      if (
+        response.decision &&
+        !joinNavigationDecision(
+          response.decision,
+          input.observation,
+          currentContext(),
+        ).accepted
+      )
+        throw new ServiceClientError(
+          "INVALID_RESPONSE",
+          0,
+          "The inference proposal does not match current navigation context.",
+        );
+      return response;
+    },
+    signal,
+    interrupted,
+  );
+}
+
+function transportRequestId(raw: string) {
+  const parsed = navigationRequestStatusSchema.shape.requestId.safeParse(raw);
+  if (!parsed.success)
+    throw new ServiceClientError(
+      "INVALID_REQUEST",
+      0,
+      "The navigation request identifier is invalid.",
+    );
+  return parsed.data;
+}
+
+/** Metadata only. Status retrieval never repeats a model generation. */
+export async function backendNavigationStatus(
+  raw: string,
+  signal?: AbortSignal,
+) {
+  const requestId = transportRequestId(raw);
+  const result = await serviceAuthorizedRequest(
+    (account) =>
+      `/api/v1/workspaces/${account.workspaceId}/decisions/${requestId}`,
+    navigationRequestStatusSchema,
+    "GET",
+    undefined,
+    { signal },
+  );
+  if (result.requestId !== requestId)
+    throw new ServiceClientError(
+      "INVALID_RESPONSE",
+      0,
+      "The inference status belongs to another request.",
+    );
+  return result;
+}
+
+/** Acknowledged cancellation intent cannot establish provider cancellation. */
+export async function cancelBackendNavigation(
+  raw: string,
+  signal?: AbortSignal,
+) {
+  const requestId = transportRequestId(raw);
+  const result = await serviceAuthorizedRequest(
+    (account) =>
+      `/api/v1/workspaces/${account.workspaceId}/decisions/${requestId}/cancel`,
+    navigationCancellationSchema,
+    "POST",
+    {},
+    { signal },
+  );
+  if (result.requestId !== requestId)
+    throw new ServiceClientError(
+      "INVALID_RESPONSE",
+      0,
+      "The inference cancellation belongs to another request.",
+    );
+  return result;
 }

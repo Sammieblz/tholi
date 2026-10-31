@@ -596,13 +596,15 @@ class ScopedRepositories {
   async setRequestStatus(
     id: string,
     status: Exclude<RequestStatus, "pending">,
+    expectedStatus?: RequestStatus,
   ): Promise<ServiceRequest> {
     const result = await this.client.query<ServiceRequest>(
       `UPDATE tholi.requests SET status = $4, updated_at = now()
        WHERE workspace_id = $1 AND account_id = $2 AND id = $3
-         AND (status IN ('pending', 'uncertain') OR status = $4)
+         AND (($5::text IS NULL AND (status IN ('pending', 'uncertain') OR status = $4))
+           OR status = $5)
        RETURNING ${requestColumns}`,
-      [...this.parameters, id, status],
+      [...this.parameters, id, status, expectedStatus ?? null],
     );
     if (!result.rows[0]) conflict();
     return result.rows[0];

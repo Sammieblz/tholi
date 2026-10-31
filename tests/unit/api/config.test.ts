@@ -123,6 +123,55 @@ describe("explicit operator model configuration", () => {
 });
 
 describe("service-only transport policy", () => {
+  it("requires an explicit fake navigation profile with identity and database, without enabling live HTTP", () => {
+    expect(parseServiceConfig({}).options.navigation).toBeUndefined();
+    expect(
+      parseServiceConfig({ THOLI_NAVIGATION_TRANSPORT_ENABLED: "false" })
+        .options.navigation,
+    ).toBeUndefined();
+    expect(() =>
+      parseServiceConfig({ THOLI_NAVIGATION_TRANSPORT_ENABLED: "true" }),
+    ).toThrow("identity");
+    const env = {
+      ...identityEnvironment(),
+      THOLI_NAVIGATION_TRANSPORT_ENABLED: "true",
+    };
+    const options = parseServiceConfig(env).options;
+    expect(options.navigation).toEqual({ provider: "fake" });
+    expect(() =>
+      parseServiceConfig({ ...env, THOLI_MODEL_PROVIDER: "vertex" }),
+    ).toThrow("quota");
+    for (const value of ["yes", "TRUE", "1", ""])
+      expect(() =>
+        parseServiceConfig({
+          ...env,
+          THOLI_NAVIGATION_TRANSPORT_ENABLED: value,
+        }),
+      ).toThrow();
+    for (const navigation of [
+      null,
+      false,
+      {},
+      { provider: "vertex" },
+      { provider: "fake", enabled: true },
+    ])
+      expect(() =>
+        validateServiceOptions({ ...options, navigation: navigation as never }),
+      ).toThrow();
+    try {
+      validateServiceOptions({
+        ...options,
+        navigation: { provider: "PRIVATE_NAVIGATION_SENTINEL" } as never,
+      });
+      throw new Error("Expected navigation configuration rejection.");
+    } catch (error) {
+      expect(String(error)).toContain("navigation");
+      expect(String(error)).not.toContain("PRIVATE_NAVIGATION_SENTINEL");
+    }
+    expect(
+      parsePrivateConfig({ THOLI_NAVIGATION_TRANSPORT_ENABLED: "true" }),
+    ).toEqual(parsePrivateConfig({}));
+  });
   it("requires explicit bounded telemetry opt-in and keeps local collectors development-only", () => {
     expect(parseObservabilityConfig({}, "tholi-api")).toBeUndefined();
     expect(

@@ -15,6 +15,8 @@ import { createS3Objects } from "./s3";
 import { createFileLinks } from "./file-links";
 import { ProductAnalyticsService } from "../application/analytics";
 import type { Observability } from "../application/observability";
+import { NavigationTransportService } from "../application/navigation";
+import { createFakeNavigationModel } from "./fake-navigation-model";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -22,6 +24,7 @@ export async function createIdentityRuntime(
   database: DatabaseOptions,
   supportOptions?: SupportRuntimeOptions,
   observer?: Observability,
+  navigationEnabled = false,
 ) {
   const { pool, resource } = await createServiceDatabase(database, observer);
   const resources: RuntimeResource[] = [resource];
@@ -35,6 +38,12 @@ export async function createIdentityRuntime(
     const authorization = new AuthorizationService(repositories);
     const jobs = new JobService(repositories);
     const analytics = new ProductAnalyticsService(repositories);
+    const navigation = navigationEnabled
+      ? new NavigationTransportService(
+          repositories,
+          createFakeNavigationModel(),
+        )
+      : undefined;
     let support: SupportService | undefined;
     if (supportOptions) {
       const objects = createS3Objects(
@@ -61,6 +70,7 @@ export async function createIdentityRuntime(
       jobs,
       support,
       analytics,
+      navigation,
       resources,
       resource,
     };

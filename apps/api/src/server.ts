@@ -13,6 +13,7 @@ import type { JobService } from "./application/jobs";
 import type { SupportService } from "./application/support";
 import type { ProductAnalyticsService } from "./application/analytics";
 import type { Observability } from "./application/observability";
+import type { NavigationTransportService } from "./application/navigation";
 import { createObservability } from "./adapters/observability";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
@@ -25,6 +26,7 @@ export interface ServiceApiServices {
   support?: SupportService;
   analytics?: ProductAnalyticsService;
   observability?: Observability;
+  navigation?: NavigationTransportService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -60,12 +62,24 @@ export async function createServiceApi(
   let jobs = injected.jobs;
   let support = injected.support;
   let analytics = injected.analytics;
+  let navigation = injected.navigation;
   const ownedResources = [...resources];
-  if ((authorization || jobs || support || analytics) && !identity)
+  if (
+    (authorization || jobs || support || analytics || navigation) &&
+    !identity
+  )
     throw new Error("Authorization requires the composed identity service.");
   if (identity && !options.identity)
     throw new Error(
       "Identity injection requires an explicit identity profile.",
+    );
+  if (navigation && !options.navigation)
+    throw new Error(
+      "Navigation injection requires the explicit fake transport profile.",
+    );
+  if (navigation && !authorization)
+    throw new Error(
+      "Navigation transport requires composed tenant authorization.",
     );
   const observer =
     injected.observability ?? createObservability(options.observability);
@@ -77,6 +91,7 @@ export async function createServiceApi(
       options.database!,
       options.support,
       observer,
+      !!options.navigation,
     ).catch(async (error) => {
       await observer.close();
       throw error;
@@ -86,6 +101,7 @@ export async function createServiceApi(
     jobs = runtime.jobs;
     support = runtime.support;
     analytics = runtime.analytics;
+    navigation = runtime.navigation;
     ownedResources.push(...runtime.resources);
   }
   // Accept late completions during drain, then flush after application resources close.
@@ -161,6 +177,7 @@ export async function createServiceApi(
         !!jobs,
         !!support,
         !!analytics,
+        !!navigation,
       );
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
@@ -183,6 +200,10 @@ export async function createServiceApi(
           const { registerFilesApi } = await import("./routes/files");
           await registerSupportApi(app, identity, support);
           await registerFilesApi(app, identity, support);
+        }
+        if (navigation) {
+          const { registerNavigationApi } = await import("./routes/navigation");
+          await registerNavigationApi(app, identity, navigation);
         }
       }
       registerHealth(app, "service", lifecycle);

@@ -45,6 +45,12 @@ export function inspectLocalStack(config) {
     (api.environment?.THOLI_MODEL_PROVIDER || "fake") === "fake",
     "the local stack must use the fake model provider.",
   );
+  requirePolicy(
+    [undefined, "false", "true"].includes(
+      api.environment?.THOLI_NAVIGATION_TRANSPORT_ENABLED,
+    ),
+    "navigation transport requires an explicit true or false setting and the fake provider.",
+  );
   for (const name of ["api", "worker"]) {
     const service = services[name];
     if (service.environment?.THOLI_OBSERVABILITY_ENABLED === "true")

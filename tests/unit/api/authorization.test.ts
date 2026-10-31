@@ -1,8 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import sharp from "sharp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AuthorizationService,
+  AuthorizationError,
   type AuthorizationRepositories,
   type AuthorizationTransaction,
 } from "../../../apps/api/src/application/authorization";
@@ -26,8 +28,27 @@ import {
   type Membership,
   type Job,
   type RepositoryScope,
+  type ServiceRequest,
 } from "../../../apps/api/src/database/contracts";
 import { createServiceApi } from "../../../apps/api/src/server";
+import type { NavigationModel } from "../../../apps/api/src/capabilities";
+import {
+  NavigationTransportService,
+  type NavigationRequestTransaction,
+} from "../../../apps/api/src/application/navigation";
+import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-navigation-model";
+import {
+  navigationModelObservation,
+  navigationModelValidation,
+  navigationModelCapture,
+} from "../../support/navigation-model-fixture";
+import {
+  NAVIGATION_TRANSPORT_LIMITS,
+  NAVIGATION_TRANSPORT_OPERATION,
+  navigationTransportResponseSchema,
+  navigationRequestStatusSchema,
+  navigationCancellationSchema,
+} from "../../../packages/navigation-core/contracts-navigation";
 import { SupportService } from "../../../apps/api/src/application/support";
 import type {
   ObjectPort,
@@ -75,7 +96,11 @@ const nativeToken = "n".repeat(43);
 const webToken = "w".repeat(43);
 const bearer = { authorization: `Bearer ${nativeToken}` };
 
-async function fixture(supportEnabled = true, analyticsEnabled = true) {
+async function fixture(
+  supportEnabled = true,
+  analyticsEnabled = true,
+  navigationModel?: NavigationModel,
+) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
     THOLI_SERVICE_ORIGINS: `${webOrigin},https://help.tholi.io`,
@@ -118,6 +143,7 @@ async function fixture(supportEnabled = true, analyticsEnabled = true) {
     revision: 2n,
   };
   const consents: Consent[] = [];
+  const navigationRequests = new Map<string, ServiceRequest>();
   const job: Job & { leaseOwner: string; leaseToken: string } = {
     id: randomUUID(),
     accountId: account.id,
@@ -144,6 +170,55 @@ async function fixture(supportEnabled = true, analyticsEnabled = true) {
     getMembership: vi.fn(async () => membership),
     listMemberships: vi.fn(async () => [target]),
     listConsents: vi.fn(async () => consents),
+    beginRequest: vi.fn<NavigationRequestTransaction["beginRequest"]>(
+      async (input) => {
+        const existing = [...navigationRequests.values()].find(
+          (row) =>
+            row.operation === input.operation &&
+            row.idempotencyKey === input.idempotencyKey,
+        );
+        if (existing) {
+          if (existing.payloadHash !== input.payloadHash)
+            throw new RepositoryError(
+              "IDEMPOTENCY_CONFLICT",
+              "PRIVATE_HASH_SENTINEL",
+            );
+          return { request: { ...existing }, replayed: true };
+        }
+        const id = input.id ?? randomUUID();
+        if (navigationRequests.has(id))
+          throw new RepositoryError("CONFLICT", "PRIVATE_REQUEST_SENTINEL");
+        const request: ServiceRequest = {
+          id,
+          operation: input.operation,
+          idempotencyKey: input.idempotencyKey,
+          payloadHash: input.payloadHash,
+          status: "pending",
+        };
+        navigationRequests.set(id, request);
+        return { request: { ...request }, replayed: false };
+      },
+    ),
+    getRequest: vi.fn<NavigationRequestTransaction["getRequest"]>(
+      async (id) => {
+        const row = navigationRequests.get(id);
+        return row ? { ...row } : undefined;
+      },
+    ),
+    setRequestStatus: vi.fn<NavigationRequestTransaction["setRequestStatus"]>(
+      async (id, status, expectedStatus) => {
+        const row = navigationRequests.get(id);
+        if (
+          !row ||
+          (expectedStatus === undefined
+            ? !["pending", "uncertain", status].includes(row.status)
+            : row.status !== expectedStatus)
+        )
+          throw new RepositoryError("CONFLICT", "PRIVATE_REQUEST_SENTINEL");
+        row.status = status;
+        return { ...row };
+      },
+    ),
     recordProductEvent: vi.fn<
       ProductAnalyticsTransaction["recordProductEvent"]
     >(async () => ({ recorded: true })),
@@ -340,15 +415,30 @@ async function fixture(supportEnabled = true, analyticsEnabled = true) {
     },
     { publicOrigin: "https://api.tholi.io", linkLifetimeMs: 60_000 },
   );
-  const app = await createServiceApi(options, [], {
-    identity,
-    authorization,
-    jobs,
-    ...(analyticsEnabled
-      ? { analytics: new ProductAnalyticsService(repositories) }
-      : {}),
-    ...(supportEnabled ? { support } : {}),
-  });
+  const app = await createServiceApi(
+    {
+      ...options,
+      ...(navigationModel ? { navigation: { provider: "fake" as const } } : {}),
+    },
+    [],
+    {
+      identity,
+      authorization,
+      jobs,
+      ...(analyticsEnabled
+        ? { analytics: new ProductAnalyticsService(repositories) }
+        : {}),
+      ...(supportEnabled ? { support } : {}),
+      ...(navigationModel
+        ? {
+            navigation: new NavigationTransportService(
+              repositories,
+              navigationModel,
+            ),
+          }
+        : {}),
+    },
+  );
   applications.push(app);
   return {
     app,
@@ -362,6 +452,7 @@ async function fixture(supportEnabled = true, analyticsEnabled = true) {
     membership,
     target,
     consents,
+    navigationRequests,
     job,
     session,
     supportStore,
@@ -389,6 +480,627 @@ function safeError(
   );
 }
 const change = { role: "admin", status: "active", expectedRevision: "2" };
+
+function navigationInput(images = false) {
+  const observation = navigationModelObservation();
+  if (images) navigationModelCapture(observation);
+  return {
+    requestId: randomUUID(),
+    profile: "fake" as const,
+    observation,
+    validation: navigationModelValidation(observation),
+  };
+}
+function grantNavigation(
+  f: Awaited<ReturnType<typeof fixture>>,
+  images = false,
+) {
+  for (const purpose of [
+    "cloud_inference",
+    ...(images ? ["image_transmission"] : []),
+  ])
+    f.consents.push({
+      id: randomUUID(),
+      purpose,
+      policyVersion: "1",
+      granted: true,
+      revision: 1n,
+    });
+}
+function delayedNavigation() {
+  const fake = createFakeNavigationModel();
+  let started!: () => void, release!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model: NavigationModel = {
+    infer: vi.fn<NavigationModel["infer"]>(async (input, context) => {
+      started();
+      await held;
+      return fake.infer(input, context);
+    }),
+  };
+  return { model, entered, release };
+}
+
+describe("opt-in authenticated navigation transport", () => {
+  it.each(["credits", "storage"])(
+    "propagates the authenticated %s allowance refusal without inferring or opening checkout",
+    async (resource) => {
+      const model = createFakeNavigationModel(),
+        infer = vi.spyOn(model, "infer");
+      const f = await fixture(false, false, model);
+      grantNavigation(f);
+      f.scoped.beginRequest.mockRejectedValueOnce(
+        resource === "credits"
+          ? new RepositoryError(
+              "INSUFFICIENT_CREDITS",
+              "PRIVATE_ALLOWANCE_SENTINEL",
+            )
+          : new AuthorizationError(
+              429,
+              "QUOTA_EXCEEDED",
+              "The cloud storage allowance has been reached.",
+            ),
+      );
+      const response = await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: bearer,
+        payload: navigationInput(),
+      });
+      safeError(response, 429, "QUOTA_EXCEEDED");
+      expect(Object.keys(response.json())).toEqual(["error"]);
+      expect(Object.keys(response.json().error).sort()).toEqual([
+        "code",
+        "message",
+        "requestId",
+        "retryable",
+      ]);
+      expect(response.payload).not.toMatch(
+        /checkout|charged|remainingCredits|planId/,
+      );
+      expect(infer).not.toHaveBeenCalled();
+      expect(f.navigationRequests.size).toBe(0);
+    },
+  );
+
+  it("advertises only explicitly composed fake decisions and authenticates before body parsing", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const f = await fixture(false, false, model);
+    const disabled = await fixture(false, false);
+    const capabilities = (await f.app.inject("/api/v1/capabilities")).json();
+    expect(capabilities.capabilities).toEqual(
+      expect.arrayContaining(["navigation-decisions", "fake-navigation-model"]),
+    );
+    expect(capabilities.availability).toMatchObject({
+      decisions: true,
+      billing: false,
+    });
+    expect(capabilities.limits.maxBodyBytes).toBe(512 * 1024);
+    expect(
+      (await disabled.app.inject("/api/v1/capabilities")).json().availability
+        .decisions,
+    ).toBe(false);
+    const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: { "content-type": "application/json" },
+        payload: "invalid JSON",
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: {
+          cookie: f.cookie,
+          origin: webOrigin,
+          "content-type": "application/json",
+        },
+        payload: "invalid JSON",
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    for (const profile of [undefined, "vertex", "cloud"])
+      safeError(
+        await f.app.inject({
+          method: "POST",
+          url: path,
+          headers: bearer,
+          payload: { ...navigationInput(), profile },
+        }),
+        400,
+        "INVALID_REQUEST",
+      );
+    const invalidGeometry = navigationInput();
+    invalidGeometry.observation.frames[0].viewport.width = 0;
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: bearer,
+        payload: invalidGeometry,
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: bearer,
+        payload: { ...navigationInput(), extra: "x".repeat(600 * 1024) },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: { ...bearer, "content-type": "application/json" },
+        payload: "x".repeat(NAVIGATION_TRANSPORT_LIMITS.maxBodyBytes + 1),
+      }),
+      413,
+      "PAYLOAD_TOO_LARGE",
+    );
+    expect(infer).not.toHaveBeenCalled();
+    expect(f.scoped.beginRequest).not.toHaveBeenCalled();
+    const spec = (await f.app.inject("/api/v1/openapi.json")).json();
+    for (const route of [
+      "/api/v1/workspaces/{workspaceId}/decisions",
+      "/api/v1/workspaces/{workspaceId}/decisions/{requestId}",
+      "/api/v1/workspaces/{workspaceId}/decisions/{requestId}/cancel",
+    ])
+      expect(Object.keys(spec.paths)).toContain(route);
+    const documentedBody =
+      spec.paths["/api/v1/workspaces/{workspaceId}/decisions"].post.requestBody
+        .content["application/json"].schema;
+    expect(
+      documentedBody.properties.observation.properties.frames.items.properties
+        .viewport.properties.width,
+    ).toMatchObject({ minimum: 0, exclusiveMinimum: true });
+  });
+
+  it("admits a valid masked PNG above the account body limit only on the decision route", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const f = await fixture(false, false, model),
+      input = navigationInput(true);
+    grantNavigation(f, true);
+    const pixels = Buffer.alloc(640 * 180 * 4);
+    let seed = 0x6a09e667;
+    for (let index = 0; index < pixels.length; index++) {
+      seed = (1664525 * seed + 1013904223) >>> 0;
+      pixels[index] = seed >>> 24;
+    }
+    const png = await sharp(pixels, {
+      raw: { width: 640, height: 180, channels: 4 },
+    })
+      .png({ compressionLevel: 0 })
+      .toBuffer();
+    input.observation.images[0].image = png.toString("base64");
+    const body = JSON.stringify(input);
+    expect(Buffer.byteLength(body)).toBeGreaterThan(512 * 1024);
+    expect(Buffer.byteLength(body)).toBeLessThan(
+      NAVIGATION_TRANSPORT_LIMITS.maxBodyBytes,
+    );
+    const response = await f.app.inject({
+      method: "POST",
+      url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+      headers: bearer,
+      payload: input,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(
+      navigationTransportResponseSchema.parse(response.json()).status,
+    ).toBe("completed");
+    expect(infer).toHaveBeenCalledOnce();
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: "/api/v1/handshake",
+        payload: input,
+      }),
+      413,
+      "PAYLOAD_TOO_LARGE",
+    );
+  });
+
+  it("requires independent current text/image purposes and preserves caller clocks and native identity", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const f = await fixture(false, false, model),
+      input = navigationInput(true);
+    const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+    const send = () =>
+      f.app.inject({
+        method: "POST",
+        url: path,
+        headers: bearer,
+        payload: input,
+      });
+    safeError(await send(), 403, "FORBIDDEN");
+    grantNavigation(f);
+    safeError(await send(), 403, "FORBIDDEN");
+    expect(infer).not.toHaveBeenCalled();
+    f.consents.push({
+      id: randomUUID(),
+      purpose: "image_transmission",
+      policyVersion: "1",
+      granted: true,
+      revision: 1n,
+    });
+    const response = await send();
+    expect(response.statusCode).toBe(200);
+    const result = navigationTransportResponseSchema.parse(response.json());
+    expect(result).toMatchObject({
+      requestId: input.requestId,
+      status: "completed",
+      replayed: false,
+      decision: {
+        native: input.observation.native,
+        stamp: input.observation.stamp,
+      },
+    });
+    expect(response.headers["cache-control"]).toContain("no-store");
+    expect(infer).toHaveBeenCalledOnce();
+    expect(f.scoped.beginRequest.mock.calls[0][0]).toEqual({
+      id: input.requestId,
+      operation: NAVIGATION_TRANSPORT_OPERATION,
+      idempotencyKey: input.requestId,
+      payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    expect(Object.keys(f.navigationRequests.get(input.requestId)!)).toEqual([
+      "id",
+      "operation",
+      "idempotencyKey",
+      "payloadHash",
+      "status",
+    ]);
+  });
+
+  it("returns metadata-only replays, rejects changed commands and does not leak another scope", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const f = await fixture(false, false, model),
+      input = navigationInput();
+    grantNavigation(f);
+    const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+    expect(
+      (
+        await f.app.inject({
+          method: "POST",
+          url: path,
+          headers: bearer,
+          payload: input,
+        })
+      ).statusCode,
+    ).toBe(200);
+    const replay = navigationTransportResponseSchema.parse(
+      (
+        await f.app.inject({
+          method: "POST",
+          url: path,
+          headers: bearer,
+          payload: input,
+        })
+      ).json(),
+    );
+    expect(replay).toEqual({
+      requestId: input.requestId,
+      status: "completed",
+      replayed: true,
+    });
+    expect(infer).toHaveBeenCalledOnce();
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: bearer,
+        payload: {
+          ...input,
+          observation: {
+            ...input.observation,
+            context: {
+              ...input.observation.context,
+              goal: "A different destination",
+            },
+          },
+        },
+      }),
+      409,
+      "IDEMPOTENCY_CONFLICT",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${randomUUID()}/decisions`,
+        headers: bearer,
+        payload: navigationInput(),
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    safeError(
+      await f.app.inject({ url: `${path}/${randomUUID()}`, headers: bearer }),
+      404,
+      "NOT_FOUND",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `${path}/${input.requestId}/cancel`,
+        headers: bearer,
+        payload: { force: true },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const request = f.navigationRequests.get(input.requestId)!;
+    request.operation = "legacy-navigation";
+    safeError(
+      await f.app.inject({
+        url: `${path}/${input.requestId}`,
+        headers: bearer,
+      }),
+      404,
+      "NOT_FOUND",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `${path}/${input.requestId}/cancel`,
+        headers: bearer,
+        payload: {},
+      }),
+      404,
+      "NOT_FOUND",
+    );
+    request.operation = NAVIGATION_TRANSPORT_OPERATION;
+    f.consents[0].granted = false;
+    expect(
+      navigationRequestStatusSchema.parse(
+        (
+          await f.app.inject({
+            url: `${path}/${input.requestId}`,
+            headers: bearer,
+          })
+        ).json(),
+      ),
+    ).toEqual({ requestId: input.requestId, status: "completed" });
+  });
+
+  it("keeps the original active request through a duplicate and acknowledges cancellation after consent withdrawal", async () => {
+    const deferred = delayedNavigation(),
+      f = await fixture(false, false, deferred.model),
+      input = navigationInput();
+    grantNavigation(f);
+    const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+    const original = f.app
+      .inject({ method: "POST", url: path, headers: bearer, payload: input })
+      .then((response) => response);
+    try {
+      await deferred.entered;
+      expect(
+        navigationTransportResponseSchema.parse(
+          (
+            await f.app.inject({
+              method: "POST",
+              url: path,
+              headers: bearer,
+              payload: input,
+            })
+          ).json(),
+        ),
+      ).toEqual({
+        requestId: input.requestId,
+        status: "pending",
+        replayed: true,
+      });
+      f.consents[0].granted = false;
+      const cancelled = navigationCancellationSchema.parse(
+        (
+          await f.app.inject({
+            method: "POST",
+            url: `${path}/${input.requestId}/cancel`,
+            headers: bearer,
+            payload: {},
+          })
+        ).json(),
+      );
+      expect(cancelled).toEqual({
+        requestId: input.requestId,
+        status: "uncertain",
+        cancelRequested: true,
+        cancellationConfirmed: false,
+      });
+      safeError(await original, 409, "CANCELLED");
+      expect(deferred.model.infer).toHaveBeenCalledOnce();
+      expect(
+        navigationRequestStatusSchema.parse(
+          (
+            await f.app.inject({
+              url: `${path}/${input.requestId}`,
+              headers: bearer,
+            })
+          ).json(),
+        ).status,
+      ).toBe("uncertain");
+    } finally {
+      deferred.release();
+    }
+  });
+
+  it("withholds a proposal when another replica cancels after the final pending read", async () => {
+    const deferred = delayedNavigation(),
+      f = await fixture(false, false, deferred.model),
+      input = navigationInput();
+    grantNavigation(f);
+    const update = f.scoped.setRequestStatus.getMockImplementation()!;
+    f.scoped.setRequestStatus.mockImplementation(
+      async (id, status, expected) => {
+        if (status === "completed")
+          f.navigationRequests.get(id)!.status = "uncertain";
+        return update(id, status, expected);
+      },
+    );
+    const original = f.app
+      .inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: bearer,
+        payload: input,
+      })
+      .then((response) => response);
+    try {
+      await deferred.entered;
+      deferred.release();
+      safeError(await original, 409, "CONFLICT");
+      expect(f.navigationRequests.get(input.requestId)?.status).toBe(
+        "uncertain",
+      );
+      expect(deferred.model.infer).toHaveBeenCalledOnce();
+    } finally {
+      deferred.release();
+    }
+  });
+
+  it.each([3, 4])(
+    "does not start more work or release a proposal after consent withdrawal during authentication read %i",
+    async (authenticationRead) => {
+      const model = createFakeNavigationModel(),
+        infer = vi.spyOn(model, "infer");
+      const f = await fixture(false, false, model),
+        input = navigationInput();
+      grantNavigation(f);
+      const authenticate = vi
+        .mocked(f.store.authenticateSession)
+        .getMockImplementation()!;
+      let calls = 0,
+        entered!: () => void,
+        release!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      vi.mocked(f.store.authenticateSession).mockImplementation(
+        async (...args) => {
+          const session = await authenticate(...args);
+          // This await formerly followed the final purpose snapshot before work.
+          if (++calls === authenticationRead) {
+            entered();
+            await held;
+          }
+          return session;
+        },
+      );
+      const pending = f.app
+        .inject({
+          method: "POST",
+          url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+          headers: bearer,
+          payload: input,
+        })
+        .then((response) => response);
+      try {
+        await waiting;
+        const beforeWithdrawal = infer.mock.calls.length;
+        f.consents[0].granted = false;
+        release();
+        safeError(await pending, 403, "FORBIDDEN");
+        expect(infer).toHaveBeenCalledTimes(beforeWithdrawal);
+      } finally {
+        release();
+      }
+    },
+  );
+
+  it.each(["identity", "admission"])(
+    "shortens the entire %s wait to the original request budget",
+    async (phase) => {
+      const model = createFakeNavigationModel(),
+        infer = vi.spyOn(model, "infer");
+      const f = await fixture(false, false, model),
+        input = { ...navigationInput(), policy: { timeoutMs: 50 } };
+      grantNavigation(f);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      if (phase === "identity") {
+        const authenticate = vi
+          .mocked(f.store.authenticateSession)
+          .getMockImplementation()!;
+        vi.mocked(f.store.authenticateSession)
+          .mockImplementationOnce(authenticate)
+          .mockImplementationOnce(async (...args) => {
+            await held;
+            return authenticate(...args);
+          });
+      } else {
+        const begin = f.scoped.beginRequest.getMockImplementation()!;
+        f.scoped.beginRequest.mockImplementationOnce(async (...args) => {
+          await held;
+          return begin(...args);
+        });
+      }
+      try {
+        safeError(
+          await f.app.inject({
+            method: "POST",
+            url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+            headers: bearer,
+            payload: input,
+          }),
+          504,
+          "DEADLINE_EXCEEDED",
+        );
+        expect(infer).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+    },
+  );
+
+  it.each(["consent", "session"])(
+    "rechecks %s after model work and withholds a late proposal",
+    async (change) => {
+      const deferred = delayedNavigation(),
+        f = await fixture(false, false, deferred.model),
+        input = navigationInput();
+      grantNavigation(f);
+      const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+      const original = f.app
+        .inject({ method: "POST", url: path, headers: bearer, payload: input })
+        .then((response) => response);
+      await deferred.entered;
+      if (change === "consent") f.consents[0].granted = false;
+      else vi.mocked(f.store.authenticateSession).mockResolvedValue(null);
+      deferred.release();
+      safeError(
+        await original,
+        change === "consent" ? 403 : 401,
+        change === "consent" ? "FORBIDDEN" : "UNAUTHENTICATED",
+      );
+      expect(f.navigationRequests.get(input.requestId)?.status).toBe(
+        "uncertain",
+      );
+    },
+  );
+});
 
 describe("consented product analytics HTTP contracts", () => {
   const input = {

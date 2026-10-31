@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { createHash } from "node:crypto";
 import type {
   PlanInput,
   observationInputSchema,
@@ -26,7 +27,23 @@ import {
   type NavigationDecision,
   type NavigationJoinResult,
   type NavigationValidationContext,
+  NAVIGATION_TRANSPORT_OPERATION,
+  navigationTransportInputSchema,
+  navigationTransportResponseSchema,
+  navigationRequestStatusSchema,
+  navigationCancellationSchema,
 } from "../../../../packages/navigation-core/contracts-navigation";
+import type { ServiceRequest, RequestStatus } from "../database/contracts";
+import type { IdentitySession } from "./identity-contracts";
+import {
+  AuthorizationError,
+  withAuthorization,
+  type AuthorizedRepositories,
+} from "./authorization";
+import {
+  evaluateAuthorization,
+  type AuthorizationContextReader,
+} from "./authorization-policy";
 import {
   MODEL_LIMITS,
   awaitModelOperation,
@@ -327,4 +344,368 @@ export function createNavigationModelService(model: NavigationModel) {
       }
     },
   };
+}
+
+export interface NavigationRequestTransaction extends AuthorizationContextReader {
+  beginRequest(input: {
+    id?: string;
+    operation: string;
+    idempotencyKey: string;
+    payloadHash: string;
+  }): Promise<{ request: ServiceRequest; replayed: boolean }>;
+  getRequest(id: string): Promise<ServiceRequest | undefined>;
+  setRequestStatus(
+    id: string,
+    status: Exclude<RequestStatus, "pending">,
+    expectedStatus?: RequestStatus,
+  ): Promise<ServiceRequest>;
+}
+type NavigationRequestRepositories =
+  AuthorizedRepositories<NavigationRequestTransaction>;
+type NavigationPrincipal = Pick<IdentitySession, "accountId">;
+type RevalidateNavigationIdentity = () => Promise<void>;
+const navigationRequestLimit = 32;
+const missingNavigationRequest = () =>
+  new AuthorizationError(
+    404,
+    "NOT_FOUND",
+    "The navigation request is unavailable.",
+  );
+
+/** Scoped request metadata is durable; observations and proposals remain ephemeral. */
+export class NavigationTransportService {
+  readonly provider = "fake" as const;
+  private readonly active = new Map<string, AbortController>();
+  private admitting = 0;
+
+  constructor(
+    private readonly repositories: NavigationRequestRepositories,
+    private readonly model: NavigationModel,
+  ) {}
+
+  private key(
+    principal: NavigationPrincipal,
+    workspaceId: string,
+    requestId: string,
+  ) {
+    return `${principal.accountId}:${workspaceId}:${requestId}`;
+  }
+
+  private async owned(
+    repository: NavigationRequestTransaction,
+    requestId: string,
+  ) {
+    const row = await repository.getRequest(requestId);
+    if (!row || row.operation !== NAVIGATION_TRANSPORT_OPERATION)
+      throw missingNavigationRequest();
+    return row;
+  }
+
+  private revalidateIdentity(
+    context: ServiceRequestContext,
+    revalidate: RevalidateNavigationIdentity,
+  ) {
+    return awaitModelOperation(revalidate, context.signal, () =>
+      context.signal.reason instanceof ModelError
+        ? context.signal.reason
+        : new ModelError(
+            Date.now() >= context.deadlineAt
+              ? "DEADLINE_EXCEEDED"
+              : "CANCELLED",
+            { outcome: "unknown" },
+          ),
+    );
+  }
+
+  private async scoped<T>(
+    principal: NavigationPrincipal,
+    workspaceId: string,
+    context: ServiceRequestContext,
+    work: (repository: NavigationRequestTransaction) => Promise<T>,
+    images = false,
+    consent = false,
+  ) {
+    return awaitModelOperation(
+      () =>
+        withAuthorization(
+          this.repositories,
+          principal,
+          workspaceId,
+          consent ? "inference.request" : "usage.read",
+          async (repository, authorization) => {
+            if (
+              images &&
+              !evaluateAuthorization(authorization, "image.transmit").allowed
+            )
+              throw new AuthorizationError(
+                403,
+                "FORBIDDEN",
+                "Image transmission consent is required.",
+              );
+            return work(repository);
+          },
+          context,
+        ),
+      context.signal,
+      () =>
+        context.signal.reason instanceof ModelError
+          ? context.signal.reason
+          : new ModelError("CANCELLED", { outcome: "unknown" }),
+    );
+  }
+
+  async request(
+    principal: NavigationPrincipal,
+    workspaceId: string,
+    raw: unknown,
+    context: ServiceRequestContext,
+    revalidate: RevalidateNavigationIdentity,
+  ) {
+    const input = navigationTransportInputSchema.parse(raw);
+    const elapsedStart = performance.now(),
+      started = Date.now();
+    const remaining =
+      Math.min(
+        input.observation.deadlineAtMs,
+        input.validation.requestDeadlineMs,
+      ) - input.validation.nowMs;
+    const deadlineAt = Math.min(
+      context.deadlineAt,
+      started + input.policy.timeoutMs,
+      started + remaining,
+    );
+    const controller = new AbortController();
+    const timeout = new AbortController();
+    const signal = AbortSignal.any([
+      context.signal,
+      controller.signal,
+      timeout.signal,
+    ]);
+    const operation = { ...context, deadlineAt, signal };
+    const interrupted = () =>
+      new ModelError(
+        timeout.signal.aborted || Date.now() >= deadlineAt
+          ? "DEADLINE_EXCEEDED"
+          : "CANCELLED",
+        { outcome: "unknown" },
+      );
+    const alive = () => {
+      if (signal.aborted) throw interrupted();
+      if (Date.now() >= deadlineAt) throw new ModelError("DEADLINE_EXCEEDED");
+    };
+    const identity = async () => {
+      alive();
+      await this.revalidateIdentity(operation, revalidate);
+      alive();
+    };
+    const current = () => ({
+      ...input.validation,
+      nowMs:
+        input.validation.nowMs + Math.floor(performance.now() - elapsedStart),
+    });
+    const initial = validateNavigationObservationContext(
+      input.observation,
+      current(),
+    );
+    if (!initial.accepted) throw modelContextError(initial.reason);
+    if (this.active.size + this.admitting >= navigationRequestLimit)
+      throw new AuthorizationError(
+        429,
+        "RATE_LIMITED",
+        "Navigation request capacity has been reached.",
+      );
+    // The HTTP owner still controls disconnect and drain. This timer only
+    // shortens that budget to the caller's unchanged observation/policy lifetime.
+    const timer = setTimeout(
+      () =>
+        timeout.abort(
+          new ModelError("DEADLINE_EXCEEDED", { outcome: "unknown" }),
+        ),
+      Math.max(0, deadlineAt - Date.now()),
+    );
+    timer.unref();
+    this.admitting++;
+    let admitted = true,
+      claimed = false;
+    const key = this.key(principal, workspaceId, input.requestId);
+    try {
+      await identity();
+      const claim = await this.scoped(
+        principal,
+        workspaceId,
+        operation,
+        (repository) =>
+          repository.beginRequest({
+            id: input.requestId,
+            operation: NAVIGATION_TRANSPORT_OPERATION,
+            idempotencyKey: input.policy.idempotencyKey ?? input.requestId,
+            payloadHash: createHash("sha256")
+              .update(
+                JSON.stringify({
+                  operation: NAVIGATION_TRANSPORT_OPERATION,
+                  command: input,
+                }),
+              )
+              .digest("hex"),
+          }),
+        input.observation.images.length > 0,
+        true,
+      );
+      claimed = !claim.replayed;
+      alive();
+      if (claim.replayed) {
+        const replay = await this.status(
+          principal,
+          workspaceId,
+          claim.request.id,
+          operation,
+          revalidate,
+        );
+        return navigationTransportResponseSchema.parse({
+          ...replay,
+          replayed: true,
+        });
+      }
+      this.active.set(key, controller);
+      this.admitting--;
+      admitted = false;
+      await identity();
+      await this.scoped(
+        principal,
+        workspaceId,
+        operation,
+        async (repository) => {
+          if (
+            (await this.owned(repository, input.requestId)).status !== "pending"
+          )
+            throw new ModelError("CANCELLED", { outcome: "unknown" });
+        },
+        input.observation.images.length > 0,
+        true,
+      );
+      alive();
+      const result = await createNavigationModelService(this.model).propose(
+        input.observation,
+        current,
+        operation,
+      );
+      await identity();
+      await this.scoped(
+        principal,
+        workspaceId,
+        operation,
+        async (repository) => {
+          const row = await this.owned(repository, input.requestId);
+          if (row.status !== "pending")
+            throw new ModelError("CANCELLED", {
+              outcome: "reported",
+              usage: result.usage,
+            });
+          await repository.setRequestStatus(
+            input.requestId,
+            "completed",
+            "pending",
+          );
+        },
+        input.observation.images.length > 0,
+        true,
+      );
+      alive();
+      return navigationTransportResponseSchema.parse({
+        requestId: input.requestId,
+        status: "completed",
+        replayed: false,
+        decision: result.decision,
+      });
+    } catch (error) {
+      if (claimed) {
+        // Cleanup records no page data and never retries inference. Revocation or
+        // database failure may leave pending metadata; that still forbids replay.
+        const cleanup = {
+          requestId: context.requestId,
+          deadlineAt: Date.now() + 1000,
+          signal: AbortSignal.timeout(1000),
+        };
+        const finalization = this.scoped(
+          principal,
+          workspaceId,
+          cleanup,
+          async (repository) => {
+            const row = await this.owned(repository, input.requestId);
+            if (row.status === "pending")
+              await repository.setRequestStatus(
+                input.requestId,
+                "uncertain",
+                "pending",
+              );
+          },
+        ).catch(() => {});
+        // The caller's deadline/cancellation bounds its response. Metadata
+        // cleanup has its own short budget and can settle after that response.
+        if (!signal.aborted && Date.now() < deadlineAt)
+          await awaitModelOperation(
+            () => finalization,
+            signal,
+            interrupted,
+          ).catch(() => {});
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      if (admitted) this.admitting--;
+      if (this.active.get(key) === controller) this.active.delete(key);
+    }
+  }
+
+  async status(
+    principal: NavigationPrincipal,
+    workspaceId: string,
+    requestId: string,
+    context: ServiceRequestContext,
+    revalidate: RevalidateNavigationIdentity,
+  ) {
+    requestId = navigationRequestStatusSchema.shape.requestId.parse(requestId);
+    await this.revalidateIdentity(context, revalidate);
+    const row = await this.scoped(
+      principal,
+      workspaceId,
+      context,
+      (repository) => this.owned(repository, requestId),
+    );
+    return navigationRequestStatusSchema.parse({
+      requestId: row.id,
+      status: row.status,
+    });
+  }
+
+  async cancel(
+    principal: NavigationPrincipal,
+    workspaceId: string,
+    requestId: string,
+    context: ServiceRequestContext,
+    revalidate: RevalidateNavigationIdentity,
+  ) {
+    requestId = navigationRequestStatusSchema.shape.requestId.parse(requestId);
+    await this.revalidateIdentity(context, revalidate);
+    const row = await this.scoped(
+      principal,
+      workspaceId,
+      context,
+      async (repository) => {
+        const existing = await this.owned(repository, requestId);
+        return existing.status === "pending"
+          ? repository.setRequestStatus(requestId, "uncertain", "pending")
+          : existing;
+      },
+    );
+    const requested = row.status === "uncertain";
+    if (requested)
+      this.active.get(this.key(principal, workspaceId, requestId))?.abort();
+    return navigationCancellationSchema.parse({
+      requestId: row.id,
+      status: row.status,
+      cancelRequested: requested,
+      cancellationConfirmed: false,
+    });
+  }
 }

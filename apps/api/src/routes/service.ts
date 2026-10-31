@@ -24,6 +24,8 @@ import {
 import {
   navigationDecisionSchema,
   navigationObservationSchema,
+  NAVIGATION_TRANSPORT_CAPABILITY,
+  NAVIGATION_FAKE_CAPABILITY,
 } from "../../../../packages/navigation-core/contracts-navigation";
 import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
@@ -35,6 +37,7 @@ function serviceCapabilities(
   jobsEnabled: boolean,
   supportEnabled: boolean,
   analyticsEnabled: boolean,
+  navigationEnabled: boolean,
 ) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -52,11 +55,14 @@ function serviceCapabilities(
       ...(jobsEnabled ? ["durable-jobs"] : []),
       ...(supportEnabled ? ["support-requests", "private-files"] : []),
       ...(analyticsEnabled ? ["product-analytics"] : []),
+      ...(navigationEnabled
+        ? [NAVIGATION_TRANSPORT_CAPABILITY, NAVIGATION_FAKE_CAPABILITY]
+        : []),
     ],
     availability: {
       authentication: identityEnabled,
       accountData: identityEnabled,
-      decisions: false,
+      decisions: navigationEnabled,
       billing: false,
     },
     limits: SERVICE_LIMITS,
@@ -74,6 +80,7 @@ export async function registerServiceApi(
   jobsEnabled = false,
   supportEnabled = false,
   analyticsEnabled = false,
+  navigationEnabled = false,
 ) {
   const capabilities = serviceCapabilities(
     identityEnabled,
@@ -81,6 +88,7 @@ export async function registerServiceApi(
     jobsEnabled,
     supportEnabled,
     analyticsEnabled,
+    navigationEnabled,
   );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,
@@ -104,17 +112,17 @@ export async function registerServiceApi(
       },
       security: [],
       components: {
-        // Future OpenAPI components do not enter Fastify's executable AJV schema
+        // Shared OpenAPI components do not enter Fastify's executable AJV schema
         // registry. Their OpenAPI dialect is documentation, not route admission.
         schemas: {
           NavigationObservation: jsonSchema(
             navigationObservationSchema.describe(
-              "Future independently versioned ephemeral navigation contract. This component does not enable a decision route, image upload or model capability. Native scope, encoded budgets and cross-reference validation also require the shared runtime validators.",
+              "Independently versioned ephemeral navigation contract. This component alone grants no capability; route availability requires a registered navigation capability. Native scope, encoded budgets and cross-reference validation also require the shared runtime validators.",
             ),
           ),
           NavigationDecision: jsonSchema(
             navigationDecisionSchema.describe(
-              "Future independently versioned navigation proposal. The browser validates current native references and original deadlines, retains interaction authority and independently verifies outcomes. Server timing is a separate clock domain.",
+              "Independently versioned navigation proposal. The browser validates current native references and original deadlines, retains interaction authority and independently verifies outcomes. Server timing is a separate clock domain.",
             ),
           ),
         },

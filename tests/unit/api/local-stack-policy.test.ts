@@ -160,6 +160,17 @@ test("resolved local-stack policy returns only redacted deployment evidence", ()
   expect(inspectLocalStack(config).fingerprint).not.toBe(evidence.fingerprint);
 });
 
+test("explicit local navigation transport remains fake and needs a boolean setting", () => {
+  const config = composeModel();
+  config.services.api.environment.THOLI_MODEL_PROVIDER = "fake";
+  config.services.api.environment.THOLI_NAVIGATION_TRANSPORT_ENABLED = "true";
+  expect(inspectLocalStack(config).services).toContain("api");
+  for (const value of ["1", "yes", "TRUE", ""]) {
+    config.services.api.environment.THOLI_NAVIGATION_TRANSPORT_ENABLED = value;
+    expect(() => inspectLocalStack(config)).toThrow("explicit true or false");
+  }
+});
+
 test.each([
   [
     "enabled telemetry without bounded logs",
@@ -271,6 +282,8 @@ test.each([
     "live model default",
     (config: ReturnType<typeof composeModel>) => {
       config.services.api.environment.THOLI_MODEL_PROVIDER = "gemini";
+      config.services.api.environment.THOLI_NAVIGATION_TRANSPORT_ENABLED =
+        "true";
     },
   ],
   [

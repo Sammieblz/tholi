@@ -20,7 +20,10 @@ import {
   NAVIGATION_PROTOCOL,
   joinNavigationDecision,
   navigationContextSchema,
+  navigationCancellationSchema,
   navigationDecisionSchema,
+  navigationTransportInputSchema,
+  navigationTransportResponseSchema,
   navigationObservationSchema,
   navigationImageMatchesViewport,
   navigationViewportSchema,
@@ -33,6 +36,83 @@ import {
 } from "../../../packages/navigation-core/contracts-navigation";
 
 afterEach(() => vi.unstubAllGlobals());
+
+test("service inference keeps transport identity separate from the original browser stamps and deadline", () => {
+  const observed = observation();
+  const input = navigationTransportInputSchema.parse({
+    requestId: "20000000-0000-4000-8000-000000000001",
+    profile: "fake",
+    observation: observed,
+    validation: context(observed),
+  });
+  expect(input.requestId).not.toBe(input.observation.stamp.requestId);
+  expect(input.observation.native).toEqual(observed.native);
+  expect(input.validation.requestDeadlineMs).toBe(
+    context(observed).requestDeadlineMs,
+  );
+  expect(input.policy.timeoutMs).toBe(NAVIGATION_LIMITS.maxLifetimeMs);
+  for (const profile of [undefined, "vertex", "gemini"])
+    expect(
+      navigationTransportInputSchema.safeParse({ ...input, profile }).success,
+    ).toBe(false);
+});
+
+test("only an original completed service request may carry a model proposal", () => {
+  const observed = observation();
+  const base = {
+    requestId: "20000000-0000-4000-8000-000000000001",
+    status: "completed",
+  };
+  expect(
+    navigationTransportResponseSchema.safeParse({
+      ...base,
+      replayed: false,
+      decision: decision(observed),
+    }).success,
+  ).toBe(true);
+  expect(
+    navigationTransportResponseSchema.safeParse({ ...base, replayed: true })
+      .success,
+  ).toBe(true);
+  expect(
+    navigationTransportResponseSchema.safeParse({
+      ...base,
+      replayed: true,
+      decision: decision(observed),
+    }).success,
+  ).toBe(false);
+  expect(
+    navigationTransportResponseSchema.safeParse({
+      ...base,
+      status: "pending",
+      replayed: false,
+      decision: decision(observed),
+    }).success,
+  ).toBe(false);
+  expect(
+    navigationTransportResponseSchema.safeParse({ ...base, replayed: false })
+      .success,
+  ).toBe(false);
+});
+
+test("service cancellation acknowledges intent without claiming provider cancellation", () => {
+  const response = {
+    requestId: "20000000-0000-4000-8000-000000000001",
+    status: "uncertain",
+    cancelRequested: true,
+    cancellationConfirmed: false,
+  };
+  expect(navigationCancellationSchema.safeParse(response).success).toBe(true);
+  expect(
+    navigationCancellationSchema.safeParse({
+      ...response,
+      cancellationConfirmed: true,
+    }).success,
+  ).toBe(false);
+  expect(
+    navigationCancellationSchema.safeParse({ ...response, costUsd: 0 }).success,
+  ).toBe(false);
+});
 
 test("bounded integer CSSOM rounding retains raw viewport metrics and the entire visible mask band", () => {
   const viewport = {

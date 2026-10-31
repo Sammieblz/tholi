@@ -105,6 +105,12 @@ export function authorizationRepositoryFailure(error: unknown): never {
         "RATE_LIMITED",
         "The request allowance has been reached. Try again later.",
       );
+    if (error.code === "INSUFFICIENT_CREDITS")
+      throw new AuthorizationError(
+        429,
+        "QUOTA_EXCEEDED",
+        "The cloud allowance has been reached.",
+      );
   }
   throw error;
 }
@@ -133,6 +139,8 @@ export async function withAuthorization<
         includeConsents:
           action === "policies.read" ||
           action === "consents.write" ||
+          action === "inference.request" ||
+          action === "image.transmit" ||
           action === "analytics.record",
       });
       context.signal.throwIfAborted();
