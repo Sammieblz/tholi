@@ -96,9 +96,50 @@ model logging configuration for the proposed global model profile. Google's
 [logging documentation](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/capabilities/request-response-logging)
 defines that configuration's `404 NOT_FOUND` as default-disabled request/response
 logging. This does not establish disabled abuse monitoring or zero retention.
-The actual text/image experiment remains unrun, pending separate approval of
-the synthetic data and a bounded spending allowance. A monthly project cap does
-not supply that experiment approval.
+A monthly project cap does not supply experiment approval. The user separately
+approved one synthetic request with a $0.02 allowance and no automatic retries.
+
+## Approved live compatibility result
+
+Run `58369468-589d-4106-99e6-e456c3dab065` exercised the built operator function
+from source commit `883a480997205c8d43739eda5e7fba4cd3b43e83`, using the
+unchanged input and build-manifest hashes above. The exact profile was API `v1`,
+model `gemini-3.8-flash`, location `global`, server-side ADC and
+`provider-default-acknowledged` retention. No browser or OS action ran.
+
+The single CountTokens request returned HTTP 200 in 437 ms. The single
+GenerateContent request returned HTTP 200 in 8,172 ms, with the synthetic PNG,
+text and derived structured-output schema. The application admitted its `guide`
+proposal against the submitted known reference. Total operator time was
+11,084 ms. No request was retried.
+
+| Measurement                   | Actual result |
+| ----------------------------- | ------------: |
+| Prompt tokens                 |         2,321 |
+| Generated text tokens         |           117 |
+| Thinking tokens               |            87 |
+| Cached tokens                 |             0 |
+| Total tokens                  |         2,525 |
+| Approved allowance, USD       |         $0.02 |
+| Conservative reservation, USD |     $0.019968 |
+| Estimated measured cost, USD  |     $0.005012 |
+
+The estimate uses the reviewed standard rates and includes thinking as output;
+it does not assume promotional credits. Provider token usage is measured, while
+the settled invoice remains unverified. This single compatibility result does
+not establish held-out quality, browser arrival, residency or zero retention.
+
+Content-free result: `output/qa/model-39-live/live-result.json`, SHA-256
+`66c9fafd33bf4df65766cf352db95d95618824de296f213a813f5788daed67f7`.
+Approval-file SHA-256:
+`39e8776947ca6c9b68c895c712be2cebd2cb9f1021bc5fcde4cc4a8081a0cc8f`.
+The exclusive durable claim has claimed, reserved and finished records; it remains
+consumed. Neither this result nor the monthly cap authorizes another paid call.
+
+The initial implementation head passed all eight hosted jobs in
+[run 41162070404](https://github.com/Sammieblz/tholi/actions/runs/41162070404).
+This documentation update still requires its own final-head hosted checks before
+merge; the earlier run is not relabeled as evidence for a later commit.
 
 ## Earlier feedback retained separately
 
@@ -123,17 +164,17 @@ copied artifact are preserved.
 
 ## Remaining gates
 
-| Gate                                                    | Status at this source snapshot                                                                      |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Fresh whole-project typecheck and version check         | Passed; log and hash above                                                                          |
-| Fresh production build                                  | Passed; manifest and target digests above                                                           |
-| Complete local `test:ci`                                | Passed 990/990 in the fresh complete cohort                                                         |
-| Exact-head hosted checks                                | Required before merge; pending                                                                      |
-| Live text/image structured-output experiment            | Not run; requires reviewed input, verified ADC/configuration and explicit bounded spending approval |
-| Actual project retention, model access and billed usage | Default cache/logging settings reviewed above; live model access and billed usage remain unverified |
-| Fresh held-out navigation quality                       | Separate #43 work; not inferred from accepted proposal fixtures                                     |
-| Production credits and quota reconciliation             | Separate #44 work; operator claims are not account credits                                          |
-| Release, packaging or deployment                        | Not performed or authorized by this record                                                          |
+| Gate                                                    | Status at this source snapshot                                                                  |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Fresh whole-project typecheck and version check         | Passed; log and hash above                                                                      |
+| Fresh production build                                  | Passed; manifest and target digests above                                                       |
+| Complete local `test:ci`                                | Passed 990/990 in the fresh complete cohort                                                     |
+| Exact-head hosted checks                                | Required before merge; pending                                                                  |
+| Live text/image structured-output experiment            | Passed once with the separately approved data and $0.02 allowance; result above                 |
+| Actual project retention, model access and billed usage | Default settings and live access verified; measured tokens recorded, settled invoice unverified |
+| Fresh held-out navigation quality                       | Separate #43 work; not inferred from accepted proposal fixtures                                 |
+| Production credits and quota reconciliation             | Separate #44 work; operator claims are not account credits                                      |
+| Release, packaging or deployment                        | Not performed or authorized by this record                                                      |
 
 Reviewable final-source results belong on issue #39 and its pull request. Preserve
 earlier failed attempts when recording later success. Fake or injected provider

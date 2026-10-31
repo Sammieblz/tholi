@@ -229,19 +229,25 @@ project/model/API/location, verified retention settings, working server
 credentials, a maximum call/token/image allowance and a spending ceiling. Keep
 the result content-free and record the build, prompt/schema/capture policy,
 price assumptions, token totals, latency, outcome and any unresolved charge.
-Dataset approval and spending authorization are not established by this draft.
+This guide does not establish dataset approval or spending authorization.
 
 ## Validation record
 
-| Evidence                                                                   | Current status                                                                 |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Official provider capability, endpoint, auth, pricing and retention review | Sources reviewed; actual inference access and retention settings not verified  |
-| Deterministic fake, adapter, configuration and operator regressions        | Fresh focused 207/207 pass; earlier failures retained in the validation record |
-| Fresh whole-project types and version check                                | Passed; linked validation record retains the log hash                          |
-| Fresh production build and complete CI                                     | Pending fresh recorded results                                                 |
-| Actual multimodal and structured-output experiment                         | Not run; requires approved input, working ADC and bounded spending approval    |
-| Measured provider billing and project retention verification               | Pending actual external evidence                                               |
-| Complete local and final-head hosted PR gates                              | Required through the repository's existing process                             |
+| Evidence                                                                   | Current status                                                                                                         |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Official provider capability, endpoint, auth, pricing and retention review | Reviewed profile exercised; actual default cache/logging settings recorded                                             |
+| Deterministic fake, adapter, configuration and operator regressions        | Fresh focused 207/207 pass; earlier failures retained in the validation record                                         |
+| Fresh whole-project types and version check                                | Passed; linked validation record retains the log hash                                                                  |
+| Fresh production build and complete CI                                     | Passed production build and 990/990 complete local PR cases                                                            |
+| Actual multimodal and structured-output experiment                         | One approved synthetic call passed, API v1 / Gemini 3.8 Flash / global                                                 |
+| Provider usage and project retention                                       | Measured 2,525 tokens; standard-rate estimate $0.005012; settled bill unverified; default caching and logging recorded |
+| Complete local and final-head hosted PR gates                              | Required through the repository's existing process                                                                     |
+
+The approved experiment and full evidence are in the
+[validation record](testing/model-adapters-validation.md#approved-live-compatibility-result).
+Its $0.02 single-use approval is consumed. Further live calls require their own
+reviewed data and spending authorization. Endpoint compatibility does not
+establish navigation quality or task arrival.
 
 Attach fresh exact-source evidence to issue #39 and its pull request. Documentation
 review, fake tests and provider documentation do not certify live quality or
