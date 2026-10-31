@@ -272,11 +272,12 @@ test("Firefox announces connected processing and supports keyboard Local recover
     );
     expect(await local.isSelected()).toBe(true);
     await app.driver.actions().sendKeys(Key.ESCAPE).perform();
-    expect(
-      await app.extension(() =>
-        document.activeElement?.getAttribute("aria-label"),
-      ),
-    ).toBe("Tholi settings");
+    await app.waitFor(
+      () =>
+        app.extension(() => document.activeElement?.getAttribute("aria-label")),
+      (label) => label === "Tholi settings",
+      "Firefox restores settings focus after closing the popover",
+    );
     await app.goal("Turn Dark on");
     await app.waitFor(
       () => app.view(),

@@ -73,6 +73,22 @@ The evidence-only commit requires its own hosted head check before merge. No
 production artifact changed when recording results. All 23 preserved release-file
 checksums still match; no archive was packaged or overwritten.
 
+The evidence-head hosted run
+[41180143043](https://github.com/Sammieblz/tholi/actions/runs/41180143043) passed
+the six other jobs and three of four Firefox cases. The new Firefox case read
+focus immediately after Escape, before the existing popover finished restoring
+it. The assertion now uses the existing bounded readiness wait for the actual
+settings trigger; no sleep, timeout increase or product change is introduced.
+The exact corrected head must pass hosted validation before merge.
+
+Local follow-up `4dcbd832-758c-40fa-8c96-0253bcf1f1eb` retained the unchanged
+verified build but failed all four cases during the existing thirty-second
+WebDriver shutdown, including the unchanged original conformance cases. This
+host cleanup failure remains recorded under
+`output/qa/processing-42-firefox-readiness/`; it is not relabeled as passing
+focus or browser evidence. The earlier complete 1,117-case result retains its
+original identity.
+
 The first fresh-build focused cohort
 `c9b1942a-600a-4b44-b705-0a2f792deba5` passed eight of nine Chromium cases, two
 native Firefox cases and all three layout owners. Retry revealed an actual
