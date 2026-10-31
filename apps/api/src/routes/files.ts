@@ -86,23 +86,25 @@ export async function registerFilesApi(
         fileParams.parse(request.params).fileId,
         token,
         context,
+        async () => {
+          const current = (await authenticate(request)).session;
+          if (
+            current.id !== session.id ||
+            current.accountId !== session.accountId ||
+            current.workspaceId !== session.workspaceId
+          )
+            throw new IdentityError(
+              401,
+              "UNAUTHENTICATED",
+              "Sign in again to continue.",
+            );
+        },
       );
-      const current = (await authenticate(request)).session;
-      if (
-        current.id !== session.id ||
-        current.accountId !== session.accountId ||
-        current.workspaceId !== session.workspaceId
-      )
-        throw new IdentityError(
-          401,
-          "UNAUTHENTICATED",
-          "Sign in again to continue.",
-        );
       return reply
         .header("Content-Type", file.contentType)
         .header(
           "Content-Disposition",
-          'attachment; filename="tholi-diagnostic.json"',
+          `attachment; filename="${file.filename}"`,
         )
         .header("X-Content-Type-Options", "nosniff")
         .send(Buffer.from(file.body));

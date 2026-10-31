@@ -14,6 +14,10 @@ The [product plan validation record](product-plans-validation.md) tracks the
 versioned catalog, development Free enrollment, shared allowance enforcement and
 storage limits. Production prices and cloud plans remain unavailable.
 
+The [saved-data validation record](saved-data-validation.md) tracks explicit
+privacy previews, scoped CRUD/import, offline conflicts, deletion tombstones,
+account-isolated caches and private exports through the existing worker owner.
+
 Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |

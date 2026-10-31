@@ -123,8 +123,11 @@ export function parameterizedTask(task: SavedTask): SavedTask {
       : undefined,
   };
 }
-export function structuralKnowledge(site: SiteMemory): SiteMemory {
-  if (!privatePlatform(site.origin)) return site;
+export function structuralKnowledge(
+  site: SiteMemory,
+  interfaceOnly = false,
+): SiteMemory {
+  if (!interfaceOnly && !privatePlatform(site.origin)) return site;
   const clean = (page: SiteMemory["pages"][number]) => ({
     ...page,
     path: "/{context}",

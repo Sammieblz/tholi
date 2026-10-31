@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { z } from "zod";
 import { jobErrorCodeSchema } from "../../../../packages/navigation-core/contracts-jobs";
+import type { AuthorizationAction } from "../../../../packages/navigation-core/contracts-authorization";
 import {
   evaluateAuthorization,
   readAuthorizationContext,
@@ -15,6 +16,7 @@ import type {
 import { RepositoryError, type RepositoryScope } from "./contracts";
 import { PostgresRepositories } from "./repositories";
 import type { ScopedSupport } from "./support-queries";
+import { withTransaction } from "./postgres";
 
 /** HTTP and worker composition reuse the same scoped transaction and pool owner. */
 export class PostgresSupport implements SupportStore {
@@ -27,6 +29,8 @@ export class PostgresSupport implements SupportStore {
     scope: RepositoryScope,
     work: (queries: ScopedSupport) => Promise<T>,
     signal?: AbortSignal,
+    action: AuthorizationAction = "support.request",
+    accountLock = false,
   ): Promise<T> {
     scope = Object.freeze({
       accountId: scope.accountId,
@@ -35,16 +39,19 @@ export class PostgresSupport implements SupportStore {
     signal?.throwIfAborted();
     return this.repositories.transaction(scope, async (owner) => {
       const context = await readAuthorizationContext(owner);
+      const personalOnly =
+        action === "support.request" || action === "diagnostics.export";
       if (
-        context.workspace?.kind !== "personal" ||
-        context.workspace.ownerAccountId !== scope.accountId ||
-        !evaluateAuthorization(context, "support.request").allowed
+        !evaluateAuthorization(context, action).allowed ||
+        (personalOnly &&
+          (context.workspace?.kind !== "personal" ||
+            context.workspace.ownerAccountId !== scope.accountId))
       )
         throw new RepositoryError(
           "FORBIDDEN",
           "The requested workspace is unavailable.",
         );
-      const result = await owner.withSupport(work);
+      const result = await owner.withSupport(work, personalOnly, accountLock);
       signal?.throwIfAborted();
       return result;
     });
@@ -72,21 +79,83 @@ export class PostgresSupport implements SupportStore {
     );
   }
 
-  getFile(scope: RepositoryScope, fileId: string, signal?: AbortSignal) {
+  async getFile(scope: RepositoryScope, fileId: string, signal?: AbortSignal) {
+    scope = Object.freeze({
+      accountId: scope.accountId,
+      workspaceId: scope.workspaceId,
+    });
     z.string().uuid().parse(fileId);
-    return this.scoped(scope, (queries) => queries.getFile(fileId), signal);
+    signal?.throwIfAborted();
+    const workspaceId = await withTransaction(
+      this.pool,
+      async (client) =>
+        (
+          await client.query<{ workspaceId: string | null }>(
+            'SELECT tholi.resolve_owned_file_workspace($1) AS "workspaceId"',
+            [fileId],
+          )
+        ).rows[0]?.workspaceId,
+      { accountId: scope.accountId },
+    );
+    signal?.throwIfAborted();
+    if (!workspaceId)
+      return this.scoped(scope, async () => null, signal, "files.read");
+    return this.scoped(
+      { accountId: scope.accountId, workspaceId },
+      (queries) => queries.getFile(fileId),
+      signal,
+      "files.read",
+    );
+  }
+
+  requestSavedExport(
+    scope: RepositoryScope,
+    raw: { idempotencyKey: string; payloadHash: string; ids: string[] },
+    signal?: AbortSignal,
+  ) {
+    const input = structuredClone(raw);
+    return this.scoped(
+      scope,
+      (queries) => queries.requestSavedExport(input),
+      signal,
+      "saved-data.export",
+      true,
+    );
   }
 
   async prepareExternal(lease: JobLease) {
     lease = structuredClone(lease);
     try {
-      return await this.scoped(lease, (queries) =>
-        queries.prepareExternal(lease),
+      return await this.scoped(
+        lease,
+        (queries) => queries.prepareExternal(lease),
+        undefined,
+        lease.kind === "file.saved-data-export"
+          ? "saved-data.export"
+          : "support.request",
       );
     } catch (error) {
       if ((error as { code?: string }).code === "40001") return null;
       throw error;
     }
+  }
+
+  async authorizeExternal(
+    lease: JobLease,
+    attemptId: string,
+  ): Promise<boolean> {
+    lease = structuredClone(lease);
+    z.string().uuid().parse(attemptId);
+    if (lease.kind !== "file.saved-data-export" || lease.version !== 1)
+      return false;
+    return (
+      (
+        await this.pool.query<{ allowed: boolean }>(
+          "SELECT tholi.authorize_saved_export($1,$2,$3,$4) AS allowed",
+          [lease.workspaceId, lease.id, lease.leaseToken, attemptId],
+        )
+      ).rows[0]?.allowed === true
+    );
   }
 
   async finishExternal(

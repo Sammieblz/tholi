@@ -63,7 +63,10 @@ export function createFileLinks(secret: string): FileLinks {
           exp: _expiry,
           ...scope
         } = payload;
-        return scopeSchema.parse(scope);
+        return {
+          ...scopeSchema.parse(scope),
+          expiresAt: new Date(payload.exp! * 1000),
+        };
       } catch {
         throw new Error("The download proof is invalid.");
       }

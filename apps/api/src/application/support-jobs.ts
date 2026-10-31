@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { registeredJobKinds, type ExternalJobHandler } from "./job-contracts";
 import {
   validateDiagnosticFile,
+  validateSavedDataFile,
   validateObjectReference,
 } from "./private-files";
 import { approvedMailSchema } from "./support-mail";
@@ -18,6 +19,7 @@ const kinds = [
   "support.operator",
   "support.received",
   "file.diagnostic",
+  "file.saved-data-export",
   "file.expire",
 ] as const;
 export const SUPPORT_JOB_KINDS = registeredJobKinds(
@@ -101,8 +103,14 @@ export function createSupportJobHandlers(
               ? { status: "retryable", code: "UNAVAILABLE", backoffMs }
               : { status: "uncertain", code: "HANDLER_FAILED", backoffMs: 0 };
       } else {
-        if (lease.kind !== "file.diagnostic") throw new ZodError([]);
-        validateDiagnosticFile(prepared.command.file, prepared.command.body);
+        if (lease.kind === "file.saved-data-export") {
+          validateSavedDataFile(prepared.command.file, prepared.command.body);
+          if (!(await store.authorizeExternal?.(lease, prepared.attemptId)))
+            throw new ZodError([]);
+          signal.throwIfAborted();
+        } else if (lease.kind === "file.diagnostic") {
+          validateDiagnosticFile(prepared.command.file, prepared.command.body);
+        } else throw new ZodError([]);
         await objects.put(prepared.command.file, prepared.command.body, signal);
         outcome = { status: "committed", backoffMs: 0 };
       }

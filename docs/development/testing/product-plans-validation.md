@@ -93,3 +93,13 @@ fingerprint:
 No archive, deployment or version change is part of this issue. Live calls stay
 disabled. Native permission prompts, actual screen-reader speech, production
 scaling, billing and the deferred live-quality comparison are not certified here.
+
+## Post-merge hosted evidence
+
+After this preparation record was committed, final source
+`18225f6932f7b988d07bf45b94c2b5618117711f` passed all eight hosted checks in
+[run 41230648824](https://github.com/Sammieblz/tholi/actions/runs/41230648824).
+The final head was rebuilt and its PostgreSQL/container and all deterministic
+unit/browser groups passed. PR #84 merged as
+`895c6bb79b2ce0a30e18c25aea064db880d5a5bf`; #58 is closed and marked Complete.
+This later evidence does not relabel the earlier local reports or certify #59.

@@ -2,6 +2,7 @@
 import { createElement, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { IDBFactory } from "fake-indexeddb";
 const config = vi.hoisted(() => ({
   origin: "https://api.example.test" as string | undefined,
 }));
@@ -27,6 +28,7 @@ import {
 import { ServiceClientError } from "../../../packages/navigation-core/service-client";
 import { AccountAnalytics } from "../../../apps/web/src/features/account/AccountAnalytics";
 import { PreferencesProvider } from "../../../apps/web/src/features/preferences/PreferencesProvider";
+import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
 const session = {
   account: {
     id: "00000000-0000-4000-8000-000000000001",
@@ -53,6 +55,7 @@ function Probe() {
   );
 }
 beforeEach(() => {
+  vi.stubGlobal("indexedDB", new IDBFactory());
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   config.origin = "https://api.example.test";
   container = document.createElement("div");
@@ -63,6 +66,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   vi.resetAllMocks();
+  vi.unstubAllGlobals();
   document.cookie = "tholi_consent=; Path=/; Max-Age=0";
 });
 async function mount() {
@@ -77,6 +81,176 @@ it("keeps the unconfigured account boundary honest and makes no account request"
   expect(current.loading).toBe(false);
   expect(current.authorizationUrl("signin")).toBeUndefined();
   expect(transport.request).not.toHaveBeenCalled();
+});
+
+it("same-account reload preserves durable pending cloud work while explicit logout removes it", async () => {
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return session;
+      if (path === "/api/v1/capabilities")
+        return { capabilities: ["saved-data-write", "account-binding"] };
+      if (path.endsWith("/artifacts") && options.method === "POST")
+        throw new Error("offline");
+      if (path.endsWith("/auth/logout"))
+        return {
+          signedOut: true,
+          providerLogoutUrl: "https://identity.example.test/logout",
+        };
+      throw new Error("Unexpected account request.");
+    },
+  );
+  await mount();
+  await expect(
+    current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
+  ).rejects.toThrow("offline");
+  expect((await current.savedData.cached()).outbox).toHaveLength(1);
+  await act(async () => current.reload());
+  expect((await current.savedData.cached()).outbox).toHaveLength(1);
+  await act(async () => {
+    await current.signOut();
+  });
+  expect(current.session).toBeUndefined();
+  await act(async () => current.reload());
+  expect((await current.savedData.cached()).outbox).toEqual([]);
+});
+
+it("peer account notices abort stale work and reload verified identity without trusting channel identities or broadcasting loops", async () => {
+  const peers = new Set<PeerChannel>(),
+    notices: unknown[] = [];
+  class PeerChannel {
+    onmessage: ((event: { data: unknown }) => void) | null = null;
+    constructor(readonly name: string) {
+      peers.add(this);
+    }
+    postMessage(data: unknown) {
+      notices.push(structuredClone(data));
+      for (const peer of peers)
+        if (peer !== this && peer.name === this.name)
+          peer.onmessage?.({ data });
+    }
+    close() {
+      peers.delete(this);
+    }
+  }
+  vi.stubGlobal("BroadcastChannel", PeerChannel);
+  const second = {
+    ...session,
+    account: {
+      ...session.account,
+      id: "00000000-0000-4000-8000-000000000004",
+      workspaceId: "00000000-0000-4000-8000-000000000005",
+    },
+    session: { ...session.session, id: "00000000-0000-4000-8000-000000000006" },
+  };
+  let actor = session,
+    accountReads = 0,
+    complete!: (value: { items: [] }) => void,
+    provePreviousTab!: (value: typeof session) => void;
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") {
+        accountReads++;
+        if (accountReads === 3)
+          return new Promise((resolve) => {
+            provePreviousTab = resolve;
+          });
+        return actor;
+      }
+      if (path === "/api/v1/capabilities")
+        return { capabilities: ["saved-data-write", "account-binding"] };
+      if (path.endsWith("/artifacts") && options.method === "POST")
+        throw new Error("offline");
+      if (path === "/api/v1/account/sessions")
+        return new Promise((resolve) => {
+          complete = resolve;
+        });
+      throw new Error("Unexpected account request.");
+    },
+  );
+  await mount();
+  await expect(
+    current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
+  ).rejects.toThrow("offline");
+  const pending = current.sessions(),
+    rejected = pending.catch((error: unknown) => error);
+  const originalSignal = transport.request.mock.calls.find(
+    (call) => call[1] === "/api/v1/account/sessions",
+  )![3].signal;
+  expect(
+    transport.request.mock.calls.find(
+      (call) => call[1] === "/api/v1/account/sessions",
+    )![3].expectedAccountId,
+  ).toBe(session.account.id);
+  actor = second;
+  const peerContainer = document.createElement("div"),
+    peerRoot = createRoot(peerContainer);
+  let peerAccount!: ReturnType<typeof useAccount>;
+  function PeerProbe() {
+    peerAccount = useAccount();
+    return createElement("span", null, "Peer");
+  }
+  document.body.append(peerContainer);
+  try {
+    await act(async () =>
+      peerRoot.render(
+        createElement(AccountProvider, null, createElement(PeerProbe)),
+      ),
+    );
+    await vi.waitFor(() => {
+      expect(peerAccount.session?.account).toEqual(second.account);
+      expect(provePreviousTab).toBeTypeOf("function");
+    });
+    expect(originalSignal.aborted).toBe(true);
+    await expect(
+      peerAccount.savedData.save(savedDataArtifactFixture("preferences"), "0"),
+    ).rejects.toThrow("offline");
+    const approved = (await peerAccount.savedData.cached()).outbox;
+    expect(approved).toHaveLength(1);
+    await act(async () => provePreviousTab(second));
+    await vi.waitFor(() =>
+      expect(current.session?.account).toEqual(second.account),
+    );
+    expect((await peerAccount.savedData.cached()).outbox).toEqual(approved);
+    expect((await current.savedData.cached()).outbox).toEqual(approved);
+    complete({ items: [] });
+    expect(String(await rejected)).toContain("session changed");
+    const count = notices.length;
+    const forged = new PeerChannel("tholi-account-lifecycle-v1");
+    await act(async () =>
+      forged.postMessage({
+        type: "account-change",
+        source: crypto.randomUUID(),
+        scope: {
+          accountId: "00000000-0000-4000-8000-000000000099",
+          workspaceId: "00000000-0000-4000-8000-000000000098",
+        },
+      }),
+    );
+    forged.close();
+    await vi.waitFor(() =>
+      expect(current.session?.account).toEqual(second.account),
+    );
+    await vi.waitFor(() =>
+      expect(peerAccount.session?.account).toEqual(second.account),
+    );
+    expect((await peerAccount.savedData.cached()).outbox).toEqual(approved);
+    expect((await current.savedData.cached()).outbox).toEqual(approved);
+    expect(
+      transport.request.mock.calls.filter(
+        (call) => call[1].endsWith("/artifacts") && call[3].method === "POST",
+      ),
+    ).toHaveLength(2);
+    expect(notices).toHaveLength(count + 1);
+    expect(JSON.stringify(notices)).not.toContain(session.csrfToken);
+    expect(JSON.stringify(notices)).not.toMatch(
+      /accessToken|refreshToken|csrfToken/,
+    );
+  } finally {
+    complete({ items: [] });
+    await rejected;
+    act(() => peerRoot.unmount());
+    peerContainer.remove();
+  }
 });
 it("uses credentialed cookie requests and CSRF for mutations without browser token storage", async () => {
   transport.request

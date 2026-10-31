@@ -81,7 +81,6 @@ export async function registerNavigationApi(
         params: zodToJsonSchema(params, { target }),
         response: {
           ...shared.response,
-          429: { $ref: "ServiceError#" },
           415: { $ref: "ServiceError#" },
         },
       };

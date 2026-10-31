@@ -146,6 +146,7 @@ describe("configured service identity composition", () => {
       "openapi",
       "authentication",
       "account-security",
+      "account-binding",
     ]);
     expect(capabilities.availability).toEqual({
       authentication: true,

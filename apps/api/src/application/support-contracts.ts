@@ -24,6 +24,8 @@ export interface DiagnosticRecord {
 }
 export interface PrivateFile {
   id: string;
+  /** Actual owned file scope; absent only in legacy in-memory adapter fixtures. */
+  workspaceId?: string;
   requestId: string;
   revision: bigint;
   key: string;
@@ -32,6 +34,8 @@ export interface PrivateFile {
   contentType: "application/json";
   expiresAt: Date;
   status: "pending" | "ready" | "deleting" | "deleted";
+  /** Missing only in legacy adapter fixtures; database rows always select it. */
+  purpose?: "diagnostic" | "saved-data-export";
 }
 export type ApprovedMail =
   | {
@@ -91,6 +95,8 @@ export interface SupportStore {
   ): Promise<PrivateFile | null>;
   /** A prior started SMTP attempt without a committed outcome returns no send command. */
   prepareExternal(lease: JobLease): Promise<PreparedExternal | null>;
+  /** New saved-data PUTs fail closed without this final current-authority fence. */
+  authorizeExternal?(lease: JobLease, attemptId: string): Promise<boolean>;
   finishExternal(
     lease: JobLease,
     attemptId: string,
@@ -136,6 +142,7 @@ export interface FileLinks {
     workspaceId: string;
     fileId: string;
     revision: string;
+    expiresAt: Date;
   }>;
 }
 export interface SupportOptions {

@@ -42,10 +42,7 @@ export async function registerSupportApi(
       route.url,
       {
         bodyLimit: 16 * 1024,
-        schema: {
-          ...schema,
-          response: { ...schema.response, 429: { $ref: "ServiceError#" } },
-        },
+        schema,
       },
       safe(async (request, reply, context) => {
         const { session, bearer } = await authenticate(request);

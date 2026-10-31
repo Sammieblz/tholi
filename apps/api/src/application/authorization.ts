@@ -148,6 +148,8 @@ export async function withAuthorization<
         includeConsents:
           action === "policies.read" ||
           action === "consents.write" ||
+          action === "saved-data.write" ||
+          action === "saved-data.import" ||
           action === "inference.request" ||
           action === "image.transmit" ||
           action === "analytics.record",

@@ -262,6 +262,54 @@ describe("approved support and private downloads", () => {
     ).rejects.toMatchObject({ statusCode: 403, code: "FORBIDDEN" });
     expect(f.objects.read).toHaveBeenCalledOnce();
   });
+  it("rechecks membership after the final asynchronous signature verification", async () => {
+    const f = fixture();
+    const token = await f.links.issue({
+      ...f.principal,
+      fileId: f.file.id,
+      revision: "2",
+      expiresAt: new Date(Date.now() + 30_000),
+    });
+    let revoked = false;
+    vi.mocked(f.store.getFile).mockImplementation(async () => {
+      if (revoked)
+        throw new RepositoryError("FORBIDDEN", "PRIVATE_REVOKED_SCOPE");
+      return { ...f.file };
+    });
+    let markVerificationReached!: () => void;
+    let finishVerification!: () => void;
+    const verificationReached = new Promise<void>((resolve) => {
+      markVerificationReached = resolve;
+    });
+    const releaseVerification = new Promise<void>((resolve) => {
+      finishVerification = resolve;
+    });
+    const verify = f.links.verify.bind(f.links);
+    let verifications = 0;
+    vi.spyOn(f.links, "verify").mockImplementation(async (value) => {
+      const proof = await verify(value);
+      if (++verifications === 2) {
+        markVerificationReached();
+        await releaseVerification;
+      }
+      return proof;
+    });
+    const pending = f.service.download(
+      f.principal,
+      f.file.id,
+      token,
+      context(),
+    );
+    await verificationReached;
+    revoked = true;
+    finishVerification();
+    await expect(pending).rejects.toMatchObject({
+      statusCode: 403,
+      code: "FORBIDDEN",
+    });
+    expect(f.objects.read).toHaveBeenCalledOnce();
+    expect(f.store.getFile).toHaveBeenCalledTimes(2);
+  });
   it("refuses changed object bytes, stale link requests and pending or expired files", async () => {
     const f = fixture();
     await expect(

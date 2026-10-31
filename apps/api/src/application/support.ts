@@ -19,7 +19,7 @@ import {
   authorizationRepositoryFailure,
 } from "./authorization";
 import type { IdentitySession } from "./identity-contracts";
-import { validateDiagnosticFile } from "./private-files";
+import { validatePrivateFile } from "./private-files";
 import type {
   FileLinks,
   ObjectPort,
@@ -190,6 +190,7 @@ export class SupportService {
       );
       const token = await this.links.issue({
         ...scope,
+        workspaceId: file.workspaceId ?? scope.workspaceId,
         fileId: id,
         revision: input.expectedRevision,
         expiresAt,
@@ -211,6 +212,7 @@ export class SupportService {
     fileId: string,
     rawToken: string,
     context: ServiceRequestContext,
+    finalIdentityCheck?: () => Promise<void>,
   ) {
     const scope = this.scope(principal);
     const id = identifier.parse(fileId);
@@ -222,36 +224,39 @@ export class SupportService {
       } catch {
         throw unavailable();
       }
-      if (
-        proof.accountId !== scope.accountId ||
-        proof.workspaceId !== scope.workspaceId ||
-        proof.fileId !== id
-      )
+      if (proof.accountId !== scope.accountId || proof.fileId !== id)
         throw unavailable();
       const file = await this.file(scope, id, context);
       if (
+        proof.workspaceId !== (file.workspaceId ?? scope.workspaceId) ||
         file.status !== "ready" ||
         file.revision.toString() !== proof.revision
       )
         throw unavailable();
       const body = await this.objects.read(file, context.signal);
-      validateDiagnosticFile(file, body);
+      validatePrivateFile(file, body);
+      const currentProof = await this.links.verify(token).catch(() => {
+        throw unavailable();
+      });
+      await finalIdentityCheck?.();
       // Authorization, expiry and revision can change while S3 is in flight.
       const current = await this.file(scope, id, context);
       if (
         current.status !== "ready" ||
         current.revision !== file.revision ||
         current.key !== file.key ||
-        current.sha256 !== file.sha256
+        current.workspaceId !== file.workspaceId ||
+        current.sha256 !== file.sha256 ||
+        currentProof.expiresAt.getTime() <= Date.now()
       )
         throw unavailable();
-      await this.links.verify(token).catch(() => {
-        throw unavailable();
-      });
       return {
         body,
         contentType: "application/json" as const,
-        filename: "tholi-diagnostic.json" as const,
+        filename:
+          file.purpose === "saved-data-export"
+            ? "tholi-saved-data.json"
+            : "tholi-diagnostic.json",
       };
     });
   }

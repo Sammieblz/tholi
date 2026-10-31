@@ -16,7 +16,9 @@ import type { Observability } from "./application/observability";
 import type { NavigationTransportService } from "./application/navigation";
 import type { CreditService } from "./application/quotas";
 import type { PlanService } from "./application/plans";
+import type { SavedDataService } from "./application/saved-data";
 import { createObservability } from "./adapters/observability";
+import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../../packages/navigation-core/contracts-service";
 
 export type { ApiOptions, ServiceApiOptions } from "./config";
 
@@ -31,6 +33,7 @@ export interface ServiceApiServices {
   navigation?: NavigationTransportService;
   credits?: CreditService;
   plans?: PlanService;
+  savedData?: SavedDataService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -96,6 +99,7 @@ async function createServiceRuntime(
   let navigation = injected.navigation;
   let credits = injected.credits;
   let plans = injected.plans;
+  let savedData = injected.savedData;
   const ownedResources = [...resources];
   if (
     (authorization ||
@@ -104,7 +108,8 @@ async function createServiceRuntime(
       analytics ||
       navigation ||
       credits ||
-      plans) &&
+      plans ||
+      savedData) &&
     !identity
   )
     throw new Error("Authorization requires the composed identity service.");
@@ -121,6 +126,10 @@ async function createServiceRuntime(
   if (navigation && !authorization)
     throw new Error(
       "Navigation transport requires composed tenant authorization.",
+    );
+  if (identity && savedData?.exportsAvailable && !support)
+    throw new Error(
+      "Saved-data exports require composed private-file delivery.",
     );
   const observer =
     injected.observability ?? createObservability(options.observability);
@@ -146,6 +155,7 @@ async function createServiceRuntime(
     navigation = runtime.navigation;
     credits = runtime.credits;
     plans = runtime.plans;
+    savedData = runtime.savedData;
     ownedResources.push(...runtime.resources);
   }
   // Accept late completions during drain, then flush after application resources close.
@@ -194,7 +204,12 @@ async function createServiceRuntime(
               !!identity &&
               request.headers.origin === options.identity?.webOrigin,
             methods: identity
-              ? ["GET", "POST", ...(authorization ? ["PATCH"] : []), "DELETE"]
+              ? [
+                  "GET",
+                  "POST",
+                  ...(authorization || savedData ? ["PATCH"] : []),
+                  "DELETE",
+                ]
               : ["GET", "POST"],
             allowedHeaders: identity
               ? [
@@ -202,9 +217,13 @@ async function createServiceRuntime(
                   "X-Tholi-Timeout-Ms",
                   "Authorization",
                   "X-Tholi-CSRF",
+                  SERVICE_ACCOUNT_BINDING_HEADER,
                 ]
               : ["Content-Type", "X-Tholi-Timeout-Ms"],
-            exposedHeaders: ["X-Request-Id"],
+            exposedHeaders: [
+              "X-Request-Id",
+              ...(identity ? [SERVICE_ACCOUNT_BINDING_HEADER] : []),
+            ],
             strictPreflight: true,
           }),
       });
@@ -213,19 +232,21 @@ async function createServiceRuntime(
           throw new ApiError(403, "FORBIDDEN", "Origin is not allowed.");
       });
       const { registerServiceApi } = await import("./routes/service");
-      await registerServiceApi(
-        app,
-        !!identity,
-        options.identity?.secureCookies,
-        !!authorization,
-        !!jobs,
-        !!support,
-        !!analytics,
-        !!navigation,
-        navigation?.evaluationMetadata,
-        !!credits,
-        !!plans,
-      );
+      await registerServiceApi(app, {
+        identityEnabled: !!identity,
+        secureCookies: options.identity?.secureCookies,
+        authorizationEnabled: !!authorization,
+        jobsEnabled: !!jobs,
+        supportEnabled: !!support,
+        analyticsEnabled: !!analytics,
+        navigationEnabled: !!navigation,
+        evaluation: navigation?.evaluationMetadata,
+        creditsEnabled: !!credits,
+        plansEnabled: !!plans,
+        savedDataEnabled: !!savedData,
+        savedDataWritesEnabled: savedData?.writesAvailable,
+        savedDataExportsEnabled: savedData?.exportsAvailable,
+      });
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
         await registerIdentityApi(app, identity);
@@ -259,6 +280,10 @@ async function createServiceRuntime(
         if (plans) {
           const { registerPlansApi } = await import("./routes/plans");
           await registerPlansApi(app, identity, plans);
+        }
+        if (savedData) {
+          const { registerSavedDataApi } = await import("./routes/saved-data");
+          await registerSavedDataApi(app, identity, savedData);
         }
       }
       registerHealth(app, "service", lifecycle);

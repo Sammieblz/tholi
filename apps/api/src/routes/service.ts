@@ -33,17 +33,37 @@ import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
 import { identityCookieNames } from "./identity-cookies";
 
-function serviceCapabilities(
-  identityEnabled: boolean,
-  authorizationEnabled: boolean,
-  jobsEnabled: boolean,
-  supportEnabled: boolean,
-  analyticsEnabled: boolean,
-  navigationEnabled: boolean,
-  evaluation?: OperatorEvaluationMetadata,
-  creditsEnabled = false,
-  plansEnabled = false,
-) {
+interface ServiceFeatures {
+  identityEnabled?: boolean;
+  secureCookies?: boolean;
+  authorizationEnabled?: boolean;
+  jobsEnabled?: boolean;
+  supportEnabled?: boolean;
+  analyticsEnabled?: boolean;
+  navigationEnabled?: boolean;
+  evaluation?: OperatorEvaluationMetadata;
+  creditsEnabled?: boolean;
+  plansEnabled?: boolean;
+  savedDataEnabled?: boolean;
+  savedDataWritesEnabled?: boolean;
+  savedDataExportsEnabled?: boolean;
+}
+
+function serviceCapabilities(features: ServiceFeatures) {
+  const {
+    identityEnabled = false,
+    authorizationEnabled = false,
+    jobsEnabled = false,
+    supportEnabled = false,
+    analyticsEnabled = false,
+    navigationEnabled = false,
+    evaluation,
+    creditsEnabled = false,
+    plansEnabled = false,
+    savedDataEnabled = false,
+    savedDataWritesEnabled = false,
+    savedDataExportsEnabled = false,
+  } = features;
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
     version: SERVICE_CONTRACT_VERSION,
@@ -53,7 +73,9 @@ function serviceCapabilities(
       "capabilities",
       "handshake",
       "openapi",
-      ...(identityEnabled ? ["authentication", "account-security"] : []),
+      ...(identityEnabled
+        ? ["authentication", "account-security", "account-binding"]
+        : []),
       ...(authorizationEnabled
         ? ["tenant-authorization", "purpose-consent"]
         : []),
@@ -62,6 +84,9 @@ function serviceCapabilities(
       ...(analyticsEnabled ? ["product-analytics"] : []),
       ...(creditsEnabled ? ["credit-accounting"] : []),
       ...(plansEnabled ? ["product-plans"] : []),
+      ...(savedDataEnabled ? ["saved-data"] : []),
+      ...(savedDataWritesEnabled ? ["saved-data-write"] : []),
+      ...(savedDataExportsEnabled ? ["saved-data-export"] : []),
       ...(navigationEnabled
         ? [
             NAVIGATION_TRANSPORT_CAPABILITY,
@@ -87,28 +112,10 @@ const jsonSchema = (schema: z.ZodTypeAny) =>
 
 export async function registerServiceApi(
   app: FastifyInstance,
-  identityEnabled = false,
-  secureCookies = false,
-  authorizationEnabled = false,
-  jobsEnabled = false,
-  supportEnabled = false,
-  analyticsEnabled = false,
-  navigationEnabled = false,
-  evaluation?: OperatorEvaluationMetadata,
-  creditsEnabled = false,
-  plansEnabled = false,
+  features: ServiceFeatures = {},
 ) {
-  const capabilities = serviceCapabilities(
-    identityEnabled,
-    authorizationEnabled,
-    jobsEnabled,
-    supportEnabled,
-    analyticsEnabled,
-    navigationEnabled,
-    evaluation,
-    creditsEnabled,
-    plansEnabled,
-  );
+  const { identityEnabled = false, secureCookies = false } = features;
+  const capabilities = serviceCapabilities(features);
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,
     PageQuery: servicePageQuerySchema,
