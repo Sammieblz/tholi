@@ -5,20 +5,28 @@ import { requestBackendAccess } from "../../../platform/site-access";
 import {
   serviceAuthStatusSchema,
   type ServiceAuthStatus,
+  type ServiceInferenceStatus,
   serviceInferenceStatusSchema,
 } from "../../../platform/service-auth-contract";
 import { identitySessionsSchema } from "../../../../../../packages/navigation-core/contracts-identity";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { z } from "zod";
 import "./account-settings.css";
+type ProcessingChoice = Pick<
+  ServiceInferenceStatus,
+  "profile" | "enabled" | "images" | "evaluation"
+>;
+const localChoice: ProcessingChoice = {
+  profile: "fake",
+  enabled: false,
+  images: false,
+};
 
 export function AccountSettings() {
-  const [inference, setInference] = useState({ enabled: false, images: false });
+  const [inference, setInference] = useState<ProcessingChoice>(localChoice);
   // An acknowledged snapshot for uncertain RPC failures. Optimistic controls
   // are not proof that the background received or saved a processing choice.
-  const confirmedInference = useRef<
-    { enabled: boolean; images: boolean } | undefined
-  >(undefined);
+  const confirmedInference = useRef<ProcessingChoice | undefined>(undefined);
   const [status, setStatus] = useState<ServiceAuthStatus>({
     configured: false,
   });
@@ -33,7 +41,7 @@ export function AccountSettings() {
   const operationVersion = useRef(0);
   const processingName = useId();
   const isCurrent = (expected: number) => operationVersion.current === expected;
-  const confirmInference = (choices: { enabled: boolean; images: boolean }) => {
+  const confirmInference = (choices: ProcessingChoice) => {
     confirmedInference.current = choices;
     setInference(choices);
   };
@@ -56,14 +64,13 @@ export function AccountSettings() {
         ? serviceInferenceStatusSchema.parse(
             await rpc({ type: "AUTH_INFERENCE_STATUS" }),
           )
-        : { enabled: false, images: false }
+        : localChoice
       : undefined;
     if (!isCurrent(expected)) return;
     setStatus(result);
     setOrigin(result.origin ?? "");
     if (!result.account) setSessions([]);
-    if (choices)
-      confirmInference({ enabled: choices.enabled, images: choices.images });
+    if (choices) confirmInference(choices);
   };
   useEffect(() => {
     const expected = ++operationVersion.current;
@@ -81,6 +88,28 @@ export function AccountSettings() {
       operationVersion.current++;
     };
   }, []);
+  useEffect(() => {
+    const expiresAt = inference.evaluation?.expiresAtMs;
+    if (!expiresAt) return;
+    const timer = setTimeout(
+      () => {
+        const expected = ++operationVersion.current;
+        setBusy(true);
+        void load(expected)
+          .catch(() => {
+            if (isCurrent(expected))
+              setError(
+                "The temporary evaluation expired. Reopen settings to confirm the current processing choice.",
+              );
+          })
+          .finally(() => {
+            if (isCurrent(expected)) setBusy(false);
+          });
+      },
+      Math.max(1, expiresAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [inference.evaluation?.expiresAtMs]);
   const act = async (
     operation: (expected: number) => Promise<void | string>,
     message: string,
@@ -170,7 +199,7 @@ export function AccountSettings() {
       );
       return;
     }
-    setInference(choices);
+    setInference({ profile: "fake", ...choices });
     void act(
       async (expected) => {
         let configurationStarted = false;
@@ -193,8 +222,7 @@ export function AccountSettings() {
             }),
           );
           if (!isCurrent(expected)) return;
-          const next = { enabled: result.enabled, images: result.images };
-          confirmInference(next);
+          confirmInference(result);
           if (!result.enabled && !status.account) {
             try {
               // A Local choice may have fenced the first account read. Refresh
@@ -226,10 +254,7 @@ export function AccountSettings() {
               await rpc({ type: "AUTH_INFERENCE_STATUS" }),
             );
             if (!isCurrent(expected)) return;
-            confirmInference({
-              enabled: current.enabled,
-              images: current.images,
-            });
+            confirmInference(current);
             if (!current.configured)
               setStatus({ configured: !!status.origin, origin: status.origin });
           } catch {
@@ -293,7 +318,7 @@ export function AccountSettings() {
             type="radio"
             value="connected"
             name={processingName}
-            checked={inference.enabled}
+            checked={inference.enabled && inference.profile === "fake"}
             disabled={busy || !status.account}
             aria-describedby="tholi-inference-help"
             onChange={() =>
@@ -309,15 +334,50 @@ export function AccountSettings() {
           model, not a hosted cloud plan. Your local collection is not uploaded.
           Private backend and sign-in access remain separate choices.
         </p>
+        {inference.evaluation && (
+          <>
+            <label className="tholi-inference-choice">
+              <input
+                type="radio"
+                name={processingName}
+                value="operator-evaluation"
+                checked
+                readOnly
+                disabled
+                aria-describedby="tholi-operator-evaluation-help"
+              />
+              Temporary operator evaluation
+            </label>
+            <p id="tholi-operator-evaluation-help">
+              {inference.evaluation.provider === "vertex"
+                ? "Vertex"
+                : "Fake provider"}
+              , {inference.evaluation.arm}. This declared trial expires at{" "}
+              {new Date(inference.evaluation.expiresAtMs).toLocaleTimeString()}.
+              It is not a saved processing choice or a hosted plan. Selecting
+              Local or the development service ends this evaluation.
+            </p>
+          </>
+        )}
         <label className="tholi-inference-choice">
           <input
             type="checkbox"
             checked={inference.images}
-            disabled={!inference.enabled || (busy && !inference.images)}
+            disabled={
+              !inference.enabled ||
+              (busy && !inference.images) ||
+              (inference.profile === "operator-evaluation" && !inference.images)
+            }
             aria-describedby="tholi-inference-image-help"
             onChange={(event) => {
               const images = event.target.checked;
-              saveInference({ enabled: true, images }, !images);
+              saveInference(
+                {
+                  enabled: inference.profile !== "operator-evaluation",
+                  images,
+                },
+                !images,
+              );
             }}
           />
           Allow temporary masked images
@@ -326,7 +386,8 @@ export function AccountSettings() {
           Selecting images records separate image-transmission consent. Images
           still require current website access before each send. Turning this
           off stops new image transmission without requesting another
-          permission.
+          permission. For a temporary operator trial, turning images off ends
+          the trial and selects Local.
         </p>
       </fieldset>
       <label htmlFor="tholi-service-origin">Account service origin</label>

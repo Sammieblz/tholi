@@ -1,0 +1,16 @@
+# Explicit operator development only. Normal Compose does not publish SQL.
+# Keep this overlay on a disposable local project; never apply it to a VM/cloud profile.
+services:
+  evaluation-sql:
+    extends:
+      file: compose.yaml
+      service: gateway
+    ports: !override
+      - "127.0.0.1:${THOLI_EVALUATION_POSTGRES_PORT:?Choose a free loopback operator SQL port}:5432"
+    volumes: !override
+      - ./infra/local/gateway/evaluation-sql.conf:/etc/nginx/nginx.conf:ro
+    networks: !override [ingress, database]
+    depends_on: !override
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, nc, -z, -w, "2", "127.0.0.1", "5432"]

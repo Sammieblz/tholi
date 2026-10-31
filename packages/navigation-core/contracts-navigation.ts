@@ -3,6 +3,11 @@ import { controlId, controlSchema, progressSchema } from "../page-model";
 import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
 import { inspectPngData } from "../vision/png";
 import {
+  operatorEvaluationArmSchema,
+  operatorEvaluationBindingSchema,
+  operatorEvaluationMetadataSchema,
+} from "./contracts-evaluation";
+import {
   SERVICE_LIMITS,
   serviceErrorCodeSchema,
   serviceRequestPolicySchema,
@@ -657,15 +662,45 @@ export type NavigationObservation = z.infer<typeof navigationObservationSchema>;
 export type NavigationDecision = z.infer<typeof navigationDecisionSchema>;
 
 /** Transient processing metadata, never a capture, saved route or arrival proof. */
+export const navigationProcessingProfileSchema = z.enum([
+  "fake",
+  "operator-evaluation",
+]);
+export const navigationEvaluationContextSchema = operatorEvaluationBindingSchema
+  .extend({
+    generation: operatorEvaluationBindingSchema.shape.generation.optional(),
+    provider: operatorEvaluationMetadataSchema.shape.provider,
+    arm: operatorEvaluationArmSchema.exclude(["local"]),
+  })
+  .strict();
 export const navigationServiceStateSchema = z
   .object({
-    profile: z.literal("fake"),
+    profile: navigationProcessingProfileSchema,
+    evaluation: navigationEvaluationContextSchema.optional(),
+    transportRequestId: z.string().uuid().optional(),
     requestId: z.string().uuid(),
-    state: z.enum(["pending", "guiding", "clarify", "unsupported", "error"]),
+    state: z.enum([
+      "pending",
+      "guiding",
+      "clarify",
+      "observation",
+      "unsupported",
+      "error",
+    ]),
     message: label.optional(),
     code: serviceErrorCodeSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      value.profile === "operator-evaluation"
+        ? !!value.evaluation &&
+          (["pending", "error"].includes(value.state) ||
+            (value.evaluation.generation !== undefined &&
+              !!value.transportRequestId))
+        : value.evaluation === undefined,
+    "Operator processing metadata requires an explicit evaluation binding.",
+  );
 export type NavigationServiceState = z.infer<
   typeof navigationServiceStateSchema
 >;
@@ -813,6 +848,8 @@ export function joinNavigationDecision(
 
 export const NAVIGATION_TRANSPORT_CAPABILITY = "navigation-decisions";
 export const NAVIGATION_FAKE_CAPABILITY = "fake-navigation-model";
+export const NAVIGATION_EVALUATION_CAPABILITY =
+  "operator-navigation-evaluation";
 export const NAVIGATION_TRANSPORT_OPERATION = "navigation-decisions.v1";
 export const NAVIGATION_TRANSPORT_LIMITS = Object.freeze({
   maxBodyBytes: NAVIGATION_LIMITS.maxEnvelopeBytes,
@@ -820,15 +857,36 @@ export const NAVIGATION_TRANSPORT_LIMITS = Object.freeze({
 });
 
 /** The caller's clock and original identities are never replaced by server time. */
-export const navigationTransportInputSchema = z
+const navigationTransportInputBaseSchema = z
   .object({
     requestId: z.string().uuid(),
-    profile: z.literal("fake"),
     observation: navigationObservationSchema,
     validation: navigationValidationContextSchema,
     policy: serviceRequestPolicySchema.default({}),
+    profile: navigationProcessingProfileSchema,
+    evaluation: operatorEvaluationBindingSchema.optional(),
   })
   .strict();
+// Keep defaults outside the conditional branches: AJV cannot apply a default
+// nested under anyOf. The strict shared owner bounds all keys; branches refine
+// only the explicit profile/binding relationship.
+export const navigationTransportInputSchema =
+  navigationTransportInputBaseSchema.and(
+    z.discriminatedUnion("profile", [
+      z
+        .object({
+          profile: z.literal("fake"),
+          evaluation: z.never().optional(),
+        })
+        .passthrough(),
+      z
+        .object({
+          profile: z.literal("operator-evaluation"),
+          evaluation: operatorEvaluationBindingSchema,
+        })
+        .passthrough(),
+    ]),
+  );
 export type NavigationTransportInput = z.infer<
   typeof navigationTransportInputSchema
 >;

@@ -112,7 +112,12 @@ export function registerMessages(context: Context) {
         respond({ error: "Open account controls from the Tholi sidebar." });
         return;
       }
-      if (raw.type === "AUTH_INFERENCE_CONFIGURE") context.cancelVision();
+      if (
+        ["AUTH_INFERENCE_CONFIGURE", "AUTH_EVALUATION_ACTIVATE"].includes(
+          raw.type,
+        )
+      )
+        context.cancelVision();
       // Authentication has its own lifecycle. A native sign-in window cannot block the journey queue.
       void serviceAuthCommand(raw)
         .then(respond)

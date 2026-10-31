@@ -275,7 +275,11 @@ export function AdvancedTools({
               <p className="small">
                 {view.serviceNavigation?.state === "guiding" &&
                 view.serviceNavigation.requestId === view.request?.id ? (
-                  "Development service proposal · Verify on the website"
+                  view.serviceNavigation.profile === "operator-evaluation" ? (
+                    "Operator evaluation proposal · Verify on the website"
+                  ) : (
+                    "Development service proposal · Verify on the website"
+                  )
                 ) : (
                   <>
                     {view.goalPlan.source === "on-device"

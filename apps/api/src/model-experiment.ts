@@ -20,7 +20,7 @@ import { createGoogleModelAccessToken } from "./adapters/google-model-auth";
 import { isMainModule } from "./runtime";
 
 export const MODEL_PRICE_REVISION = "vertex-3.8-standard-2026-10-31";
-const priceReviewExpiresAt = Date.parse("2027-01-01T00:00:00Z");
+export const priceReviewExpiresAt = Date.parse("2027-01-01T00:00:00Z");
 const inputLimit = NAVIGATION_LIMITS.maxEnvelopeBytes + 65536;
 const inputSchema = z
   .object({
@@ -73,7 +73,10 @@ export function estimateModelCostUsdMicros(
   return Number(micros);
 }
 
-async function boundedFile(file: string, limit: number): Promise<Buffer> {
+export async function boundedFile(
+  file: string,
+  limit: number,
+): Promise<Buffer> {
   const handle = await open(file, "r");
   try {
     const info = await handle.stat();

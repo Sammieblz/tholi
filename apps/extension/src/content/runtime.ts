@@ -267,19 +267,12 @@ if (!host[marker]) {
           respond({ error: "Current page perception is unavailable." });
           return;
         }
-        const request = owner.view.request?.id,
-          journey = owner.view.journey?.id,
-          context = owner.view.journey?.workflow?.revision;
+        const pageCurrent = owner.captureCurrent(page);
         const current = () =>
           coach === owner &&
           sessionId === id &&
-          owner.view.status === "running" &&
           !document.hidden &&
-          owner.view.page === page &&
-          owner.getPerception(page) === perception &&
-          owner.view.request?.id === request &&
-          owner.view.journey?.id === journey &&
-          owner.view.journey?.workflow?.revision === context;
+          pageCurrent();
         void captureMetadata(
           {
             captureId: token.data,

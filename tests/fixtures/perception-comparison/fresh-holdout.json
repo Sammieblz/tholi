@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "status": "reviewed-frozen",
+  "cases": [
+    {
+      "id": "h43-wiki-hopper-awards",
+      "app": "wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Grace_Hopper",
+      "goal": "Show the section covering her awards and honors.",
+      "kind": "section",
+      "target": "Awards and honors",
+      "proof": { "heading": "Awards and honors", "headingLevel": 2 }
+    },
+    {
+      "id": "h43-wiki-voyager-talk",
+      "app": "wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Voyager_1",
+      "goal": "Open this article's discussion page without posting anything.",
+      "kind": "navigation",
+      "target": "Talk",
+      "path": "/wiki/Talk:Voyager_1",
+      "proof": {
+        "heading": "Talk:Voyager 1",
+        "bodyText": "This is the talk page for discussing improvements to the Voyager 1 article."
+      }
+    },
+    {
+      "id": "h43-wiki-turing-machine",
+      "app": "wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Alan_Turing",
+      "goal": "Open the article about the Turing machine.",
+      "kind": "navigation",
+      "target": "Turing machine",
+      "path": "/wiki/Turing_machine",
+      "proof": {
+        "heading": "Turing machine",
+        "bodyText": "A Turing machine is"
+      }
+    },
+    {
+      "id": "h43-github-flask-tags",
+      "app": "github",
+      "url": "https://github.com/pallets/flask",
+      "goal": "Show the repository's Git tags.",
+      "kind": "navigation",
+      "target": "Tags",
+      "path": "/pallets/flask/tags",
+      "proof": {
+        "heading": "Tags: pallets/flask",
+        "entryHrefPrefix": "/pallets/flask/releases/tag/"
+      }
+    },
+    {
+      "id": "h43-github-flask-examples",
+      "app": "github",
+      "url": "https://github.com/pallets/flask",
+      "goal": "Browse the example applications in this repository.",
+      "kind": "navigation",
+      "target": "examples",
+      "path": "/pallets/flask/tree/main/examples",
+      "proof": {
+        "heading": "examples",
+        "entryHref": "/pallets/flask/tree/main/examples/tutorial"
+      }
+    },
+    {
+      "id": "h43-github-flask-changes",
+      "app": "github",
+      "url": "https://github.com/pallets/flask",
+      "goal": "Read the change log for this project.",
+      "kind": "navigation",
+      "target": "CHANGES.rst",
+      "path": "/pallets/flask/blob/main/CHANGES.rst",
+      "proof": { "heading": "CHANGES.rst", "versionHistory": true }
+    }
+  ]
+}

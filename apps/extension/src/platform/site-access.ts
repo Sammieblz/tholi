@@ -1,15 +1,10 @@
 import { api, browserTarget, chromiumApi } from "./api";
 import backendDataPermissions from "../../../../config/backend-data-permissions.json";
 import type { Manifest } from "webextension-polyfill";
+import { hostPermissionPattern } from "./host-permissions";
+export { hostPermissionPattern } from "./host-permissions";
 const backendData =
   backendDataPermissions as Manifest.OptionalDataCollectionPermission[];
-/** Host grants cannot include ports in Firefox; task identity still uses the exact origin. */
-export function hostPermissionPattern(origin: string) {
-  const url = new URL(origin);
-  if (!["http:", "https:"].includes(url.protocol) || url.origin !== origin)
-    throw Error("Invalid website origin.");
-  return url.protocol + "//" + url.hostname + "/*";
-}
 /** Read the active tab at the click, rather than a previously polled panel state. */
 export function requestCurrentSiteAccess(
   expectedOrigin?: string,

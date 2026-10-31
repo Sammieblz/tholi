@@ -23,6 +23,7 @@ const full =
       "browser-performance",
       "live",
       "navigation-baseline",
+      "perception-comparison",
       "acceptance",
       "acceptance-chromium",
       "acceptance-firefox",
@@ -91,6 +92,7 @@ const browserGroups = {
   identity: ["native-identity"],
   "identity-web": ["identity-web-chromium", "identity-web-firefox"],
   "navigation-baseline": ["navigation-baseline"],
+  "perception-comparison": ["perception-comparison"],
   core: ["core-desktop", "narrow"],
   integration: ["nlp", "multi-app", "continuity", "reliability"],
   ui: ["ui-extension", "ui-website", "ui-website-firefox"],
@@ -120,6 +122,7 @@ function browser(scope) {
     ? "local-identity"
     : [
           "navigation-baseline",
+          "perception-comparison",
           "live",
           "acceptance",
           "acceptance-chromium",

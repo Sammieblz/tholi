@@ -1,5 +1,10 @@
 # Testing and CI
 
+The opt-in [perception comparison protocol](perception-comparison.md) owns the
+fixed Local/structured/multimodal experiment for #43. Its fake calibration checks
+and explicit live-data/spending gate remain separate from deterministic PR checks
+and release certification.
+
 Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |

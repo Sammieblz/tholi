@@ -18,8 +18,10 @@ import {
   type CaseResult,
 } from "./evidence";
 import AccuracyReporter from "./accuracy-reporter";
+import { comparisonEvidence } from "./comparison-report";
 const output: Record<string, string> = {
   "navigation-baseline": "output/qa/navigation-baseline.json",
+  "perception-comparison": "output/qa/perception-comparison.json",
   firefox: "output/qa/firefox-build.json",
   branded: "output/qa/branded-build.json",
   "browser-performance": "output/qa/browser-performance.json",
@@ -124,6 +126,7 @@ export default class BrowserReporter implements Reporter {
     const extra: Record<string, unknown> = {};
     for (const [name, key] of [
       ["navigation-baseline", "measurement"],
+      ["perception-comparison", "comparison"],
       ["motion-benchmark", "motion"],
       ["native-surfaces", "surfaces"],
       ["paired-performance", "pairedPerformance"],
@@ -189,6 +192,13 @@ export default class BrowserReporter implements Reporter {
         expected: expected.length,
         configuredCount: expected.length,
         cases,
+        ...(group === "perception-comparison"
+          ? await comparisonEvidence(cases, {
+              mode: process.env.THOLI_EVALUATION_MODE,
+              planFile: process.env.THOLI_EVALUATION_PLAN_FILE,
+              journalFile: process.env.THOLI_EVALUATION_JOURNAL_FILE,
+            })
+          : {}),
         ...(group === "ui" ? { website: this.website } : {}),
         ...(["continuity", "reliability"].includes(group)
           ? {
