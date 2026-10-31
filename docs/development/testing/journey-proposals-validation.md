@@ -45,26 +45,43 @@ unknown destination still remains unresolved.
 
 ## Validation status
 
-| Check                                                                      | Status                                                                        |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Shared navigation/model/Vertex adapter contracts                           | Passed: 99 focused checks                                                     |
-| Content and background lifecycle                                           | Passed: 79 focused checks                                                     |
-| Existing masked native capture regressions                                 | Passed: 25 checks                                                             |
-| TypeScript and synchronized versions                                       | Passed on the combined source; final fixture check is included in the PR gate |
-| Fresh production build and manifest                                        | Passed in `c36868d0-4d57-4fc7-97c9-9e81445e3cae`                              |
-| Installed-client authenticated service round trip                          | Firefox passed; final Chromium cohort pending                                 |
-| Chrome/Firefox planning, OCR and Stop performance budgets                  | Passed, same build, both native browsers                                      |
-| Complete deterministic `test:ci`                                           | Pending                                                                       |
-| Hosted required PR checks                                                  | Separate required gate before merge                                           |
-| Native data-processing/sign-in permission prompts and screen-reader speech | Not performed for this milestone; remain pending                              |
+| Check                                                                      | Status                                                                       |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Shared navigation/model/Vertex adapter contracts                           | Passed: 99 focused checks                                                    |
+| Content and background lifecycle                                           | Passed: 80 cases in the final complete cohort                                |
+| Existing masked native capture regressions                                 | Passed: 25 checks                                                            |
+| TypeScript and synchronized versions                                       | Passed in the final complete cohort                                          |
+| Fresh production build and manifest                                        | Passed in `382e85ea-371d-4441-8ed0-b0cfdd9c8f3d`                             |
+| Installed-client authenticated service round trip                          | Passed: six Chromium proposal/outcome/interruption cases and native Firefox  |
+| Chrome/Firefox planning, OCR and Stop performance budgets                  | Passed, same build, both native browsers                                     |
+| Complete deterministic `test:ci`                                           | Passed: 1,100 checks, one fresh build                                        |
+| Hosted required PR checks                                                  | All eight passed for code commit `3e5d6a1e`; final head checked before merge |
+| Native data-processing/sign-in permission prompts and screen-reader speech | Not performed for this milestone; remain pending                             |
 
-The paired run used Chrome `155.0.8059.40` and Firefox `159.0` on the same
-Windows/Node `24.19.0` host. Warm planning p95 was 156.6/142 ms, warm OCR p95
-844.4/676 ms and Stop 7.1/46 ms, respectively, against unchanged 750/2000/1000 ms
-limits. Cold times, device memory and the busy-page frame measurements remain in
-the full report; the 50,000-node fixture recorded frame p95 above 200 ms in both
-active and stopped states. Passing the three retained budgets does not imply
-smooth rendering under that synthetic load.
+Final cohort `382e85ea-371d-4441-8ed0-b0cfdd9c8f3d` contains 957 unit, 53 core,
+20 integration, three Firefox and 67 UI checks. Its manifest SHA-256 is
+`145d5dd000a98ea1fc8e922e14cdfff332a2e898fdd091392ac274d9e83b4fe5`;
+Chromium/Firefox build digests are
+`e3689b5db93290764ef0ff6a28c3d7a9905f4755c8cbc668b5864bcf594322d2` and
+`d46fe6a6a7edf0713dd13771a74a4a8d351c420e1db144b2b6fd69031f6c9baf`.
+Matching reports and the fresh paired performance result are preserved in
+`output/qa/journey-41-ci/382e85ea-371d-4441-8ed0-b0cfdd9c8f3d/`.
+
+The final paired run used Chrome `155.0.8059.40` and Firefox `159.0` on the same
+Windows/Node `24.19.0` host. Warm planning p95 was 126.3/259 ms, warm OCR p95
+716.1/702 ms and Stop 8.8/18 ms, respectively, against unchanged 750/2000/1000 ms
+limits. Cold times, device memory and busy-page frame measurements remain in the
+full report: active frame p95 was 267/183.5 ms and stopped baseline p95 was
+250.3/216.9 ms. Passing the three retained budgets does not imply smooth rendering
+under that 50,000-node synthetic load. The earlier paired result remains under its
+separate `c36868d0-4d57-4fc7-97c9-9e81445e3cae` identity.
+
+All eight hosted checks passed for code commit
+`3e5d6a1e6ed2b452264a314c5592981fff0c783b` in
+[workflow 41176015223](https://github.com/Sammieblz/tholi/actions/runs/41176015223).
+The evidence-only commit requires another hosted head check before merge. No
+production artifact changed when recording these results. All 23 preserved
+release-file checksums still match.
 
 Focused evidence remains under `output/qa/journey-41-*`. It does not relabel the
 matching #40 CI, browser or actual-container evidence as #41 validation. Earlier
