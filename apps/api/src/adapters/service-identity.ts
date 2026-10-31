@@ -24,6 +24,8 @@ import {
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 import { PlanService } from "../application/plans";
 import { SavedDataService } from "../application/saved-data";
+import { AccountService } from "../application/account";
+import { PostgresAccount } from "../database/account";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -91,6 +93,13 @@ export async function createIdentityRuntime(
       supportStore,
       planEnvironment,
     );
+    const account = new AccountService(
+      new PostgresAccount(pool, repositories),
+      {
+        exportsAvailable: !!supportStore,
+        deletionAvailable: !!supportStore,
+      },
+    );
     return {
       service,
       authorization,
@@ -99,6 +108,7 @@ export async function createIdentityRuntime(
       analytics,
       plans,
       savedData,
+      account,
       credits,
       navigation,
       repositories,

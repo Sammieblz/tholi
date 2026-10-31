@@ -121,7 +121,8 @@ export async function runSavedDataChecks(
     Number(
       (
         await migration.query(
-          "SELECT tholi.saved_artifact_bytes(format_version,content,metadata)::text AS bytes FROM tholi.saved_artifacts WHERE workspace_id=$1 AND id=$2",
+          `SELECT (octet_length(content::text)+CASE WHEN format_version=2 THEN COALESCE(octet_length(metadata::text),0) ELSE 0 END)::text AS bytes
+             FROM tholi.saved_artifacts WHERE workspace_id=$1 AND id=$2 AND deleted_at IS NULL`,
           [scope.workspaceId, id],
         )
       ).rows[0].bytes,
@@ -290,6 +291,20 @@ export async function runSavedDataChecks(
             ),
           }),
         );
+        const storage = await service.storage(
+          scope,
+          scope.workspaceId,
+          context(),
+        );
+        const actualStorage = (
+          await migration.query(
+            `SELECT count(*)::text AS artifacts,COALESCE(sum(octet_length(content::text)+CASE WHEN format_version=2 THEN COALESCE(octet_length(metadata::text),0) ELSE 0 END),0)::text AS bytes
+           FROM tholi.saved_artifacts WHERE owner_account_id=$1 AND deleted_at IS NULL`,
+            [scope.accountId],
+          )
+        ).rows[0];
+        assert.deepEqual(storage, { scope: "account", ...actualStorage });
+        assert.equal(storage.artifacts, "5");
         await assert.rejects(() => get(scope, legacy.id), {
           code: "NOT_FOUND",
         });
@@ -707,11 +722,20 @@ export async function runSavedDataChecks(
         );
         const stored = (await list(limited)).items[0];
         assert.equal(await bytes(limited, stored.id), actualBytes);
+        assert.deepEqual(
+          await service.storage(limited, limited.workspaceId, context()),
+          { scope: "account", artifacts: "1", bytes: String(actualBytes) },
+        );
         await migration.query(
           "UPDATE tholi.entitlements SET status='ended',revision=revision+1 WHERE workspace_id=$1",
           [limited.workspaceId],
         );
         assert.equal((await get(limited, stored.id)).id, stored.id);
+        assert.equal(
+          (await service.storage(limited, limited.workspaceId, context()))
+            .bytes,
+          String(actualBytes),
+        );
         const grow = savedDataArtifactFixture("preferences", {
           id: stored.id,
           metadata: {
@@ -741,6 +765,10 @@ export async function runSavedDataChecks(
           ),
         );
         assert.equal((await remove(limited, shrunk)).data, null);
+        assert.deepEqual(
+          await service.storage(limited, limited.workspaceId, context()),
+          { scope: "account", artifacts: "0", bytes: "0" },
+        );
         await assert.rejects(() => create(limited), { code: "QUOTA_EXCEEDED" });
       },
     );
@@ -795,6 +823,27 @@ export async function runSavedDataChecks(
           assert.deepEqual(
             (await list(memberOrg)).items.map((item) => item.id),
             [b.id],
+          );
+          assert.deepEqual((await list(owner)).items, []);
+          assert.deepEqual(
+            await service.storage(owner, owner.workspaceId, context()),
+            {
+              scope: "account",
+              artifacts: "1",
+              bytes: String(await bytes(ownerOrg, a.id)),
+            },
+          );
+          assert.deepEqual(
+            await service.storage(ownerOrg, workspaceId, context()),
+            await service.storage(owner, owner.workspaceId, context()),
+          );
+          assert.deepEqual(
+            await service.storage(stranger, stranger.workspaceId, context()),
+            { scope: "account", artifacts: "0", bytes: "0" },
+          );
+          await assert.rejects(
+            () => service.storage(stranger, workspaceId, context()),
+            { code: "FORBIDDEN" },
           );
           await assert.rejects(() => get(ownerOrg, b.id), {
             code: "NOT_FOUND",
@@ -1066,6 +1115,10 @@ export async function runSavedDataChecks(
           await assert.rejects(() => get(memberOrg, b.id), {
             code: "FORBIDDEN",
           });
+          await assert.rejects(
+            () => service.storage(memberOrg, workspaceId, context()),
+            { code: "FORBIDDEN" },
+          );
           assert.equal(
             (await exports.getFile(owner, queued[0].saved.fileId))?.status,
             "ready",

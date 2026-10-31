@@ -81,6 +81,20 @@ export const identityTokensSchema = z
     account: identityAccountSchema,
   })
   .strict();
+export const identityProfileSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    verifiedEmail: z.string().max(254).email().nullable(),
+    provider: z
+      .object({
+        managementUrl: z.string().url().max(2048).nullable(),
+        recoveryAvailable: z.boolean(),
+        verificationAvailable: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
+export type IdentityProfile = z.infer<typeof identityProfileSchema>;
 export const identitySessionsSchema = z
   .object({
     items: z

@@ -17,6 +17,7 @@ import type { NavigationTransportService } from "./application/navigation";
 import type { CreditService } from "./application/quotas";
 import type { PlanService } from "./application/plans";
 import type { SavedDataService } from "./application/saved-data";
+import type { AccountService } from "./application/account";
 import { createObservability } from "./adapters/observability";
 import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../../packages/navigation-core/contracts-service";
 
@@ -34,6 +35,7 @@ export interface ServiceApiServices {
   credits?: CreditService;
   plans?: PlanService;
   savedData?: SavedDataService;
+  account?: AccountService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -100,6 +102,7 @@ async function createServiceRuntime(
   let credits = injected.credits;
   let plans = injected.plans;
   let savedData = injected.savedData;
+  let account = injected.account;
   const ownedResources = [...resources];
   if (
     (authorization ||
@@ -109,7 +112,8 @@ async function createServiceRuntime(
       navigation ||
       credits ||
       plans ||
-      savedData) &&
+      savedData ||
+      account) &&
     !identity
   )
     throw new Error("Authorization requires the composed identity service.");
@@ -130,6 +134,14 @@ async function createServiceRuntime(
   if (identity && savedData?.exportsAvailable && !support)
     throw new Error(
       "Saved-data exports require composed private-file delivery.",
+    );
+  if (
+    identity &&
+    (account?.exportsAvailable || account?.deletionAvailable) &&
+    !support
+  )
+    throw new Error(
+      "Account lifecycle operations require composed private-file cleanup and delivery.",
     );
   const observer =
     injected.observability ?? createObservability(options.observability);
@@ -156,6 +168,7 @@ async function createServiceRuntime(
     credits = runtime.credits;
     plans = runtime.plans;
     savedData = runtime.savedData;
+    account = runtime.account;
     ownedResources.push(...runtime.resources);
   }
   // Accept late completions during drain, then flush after application resources close.
@@ -246,10 +259,16 @@ async function createServiceRuntime(
         savedDataEnabled: !!savedData,
         savedDataWritesEnabled: savedData?.writesAvailable,
         savedDataExportsEnabled: savedData?.exportsAvailable,
+        accountExportsEnabled: account?.exportsAvailable,
+        accountDeletionEnabled: account?.deletionAvailable,
       });
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
         await registerIdentityApi(app, identity);
+        if (account) {
+          const { registerAccountApi } = await import("./routes/account");
+          await registerAccountApi(app, identity, account);
+        }
         if (authorization) {
           const { registerAuthorizationApi } =
             await import("./routes/authorization");

@@ -13,6 +13,8 @@ import {
   savedDataPageSchema,
   savedDataRecordSchema,
   savedDataUpdateSchema,
+  savedDataStorageUsageSchema,
+  type SavedDataStorageUsage,
   type SavedDataChanges,
   type SavedDataDeleteInput,
   type SavedDataImportInput,
@@ -40,6 +42,7 @@ const identifier = z.string().uuid();
 
 /** The existing artifact owner handles quota checks, receipts and tombstones. */
 export interface SavedDataTransaction extends AuthorizationContextReader {
+  readSavedDataStorage(): Promise<SavedDataStorageUsage>;
   getSavedArtifact(id: string): Promise<SavedDataRecord | undefined>;
   listSavedArtifacts(query: SavedDataListQuery): Promise<SavedDataPage>;
   savedArtifactChanges(query: {
@@ -106,6 +109,24 @@ export class SavedDataService {
       "saved-data.read",
       async (repository) =>
         savedDataPageSchema.parse(await repository.listSavedArtifacts(query)),
+      context,
+    );
+  }
+
+  storage(
+    principal: Principal,
+    workspaceId: string,
+    context: ServiceRequestContext,
+  ) {
+    return withAuthorization(
+      this.repositories,
+      principal,
+      workspaceId,
+      "saved-data.read",
+      async (repository) =>
+        savedDataStorageUsageSchema.parse(
+          await repository.readSavedDataStorage(),
+        ),
       context,
     );
   }

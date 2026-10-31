@@ -86,6 +86,7 @@ services:
       THOLI_IDENTITY_TOKEN_ENDPOINT: http://oidc:8080/realms/tholi-local/protocol/openid-connect/token
       THOLI_IDENTITY_JWKS_URI: http://oidc:8080/realms/tholi-local/protocol/openid-connect/certs
       THOLI_IDENTITY_LOGOUT_ENDPOINT: http://localhost:${OIDC_HOST_PORT:-18080}/realms/tholi-local/protocol/openid-connect/logout
+      THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL: ${THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL:-}
       THOLI_IDENTITY_CLIENT_ID: tholi-service
       THOLI_IDENTITY_CLIENT_SECRET_KEY: ${THOLI_IDENTITY_CLIENT_SECRET_KEY:?Initialize local identity credentials first}
       THOLI_IDENTITY_FLOW_SECRET_KEY: ${THOLI_IDENTITY_FLOW_SECRET_KEY:?Initialize local identity credentials first}

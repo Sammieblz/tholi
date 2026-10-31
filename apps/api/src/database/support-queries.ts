@@ -6,8 +6,7 @@ import {
   SUPPORT_LIMITS,
 } from "../../../../packages/navigation-core/contracts-support";
 import { jobStatusSchema } from "../../../../packages/navigation-core/contracts-jobs";
-import { diagnosticBytes } from "../application/private-files";
-import { savedDataExportBytes } from "../application/private-files";
+import { privateExportBytes } from "../application/private-files";
 import {
   savedDataExportInputSchema,
   savedDataExportSnapshotSchema,
@@ -52,7 +51,7 @@ export class ScopedSupport {
     return [this.scope.workspaceId, this.scope.accountId];
   }
 
-  private async quota(operation: string) {
+  async quota(operation: string) {
     const result = await this.client.query<{ hour: number; day: number }>(
       `SELECT count(*) FILTER(WHERE created_at>clock_timestamp()-interval '1 hour')::integer AS hour,
         count(*)::integer AS day FROM tholi.requests WHERE workspace_id=$1 AND account_id=$2 AND operation=$3
@@ -217,19 +216,21 @@ export class ScopedSupport {
     return this.createFile(request.id, snapshot, "diagnostic");
   }
 
-  private async createFile(
+  async createFile(
     requestId: string,
     snapshot: unknown,
     purpose: NonNullable<PrivateFile["purpose"]>,
   ): Promise<DiagnosticRecord> {
-    const encoded =
-        purpose === "diagnostic"
-          ? diagnosticBytes(snapshot)
-          : savedDataExportBytes(snapshot),
+    const encoded = privateExportBytes(snapshot, purpose),
       id = randomUUID();
+    const generation =
+      purpose === "account-export-part" || purpose === "account-export-manifest"
+        ? (JSON.parse(encoded.body.toString("utf8")) as { generation: string })
+            .generation
+        : null;
     await this.client.query(
-      `INSERT INTO tholi.private_files(workspace_id,account_id,id,request_id,object_key,content_type,bytes,checksum,snapshot,expires_at,purpose)
-        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,clock_timestamp()+$9*interval '1 millisecond',$10)`,
+      `INSERT INTO tholi.private_files(workspace_id,account_id,id,request_id,object_key,content_type,bytes,checksum,snapshot,expires_at,purpose,account_export_generation)
+        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,clock_timestamp()+$9*interval '1 millisecond',$10,$11)`,
       [
         ...this.parameters,
         id,
@@ -240,12 +241,12 @@ export class ScopedSupport {
         JSON.stringify(snapshot),
         SUPPORT_LIMITS.fileRetentionMs,
         purpose,
+        generation,
       ],
     );
     const queued = await this.owner.enqueueJob({
       requestId,
-      kind:
-        purpose === "diagnostic" ? "file.diagnostic" : "file.saved-data-export",
+      kind: `file.${purpose}`,
       version: 1,
       replaySafe: true,
       idempotencyKey: `${purpose}:${requestId}`,
@@ -296,7 +297,8 @@ export class ScopedSupport {
 
   async getFile(id: string): Promise<PrivateFile | null> {
     const result = await this.client.query<FileRow>(
-      `SELECT ${fileColumns} FROM tholi.private_files WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND expires_at>clock_timestamp()`,
+      `SELECT ${fileColumns} FROM tholi.private_files WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND expires_at>clock_timestamp()
+        AND (purpose NOT IN ('account-export-part','account-export-manifest') OR tholi.current_account_export_allowed(snapshot))`,
       [...this.parameters, id],
     );
     return result.rows[0] ? file(result.rows[0]) : null;
@@ -310,6 +312,8 @@ export class ScopedSupport {
         "support.received",
         "file.diagnostic",
         "file.saved-data-export",
+        "file.account-export-part",
+        "file.account-export-manifest",
       ].includes(lease.kind)
     )
       throw unavailable();
@@ -337,24 +341,24 @@ export class ScopedSupport {
     let command: PreparedExternal["command"];
     if (
       lease.kind === "file.diagnostic" ||
-      lease.kind === "file.saved-data-export"
+      lease.kind === "file.saved-data-export" ||
+      lease.kind === "file.account-export-part" ||
+      lease.kind === "file.account-export-manifest"
     ) {
       const found = await this.client.query<FileRow>(
         `SELECT ${fileColumns},snapshot FROM tholi.private_files WHERE workspace_id=$1 AND account_id=$2 AND request_id=$3
-          AND status='pending' AND expires_at>clock_timestamp()`,
+          AND status='pending' AND expires_at>clock_timestamp()
+          AND (purpose NOT IN ('account-export-part','account-export-manifest') OR tholi.current_account_export_allowed(snapshot))`,
         [...this.parameters, row.request_id],
       );
       if (!found.rows[0]) throw unavailable();
       const { snapshot, ...metadata } = found.rows[0];
       if (
-        metadata.purpose !==
-        (lease.kind === "file.diagnostic" ? "diagnostic" : "saved-data-export")
+        !metadata.purpose ||
+        metadata.purpose !== lease.kind.slice("file.".length)
       )
         throw unavailable();
-      const encoded =
-        metadata.purpose === "diagnostic"
-          ? diagnosticBytes(snapshot)
-          : savedDataExportBytes(snapshot);
+      const encoded = privateExportBytes(snapshot, metadata.purpose);
       if (
         encoded.bytes !== metadata.bytes ||
         encoded.sha256 !== metadata.sha256

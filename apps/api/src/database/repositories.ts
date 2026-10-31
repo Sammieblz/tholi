@@ -14,6 +14,7 @@ import {
   savedDataListQuerySchema,
   savedDataExportInputSchema,
   savedDataImportHash,
+  savedDataStorageUsageSchema,
   type SavedDataRecord,
   type SavedDataMutation,
   type SavedDataDeleteInput,
@@ -45,6 +46,7 @@ import {
 } from "../../../../packages/navigation-core/contracts-analytics";
 import { pruneExpiredIdentityBrokers } from "./identity-retention";
 import { ScopedSupport } from "./support-queries";
+import { ScopedAccount } from "./account-queries";
 import type { JobLease, JobTransaction } from "../application/job-contracts";
 import {
   jobResultSchema,
@@ -190,7 +192,7 @@ function reservation(row: ReservationRow): CreditReservation {
   return { ...row, amount: BigInt(row.amount) };
 }
 
-function accountingError(error: unknown): never {
+export function accountingError(error: unknown): never {
   const code = (error as { code?: string }).code;
   const codes: Partial<Record<string, RepositoryError["code"]>> = {
     P4401: "QUOTA_EXCEEDED",
@@ -555,6 +557,21 @@ class ScopedRepositories {
     return work(new ScopedSupport(this.client, this.scope, this));
   }
 
+  async withAccount<T>(
+    work: (queries: ScopedAccount) => Promise<T>,
+  ): Promise<T> {
+    await this.lockAccount();
+    await this.lockWorkspace(true);
+    return work(
+      new ScopedAccount(
+        this.client,
+        this.scope,
+        this,
+        (scope) => new ScopedRepositories(this.client, scope, this.observer),
+      ),
+    );
+  }
+
   // Credits and sync stamps share this lock order: workspace, then domain row.
   private async lockWorkspace(ownerOnly = false) {
     const found = await this.client.query(
@@ -717,11 +734,20 @@ class ScopedRepositories {
     return row && { ...row, revision: BigInt(row.revision) };
   }
 
-  async listConsents(): Promise<Consent[]> {
+  async listConsents(options?: {
+    after?: string;
+    limit?: number;
+  }): Promise<Consent[]> {
+    options = options === undefined ? undefined : snapshot(options);
     const result = await this.client.query<Int8Row<Consent, "revision">>(
       `SELECT id,purpose,policy_version AS "policyVersion",granted,revision::text
-       FROM tholi.consents WHERE workspace_id = $1 AND account_id = $2 ORDER BY purpose LIMIT 100`,
-      this.parameters,
+       FROM tholi.consents WHERE workspace_id = $1 AND account_id = $2 AND ($3::uuid IS NULL OR id>$3)
+       ORDER BY ${options === undefined ? "purpose" : "id"} LIMIT $4`,
+      [
+        ...this.parameters,
+        options?.after ?? null,
+        limit(options?.limit ?? 100),
+      ],
     );
     return result.rows.map((row) => ({
       ...row,
@@ -1515,6 +1541,13 @@ class ScopedRepositories {
       [...this.parameters, id],
     );
     return result.rows[0] && savedDataRecord(result.rows[0]);
+  }
+
+  async readSavedDataStorage() {
+    const result = await this.client.query<{ usage: unknown }>(
+      "SELECT tholi.read_saved_data_storage() AS usage",
+    );
+    return savedDataStorageUsageSchema.parse(result.rows[0]?.usage);
   }
 
   async listSavedArtifacts(raw: SavedDataListQuery): Promise<SavedDataPage> {

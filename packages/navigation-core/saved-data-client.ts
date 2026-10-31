@@ -153,7 +153,9 @@ const artifactScope = (connection: SavedDataConnection): SavedDataScope => ({
   accountId: connection.accountId,
   workspaceId: connection.workspaceId,
 });
-const ids = (operation: PendingOperation["operation"]) =>
+export const savedDataOperationIds = (
+  operation: PendingOperation["operation"],
+) =>
   operation.kind === "import"
     ? operation.body.items.map((item) => item.artifact.id)
     : [operation.kind === "save" ? operation.body.artifact.id : operation.id];
@@ -298,7 +300,7 @@ export class SavedDataClient {
       BigInt(a.syncRevision) < BigInt(b.syncRevision) ? 1 : -1,
     );
     const protectedIds = new Set(
-      state.outbox.flatMap((entry) => ids(entry.operation)),
+      state.outbox.flatMap((entry) => savedDataOperationIds(entry.operation)),
     );
     const retained = ordered.filter(
       (record, index) => index < 200 || protectedIds.has(record.id),
@@ -550,7 +552,7 @@ export class SavedDataClient {
             operation.body,
           ),
         ];
-      const expected = ids(operation);
+      const expected = savedDataOperationIds(operation);
       const bases = new Map<string, string>(
         operation.kind === "import"
           ? operation.body.items.map((item) => [
@@ -656,7 +658,8 @@ export class SavedDataClient {
           if (entry.state === "conflict") continue;
           const deleted = ready.records.some(
             (record) =>
-              record.deletedAt && ids(entry.operation).includes(record.id),
+              record.deletedAt &&
+              savedDataOperationIds(entry.operation).includes(record.id),
           );
           if (deleted) {
             await this.options.store.update(

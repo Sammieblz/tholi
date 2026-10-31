@@ -9,7 +9,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import {
-  validateDiagnosticFile,
+  validatePrivateFile,
   validateObjectReference,
 } from "../application/private-files";
 import type {
@@ -100,7 +100,7 @@ export function createS3Objects(
         async () => {
           const file = { ...rawFile };
           const body = Buffer.from(rawBody);
-          validateDiagnosticFile(file, body);
+          validatePrivateFile(file, body);
           if (body.byteLength > options.maxBytes)
             throw new Error("The private file exceeds its size limit.");
           try {
@@ -163,7 +163,7 @@ export function createS3Objects(
               chunks.push(Buffer.from(chunk));
             }
             const bytes = Buffer.concat(chunks);
-            validateDiagnosticFile(file, bytes);
+            validatePrivateFile(file, bytes);
             return bytes;
           } catch {
             throw new Error("The private file could not be retrieved.");

@@ -9,6 +9,8 @@ import { JobWorker } from "./application/job-worker";
 import { JOB_HANDLERS } from "./application/identity-maintenance";
 import { createSupportJobHandlers } from "./application/support-jobs";
 import { createInferenceReconciliationHandler } from "./application/quotas";
+import { createAccountDeletionHandler } from "./application/account";
+import { PostgresAccount } from "./database/account";
 import { PostgresSupport } from "./database/support";
 import { createSmtpMailer } from "./adapters/smtp";
 import { createS3Objects } from "./adapters/s3";
@@ -98,6 +100,13 @@ export async function createWorkerRuntime(
       [
         ...JOB_HANDLERS,
         createInferenceReconciliationHandler(repositories),
+        ...(config.support
+          ? [
+              createAccountDeletionHandler(
+                new PostgresAccount(pool, repositories),
+              ),
+            ]
+          : []),
         ...external,
       ],
       observer,

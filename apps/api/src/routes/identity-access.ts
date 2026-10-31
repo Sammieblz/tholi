@@ -22,6 +22,7 @@ const jsonSchema = (schema: z.ZodTypeAny, target: "openApi3" | "jsonSchema7") =>
 export function createIdentityAccess(service: IdentityService) {
   const { access } = identityCookieNames(service.options.secureCookies);
   const replies = new WeakMap<FastifyRequest, FastifyReply>();
+  const protectedSessions = new WeakMap<FastifyRequest, IdentitySession>();
   async function authenticate(
     request: FastifyRequest,
     options: { requireAccountBinding?: boolean } = {},
@@ -110,7 +111,25 @@ export function createIdentityAccess(service: IdentityService) {
           replies.delete(request);
         }
       });
-  return { authenticate, mutation, safe };
+  const protect = (write = false) =>
+    safe(async (request) => {
+      const actor = await authenticate(request, {
+        requireAccountBinding: true,
+      });
+      if (write) mutation(request, actor.session, actor.bearer);
+      protectedSessions.set(request, actor.session);
+    });
+  const protectedSession = (request: FastifyRequest) => {
+    const session = protectedSessions.get(request);
+    if (!session)
+      throw new IdentityError(
+        401,
+        "UNAUTHENTICATED",
+        "Open your account again before continuing.",
+      );
+    return session;
+  };
+  return { authenticate, mutation, safe, protect, protectedSession };
 }
 
 type IdentityRouteInput = {

@@ -88,6 +88,7 @@ let root: Root;
 let container: HTMLDivElement;
 let supportFailure = false;
 let metadataFailure = false;
+let diagnosticFailure = false;
 let hostileLink = false;
 let downloadUnauthorized = false;
 beforeEach(() => {
@@ -95,6 +96,7 @@ beforeEach(() => {
   vi.stubGlobal("FormData", window.FormData);
   config.origin = "https://api.example.test";
   supportFailure = metadataFailure = hostileLink = downloadUnauthorized = false;
+  diagnosticFailure = false;
   transport.request.mockImplementation(
     async (_origin: string, path: string, schema: z.ZodTypeAny) => {
       let response: unknown;
@@ -104,9 +106,11 @@ beforeEach(() => {
         if (supportFailure)
           throw new ServiceClientError("RATE_LIMITED", 429, "Try again later.");
         response = saved;
-      } else if (path === "/api/v1/account/diagnostic-exports")
+      } else if (path === "/api/v1/account/diagnostic-exports") {
+        if (diagnosticFailure)
+          throw new ServiceClientError("UNAVAILABLE", 503, "Try again later.");
         response = { requestId: file.requestId, jobId: id(8), fileId: file.id };
-      else if (path === `/api/v1/account/files/${file.id}`) {
+      } else if (path === `/api/v1/account/files/${file.id}`) {
         if (metadataFailure)
           throw new ServiceClientError("UNAVAILABLE", 503, "Try again later.");
         response = file;
@@ -226,9 +230,10 @@ it("submits only on explicit action, reuses a payload-bound retry key and announ
 
 it("keeps diagnostic retries idempotent, validates download destinations and removes private controls when authentication expires", async () => {
   await mount();
-  metadataFailure = true;
+  diagnosticFailure = true;
   await click("Create account diagnostic");
-  metadataFailure = false;
+  diagnosticFailure = false;
+  metadataFailure = true;
   await click("Create account diagnostic");
   const exports = transport.request.mock.calls.filter(
     (call) => call[1] === "/api/v1/account/diagnostic-exports",
@@ -237,10 +242,17 @@ it("keeps diagnostic retries idempotent, validates download destinations and rem
   expect(exports[0][3].body.idempotencyKey).toBe(
     exports[1][3].body.idempotencyKey,
   );
+  metadataFailure = false;
+  await click("Check diagnostic status");
+  expect(
+    transport.request.mock.calls.filter(
+      (call) => call[1] === "/api/v1/account/diagnostic-exports",
+    ),
+  ).toHaveLength(2);
   hostileLink = true;
   await click("Download diagnostic");
   expect(container.textContent).toContain(
-    "download link is invalid or expired",
+    "This request could not be completed. Try again when you are ready.",
   );
   expect(
     transport.request.mock.calls.some((call) => call[1].includes("/download?")),

@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import {
-  IDENTITY_CLOCK_TOLERANCE_SECONDS,
   type IdentityAccount,
   type IdentityBroker,
   type IdentityFlow,
   type IdentitySession,
   type IdentityStore,
+  type IdentityContactQuery,
   type ProviderIdentity,
   type RefreshResult,
 } from "../application/identity-contracts";
@@ -19,6 +19,7 @@ import {
 } from "./postgres";
 import { appendSecurityAudit } from "./audit";
 import { provisionAccountOnClient } from "./repositories";
+import { readIdentityContactsOnClient } from "./identity-contacts";
 import { cleanupExpiredIdentity as cleanup } from "./identity-retention";
 
 export class IdentityStoreError extends Error {
@@ -162,6 +163,22 @@ async function readSession(
 /** Provider proof is verified by the identity application before this adapter. */
 export class PostgresIdentityRepository implements IdentityStore {
   constructor(private readonly pool: Pool) {}
+
+  async readContacts(accountId: string, query: IdentityContactQuery = {}) {
+    z.string().uuid().parse(accountId);
+    return withTransaction(
+      this.pool,
+      async (client) => {
+        const active = await client.query(
+          "SELECT 1 FROM tholi.accounts WHERE id=$1 AND status='active'",
+          [accountId],
+        );
+        if (!active.rowCount) throw new IdentityStoreError();
+        return readIdentityContactsOnClient(client, accountId, query);
+      },
+      { accountId },
+    );
+  }
 
   async createFlow(flow: IdentityFlow): Promise<void> {
     flow = structuredClone(flow);
@@ -641,15 +658,9 @@ export class PostgresIdentityRepository implements IdentityStore {
     await withTransaction(
       this.pool,
       async (client) => {
-        await lockAccount(client, accountId);
-        await client.query(
-          `UPDATE tholi.accounts SET revision = revision + 1, updated_at = $2,
-          auth_grants_revoked_at = GREATEST(auth_grants_revoked_at,
-            date_trunc('second',$2::timestamptz) + $3 * interval '1 second')
-          WHERE id = $1`,
-          [accountId, date(now), IDENTITY_CLOCK_TOLERANCE_SECONDS],
-        );
-        await this.revokeAccountSessions(client, accountId, now, false);
+        await client.query("SELECT tholi.revoke_current_account_grants($1)", [
+          date(now),
+        ]);
         await appendSecurityAudit(
           client,
           { accountId, kind: "sessions.revoked_all", details: {} },

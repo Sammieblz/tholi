@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   createServer as createHttpServer,
   type Server as HttpServer,
@@ -11,7 +11,11 @@ import {
 import { afterEach, describe, expect, it } from "vitest";
 import { createSmtpMailer } from "../../../apps/api/src/adapters/smtp";
 import { createS3Objects } from "../../../apps/api/src/adapters/s3";
-import { diagnosticBytes } from "../../../apps/api/src/application/private-files";
+import {
+  diagnosticBytes,
+  privateExportBytes,
+} from "../../../apps/api/src/application/private-files";
+import { savedDataRecordFixture } from "../../support/saved-data-fixture";
 import type {
   ApprovedMail,
   PrivateFile,
@@ -302,6 +306,87 @@ describe("private S3-compatible adapter", () => {
     await f.adapter.delete(f.file, signal);
     await f.adapter.delete(f.file, signal);
     expect(f.stored()).toBeUndefined();
+  });
+  it("roundtrips each approved export purpose and rejects purpose or credential fields before PUT", async () => {
+    const f = await objects(),
+      signal = new AbortController().signal,
+      now = new Date().toISOString(),
+      generation = randomUUID(),
+      accountId = randomUUID();
+    const snapshots = [
+      {
+        purpose: "saved-data-export",
+        snapshot: {
+          schemaVersion: 1,
+          kind: "saved-data-export",
+          createdAt: now,
+          items: [savedDataRecordFixture()],
+        },
+      },
+      {
+        purpose: "account-export-part",
+        snapshot: {
+          schemaVersion: 1,
+          kind: "account-export-part",
+          generation,
+          accountId,
+          workspaceId: null,
+          cutoff: now,
+          section: "profile",
+          items: [{ accountId, revision: "1", createdAt: now, updatedAt: now }],
+        },
+      },
+      {
+        purpose: "account-export-manifest",
+        snapshot: {
+          schemaVersion: 1,
+          kind: "account-export-manifest",
+          generation,
+          accountId,
+          startedAt: now,
+          completedAt: now,
+          cutoff: now,
+          consistency: "collected-over-interval",
+          scope: { workspaces: "current-memberships", workspaceIds: [] },
+          parts: [],
+          previousManifestFileId: null,
+          continuation: null,
+          complete: true,
+          omissions: [],
+        },
+      },
+    ] as const;
+    for (const { purpose, snapshot } of snapshots) {
+      const payload = privateExportBytes(snapshot, purpose),
+        file: PrivateFile = {
+          ...f.file,
+          purpose,
+          bytes: payload.bytes,
+          sha256: payload.sha256,
+        };
+      await f.adapter.put(file, payload.body, signal);
+      expect(f.stored()).toEqual(payload.body);
+      expect(await f.adapter.read(file, signal)).toEqual(payload.body);
+      const before = f.requests();
+      await expect(
+        f.adapter.put({ ...file, purpose: "diagnostic" }, payload.body, signal),
+      ).rejects.toThrow();
+      const credentialBody = Buffer.from(
+        JSON.stringify({ ...snapshot, credentials: "PRIVATE_AUTH_SECRET" }),
+      );
+      await expect(
+        f.adapter.put(
+          {
+            ...file,
+            bytes: credentialBody.byteLength,
+            sha256: createHash("sha256").update(credentialBody).digest("hex"),
+          },
+          credentialBody,
+          signal,
+        ),
+      ).rejects.toThrow();
+      expect(f.requests()).toBe(before);
+    }
   });
   it("aborts an actual object request without hidden SDK retries", async () => {
     const f = await objects();

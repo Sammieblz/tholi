@@ -8,6 +8,7 @@ import {
   identityExchangeSchema,
   identityLogoutResponseSchema,
   identityLogoutSchema,
+  identityProfileSchema,
   identityRefreshSchema,
   identityRevokedSchema,
   identitySessionsSchema,
@@ -19,11 +20,16 @@ import {
   type IssuedIdentitySession,
 } from "../application/identity";
 import { ApiError } from "../http";
-import { identityCookieNames } from "./identity-cookies";
+import {
+  identityCookieNames,
+  identityCookieOptions,
+  clearIdentityCookies,
+} from "./identity-cookies";
 import {
   createIdentityAccess,
   identityErrorResponses,
   identityRouteSchema as schema,
+  identityRouteOptions,
 } from "./identity-access";
 
 const jsonSchema = (schema: z.ZodTypeAny) =>
@@ -52,14 +58,9 @@ export async function registerIdentityApi(
     refresh: REFRESH,
     flow: FLOW,
   } = identityCookieNames(service.options.secureCookies);
-  const options = {
-    httpOnly: true,
-    secure: service.options.secureCookies,
-    sameSite: "lax" as const,
-    path: service.options.secureCookies ? "/" : "/api/v1",
-  };
+  const options = identityCookieOptions(service.options.secureCookies);
   function clear(reply: FastifyReply) {
-    reply.clearCookie(ACCESS, options).clearCookie(REFRESH, options);
+    clearIdentityCookies(reply, service.options.secureCookies);
   }
   function credentials(reply: FastifyReply, issued: IssuedIdentitySession) {
     const seconds = Math.max(
@@ -76,6 +77,25 @@ export async function registerIdentityApi(
     });
   }
   const { safe, authenticate, mutation } = createIdentityAccess(service);
+  app.get(
+    "/api/v1/account/profile",
+    {
+      onRequest: safe(async (request) => {
+        await authenticate(request, { requireAccountBinding: true });
+      }),
+      ...identityRouteOptions("getAccountProfile", {
+        protected: true,
+        requireAccountBinding: true,
+        response: identityProfileSchema,
+      }),
+    },
+    safe(async (request, _reply, context) =>
+      service.profile(
+        (await authenticate(request, { requireAccountBinding: true })).session,
+        context,
+      ),
+    ),
+  );
   app.get(
     "/api/v1/auth/authorize",
     {

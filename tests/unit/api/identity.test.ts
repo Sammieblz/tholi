@@ -23,6 +23,7 @@ import {
   identityAccountResponseSchema,
   identityTokensSchema,
 } from "../../../packages/navigation-core/contracts-identity";
+import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../../packages/navigation-core/contracts-service";
 
 const options: IdentityOptions = {
   issuer: "https://identity.example.test/realms/tholi",
@@ -396,6 +397,7 @@ function memoryStore() {
     revision: "1",
   };
   const store: IdentityStore = {
+    readContacts: vi.fn(async () => []),
     createFlow: vi.fn(async (flow) => {
       flows.set(flow.stateHash, structuredClone(flow));
     }),
@@ -488,6 +490,118 @@ function cookiePairs(header: string | string[] | undefined) {
 }
 
 describe("identity application and HTTP delivery", () => {
+  it("reads only the current verified contact and reports actual configured provider controls", async () => {
+    const f = await application();
+    try {
+      const start = await f.service.start({
+        clientId: "web",
+        action: "signin",
+        destination: "account",
+      });
+      const completed = await f.service.complete(
+        {
+          state: new URL(start.url).searchParams.get("state")!,
+          code: "synthetic-code",
+          browserBinding: start.browserBinding,
+        },
+        context(),
+      );
+      if (completed.kind !== "web")
+        throw Error("The website flow must issue a website session.");
+      const principal = completed.issued.session;
+      vi.mocked(f.store.readContacts).mockResolvedValue([
+        {
+          identityId: randomUUID(),
+          verifiedEmail: "other-provider@example.test",
+        },
+        {
+          identityId: principal.identityId,
+          verifiedEmail: "verified@example.test",
+        },
+      ]);
+      expect(await f.service.profile(principal, context())).toEqual({
+        accountId: principal.accountId,
+        verifiedEmail: "verified@example.test",
+        provider: {
+          managementUrl: null,
+          recoveryAvailable: false,
+          verificationAvailable: false,
+        },
+      });
+      expect(f.store.readContacts).toHaveBeenCalledWith(principal.accountId, {
+        identityId: principal.identityId,
+      });
+      vi.mocked(f.store.readContacts).mockClear();
+      const cookie = `tholi_session=${completed.issued.tokens.accessToken}`;
+      expect(
+        (
+          await f.api.inject({
+            url: "/api/v1/account/profile",
+            headers: { cookie },
+          })
+        ).statusCode,
+      ).toBe(401);
+      expect(
+        (
+          await f.api.inject({
+            url: "/api/v1/account/profile",
+            headers: { cookie, [SERVICE_ACCOUNT_BINDING_HEADER]: randomUUID() },
+          })
+        ).statusCode,
+      ).toBe(401);
+      expect(f.store.readContacts).not.toHaveBeenCalled();
+      const response = await f.api.inject({
+        url: "/api/v1/account/profile",
+        headers: {
+          cookie,
+          [SERVICE_ACCOUNT_BINDING_HEADER]: principal.accountId,
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        accountId: principal.accountId,
+        verifiedEmail: "verified@example.test",
+      });
+      expect(response.headers[SERVICE_ACCOUNT_BINDING_HEADER]).toBe(
+        principal.accountId,
+      );
+      expect(response.headers["cache-control"]).toBe("no-store");
+      vi.mocked(f.store.readContacts).mockResolvedValue([
+        { identityId: principal.identityId, verifiedEmail: null },
+      ]);
+      expect(
+        (await f.service.profile(principal, context())).verifiedEmail,
+      ).toBeNull();
+      vi.mocked(f.store.readContacts).mockRejectedValue({
+        code: "IDENTITY_REVOKED",
+      });
+      await expect(
+        f.service.profile(principal, context()),
+      ).rejects.toMatchObject({ statusCode: 401 });
+      expect(
+        createOidcProvider({
+          ...options,
+          accountManagementUrl: "https://accounts.example.test/settings",
+        }).accountManagement,
+      ).toEqual({
+        managementUrl: "https://accounts.example.test/settings",
+        recoveryAvailable: true,
+        verificationAvailable: true,
+      });
+      expect(
+        createOidcProvider({
+          ...options,
+          authorizationEndpoint: "https://generic.example.test/oauth/authorize",
+        }).accountManagement,
+      ).toEqual({
+        managementUrl: null,
+        recoveryAvailable: false,
+        verificationAvailable: false,
+      });
+    } finally {
+      await f.api.close();
+    }
+  });
   it("accepts a real signed provider logout form and rejects duplicated or forged proof", async () => {
     const claims = {
       nonce: undefined,

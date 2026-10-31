@@ -118,6 +118,16 @@ function verifyOwnedStack(environment: NativeIdentityEnvironment) {
     throw Error(
       "The identity provider must match the allocated disposable project's configured provider.",
     );
+  const management =
+    configuration.services.api.environment
+      .THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL;
+  if (
+    management &&
+    management !== `${environment.providerOrigin}/realms/tholi-local/account/`
+  )
+    throw Error(
+      "The configured local account controls must use the allocated provider endpoint and resolved port.",
+    );
   if (
     configuration.services.api.environment.THOLI_IDENTITY_WEB_ORIGIN !==
       environment.webOrigin ||

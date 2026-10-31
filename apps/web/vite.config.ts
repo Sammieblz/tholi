@@ -1,9 +1,16 @@
 import { defineConfig } from "vite";
 import websiteRelease from "./release.json";
 import { staticSite } from "./build/static-site";
+import { websiteArtifactDirectory } from "../../scripts/artifact-files.mjs";
+import { resolve } from "node:path";
+const websiteDirectory = websiteArtifactDirectory();
 export default defineConfig({
   plugins: [
-    staticSite(),
+    staticSite({
+      deploymentDirectory: process.env.THOLI_IDENTITY_WEB_DIRECTORY
+        ? resolve(websiteDirectory, "../website-deploy")
+        : undefined,
+    }),
     {
       name: "website-release-metadata",
       generateBundle() {
@@ -19,7 +26,7 @@ export default defineConfig({
   publicDir: "../public",
   server: { host: "127.0.0.1", port: 5174, strictPort: true },
   build: {
-    outDir: "../../dist/web",
+    outDir: websiteDirectory,
     emptyOutDir: true,
     rollupOptions: {
       onwarn(warning, warn) {

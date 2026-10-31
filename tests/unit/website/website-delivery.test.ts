@@ -6,6 +6,7 @@ import {
 import {
   accountAliases,
   accountPath,
+  ACCOUNT_SECTIONS,
 } from "../../../apps/web/src/features/account/paths";
 
 const assets = [
@@ -20,7 +21,7 @@ const delivery = createWebsiteDelivery(
     "/about",
     "/docs",
     "/docs/getting-started",
-    "/account",
+    ...ACCOUNT_SECTIONS.map((item) => item.path),
     "/signin",
     "/signup",
     "/help/start",
@@ -197,7 +198,7 @@ describe("shared static website delivery", () => {
     expect(config).toContain("location = /_redirects");
     expect(config).toContain("try_files $uri $uri.html $uri/index.html =404;");
     for (const [path, destination] of [
-      ["/account", "/account"],
+      ...ACCOUNT_SECTIONS.map((item) => [item.path, item.path]),
       ["/welcome", "/account"],
       ["/help/start", "/help/start"],
     ])
@@ -219,6 +220,14 @@ describe("shared static website delivery", () => {
     ])
       expect(accountPath(path)).toBe("/welcome");
     expect(accountPath("/account.html")).toBe("/account");
+    for (const section of ACCOUNT_SECTIONS)
+      for (const alias of [
+        section.path,
+        section.path + "/",
+        section.path + ".html",
+        section.path + ".html/",
+      ])
+        expect(accountPath(alias)).toBe(section.path);
     expect(accountPath("/account/unknown")).toBeUndefined();
     expect(
       accountPath("https://untrusted.example.test/account"),

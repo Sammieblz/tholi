@@ -139,6 +139,48 @@ export const SERVICE_ROUTES = [
   },
   {
     method: "GET",
+    path: "/api/v1/account/profile",
+    operationId: "getAccountProfile",
+    group: "account",
+    status: "planned",
+    issue: 60,
+    access: "authenticated",
+    summary:
+      "Read the current identity's verified profile and configured provider controls.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/account/exports",
+    operationId: "listAccountExports",
+    group: "account",
+    status: "planned",
+    issue: 60,
+    access: "authenticated",
+    summary: "Find bounded owned export requests and their delivery status.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/account/exports",
+    operationId: "prepareAccountExport",
+    group: "account",
+    status: "planned",
+    issue: 60,
+    access: "authenticated",
+    summary: "Explicitly prepare or continue a bounded private account export.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/account/exports/{generation}",
+    operationId: "getAccountExport",
+    group: "account",
+    status: "planned",
+    issue: 60,
+    access: "authenticated",
+    summary:
+      "Read the current delivery status of an owned account export generation.",
+  },
+  {
+    method: "GET",
     path: "/api/v1/account/sessions",
     operationId: "listAccountSessions",
     group: "account",
@@ -175,7 +217,7 @@ export const SERVICE_ROUTES = [
     operationId: "requestAccountDeletion",
     group: "account",
     status: "planned",
-    issue: 45,
+    issue: 60,
     access: "authenticated",
     summary:
       "Request idempotent account deletion with explicit retention and organization boundaries.",
@@ -454,6 +496,17 @@ export const SERVICE_ROUTES = [
     access: "authenticated",
     summary:
       "Explicitly save an allowlisted privacy-filtered artifact using a scoped idempotency key.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/workspaces/{workspaceId}/artifacts/usage",
+    operationId: "getSavedDataStorageUsage",
+    group: "saved-data",
+    status: "planned",
+    issue: 60,
+    access: "authenticated",
+    summary:
+      "Read account-wide saved-item storage usage under the current workspace grant.",
   },
   {
     method: "GET",

@@ -65,6 +65,7 @@ type AccountContextValue = {
   sessions: () => Promise<z.infer<typeof identitySessionsSchema>>;
   revoke: (id: string) => Promise<void>;
   signOut: (all?: boolean) => Promise<string>;
+  completeDeletion: () => Promise<void>;
   request: <T>(
     path: `/api/v1/${string}`,
     schema: z.ZodType<T>,
@@ -148,6 +149,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           requireAccountBinding:
             /^\/api\/v1\/workspaces\/[^/]+\/(artifacts(?:\/|\?|$)|sync\/)/.test(
               path,
+            ) ||
+            /^\/api\/v1\/account\/(profile(?:\?|$)|exports(?:\/|\?|$)|deletion(?:\?|$))/.test(
+              path,
             ),
           signal: signal
             ? AbortSignal.any([pending.current.signal, signal])
@@ -174,7 +178,36 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     },
     [clear],
   );
-  requestRef.current = request;
+  const viewedAccount = session?.account.id;
+  const viewedWorkspace = session?.account.workspaceId;
+  const viewedSession = session?.session.id;
+  const assertCurrentView = useCallback(() => {
+    const current = sessionRef.current;
+    if (
+      current?.account.id !== viewedAccount ||
+      current?.account.workspaceId !== viewedWorkspace ||
+      current?.session.id !== viewedSession
+    )
+      throw new ServiceClientError(
+        "CANCELLED",
+        0,
+        "The account view changed. Open it again before continuing.",
+      );
+  }, [viewedAccount, viewedWorkspace, viewedSession]);
+  const clientRequest = useCallback(
+    async <T,>(
+      path: `/api/v1/${string}`,
+      schema: z.ZodType<T>,
+      method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
+      body?: unknown,
+      signal?: AbortSignal,
+    ): Promise<T> => {
+      assertCurrentView();
+      return request(path, schema, method, body, signal);
+    },
+    [request, assertCurrentView],
+  );
+  requestRef.current = clientRequest;
   if (!savedData.current)
     savedData.current = new SavedDataClient({
       store: new IndexedDBCloudDataStore(),
@@ -275,7 +308,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     session,
     savedData: savedData.current,
     reload,
-    request,
+    request: clientRequest,
     authorizationUrl: (action) => {
       if (!serviceApiOrigin) return;
       const url = new URL("/api/v1/auth/authorize", serviceApiOrigin);
@@ -287,7 +320,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return url.href;
     },
     renew: async () => {
-      const next = await request(
+      const next = await clientRequest(
         "/api/v1/auth/refresh",
         identityAccountResponseSchema,
         "POST",
@@ -296,9 +329,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       sessionRef.current = next;
       setSession(next);
     },
-    sessions: () => request("/api/v1/account/sessions", identitySessionsSchema),
+    sessions: () =>
+      clientRequest("/api/v1/account/sessions", identitySessionsSchema),
     revoke: async (id) => {
-      await request(
+      await clientRequest(
         `/api/v1/account/sessions/${encodeURIComponent(id)}`,
         identityRevokedSchema,
         "DELETE",
@@ -306,13 +340,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (sessionRef.current?.session.id === id) clear();
     },
     signOut: async (all = false) => {
+      assertCurrentView();
       accountChanging.current = true;
       const previous = sessionRef.current
         ? accountScope(sessionRef.current.account)
         : lastNotice.current;
       const cleanup = savedData.current!.reset(cloudConnection(previous));
       try {
-        const result = await request(
+        const result = await clientRequest(
           "/api/v1/auth/logout",
           identityLogoutResponseSchema,
           "POST",
@@ -323,6 +358,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         announce(null);
         return result.providerLogoutUrl;
       } finally {
+        accountChanging.current = false;
+      }
+    },
+    completeDeletion: async () => {
+      assertCurrentView();
+      accountChanging.current = true;
+      const previous = sessionRef.current
+        ? accountScope(sessionRef.current.account)
+        : lastNotice.current;
+      clear(true);
+      try {
+        await savedData.current!.reset(cloudConnection(previous));
+      } finally {
+        announce(null);
         accountChanging.current = false;
       }
     },

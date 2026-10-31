@@ -254,9 +254,13 @@ export class SupportService {
         body,
         contentType: "application/json" as const,
         filename:
-          file.purpose === "saved-data-export"
-            ? "tholi-saved-data.json"
-            : "tholi-diagnostic.json",
+          file.purpose === "account-export-manifest"
+            ? "tholi-account-manifest.json"
+            : file.purpose === "account-export-part"
+              ? "tholi-account-part.json"
+              : file.purpose === "saved-data-export"
+                ? "tholi-saved-data.json"
+                : "tholi-diagnostic.json",
       };
     });
   }

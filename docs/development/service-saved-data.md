@@ -3,7 +3,8 @@
 Roadmap [#59](https://github.com/Sammieblz/tholi/issues/59) extends the existing
 PostgreSQL artifact owner and private-file pipeline. It does not move local memory
 to the service or create a server-owned journey. The public website workspace and
-first-run onboarding consume these foundations in #60 and #61.
+[account workspace](account-dashboard.md) consumes these foundations in #60;
+first-run mode selection remains in #61.
 
 ## Approved fields
 
@@ -47,6 +48,7 @@ anonymous. The `account-binding` capability is required before sending saved dat
 | Operation                     | Route                                                          |
 | ----------------------------- | -------------------------------------------------------------- |
 | List                          | `GET /api/v1/workspaces/:workspaceId/artifacts`                |
+| Account storage usage         | `GET /api/v1/workspaces/:workspaceId/artifacts/usage`          |
 | Search/filter                 | `GET /api/v1/workspaces/:workspaceId/artifacts/search`         |
 | Create                        | `POST /api/v1/workspaces/:workspaceId/artifacts`               |
 | Read                          | `GET /api/v1/workspaces/:workspaceId/artifacts/:artifactId`    |

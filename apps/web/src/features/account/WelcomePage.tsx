@@ -1,219 +1,320 @@
 import { useEffect, useState } from "react";
-import type { z } from "zod";
-import type { identitySessionsSchema } from "../../../../../packages/navigation-core/contracts-identity";
 import { SiteLink } from "../../app/router";
 import { useAccount } from "./session";
-import { AccountConfirmation } from "./AccountConfirmation";
-import { AccountAnalytics } from "./AccountAnalytics";
+import { ACCOUNT_SECTIONS } from "./paths";
+import {
+  useAccountSummary,
+  formatQuantity,
+  type AccountSummary,
+} from "./useAccountSummary";
+import { SavedDataPage } from "./SavedDataPage";
+import { AccountCreditsPage } from "./AccountCreditsPage";
+import { AccountPlansPage } from "./AccountPlansPage";
+import { AccountSecurityPage } from "./AccountSecurityPage";
 import "./account.css";
 
-export function WelcomePage() {
-  const account = useAccount();
-  const [sessions, setSessions] = useState<
-    z.infer<typeof identitySessionsSchema>["items"]
-  >([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [providerLogout, setProviderLogout] = useState<string>();
-  const identity = account.session?.session.id;
+/** The account boundary supplies identity; private page state has one scoped lifetime. */
+export function WelcomePage({ path }: { path: string }) {
+  const account = useAccount(),
+    actor = account.session?.account.id,
+    sessionId = account.session?.session.id;
+  const [deletionActor, setDeletionActor] = useState<string>();
+  const [signedOut, setSignedOut] = useState<{
+    actor: string;
+    sessionId: string;
+    providerUrl?: string;
+  }>();
   useEffect(() => {
-    let active = true;
-    setSessions([]);
-    setError("");
-    if (identity)
-      void account
-        .sessions()
-        .then((result) => {
-          if (active) setSessions(result.items);
-        })
-        .catch((failure: unknown) => {
-          if (active)
-            setError(
-              failure instanceof Error
-                ? failure.message
-                : "Sessions could not be loaded.",
-            );
-        });
-    return () => {
-      active = false;
-    };
-  }, [identity]);
-  const act = async (operation: () => Promise<void>, message: string) => {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await operation();
-      setNotice(message);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "The account change could not be completed.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  const signOut = async (all: boolean) => {
-    const target = new URL(await account.signOut(all));
+    if (actor && actor !== deletionActor) setDeletionActor(undefined);
     if (
-      (target.protocol === "https:" ||
-        (target.protocol === "http:" &&
-          ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname))) &&
-      !target.username &&
-      !target.password
+      actor &&
+      signedOut &&
+      (actor !== signedOut.actor || sessionId !== signedOut.sessionId)
     )
-      setProviderLogout(target.href);
-    setSessions([]);
-  };
-  return (
-    <section
-      className="reading account-security"
-      aria-busy={busy || account.loading}
-    >
-      <p className="eyebrow">YOUR THOLI ACCOUNT</p>
-      <h1>Account and security</h1>
-      {account.loading ? (
+      setSignedOut(undefined);
+  }, [actor, sessionId, deletionActor, signedOut]);
+  if (deletionActor && (!actor || actor === deletionActor))
+    return (
+      <section className="reading account-gate">
+        <h1>Your Tholi account</h1>
+        <p role="status">
+          Your account deletion request was accepted. You are signed out while
+          deletion continues.
+        </p>
+        <p>Local extension data remains on your device.</p>
+        <SiteLink to="/download">Get local Tholi</SiteLink>
+      </section>
+    );
+  if (account.loading)
+    return (
+      <section className="reading account-gate">
+        <h1>Your Tholi account</h1>
         <p role="status">Opening your account.</p>
-      ) : account.session ? (
-        <>
-          <p>
-            Manage access to your Tholi account. Signing out does not erase
-            local routes or stop local guidance.
+      </section>
+    );
+  const outgoing =
+    signedOut &&
+    (!actor ||
+      (actor === signedOut.actor && sessionId === signedOut.sessionId));
+  if (!account.session || outgoing)
+    return (
+      <section className="reading account-gate">
+        <p className="eyebrow">YOUR WORKSPACE</p>
+        <h1>Your Tholi account</h1>
+        {outgoing && <p role="status">Signed out of Tholi.</p>}
+        <p>
+          {account.configured
+            ? "Sign in to manage your account and the data you explicitly saved to the cloud."
+            : "Accounts are not configured on this website. Local Tholi needs no account."}
+        </p>
+        {account.error && (
+          <p role="alert" className="auth-error">
+            {account.error}
           </p>
-          <dl className="account-details">
-            <dt>Account</dt>
-            <dd>{account.session.account.id}</dd>
-            <dt>Current session expires</dt>
-            <dd>
-              <time dateTime={account.session.session.expiresAt}>
-                {new Date(account.session.session.expiresAt).toLocaleString()}
-              </time>
-            </dd>
-          </dl>
-          <div className="account-actions">
-            <button
-              disabled={busy}
-              onClick={() =>
-                void act(account.renew, "Your account session was renewed.")
-              }
-            >
-              Renew session
-            </button>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void act(
-                  () => signOut(false),
-                  "Signed out of this Tholi session.",
-                )
-              }
-            >
-              Sign out
-            </button>
-            <AccountConfirmation
-              title="Sign out of every Tholi session?"
-              description="This revokes access on your other browsers and devices. Local guidance and local data remain available."
-              label="Sign out everywhere"
-              busy={busy}
-              onConfirm={() =>
-                void act(
-                  () => signOut(true),
-                  "All Tholi sessions were signed out.",
-                )
-              }
-            />
-          </div>
-          <p>
-            <a href={account.authorizationUrl("verify")}>
-              Review email verification
-            </a>{" "}
-            ·{" "}
-            <a href={account.authorizationUrl("recover")}>
-              Recover account access
-            </a>
-          </p>
-          <h2>Your sessions</h2>
-          <p>
-            Revoke a session you no longer use or do not recognize. Your
-            identity provider may maintain a separate session.
-          </p>
-          <ul className="account-sessions">
-            {sessions.map((session) => (
-              <li key={session.id}>
-                <div>
-                  <strong>
-                    {session.clientKind}
-                    {session.current ? " · This session" : ""}
-                  </strong>
-                  <p>
-                    Last used{" "}
-                    <time dateTime={session.lastUsedAt}>
-                      {new Date(session.lastUsedAt).toLocaleString()}
-                    </time>
-                  </p>
-                  <p>
-                    Expires{" "}
-                    <time dateTime={session.expiresAt}>
-                      {new Date(session.expiresAt).toLocaleString()}
-                    </time>
-                  </p>
-                </div>
-                <AccountConfirmation
-                  title="Revoke this session?"
-                  description="This session will no longer have access to your Tholi account."
-                  label={`Revoke ${session.current ? "this" : session.clientKind} session`}
-                  busy={busy}
-                  onConfirm={() =>
-                    void act(async () => {
-                      await account.revoke(session.id);
-                      setSessions((items) =>
-                        items.filter((item) => item.id !== session.id),
-                      );
-                    }, "The Tholi session was revoked.")
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-          <AccountAnalytics
-            key={`${account.session.account.id}:${account.session.account.workspaceId}`}
-          />
-        </>
-      ) : (
-        <>
-          <p>
-            {account.configured
-              ? "Sign in to review your account and sessions."
-              : "Accounts are not available on this website yet. Local guidance needs no account."}
-          </p>
+        )}
+        <div className="account-actions">
           {account.configured && (
             <SiteLink className="web-primary" to="/signin">
               Sign in
             </SiteLink>
-          )}{" "}
-          <SiteLink to="/download">Get Tholi</SiteLink>
-        </>
-      )}
-      {(error || account.error) && (
-        <p role="alert" className="auth-error">
-          {error || account.error}
-        </p>
-      )}
-      <p role="status">{notice}</p>
-      {providerLogout && (
+          )}
+          <SiteLink to="/download">Get local Tholi</SiteLink>
+        </div>
+        <p>Signing in never uploads local extension data automatically.</p>
+        {outgoing && signedOut.providerUrl && (
+          <p>
+            <a
+              href={signedOut.providerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Review sign-out with your identity provider
+            </a>
+          </p>
+        )}
+      </section>
+    );
+  const key = `${account.session.account.id}:${account.session.account.workspaceId}:${account.session.session.id}`;
+  return (
+    <Workspace
+      key={key}
+      path={path}
+      onDeletionAccepted={setDeletionActor}
+      onSignedOut={(providerUrl) => {
+        if (actor && sessionId) setSignedOut({ actor, sessionId, providerUrl });
+      }}
+    />
+  );
+}
+
+function Workspace({
+  path,
+  onDeletionAccepted,
+  onSignedOut,
+}: {
+  path: string;
+  onDeletionAccepted: (accountId: string) => void;
+  onSignedOut: (providerLogoutUrl: string | undefined) => void;
+}) {
+  const summary = useAccountSummary();
+  const selected = path === "/welcome" ? "/account" : path;
+  return (
+    <section className="account-workspace">
+      <nav className="account-navigation" aria-label="Account sections">
+        <p className="account-navigation-label">YOUR ACCOUNT</p>
+        <ul>
+          {ACCOUNT_SECTIONS.map((item) => (
+            <li key={item.path}>
+              <SiteLink
+                to={item.path}
+                aria-current={selected === item.path ? "page" : undefined}
+              >
+                {item.label}
+              </SiteLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="account-content">
+        {selected === "/account/data" ? (
+          <SavedDataPage />
+        ) : selected === "/account/credits" ? (
+          <AccountCreditsPage summary={summary} />
+        ) : selected === "/account/billing" ? (
+          <AccountPlansPage summary={summary} />
+        ) : selected === "/account/security" ? (
+          <AccountSecurityPage
+            summary={summary}
+            onDeletionAccepted={onDeletionAccepted}
+            onSignedOut={onSignedOut}
+          />
+        ) : (
+          <AccountOverview summary={summary} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AccountOverview({ summary }: { summary: AccountSummary }) {
+  const effective = summary.entitlements?.effective,
+    plan =
+      effective &&
+      summary.catalog?.plans.find(
+        (item) =>
+          item.id === effective.planId &&
+          item.version === effective.planVersion,
+      ),
+    development =
+      summary.catalog?.environment === "development" ||
+      summary.credits?.policy.environment === "development";
+  return (
+    <section
+      className="account-overview"
+      aria-labelledby="account-overview-title"
+    >
+      <header>
+        <p className="eyebrow">YOUR WORKSPACE</p>
+        <h1 id="account-overview-title">Your Tholi account</h1>
         <p>
-          <a href={providerLogout} target="_blank" rel="noopener noreferrer">
-            Also review sign-out with your identity provider
-          </a>
+          Manage your account, review saved data and check your allowance. Your
+          local extension data stays on your device unless you explicitly choose
+          to save it to the cloud.
         </p>
-      )}
-      <p className="small">
-        Cloud guidance, cloud saved data, paid plans and credits are not
-        available in this release.
+      </header>
+      <p role="status" aria-live="polite" aria-atomic="true">
+        {summary.loading ? "Loading your account overview." : ""}
       </p>
+      {development && (
+        <div className="account-development-note">
+          <strong>Development workspace</strong>
+          <p>
+            Cloud processing uses the fake development model. Live Gemini
+            access, purchased credits and paid plans are not enabled.
+          </p>
+        </div>
+      )}
+      <div className="account-overview-grid">
+        <article>
+          <h2>Profile and access</h2>
+          {summary.profile ? (
+            <p>
+              {summary.profile.verifiedEmail ? (
+                <>
+                  Verified email:{" "}
+                  <strong>{summary.profile.verifiedEmail}</strong>
+                </>
+              ) : (
+                "No verified email is recorded for this account."
+              )}
+            </p>
+          ) : (
+            <p>
+              {summary.loading
+                ? "Loading your profile."
+                : "Your profile is unavailable."}
+            </p>
+          )}
+          {summary.errors.profile && (
+            <p role="alert" className="auth-error">
+              {summary.errors.profile}
+            </p>
+          )}
+          <SiteLink to="/account/security">Manage account security</SiteLink>
+        </article>
+        <article>
+          <h2>Saved data</h2>
+          {summary.storage ? (
+            <p>
+              <strong>{formatQuantity(summary.storage.artifacts)}</strong> saved
+              items using {formatQuantity(summary.storage.bytes)} bytes across
+              this account's workspaces.
+            </p>
+          ) : (
+            <p>
+              {summary.loading
+                ? "Loading your storage totals."
+                : "Storage totals are unavailable."}
+            </p>
+          )}
+          {summary.errors.storage && (
+            <p role="alert" className="auth-error">
+              {summary.errors.storage}
+            </p>
+          )}
+          <p>
+            Review saved routes, website knowledge, conversation excerpts and
+            preferences.
+          </p>
+          <SiteLink to="/account/data">Review saved data</SiteLink>
+        </article>
+        <article>
+          <h2>Credits and usage</h2>
+          {summary.credits ? (
+            <p>
+              <strong>
+                {formatQuantity(summary.credits.balance.available)}
+              </strong>{" "}
+              development credits available.{" "}
+              {formatQuantity(summary.credits.balance.reserved)} reserved while
+              outcomes are confirmed.
+            </p>
+          ) : (
+            <p>
+              {summary.loading
+                ? "Loading your allowance."
+                : "Your credit balance is unavailable."}
+            </p>
+          )}
+          {summary.errors.credits && (
+            <p role="alert" className="auth-error">
+              {summary.errors.credits}
+            </p>
+          )}
+          <p>Processing records do not prove that a task succeeded.</p>
+          <SiteLink to="/account/credits">Review credits and usage</SiteLink>
+        </article>
+        <article>
+          <h2>Current cloud plan</h2>
+          {effective ? (
+            <p>
+              {plan?.name ?? "Cloud plan"}:{" "}
+              {effective.status === "active" ? "Active" : "Inactive"}.
+            </p>
+          ) : summary.entitlements ? (
+            <p>
+              No product cloud plan is enrolled. Local guidance remains
+              available.
+            </p>
+          ) : (
+            <p>
+              {summary.loading
+                ? "Loading your plan."
+                : "Your cloud plan could not be confirmed."}
+            </p>
+          )}
+          {summary.errors.entitlements && (
+            <p role="alert" className="auth-error">
+              {summary.errors.entitlements}
+            </p>
+          )}
+          {summary.errors.catalog && (
+            <p role="alert" className="auth-error">
+              {summary.errors.catalog}
+            </p>
+          )}
+          <p>
+            Plan availability comes from the service. Signing in does not change
+            your extension's processing choice.
+          </p>
+          <SiteLink to="/account/billing">Review plans and billing</SiteLink>
+        </article>
+      </div>
+      <div className="account-actions">
+        <button disabled={summary.loading} onClick={summary.refresh}>
+          Refresh account overview
+        </button>
+      </div>
     </section>
   );
 }

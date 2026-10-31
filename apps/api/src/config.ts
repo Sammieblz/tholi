@@ -415,6 +415,7 @@ const identityOptionsSchema = z
     tokenEndpoint: identityUrlSchema,
     jwksUri: identityUrlSchema,
     endSessionEndpoint: identityUrlSchema,
+    accountManagementUrl: identityUrlSchema.optional(),
     clientId: z.string().min(1).max(100),
     clientSecret: z.string().min(32).max(512),
     callbackUrl: identityUrlSchema,
@@ -464,6 +465,7 @@ export function validateIdentityOptions(
     options.tokenEndpoint,
     options.jwksUri,
     options.endSessionEndpoint,
+    ...(options.accountManagementUrl ? [options.accountManagementUrl] : []),
     options.callbackUrl,
     options.webOrigin,
   ];
@@ -961,6 +963,14 @@ function parseIdentityConfig(env: Environment): IdentityOptions | undefined {
     tokenEndpoint: need("THOLI_IDENTITY_TOKEN_ENDPOINT"),
     jwksUri: need("THOLI_IDENTITY_JWKS_URI"),
     endSessionEndpoint: need("THOLI_IDENTITY_LOGOUT_ENDPOINT"),
+    ...(environmentValue(env, "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL")
+      ? {
+          accountManagementUrl: environmentValue(
+            env,
+            "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL",
+          ),
+        }
+      : {}),
     clientId: need("THOLI_IDENTITY_CLIENT_ID"),
     clientSecret: need("THOLI_IDENTITY_CLIENT_SECRET_KEY"),
     callbackUrl: `${publicOrigin}/api/v1/auth/callback`,

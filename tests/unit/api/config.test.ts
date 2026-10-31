@@ -835,6 +835,22 @@ describe("API configuration profiles", () => {
     ["THOLI_IDENTITY_JWKS_URI", "https://identity.tholi.io/keys#fragment"],
     ["THOLI_IDENTITY_AUTHORIZATION_ENDPOINT", "javascript:alert(1)"],
     ["THOLI_IDENTITY_LOGOUT_ENDPOINT", "http://identity.tholi.io/logout"],
+    [
+      "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL",
+      "https://user:secret@accounts.example.test/account",
+    ],
+    [
+      "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL",
+      "https://accounts.example.test/account?token=PRIVATE_SENTINEL",
+    ],
+    [
+      "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL",
+      "https://accounts.example.test/account#token",
+    ],
+    [
+      "THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL",
+      "http://accounts.example.test/account",
+    ],
     ["THOLI_SERVICE_PUBLIC_ORIGIN", "https://api.tholi.io/prefix"],
     ["THOLI_IDENTITY_WEB_ORIGIN", "https://tholi.io/account"],
     [
@@ -932,6 +948,20 @@ describe("API configuration profiles", () => {
         THOLI_IDENTITY_SESSION_LIFETIME_MS: "Infinity",
       }),
     ).toThrow("identity configuration");
+  });
+
+  it("accepts only explicit trusted provider management destinations without inferring an endpoint", () => {
+    expect(
+      parseServiceConfig(identityEnvironment()).options.identity
+        ?.accountManagementUrl,
+    ).toBeUndefined();
+    expect(
+      parseServiceConfig({
+        ...identityEnvironment(),
+        THOLI_IDENTITY_ACCOUNT_MANAGEMENT_URL:
+          "https://accounts.example.test/settings",
+      }).options.identity?.accountManagementUrl,
+    ).toBe("https://accounts.example.test/settings");
   });
 
   it("requires a usable same-site cookie topology and confines HTTP development exceptions", () => {

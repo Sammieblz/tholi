@@ -47,6 +47,8 @@ interface ServiceFeatures {
   savedDataEnabled?: boolean;
   savedDataWritesEnabled?: boolean;
   savedDataExportsEnabled?: boolean;
+  accountExportsEnabled?: boolean;
+  accountDeletionEnabled?: boolean;
 }
 
 function serviceCapabilities(features: ServiceFeatures) {
@@ -63,6 +65,8 @@ function serviceCapabilities(features: ServiceFeatures) {
     savedDataEnabled = false,
     savedDataWritesEnabled = false,
     savedDataExportsEnabled = false,
+    accountExportsEnabled = false,
+    accountDeletionEnabled = false,
   } = features;
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -87,6 +91,8 @@ function serviceCapabilities(features: ServiceFeatures) {
       ...(savedDataEnabled ? ["saved-data"] : []),
       ...(savedDataWritesEnabled ? ["saved-data-write"] : []),
       ...(savedDataExportsEnabled ? ["saved-data-export"] : []),
+      ...(accountExportsEnabled ? ["account-export"] : []),
+      ...(accountDeletionEnabled ? ["account-deletion"] : []),
       ...(navigationEnabled
         ? [
             NAVIGATION_TRANSPORT_CAPABILITY,

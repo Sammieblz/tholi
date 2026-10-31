@@ -56,6 +56,11 @@ function fixture() {
       status: "active" as const,
     })),
     listConsents: vi.fn(async () => [consent]),
+    readSavedDataStorage: vi.fn(async () => ({
+      scope: "account" as const,
+      artifacts: "1",
+      bytes: "100",
+    })),
     getSavedArtifact: vi.fn<SavedDataTransaction["getSavedArtifact"]>(
       async () => record,
     ),
@@ -159,6 +164,9 @@ test("current saved-data consent permits explicit writes while earlier consent a
   await expect(
     f.service.list(f.scope, f.scope.workspaceId, {}, f.context),
   ).resolves.toEqual({ items: [f.record] });
+  await expect(
+    f.service.storage(f.scope, f.scope.workspaceId, f.context),
+  ).resolves.toEqual({ scope: "account", artifacts: "1", bytes: "100" });
   await expect(
     f.service.delete(
       f.scope,

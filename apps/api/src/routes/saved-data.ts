@@ -13,10 +13,10 @@ import {
   savedDataPageSchema,
   savedDataRecordSchema,
   savedDataUpdateSchema,
+  savedDataStorageUsageSchema,
 } from "../../../../packages/navigation-core/contracts-saved-data";
 import { serviceSyncQuerySchema } from "../../../../packages/navigation-core/contracts-service";
 import type { IdentityService } from "../application/identity";
-import type { IdentitySession } from "../application/identity-contracts";
 import type { SavedDataService } from "../application/saved-data";
 import { createIdentityAccess, identityRouteOptions } from "./identity-access";
 
@@ -31,16 +31,7 @@ export async function registerSavedDataApi(
   identity: IdentityService,
   savedData: SavedDataService,
 ) {
-  const { safe, authenticate, mutation } = createIdentityAccess(identity);
-  const sessions = new WeakMap<FastifyRequest, IdentitySession>();
-  const early = (write = false) =>
-    safe(async (request) => {
-      const { session, bearer } = await authenticate(request, {
-        requireAccountBinding: true,
-      });
-      if (write) mutation(request, session, bearer);
-      sessions.set(request, session);
-    });
+  const { safe, protect, protectedSession } = createIdentityAccess(identity);
   const options = (
     operationId: string,
     response: z.ZodTypeAny,
@@ -64,16 +55,27 @@ export async function registerSavedDataApi(
   const artifacts = "/api/v1/workspaces/:workspaceId/artifacts";
 
   app.get(
+    `${artifacts}/usage`,
+    {
+      onRequest: protect(),
+      ...options("getSavedDataStorageUsage", savedDataStorageUsageSchema),
+    },
+    safe((request, _reply, context) =>
+      savedData.storage(protectedSession(request), workspace(request), context),
+    ),
+  );
+
+  app.get(
     artifacts,
     {
-      onRequest: early(),
+      onRequest: protect(),
       ...options("listSavedArtifacts", savedDataPageSchema, {
         query: savedDataListQuerySchema,
       }),
     },
     safe((request, _reply, context) =>
       savedData.list(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.query,
         context,
@@ -84,7 +86,7 @@ export async function registerSavedDataApi(
   app.post(
     artifacts,
     {
-      onRequest: early(true),
+      onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.itemBytes + 2048,
       ...options("createSavedArtifact", savedDataRecordSchema, {
         body: savedDataCreateSchema,
@@ -92,7 +94,7 @@ export async function registerSavedDataApi(
     },
     safe((request, _reply, context) =>
       savedData.create(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.body,
         context,
@@ -103,14 +105,14 @@ export async function registerSavedDataApi(
   app.get(
     `${artifacts}/search`,
     {
-      onRequest: early(),
+      onRequest: protect(),
       ...options("searchSavedArtifacts", savedDataPageSchema, {
         query: savedDataListQuerySchema,
       }),
     },
     safe((request, _reply, context) =>
       savedData.list(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.query,
         context,
@@ -121,7 +123,7 @@ export async function registerSavedDataApi(
   app.post(
     `${artifacts}/export`,
     {
-      onRequest: early(true),
+      onRequest: protect(true),
       bodyLimit: 2048,
       ...options("exportSavedArtifacts", savedDataExportResultSchema, {
         body: savedDataExportInputSchema,
@@ -129,7 +131,7 @@ export async function registerSavedDataApi(
     },
     safe((request, _reply, context) =>
       savedData.export(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.body,
         context,
@@ -140,13 +142,13 @@ export async function registerSavedDataApi(
   app.get(
     `${artifacts}/:artifactId`,
     {
-      onRequest: early(),
+      onRequest: protect(),
       ...options("getSavedArtifact", savedDataRecordSchema, { artifact: true }),
     },
     safe((request, _reply, context) => {
       const params = artifactParams.parse(request.params);
       return savedData.get(
-        sessions.get(request)!,
+        protectedSession(request),
         params.workspaceId,
         params.artifactId,
         context,
@@ -157,7 +159,7 @@ export async function registerSavedDataApi(
   app.patch(
     `${artifacts}/:artifactId`,
     {
-      onRequest: early(true),
+      onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.itemBytes + 2048,
       ...options("updateSavedArtifact", savedDataRecordSchema, {
         artifact: true,
@@ -167,7 +169,7 @@ export async function registerSavedDataApi(
     safe((request, _reply, context) => {
       const params = artifactParams.parse(request.params);
       return savedData.update(
-        sessions.get(request)!,
+        protectedSession(request),
         params.workspaceId,
         params.artifactId,
         request.body,
@@ -179,7 +181,7 @@ export async function registerSavedDataApi(
   app.delete(
     `${artifacts}/:artifactId`,
     {
-      onRequest: early(true),
+      onRequest: protect(true),
       bodyLimit: 1024,
       ...options("deleteSavedArtifact", savedDataRecordSchema, {
         artifact: true,
@@ -189,7 +191,7 @@ export async function registerSavedDataApi(
     safe((request, _reply, context) => {
       const params = artifactParams.parse(request.params);
       return savedData.delete(
-        sessions.get(request)!,
+        protectedSession(request),
         params.workspaceId,
         params.artifactId,
         request.body,
@@ -201,14 +203,14 @@ export async function registerSavedDataApi(
   app.get(
     "/api/v1/workspaces/:workspaceId/sync/changes",
     {
-      onRequest: early(),
+      onRequest: protect(),
       ...options("getSavedArtifactChanges", savedDataChangesSchema, {
         query: serviceSyncQuerySchema,
       }),
     },
     safe((request, _reply, context) =>
       savedData.changes(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.query,
         context,
@@ -219,7 +221,7 @@ export async function registerSavedDataApi(
   app.post(
     "/api/v1/workspaces/:workspaceId/sync/import",
     {
-      onRequest: early(true),
+      onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.importBytes,
       ...options("importSavedArtifacts", savedDataImportResultSchema, {
         body: savedDataImportInputSchema,
@@ -227,7 +229,7 @@ export async function registerSavedDataApi(
     },
     safe((request, _reply, context) =>
       savedData.import(
-        sessions.get(request)!,
+        protectedSession(request),
         workspace(request),
         request.body,
         context,

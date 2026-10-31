@@ -38,7 +38,10 @@ and durable development inference limits. The composed [product catalog](service
 describes Local and unavailable production cloud tiers, with authenticated fake
 Free enrollment only in development. The [saved-data service](service-saved-data.md)
 adds explicit library operations and reviewed imports; its production write path
-remains unavailable. Billing remains a later milestone. By default, decisions and billing availability
+remains unavailable. The [account workspace](account-dashboard.md) reuses these
+services for private profile, storage, export and deletion controls. Lifecycle
+capabilities require the composed private-file pipeline. Billing remains a later
+milestone. By default, decisions and billing availability
 stay false. Explicitly enabling the
 fake navigation transport adds the registered decision routes described below;
 this does not enable paid inference or grant a cloud plan.
