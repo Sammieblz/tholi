@@ -37,6 +37,7 @@ interface Context {
 }
 
 export function verified(context: Context, page: PageSnapshot) {
+  context.view.serviceNavigation = undefined;
   const selected = context.selected!,
     before = context.before!;
   const evidence =
@@ -109,14 +110,17 @@ export function verified(context: Context, page: PageSnapshot) {
   }
   context.view.verifiedSteps++;
   context.clearTarget();
-  if (plan?.exploration) {
+  const destinationReached =
+    !!context.view.journey?.objective.value &&
+    objectiveReached(context.view.journey, page);
+  if (plan?.exploration && !destinationReached) {
     context.view.goalPlan = {
       ...plan,
       status: "unresolved",
       exploration: false,
       steps: [],
       reason:
-        "The navigation surface opened. Checking it for your retained destination…",
+        "The control result was verified. Checking the retained destination…",
     };
     context.view.instruction = context.view.goalPlan.reason;
     context.publish(context.view, evidence);
@@ -128,9 +132,6 @@ export function verified(context: Context, page: PageSnapshot) {
   context.view.instruction =
     "Control interaction verified. Choose another control or goal.";
   if (plan?.status === "guiding") {
-    const destinationReached =
-      !!context.view.journey?.objective.value &&
-      objectiveReached(context.view.journey, page);
     const remaining = destinationReached ? [] : plan.steps.slice(1);
     if (
       remaining.length &&
@@ -197,6 +198,7 @@ export function verified(context: Context, page: PageSnapshot) {
     context.view.goalPlan = {
       ...plan,
       status: "completed",
+      exploration: false,
       steps: [],
       reason: "The final step's expected result was observed.",
     };

@@ -273,21 +273,28 @@ export function AdvancedTools({
                 ))}
               </ol>
               <p className="small">
-                {view.goalPlan.source === "on-device"
-                  ? "On-device AI"
-                  : view.goalPlan.source === "memory"
-                    ? "Verified site memory"
-                    : "Live page semantics"}{" "}
-                ·{" "}
-                {view.goalPlan.issue === "consequential"
-                  ? "Action boundary"
-                  : view.goalPlan.issue === "unknown-effect"
-                    ? "Effect not declared"
-                    : view.goalPlan.confidence >= 0.85
-                      ? "Strong match"
-                      : view.goalPlan.confidence >= 0.6
-                        ? "Moderate match"
-                        : "Uncertain match"}
+                {view.serviceNavigation?.state === "guiding" &&
+                view.serviceNavigation.requestId === view.request?.id ? (
+                  "Development service proposal · Verify on the website"
+                ) : (
+                  <>
+                    {view.goalPlan.source === "on-device"
+                      ? "On-device AI"
+                      : view.goalPlan.source === "memory"
+                        ? "Verified site memory"
+                        : "Live page semantics"}{" "}
+                    ·{" "}
+                    {view.goalPlan.issue === "consequential"
+                      ? "Action boundary"
+                      : view.goalPlan.issue === "unknown-effect"
+                        ? "Effect not declared"
+                        : view.goalPlan.confidence >= 0.85
+                          ? "Strong match"
+                          : view.goalPlan.confidence >= 0.6
+                            ? "Moderate match"
+                            : "Uncertain match"}
+                  </>
+                )}
               </p>
             </section>
           )}

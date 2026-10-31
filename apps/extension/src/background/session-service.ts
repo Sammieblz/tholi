@@ -74,6 +74,40 @@ export function createSessionService(context: Context) {
     if (!context.session) throw new Error("No active session.");
     const view = validPinnedView(context.session, raw);
     if (!view) throw new Error("The website did not return a valid session.");
+    // Processing status is background-owned metadata, never content authority.
+    const previous = context.session.view;
+    const serviceNavigation = previous?.serviceNavigation;
+    delete view.serviceNavigation;
+    if (
+      serviceNavigation?.requestId === view.request?.id &&
+      view.status === "running" &&
+      previous?.status === "running" &&
+      view.request &&
+      ["active", "clarification"].includes(view.request.status) &&
+      previous.request &&
+      previous.request.id === view.request.id &&
+      previous.request.active === view.request.active &&
+      previous.request.tasks[previous.request.active]?.id ===
+        view.request.tasks[view.request.active]?.id &&
+      previous.journey &&
+      view.journey &&
+      previous.journey.id === view.journey.id &&
+      previous.journey.status === view.journey.status &&
+      (previous.journey.workflow?.id ?? "") ===
+        (view.journey.workflow?.id ?? "") &&
+      (previous.journey.workflow?.revision ?? 0) ===
+        (view.journey.workflow?.revision ?? 0) &&
+      previous.verifiedSteps === view.verifiedSteps &&
+      (previous.journey.totalVerified ?? previous.journey.progress.length) ===
+        (view.journey.totalVerified ?? view.journey.progress.length) &&
+      previous.page &&
+      view.page &&
+      previous.page.origin === view.page.origin &&
+      previous.page.revision === view.page.revision &&
+      previous.page.fingerprint === view.page.fingerprint &&
+      previous.page.stateKey === view.page.stateKey
+    )
+      view.serviceNavigation = serviceNavigation;
     view.memory = context.session.view?.memory;
     view.memoryError = context.session.view?.memoryError;
     context.session.view = view;
@@ -90,6 +124,9 @@ export function createSessionService(context: Context) {
 
   async function attachSession() {
     if (!context.session) throw new Error("No pinned session.");
+    // Reattachment obtains a new native document proof. Processing status from
+    // an earlier native span must never survive that transition.
+    if (context.session.view) delete context.session.view.serviceNavigation;
     const attaching = context.session,
       generation = context.goalGeneration;
     const interrupted = () =>
@@ -256,6 +293,7 @@ export function createSessionService(context: Context) {
       const view = current.view;
       current.view = {
         ...view,
+        serviceNavigation: undefined,
         status: action === "STOP" ? "stopped" : "paused",
         request:
           view.request &&

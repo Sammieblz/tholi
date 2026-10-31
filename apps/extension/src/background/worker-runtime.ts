@@ -81,50 +81,51 @@ let lastCapture = 0;
 let lastVisionKey = "";
 
 type ContextForcreateVisionService = Parameters<typeof createVisionService>[0];
-const { cancelVision, attemptVision, captureWindowId } = createVisionService({
-  get visionJob() {
-    return visionJob;
-  },
-  set visionJob(value: ContextForcreateVisionService["visionJob"]) {
-    visionJob = value;
-  },
-  get lastVisionKey() {
-    return lastVisionKey;
-  },
-  set lastVisionKey(value: ContextForcreateVisionService["lastVisionKey"]) {
-    lastVisionKey = value;
-  },
-  get session() {
-    return session;
-  },
-  set session(value: ContextForcreateVisionService["session"]) {
-    session = value;
-  },
-  get goalGeneration() {
-    return goalGeneration;
-  },
-  set goalGeneration(value: ContextForcreateVisionService["goalGeneration"]) {
-    goalGeneration = value;
-  },
-  get originOf() {
-    return originOf;
-  },
-  get lastCapture() {
-    return lastCapture;
-  },
-  set lastCapture(value: ContextForcreateVisionService["lastCapture"]) {
-    lastCapture = value;
-  },
-  get knownSites() {
-    return knownSites;
-  },
-  get save() {
-    return save;
-  },
-  get acceptView() {
-    return acceptView;
-  },
-});
+const { cancelVision, attemptVision, withMaskedNavigation, captureWindowId } =
+  createVisionService({
+    get visionJob() {
+      return visionJob;
+    },
+    set visionJob(value: ContextForcreateVisionService["visionJob"]) {
+      visionJob = value;
+    },
+    get lastVisionKey() {
+      return lastVisionKey;
+    },
+    set lastVisionKey(value: ContextForcreateVisionService["lastVisionKey"]) {
+      lastVisionKey = value;
+    },
+    get session() {
+      return session;
+    },
+    set session(value: ContextForcreateVisionService["session"]) {
+      session = value;
+    },
+    get goalGeneration() {
+      return goalGeneration;
+    },
+    set goalGeneration(value: ContextForcreateVisionService["goalGeneration"]) {
+      goalGeneration = value;
+    },
+    get originOf() {
+      return originOf;
+    },
+    get lastCapture() {
+      return lastCapture;
+    },
+    set lastCapture(value: ContextForcreateVisionService["lastCapture"]) {
+      lastCapture = value;
+    },
+    get knownSites() {
+      return knownSites;
+    },
+    get save() {
+      return save;
+    },
+    get acceptView() {
+      return acceptView;
+    },
+  });
 
 const navigationStarts = new Map<
   number,
@@ -134,6 +135,7 @@ const ready = api.storage.session
   .get(["navigatorSession", "navigatorJourneys"])
   .then((data) => {
     session = restoreSession(data.navigatorSession);
+    if (session?.view) delete session.view.serviceNavigation;
     suspended = (data.navigatorJourneys || [])
       .map((v: unknown) => suspendedJourneySchema.safeParse(v))
       .filter((v: any) => v.success)
@@ -162,8 +164,11 @@ const save = async () => {
   invalidateUi();
   void mountWidget(session);
   await api.storage.session.set({ navigatorJourneys: suspended });
-  if (session) await api.storage.session.set({ navigatorSession: session });
-  else await api.storage.session.remove("navigatorSession");
+  if (session) {
+    const persisted = structuredClone(session);
+    if (persisted.view) delete persisted.view.serviceNavigation;
+    await api.storage.session.set({ navigatorSession: persisted });
+  } else await api.storage.session.remove("navigatorSession");
 };
 void ready.then(() => mountWidget(session, true));
 const live = () => session?.routeId === LIVE_ROUTE_ID;
@@ -359,6 +364,7 @@ type ContextForcreateJourneyService = Parameters<
   typeof createJourneyService
 >[0];
 const { handleNlp } = createJourneyService({
+  withMaskedNavigation,
   get goalGeneration() {
     return goalGeneration;
   },

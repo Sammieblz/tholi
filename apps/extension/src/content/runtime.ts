@@ -417,6 +417,14 @@ if (!host[marker]) {
         );
         return;
       }
+      if (message.type === "APPLY_NAVIGATION_PROPOSAL") {
+        respond(
+          coach?.applyNavigationProposal(message) || {
+            error: "Start live navigation before applying a proposal.",
+          },
+        );
+        return;
+      }
       if (message.type === "GET_PAGE") {
         const page = message.regionObservation
           ? coach?.observeRegion(
@@ -431,6 +439,7 @@ if (!host[marker]) {
         }
         respond({
           page,
+          viewportRevision: viewportRevision(),
           perception:
             message.planningIntent?.phase === "end"
               ? undefined

@@ -66,6 +66,7 @@ export interface SessionView {
   request?: import("../navigation-core/contracts").NavigationRequest;
   clarification?: import("../navigation-core/contracts").Clarification;
   embeddingActivity?: import("../navigation-core/contracts").PlanResult["activity"];
+  serviceNavigation?: import("../navigation-core/contracts-navigation").NavigationServiceState;
   continuationOrigin?: string;
   frameAccess?: string[];
   memory?: {

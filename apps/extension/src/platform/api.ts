@@ -33,7 +33,7 @@ type WebExtensionApi = Omit<
     sendMessage<T = any>(
       tabId: number,
       message: unknown,
-      options?: browser.Tabs.SendMessageOptionsType,
+      options?: browser.Tabs.SendMessageOptionsType & { documentId?: string },
     ): Promise<T>;
   };
   storage: Omit<typeof browser.storage, "local" | "session" | "sync"> & {

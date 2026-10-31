@@ -6,8 +6,165 @@ import { openFirefoxExtension } from "../../../support/firefox-extension";
 import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
 import type { CaptureMetadata } from "../../../../packages/vision/contracts";
+import { createHash } from "node:crypto";
+import {
+  navigationServiceFixture,
+  navigationServicePageHtml,
+} from "../../../support/navigation-service-fixture";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
+
+test("Firefox binds an authenticated service proposal to its native document without inventing arrival", async ({}, info) => {
+  const service = await navigationServiceFixture("extension-firefox");
+  const fixture = await acceptanceServer({
+    "/service-journey/start": navigationServicePageHtml,
+  });
+  let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
+  try {
+    app = await openFirefoxExtension(
+      new URL("/service-journey/start", fixture.url).href,
+      info.project.use.viewport || undefined,
+      backendDataPermissions,
+    );
+    const current = app;
+    const grants = await app.extension(async (categories: string[]) => {
+      const api = (globalThis as any).browser;
+      return {
+        manifest: api.runtime.getManifest(),
+        granted: await Promise.all(
+          categories.map(async (category) => ({
+            category,
+            granted: await api.permissions.contains({
+              data_collection: [category],
+            }),
+          })),
+        ),
+      };
+    }, backendDataPermissions);
+    expect(
+      grants.manifest.browser_specific_settings.gecko.data_collection_permissions.required
+        .slice()
+        .sort(),
+    ).toEqual([...backendDataPermissions].sort());
+    expect(
+      grants.manifest.browser_specific_settings.gecko
+        .data_collection_permissions.optional,
+    ).toEqual([]);
+    expect(
+      grants.granted.every(
+        (category: { granted: boolean }) => category.granted,
+      ),
+    ).toBe(true);
+    await info.attach("service-proposal-firefox-runtime", {
+      body: Buffer.from(
+        JSON.stringify({
+          browser: "firefox",
+          version: app.version,
+          runtimeManifestHash: createHash("sha256")
+            .update(JSON.stringify(grants.manifest))
+            .digest("hex"),
+          grantedCategories: grants.granted,
+          fixturePregrants: true,
+          syntheticAccount: true,
+          nativePermissionPromptVerified: false,
+          realSignInVerified: false,
+        }),
+      ),
+      contentType: "application/json",
+    });
+    // Firefox's existing private-settings owner uses extension-origin IndexedDB.
+    // Synthetic credentials never enter website storage or a content script.
+    await app.extension(async (settings: unknown) => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("tholi-private-settings", 1);
+        request.onupgradeneeded = () =>
+          request.result.createObjectStore("settings");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("settings", "readwrite");
+          transaction.objectStore("settings").put(settings, "service-auth");
+          transaction.oncomplete = () => resolve();
+          transaction.onabort = transaction.onerror = () =>
+            reject(transaction.error);
+        });
+      } finally {
+        database.close();
+      }
+    }, service.settings);
+    const started = await app.start();
+    const local = await app.goal("Find the amber compass");
+    expect(local.view.selectedControlId).toBeUndefined();
+    await app.waitFor(
+      async () => service.decisions.length,
+      (count) => count === 1,
+      "Firefox sends one explicit authenticated request",
+    );
+    expect(service.decisions[0].input.observation.native).toMatchObject({
+      tabId: app.tabId,
+      documentId: started.documentId,
+      frameId: 0,
+    });
+    expect(JSON.stringify(service.decisions[0].input)).not.toContain(
+      "SENTINEL",
+    );
+    service.decisions[0].release();
+    const proposed = await app.waitFor(
+      () => current.view(),
+      (view) =>
+        view.serviceNavigation?.state === "guiding" &&
+        view.page?.controls.find(
+          (control: any) => control.id === view.selectedControlId,
+        )?.label === "Dark",
+      "Firefox binds the proposal to a fresh known control",
+    );
+    expect(proposed.request.id).toBe(local.view.request.id);
+    expect(proposed.journey.id).toBe(local.view.journey.id);
+    expect(proposed.verifiedSteps).toBe(0);
+    expect(
+      await app.site(
+        () => !!document.querySelector("#internet-navigator-overlay"),
+      ),
+    ).toBe(true);
+    expect(
+      await app.site(
+        () => (document.querySelector("#dark") as HTMLInputElement).checked,
+      ),
+    ).toBe(false);
+    expect(service.decisions).toHaveLength(1);
+    await app.driver.findElement({ css: "#dark" }).click();
+    const verified = await app.waitFor(
+      () => current.view(),
+      (view) => view.verifiedSteps === 1,
+      "Firefox verifies the actual checkbox state change",
+    );
+    expect(
+      await app.site(
+        () => (document.querySelector("#dark") as HTMLInputElement).checked,
+      ),
+    ).toBe(true);
+    expect(verified.request.status).toBe("active");
+    expect(verified.journey.status).toBe("active");
+    expect(verified.goalPlan.status).not.toBe("completed");
+    expect(verified.liveDiagnostics.events).toContainEqual(
+      expect.objectContaining({
+        outcome: "verified",
+        evidence: "checked-change",
+      }),
+    );
+    expect(service.decisions.length).toBeLessThanOrEqual(2);
+    expect(service.failures).toEqual([]);
+  } finally {
+    try {
+      await app?.close();
+    } finally {
+      await Promise.all([fixture.close(), service.close()]);
+    }
+  }
+});
+
 test("Firefox uses native document identity, local planning and independently verified outcomes", async ({}, info) => {
   const fixture = await acceptanceServer();
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;

@@ -1,9 +1,11 @@
 # Ephemeral navigation observations and decisions
 
-Roadmap [#36](https://github.com/Sammieblz/tholi/issues/36) defines the shared
-contract for future cloud navigation. It adds bounded schemas and pure validation
-without enabling a decision endpoint, model provider, capture permission or
-automatic upload. The service continues to advertise `decisions: false`.
+Roadmap [#36](https://github.com/Sammieblz/tholi/issues/36) introduced the shared
+bounded observation and proposal contract. [#40](https://github.com/Sammieblz/tholi/issues/40)
+adds explicitly enabled, authenticated fake transport, and
+[#41](https://github.com/Sammieblz/tholi/issues/41) connects it to the browser's
+single journey owner. The default service still advertises `decisions: false`.
+Neither contract admission nor a saved processing choice enables paid inference.
 
 [`contracts-navigation.ts`](../../packages/navigation-core/contracts-navigation.ts)
 owns this independent protocol. The API publishes its schemas as OpenAPI
@@ -11,8 +13,9 @@ components for review and client integration: `NavigationObservation` and
 `NavigationDecision`. The wire protocol is `tholi-navigation`, version 1; its
 browser-native reference extension has a separate version 1. A component is not an executable
 route; `paths`, the route inventory and capability negotiation remain the current
-availability owners. The service's existing 512 KiB HTTP body limit is unchanged.
-The later transport milestone must explicitly apply the multimodal route budget.
+availability owners. The ordinary service body limit remains 512 KiB. Only the
+explicitly enabled decision POST has the separate 4 MiB encoded envelope budget;
+see the [service transport](../development/service-api.md#opt-in-development-navigation-transport).
 
 ## Native identity and browser authority
 
@@ -60,7 +63,7 @@ reply or predicted step does not become verified evidence.
 This is a request projection, not a new persisted journey or saved-route model.
 It does not change stored identifiers or automatically import Local data. Schema
 validation and text redaction also do not establish user consent. The sending
-client and future service must check current scope and purpose-specific consent
+client and service must check current scope and purpose-specific consent
 before transmitting structure or images.
 
 ## Decision meanings
@@ -102,9 +105,57 @@ Measurements must share a
 clock domain; content and background `performance.now()` values cannot be mixed.
 Ephemeral in-flight evidence is discarded after losing that local timing state.
 
-The contract's pure validation is separate from wiring a live cloud request into
-the background runtime. Actual transport and cancellation integration belong to
-their later roadmap milestone.
+The contract's pure validation is separate from provider availability and browser
+integration. The current authenticated HTTP profile is fake-only. Live provider
+experiments, durable cost admission and quality evidence have separate owners.
+
+## Background proposal integration
+
+The existing journey service first installs the ordinary local request and plan.
+An explicit authenticated development-service choice can then enrich the same
+retained task. Its network wait runs outside the routine journey and local NLP
+queues. Local-only selection sends no service observation. Unknown account
+settings preserve local planning while refusing inference egress; selecting the
+service also prevents an implicit legacy inference request. Independently
+consented legacy route mirroring and explicit private OCR retain their owners.
+
+The panel and journey service reuse one native-bound page observation owner.
+Actual session, task, journey, document, page, workflow, progress and viewport
+changes invalidate pending proposals. Frame scan UUIDs remain evidence for
+targeted region refresh; a newly generated scan UUID alone does not establish a
+changed document or layout. Generation counters never replace native IDs.
+
+Each admitted job has one original deadline and at most two decision calls: the
+initial proposal and one bounded observation follow-up. A visual request uses the
+existing masked-capture owner only with its separate image choice and current
+grants. No raw image or screenshot coordinate becomes a content command.
+Uncertain failures and status-only replays do not trigger another generation.
+
+The background joins a returned decision against the submitted allowlist, then
+targets the actual native document for fresh content binding. Both
+[Mozilla](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/sendMessage)
+and [Chromium](https://developer.chrome.com/docs/extensions/reference/api/tabs#method-sendMessage)
+document this `documentId` delivery option. The content owner checks the retained
+request/task/journey, workflow, page, viewport, pending verification and current
+ordinary control before selecting it. Generic background RPC cannot apply a
+proposal, and the content operation cannot replace the journey with a standalone
+highlight.
+
+Service-guided steps are exploratory. Actual checked state, navigation or another
+declared control effect can verify a step; only the existing independent
+objective/workflow owner can establish destination arrival. Inherited back,
+tab-switch or visual actions and stale route/recovery estimates are cleared
+when a proposal replaces the current step. Consequential-action review and the
+existing limited assisted-navigation policy still apply.
+
+`serviceNavigation` is bounded background-owned presentation metadata. It can
+describe pending, guiding, clarification, unsupported or error state, and cannot
+represent completion or contain captures or credentials. It is scope-bound and
+removed from persisted/restored sessions. The local plan retains its original
+provenance; the current service step has its own explicit source label rather
+than inheriting an on-device or confidence claim. See the
+[integration verification record](../development/testing/journey-proposals-validation.md)
+for measured checks and remaining native evidence.
 
 ## Images and coordinate provenance
 

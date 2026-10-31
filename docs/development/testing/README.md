@@ -42,6 +42,11 @@ tracks #40's opt-in fake service, final browser transmission guards, authenticat
 HTTP, request metadata and cancellation races. Transport checks do not establish
 live provider quality, cloud-plan availability or release certification.
 
+The [journey-proposal integration record](journey-proposals-validation.md) tracks
+#41's retained ownership, native rebinding, bounded follow-ups and independent
+outcomes. Fixture authentication and pregrants do not establish native consent
+prompts or real model quality.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`

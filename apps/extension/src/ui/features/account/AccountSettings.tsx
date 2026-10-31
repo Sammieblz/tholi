@@ -192,7 +192,7 @@ export function AccountSettings() {
         }
       },
       choices.enabled
-        ? "Development inference choices saved. Automatic journey integration is not enabled."
+        ? "Development inference choices saved. The service can propose next controls for your current task."
         : "Browser transmission disabled and service consent withdrawal confirmed.",
       true,
     );
@@ -233,10 +233,10 @@ export function AccountSettings() {
           >
             <legend>Development inference transport</legend>
             <p id="tholi-inference-help">
-              Use an explicitly enabled service fake for local development.
-              Cloud plans and automatic journey integration are not available
-              yet. These choices are separate from private backend and sign-in
-              access.
+              Use an explicitly enabled service fake for local development. The
+              service can propose next controls for your current task. Cloud
+              plans are not available yet. These choices are separate from
+              private backend and sign-in access.
             </p>
             <label className="tholi-inference-choice">
               <input

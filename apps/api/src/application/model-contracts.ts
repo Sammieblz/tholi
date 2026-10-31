@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  navigationDecisionSchema,
+  navigationProposalSchema,
   NAVIGATION_LIMITS,
 } from "../../../../packages/navigation-core/contracts-navigation";
 
@@ -86,8 +86,7 @@ export const modelUsageSchema = z
 export type ModelUsage = z.infer<typeof modelUsageSchema>;
 
 /** Provider output supplies a proposal, never browser identity or generations. */
-export const modelProposalSchema =
-  navigationDecisionSchema.innerType().shape.decision;
+export const modelProposalSchema = navigationProposalSchema;
 export const modelResponseSchema = z
   .object({ proposal: z.unknown(), usage: modelUsageSchema })
   .strict();

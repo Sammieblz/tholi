@@ -70,7 +70,9 @@ import { sanitizeGoal } from "../../../../packages/privacy-redaction/index";
 import { assistanceKind } from "../../../../packages/safety-policy/assistance";
 import { taskWords } from "../../../../packages/goal-planner/task-intent";
 import type { SessionView } from "../../../../packages/shared-types/index";
+import type { NavigationProposalMessage } from "../../../../packages/route-schema/index";
 import { frameElement } from "./frame-visibility";
+import { viewportRevision } from "./visual-guidance";
 import { compose as composeService } from "./observation-composition";
 import type {
   BrowserPerception,
@@ -395,6 +397,7 @@ export class PageCoach {
     this.overlay.clear();
   }
   private teardown() {
+    this.view.serviceNavigation = undefined;
     this.foregroundPlanning = undefined;
     this.planningInFlight = undefined;
     this.inputHandoff = undefined;
@@ -901,6 +904,7 @@ export class PageCoach {
     }
     this.clearTarget();
     if (!options.journeyId) {
+      this.view.serviceNavigation = undefined;
       this.view.request = undefined;
       this.view.clarification = undefined;
       this.view.journey = beginJourney(
@@ -1013,6 +1017,7 @@ export class PageCoach {
     return { view: this.view };
   }
   restoreJourney(journey: TaskJourney, request: NavigationRequest) {
+    this.view.serviceNavigation = undefined;
     this.clearTarget();
     this.view.journey = structuredClone(journey);
     this.view.request = structuredClone(request);
@@ -1027,6 +1032,7 @@ export class PageCoach {
   }
   skipTask() {
     if (!this.view.request || this.view.request.status === "canceled") return;
+    this.view.serviceNavigation = undefined;
     this.clearTarget();
     this.view.request = advanceQueue(this.view.request, "skipped");
     this.view.clarification = undefined;
@@ -1038,6 +1044,7 @@ export class PageCoach {
     return requestReplanService(this.serviceContext());
   }
   guide(id: string) {
+    this.view.serviceNavigation = undefined;
     this.view.request = undefined;
     this.view.clarification = undefined;
     this.view.goalPlan = undefined;
@@ -1046,6 +1053,136 @@ export class PageCoach {
       this.view.liveDiagnostics.planning = undefined;
     this.refresh();
     return this.select(id);
+  }
+  /** The background owns proposal admission; this owner binds actual fresh DOM. */
+  applyNavigationProposal(message: NavigationProposalMessage) {
+    this.refresh();
+    const { binding, decision } = message;
+    const request = this.view.request,
+      journey = this.view.journey,
+      page = this.view.page,
+      plan = this.view.goalPlan;
+    if (
+      this.view.status !== "running" ||
+      this.pending ||
+      !request ||
+      request.status !== "active" ||
+      request.id !== binding.requestId ||
+      request.tasks[request.active]?.id !== binding.activeTaskId ||
+      !journey ||
+      journey.id !== binding.journeyId ||
+      journey.status !== "active" ||
+      journey.requestTaskId !== binding.activeTaskId ||
+      (journey.workflow?.revision || 0) !== binding.contextRevision ||
+      journey.workflow?.status === "review" ||
+      !page ||
+      page.revision !== binding.pageRevision ||
+      viewportRevision() !== binding.viewportRevision ||
+      !plan ||
+      ["consequential", "unknown-effect"].includes(plan.issue || "") ||
+      ["credentials", "two-factor", "authorization", "review"].includes(
+        page.screen?.kind || "",
+      )
+    )
+      return { error: "The task or page changed before proposal binding." };
+    const fenceLocalRecovery = () => {
+      // An older local response or recovery tick cannot overwrite this admitted
+      // binding. Retain the existing recovery key and budget for later evidence.
+      this.planningInFlight = undefined;
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = undefined;
+    };
+    if (decision.kind !== "guide") {
+      fenceLocalRecovery();
+      this.clearTarget();
+      this.view.serviceNavigation = {
+        profile: "fake",
+        requestId: binding.requestId,
+        state:
+          decision.kind === "request-observation" ? "pending" : decision.kind,
+        message:
+          decision.kind === "clarify"
+            ? decision.question
+            : decision.kind === "unsupported"
+              ? decision.reason
+              : decision.message,
+      };
+      this.view.goalPlan = {
+        ...plan,
+        status: "unresolved",
+        action: undefined,
+        route: undefined,
+        recoveryStage: undefined,
+        budgetPending: undefined,
+        exploration: false,
+        steps: [],
+        issue: decision.kind === "clarify" ? "ambiguous" : "no-match",
+        reason:
+          decision.kind === "clarify"
+            ? `Development service clarification: ${decision.question}`
+            : decision.kind === "unsupported"
+              ? `Development service could not guide this step: ${decision.reason}`
+              : "The development service requested another observation. Your destination is retained; check the current page before trying again.",
+      };
+      this.view.instruction = this.view.goalPlan.reason;
+      this.state("choosing");
+      this.publish(this.view);
+      return { view: this.view };
+    }
+    const reference = decision.reference;
+    const control = page.controls.find(
+      (candidate) => candidate.id === reference.controlId,
+    );
+    if (
+      reference.tabId !== binding.native.tabId ||
+      reference.windowId !== binding.native.windowId ||
+      !control ||
+      !control.visible ||
+      !control.enabled ||
+      control.occluded ||
+      control.risk !== "ordinary" ||
+      (reference.frameId === 0
+        ? reference.documentId !== binding.native.documentId ||
+          (control.reference?.frameId || 0) !== 0
+        : control.reference?.frameId !== reference.frameId ||
+          control.reference.documentId !== reference.documentId ||
+          control.reference.tabId !== reference.tabId)
+    )
+      return { error: "The proposal has no current eligible control." };
+    fenceLocalRecovery();
+    // The selected DOM result can verify a step; it cannot make a model hint
+    // final task evidence. Existing exploration/outcome handling replans next.
+    const previousService = this.view.serviceNavigation;
+    this.view.serviceNavigation = {
+      profile: "fake",
+      requestId: binding.requestId,
+      state: "guiding",
+      message: "A development service proposed the highlighted control.",
+    };
+    this.view.goalPlan = {
+      ...plan,
+      status: "guiding",
+      action: undefined,
+      route: undefined,
+      recoveryStage: undefined,
+      budgetPending: undefined,
+      exploration: true,
+      issue: undefined,
+      steps: [
+        {
+          controlId: control.id,
+          label: control.label,
+          outcome: "Verify the website's declared control result.",
+        },
+      ],
+      reason: "A development service proposed this known control.",
+    };
+    const selected = this.select(control.id, undefined, false);
+    if ("error" in selected) {
+      this.view.goalPlan = plan;
+      this.view.serviceNavigation = previousService;
+    }
+    return selected;
   }
   assistStep(controlId: string, revision: number, requestId: string) {
     this.refresh();
@@ -1118,19 +1255,27 @@ export class PageCoach {
     queueMicrotask(() => this.refresh());
     return { assisted: true };
   }
-  private select(id: string, observed?: ObservedTransition) {
+  private select(
+    id: string,
+    observed?: ObservedTransition,
+    usePlanInstruction = true,
+  ) {
     if (this.view.status !== "running")
       return { error: "Resume navigation before choosing a control." };
     const target = this.discovery.bindings.get(id);
     const external = this.view.page?.controls.find(
       (c) => c.id === id && c.reference?.frameId,
     );
-    if (external)
-      return this.showFrameControl(
-        external,
-        "Use the highlighted control in the embedded application. Its result will be checked.",
-        false,
-      );
+    if (external) {
+      const instruction =
+        (!usePlanInstruction ? "Development proposal. " : "") +
+        "Use the highlighted control in the embedded application. Its result will be checked.";
+      if (!usePlanInstruction && this.view.goalPlan) {
+        this.view.goalPlan.reason = instruction;
+        this.state("guiding");
+      }
+      return this.showFrameControl(external, instruction, false);
+    }
     if (
       !target ||
       !target.control.visible ||
@@ -1214,7 +1359,7 @@ export class PageCoach {
                   target.control.label +
                   "” control, then choose an option on the website."
                 : "Use the highlighted “" + target.control.label + "” control.";
-    if (this.view.goalPlan?.exploration)
+    if (usePlanInstruction && this.view.goalPlan?.exploration)
       this.view.instruction = this.view.goalPlan.reason;
     const workflow = this.view.journey?.workflow,
       guide = workflow && workflowGuides.find((g) => g.id === workflow.guideId),
@@ -1225,6 +1370,10 @@ export class PageCoach {
         target.control.kind === "focus"
           ? `Enter “${value}” using the highlighted field and the website's controls. Input contents are not read.`
           : `Use the highlighted “${target.control.label}” control to choose “${value}”. The requested state is checked.`;
+    if (!usePlanInstruction && this.view.goalPlan) {
+      this.view.instruction = "Development proposal. " + this.view.instruction;
+      this.view.goalPlan.reason = this.view.instruction;
+    }
     this.overlay.show(target.geometry, this.view.instruction, {
       key:
         (this.view.request?.id || this.view.journey?.id || "") +
@@ -1568,6 +1717,7 @@ export class PageCoach {
       this.view.status !== "running"
     )
       return;
+    if (verified) this.view.serviceNavigation = undefined;
     if (this.view.journey?.workflow) {
       this.view.journey.workflow = recordWorkflowAction(
         this.view.journey.workflow,
@@ -1586,15 +1736,27 @@ export class PageCoach {
       this.view.verifiedSteps++;
     } else if (verified && this.view.goalPlan) {
       this.view.verifiedSteps++;
-      this.view.goalPlan = {
-        ...this.view.goalPlan,
-        status: "completed",
-        steps: [],
-        reason:
-          "The requested control interaction was verified in the embedded application.",
-      };
-      if (this.view.journey) this.view.journey.status = "completed";
-      this.completeQueuedTask();
+      if (this.view.goalPlan.exploration) {
+        this.view.goalPlan = {
+          ...this.view.goalPlan,
+          status: "unresolved",
+          exploration: false,
+          steps: [],
+          reason:
+            "The embedded control result was verified. Checking the retained destination…",
+        };
+        this.view.instruction = this.view.goalPlan.reason;
+      } else {
+        this.view.goalPlan = {
+          ...this.view.goalPlan,
+          status: "completed",
+          steps: [],
+          reason:
+            "The requested control interaction was verified in the embedded application.",
+        };
+        if (this.view.journey) this.view.journey.status = "completed";
+        this.completeQueuedTask();
+      }
     }
     this.publish(this.view);
     this.planningRevision = "";

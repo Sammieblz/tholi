@@ -4,7 +4,10 @@ import {
   setPrivateSetting,
 } from "../platform/private-settings";
 import { api, type Tabs } from "../platform/api";
-import { serviceAuthCommand } from "../platform/service-auth";
+import {
+  cancelServiceInference,
+  serviceAuthCommand,
+} from "../platform/service-auth";
 import type { createJourneyService } from "./journey-service";
 import type { SuspendedJourney } from "../../../../packages/navigation-core/continuity";
 import { taskKey } from "../../../../packages/goal-planner/task-journey";
@@ -42,13 +45,11 @@ import {
 import { tabAppearance, validThemeSender } from "../ui/theme/theme-worker";
 import {
   clearFrames,
-  bindPagePerception,
-  beginPageObservation,
+  observePinnedPage,
+  PageObservationError,
   frameMessage,
   frameVisibilityMessage,
   routeFrameGuide,
-  refreshFrameRegion,
-  refreshPerceptionFrames,
   stopFrames,
 } from "./frame-coordinator";
 import {
@@ -99,6 +100,13 @@ interface Context {
 
 export function registerMessages(context: Context) {
   api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (raw?.type === "APPLY_NAVIGATION_PROPOSAL") {
+      respond({
+        error:
+          "Model proposals are applied only by the active background journey.",
+      });
+      return;
+    }
     if (typeof raw?.type === "string" && raw.type.startsWith("AUTH_")) {
       if (!isPanel(sender)) {
         respond({ error: "Open account controls from the Tholi sidebar." });
@@ -235,6 +243,7 @@ export function registerMessages(context: Context) {
           const value = frameMessage(raw, sender, context.session);
           if (!value || !context.session)
             return { error: "Stale frame observation" };
+          if (raw.type === "FRAME_OBSERVATION") cancelServiceInference();
           await api.tabs.sendMessage(context.session.tabId, {
             type:
               raw.type === "FRAME_OBSERVATION"
@@ -324,6 +333,7 @@ export function registerMessages(context: Context) {
     ) {
       context.goalGeneration++;
       context.cancelVision();
+      cancelServiceInference();
     }
     if (raw?.type === "VISION_INVALIDATED") {
       if (
@@ -331,8 +341,10 @@ export function registerMessages(context: Context) {
         sender.tab?.id === context.session?.tabId &&
         sender.documentId === context.session?.documentId &&
         raw.sessionId === context.session?.sessionId
-      )
+      ) {
         context.cancelVision();
+        cancelServiceInference();
+      }
       respond({ ok: true });
       return;
     }
@@ -907,26 +919,39 @@ export function registerMessages(context: Context) {
           return {
             error: "Start or resume live navigation on the current page first.",
           };
-        const observationSession = context.session;
-        const observationDocument = context.session.documentId;
-        const observationStart =
-          command.type === "GET_PAGE"
-            ? await beginPageObservation(context.session, tab).catch(
-                () => undefined,
-              )
-            : undefined;
-        if (
-          command.type === "GET_PAGE" &&
-          (!observationStart ||
-            context.session !== observationSession ||
-            context.session.documentId !== observationDocument ||
-            queuedGeneration !== context.goalGeneration)
-        )
-          return {
-            error:
-              "The native browser context is unavailable. Observe the page again.",
-          };
-        let outgoing =
+        if (command.type === "GET_PAGE") {
+          const observedSession = context.session;
+          const documentId = observedSession.documentId;
+          try {
+            const observed = await observePinnedPage(
+              observedSession,
+              tab,
+              () =>
+                context.session === observedSession &&
+                observedSession.documentId === documentId &&
+                queuedGeneration === context.goalGeneration,
+              {
+                regionObservation: command.regionObservation,
+              },
+            );
+            return {
+              page: observed.page,
+              perception: observed.perception,
+              viewportRevision: observed.viewportRevision,
+              sessionId: observedSession.sessionId,
+              documentId,
+              journey: observed.view.journey,
+            };
+          } catch (error) {
+            return {
+              error:
+                error instanceof PageObservationError
+                  ? error.message
+                  : "The native page observation changed. Observe the page again.",
+            };
+          }
+        }
+        const outgoing =
           command.type === "PAUSE" || command.type === "RESUME"
             ? {
                 type: "CONTROL_SESSION",
@@ -934,79 +959,6 @@ export function registerMessages(context: Context) {
                 sessionId: context.session.sessionId,
               }
             : { ...command, sessionId: context.session.sessionId };
-        if (command.type === "GET_PAGE" && command.regionObservation) {
-          const request = command.regionObservation;
-          if (
-            request.native.tabId !== context.session.tabId ||
-            request.native.windowId !== tab.windowId
-          )
-            return {
-              error: "This region belongs to a different browser context.",
-            };
-          if (request.native.frameId === 0) {
-            const native = await api.webNavigation
-              .getFrame({ tabId: context.session.tabId, frameId: 0 })
-              .catch(() => null);
-            if (
-              !native ||
-              native.documentId !== observationDocument ||
-              request.native.documentId !== observationDocument ||
-              !request.regionId.startsWith("f0:")
-            )
-              return { error: "This region belongs to a previous document." };
-            outgoing = {
-              type: "GET_PAGE",
-              sessionId: context.session.sessionId,
-              regionObservation: {
-                ...request,
-                regionId: request.regionId.slice(3),
-              },
-            };
-            const refreshed = await api.tabs.sendMessage(
-              context.session.tabId,
-              outgoing,
-              { frameId: 0 },
-            );
-            if (refreshed?.error) return refreshed;
-            outgoing = {
-              type: "GET_PAGE",
-              sessionId: context.session.sessionId,
-            };
-          } else {
-            if (!(await refreshFrameRegion(context.session, request)))
-              return {
-                error: "This region is unavailable in the current scan.",
-              };
-            outgoing = {
-              type: "GET_PAGE",
-              sessionId: context.session.sessionId,
-            };
-          }
-          if (
-            context.session !== observationSession ||
-            context.session.documentId !== observationDocument ||
-            queuedGeneration !== context.goalGeneration
-          )
-            return { error: "The browser context changed during observation." };
-        }
-        if (
-          command.type === "GET_PAGE" &&
-          observationStart &&
-          !(await refreshPerceptionFrames(
-            context.session,
-            observationStart,
-            command.regionObservation?.native.frameId,
-          ))
-        )
-          return {
-            error: "The frame observation changed. Observe the page again.",
-          };
-        if (
-          context.session !== observationSession ||
-          context.session.documentId !== observationDocument ||
-          queuedGeneration !== context.goalGeneration
-        )
-          return { error: "The browser context changed during observation." };
         try {
           const reply = await api.tabs.sendMessage(
             context.session.tabId,
@@ -1015,47 +967,6 @@ export function registerMessages(context: Context) {
           if (queuedGeneration !== context.goalGeneration)
             return structuredClone(context.session);
           if (reply?.error) return reply;
-          if (command.type === "GET_PAGE") {
-            const observedView = validPinnedView(context.session, reply.view);
-            if (
-              !observedView?.page ||
-              observedView.page.revision !== reply.page?.revision ||
-              observedView.page.fingerprint !== reply.page?.fingerprint ||
-              observedView.page.stateKey !== reply.page?.stateKey
-            )
-              return {
-                error: "The page and journey observation do not match.",
-              };
-            const perception = await bindPagePerception(
-              context.session,
-              tab,
-              observedView.page,
-              reply.perception,
-              observationStart,
-            ).catch(() => undefined);
-            if (
-              context.session !== observationSession ||
-              context.session.documentId !== observationDocument ||
-              queuedGeneration !== context.goalGeneration
-            )
-              return {
-                error: "The browser context changed during observation.",
-              };
-            if (reply.perception && !perception)
-              return {
-                error:
-                  "The native page observation changed. Observe the page again.",
-              };
-            return {
-              page: observedView.page,
-              perception,
-              sessionId: context.session.sessionId,
-              documentId: context.session.documentId,
-              // SESSION_UPDATE remains the state acceptance owner. A prompt
-              // uses the validated journey paired with this exact fresh page.
-              journey: observedView.journey,
-            };
-          }
           if (
             command.type === "SET_GOAL" &&
             !command.journeyId &&
