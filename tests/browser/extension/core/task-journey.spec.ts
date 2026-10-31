@@ -1,6 +1,47 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
+import {
+  navigationServiceFixture,
+  navigationServicePageHtml,
+} from "../../../support/navigation-service-fixture";
 type App = Awaited<ReturnType<typeof openNavigatorExtension>>;
+
+async function serviceJourney(viewport?: { width: number; height: number }) {
+  const service = await navigationServiceFixture("extension-chromium");
+  let app: App | undefined;
+  const close = async () => {
+    try {
+      await app?.close();
+    } finally {
+      await service.close();
+    }
+  };
+  try {
+    app = await openNavigatorExtension(viewport);
+    // Only the trusted worker receives synthetic fixture credentials. Native
+    // permission and real sign-in prompts remain separate evidence.
+    await app.worker.evaluate(async (settings) => {
+      await chrome.storage.local.setAccessLevel({
+        accessLevel: "TRUSTED_CONTEXTS",
+      });
+      await chrome.storage.local.set({ "service-auth": settings });
+    }, service.settings);
+    await app.context.route(
+      "http://localhost:5173/service-journey/**",
+      (route) =>
+        route.fulfill({
+          contentType: "text/html; charset=utf-8",
+          body: navigationServicePageHtml,
+        }),
+    );
+    await app.page.goto("http://localhost:5173/service-journey/start");
+    await app.start();
+    return { ...service, app, close };
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
 async function setGoal(app: App, goal: string) {
   const reply = await app.panel.evaluate(async (goal) => {
     const r = await chrome.runtime.sendMessage({ type: "GET_PAGE" });
@@ -470,3 +511,232 @@ test("model follow-ups receive the original destination and verified progress af
     await app.close();
   }
 });
+
+for (const arrival of [false, true])
+  test(`an authenticated service proposal verifies a user step${arrival ? " and its independently observed destination" : " without inventing whole-task arrival"}`, async ({}, info) => {
+    const fixture = await serviceJourney(
+      info.project.use.viewport || undefined,
+    );
+    const { app, decisions, failures } = fixture;
+    try {
+      const initial = await setGoal(
+        app,
+        arrival ? "Turn Dark on" : "Find the amber compass",
+      );
+      if (arrival) {
+        expect(initial.request.tasks[initial.request.active]).toMatchObject({
+          target: "Dark",
+          desiredValue: "on",
+        });
+        expect(initial.journey.objective).toMatchObject({
+          purpose: "Dark",
+          value: "on",
+        });
+      }
+      if (!arrival) expect(initial.selectedControlId).toBeUndefined();
+      await expect.poll(() => decisions.length).toBe(1);
+      expect(JSON.stringify(decisions[0].input)).not.toContain("SENTINEL");
+      expect(decisions[0].input.observation.native).toMatchObject({
+        kind: "browser",
+        documentId: expect.any(String),
+      });
+      decisions[0].release();
+      await expect
+        .poll(async () => (await app.view()).serviceNavigation?.state)
+        .toBe("guiding");
+      await next(app, "Dark");
+      await expect(
+        app.page.locator("#internet-navigator-overlay"),
+      ).toBeVisible();
+      const proposed = await app.view();
+      expect(proposed.journey.id).toBe(initial.journey.id);
+      expect(proposed.request.id).toBe(initial.request.id);
+      expect(proposed.verifiedSteps).toBe(0);
+      expect(proposed.journey.progress).toHaveLength(0);
+      expect(decisions).toHaveLength(1);
+      await expect(
+        app.page.getByRole("checkbox", { name: "Dark", exact: true }),
+      ).not.toBeChecked();
+      await app.page
+        .getByRole("checkbox", { name: "Dark", exact: true })
+        .check();
+      await expect.poll(async () => (await app.view()).verifiedSteps).toBe(1);
+      if (arrival)
+        await expect
+          .poll(async () => (await app.view()).goalPlan?.status)
+          .toBe("completed");
+      const completed = await app.view();
+      expect(completed.journey.id).toBe(initial.journey.id);
+      expect(completed.verifiedSteps).toBe(1);
+      expect(completed.request.status).toBe(arrival ? "completed" : "active");
+      expect(completed.journey.status).toBe(arrival ? "completed" : "active");
+      if (!arrival) expect(completed.goalPlan?.status).not.toBe("completed");
+      expect(completed.liveDiagnostics.events).toContainEqual(
+        expect.objectContaining({
+          outcome: "verified",
+          evidence: "checked-change",
+        }),
+      );
+      // An unfinished destination may request a new proposal only after this
+      // independently verified step; that is distinct from retrying inference.
+      expect(decisions.length).toBeLessThanOrEqual(arrival ? 1 : 2);
+      expect(failures).toEqual([]);
+    } finally {
+      await fixture.close();
+    }
+  });
+
+for (const interruption of [
+  "Stop",
+  "Pause",
+  "replacement",
+  "mutation",
+] as const)
+  test(`a delayed authenticated service proposal cannot undo ${interruption}`, async ({}, info) => {
+    const fixture = await serviceJourney(
+      info.project.use.viewport || undefined,
+    );
+    const { app, decisions, failures } = fixture;
+    try {
+      const initial = await setGoal(app, "Find the amber compass");
+      await expect.poll(() => decisions.length).toBe(1);
+      let replacement: any;
+      let freshIndex = 1;
+      if (interruption === "Stop") await app.stop();
+      else if (interruption === "Pause")
+        await app.panel.evaluate(() =>
+          chrome.runtime.sendMessage({ type: "PAUSE" }),
+        );
+      else if (interruption === "replacement") {
+        replacement = await setGoal(app, "Find the silver orchard");
+        await expect.poll(() => decisions.length).toBe(2);
+        expect(decisions[1].input.observation.stamp.requestId).toBe(
+          replacement.request.id,
+        );
+        expect(replacement.request.id).not.toBe(initial.request.id);
+      } else {
+        await app.page
+          .getByRole("checkbox", { name: "Dark", exact: true })
+          .evaluate((element) => {
+            const replacement = element.cloneNode() as HTMLInputElement;
+            replacement.setAttribute("aria-label", "Unrelated replacement");
+            element.replaceWith(replacement);
+          });
+        await expect
+          .poll(async () => (await app.view()).page?.revision)
+          .not.toBe(initial.page.revision);
+      }
+      // A new-context request stays held while the actual HTTP connection for
+      // the obsolete generation is cancelled and its server work finishes.
+      await expect.poll(() => decisions[0].disconnected).toBe(true);
+      decisions[0].release();
+      await expect.poll(() => decisions[0].finished).toBe(true);
+      expect(decisions[0].sent).toBe(false);
+      const after = await app.view();
+      expect(after.verifiedSteps).toBe(0);
+      expect(after.selectedControlId).toBeUndefined();
+      await expect(app.page.locator("#internet-navigator-overlay")).toHaveCount(
+        0,
+      );
+      if (interruption === "replacement") {
+        expect(after.request.id).toBe(replacement.request.id);
+        expect(after.request.original).toBe("Find the silver orchard");
+        expect(after.journey.id).toBe(replacement.journey.id);
+      } else {
+        expect(after.status).toBe(
+          interruption === "Stop"
+            ? "stopped"
+            : interruption === "Pause"
+              ? "paused"
+              : "running",
+        );
+        if (interruption !== "mutation")
+          expect(after.serviceNavigation).toBeUndefined();
+      }
+      if (interruption === "mutation") {
+        const previousTarget = decisions[0].input.observation.controls.find(
+          (control) => control.kind === "toggle",
+        )!;
+        expect(
+          after.page.controls.some(
+            (control: any) => control.id === previousTarget.reference.controlId,
+          ),
+        ).toBe(false);
+        expect(after.request.original).toBe(initial.request.original);
+        // Mutation invalidates the obsolete proposal; it does not promise an
+        // automatic retry. Request fresh recovery through the normal user path.
+        replacement = await setGoal(app, initial.request.original);
+        expect(replacement.request.original).toBe(initial.request.original);
+        const freshAttempt = () =>
+          decisions.findIndex(
+            (decision) =>
+              decision.input.observation.stamp.contextGeneration >
+                decisions[0].input.observation.stamp.contextGeneration &&
+              decision.input.observation.stamp.scanGeneration >
+                decisions[0].input.observation.stamp.scanGeneration &&
+              decision.input.observation.stamp.requestId ===
+                replacement.request.id,
+          );
+        await expect.poll(freshAttempt).toBeGreaterThan(0);
+        freshIndex = freshAttempt();
+        expect(decisions[freshIndex].input.requestId).not.toBe(
+          decisions[0].input.requestId,
+        );
+        expect(decisions[freshIndex].input.observation.context.goal).toBe(
+          initial.request.original,
+        );
+        expect(
+          decisions[freshIndex].input.observation.controls.some(
+            (control) =>
+              control.reference.controlId ===
+              previousTarget.reference.controlId,
+          ),
+        ).toBe(false);
+        for (const prior of decisions.slice(0, freshIndex)) {
+          await expect.poll(() => prior.disconnected).toBe(true);
+          expect(prior.sent).toBe(false);
+        }
+      }
+      if (interruption === "replacement" || interruption === "mutation") {
+        const currentDecision = decisions[freshIndex];
+        expect(currentDecision.sent).toBe(false);
+        expect(currentDecision.finished).toBe(false);
+        expect(currentDecision.input.observation.native.documentId).toBe(
+          decisions[0].input.observation.native.documentId,
+        );
+        const freshTarget = currentDecision.input.observation.controls.find(
+          (control) => control.kind === "toggle",
+        )!;
+        currentDecision.release();
+        await expect
+          .poll(async () => (await app.view()).selectedControlId)
+          .toBe(freshTarget.reference.controlId);
+        await expect(
+          app.page.locator("#internet-navigator-overlay"),
+        ).toBeVisible();
+        // An ordinary passive observation must retain a valid current proposal.
+        const refreshed = await app.panel.evaluate(() =>
+          chrome.runtime.sendMessage({ type: "GET_PAGE" }),
+        );
+        expect(refreshed.error).toBeUndefined();
+        const fresh = await app.view();
+        expect(fresh.selectedControlId).toBe(freshTarget.reference.controlId);
+        expect(fresh.request.id).toBe(
+          currentDecision.input.observation.stamp.requestId,
+        );
+        expect(
+          fresh.page.controls.find(
+            (control: any) => control.id === fresh.selectedControlId,
+          )?.label,
+        ).toBe(interruption === "mutation" ? "Unrelated replacement" : "Dark");
+        expect(fresh.verifiedSteps).toBe(0);
+      }
+      if (interruption === "mutation")
+        expect(decisions.length).toBeLessThanOrEqual(3);
+      else
+        expect(decisions).toHaveLength(interruption === "replacement" ? 2 : 1);
+      expect(failures).toEqual([]);
+    } finally {
+      await fixture.close();
+    }
+  });

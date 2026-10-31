@@ -8,6 +8,7 @@ import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
+import { permissionVariant } from "./permission-variant";
 import { Builder, By, until, type WebDriver } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
 import { execFileSync } from "node:child_process";
@@ -39,8 +40,13 @@ export function firefoxBinary() {
 export async function openFirefoxExtension(
   url = "http://127.0.0.1:5173/",
   viewport = { width: 1280, height: 900 },
+  fixtureDataCollection: readonly string[] = [],
 ) {
   assertFixtureUrl(url);
+  const extension = await permissionVariant([], {
+    target: "firefox",
+    dataCollection: fixtureDataCollection,
+  });
   const uuid = randomUUID(),
     options = new firefox.Options()
       .addArguments("-headless")
@@ -109,7 +115,7 @@ export async function openFirefoxExtension(
       params: {
         extensionData: {
           type: "path",
-          path: resolve("dist/extension-firefox"),
+          path: extension,
         },
       },
     });

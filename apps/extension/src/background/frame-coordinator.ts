@@ -1,7 +1,10 @@
 import { api, type Runtime, type Tabs } from "../platform/api";
 import { hostPermissionPattern } from "../platform/site-access";
 import { pageSnapshotSchema } from "../../../../packages/page-model/index";
-import type { PinnedSession } from "../../../../packages/route-registry/session";
+import {
+  validPinnedView,
+  type PinnedSession,
+} from "../../../../packages/route-registry/session";
 import type { PageSnapshot } from "../../../../packages/page-model";
 import {
   browserPerceptionSchema,
@@ -9,6 +12,7 @@ import {
   type BrowserPerception,
   type RegionObservationRequest,
 } from "../../../../packages/page-discovery/perception";
+import { awaitAbortableOperation } from "../../../../packages/navigation-core/abort";
 type Frame = {
   frameId: number;
   documentId: string;
@@ -352,6 +356,128 @@ export async function beginPageObservation(
 type ObservationStart = NonNullable<
   Awaited<ReturnType<typeof beginPageObservation>>
 >;
+
+/** Only fixed messages authored by the observation owner may reach public RPC. */
+export class PageObservationError extends Error {}
+
+/** The panel and journey planner share the same native-bound observation owner. */
+export async function observePinnedPage(
+  session: PinnedSession,
+  tab: Pick<Tabs.Tab, "id" | "windowId">,
+  current: () => boolean,
+  options: {
+    query?: string;
+    regionObservation?: RegionObservationRequest;
+    signal?: AbortSignal;
+  } = {},
+) {
+  const ensureCurrent = () => {
+    if (options.signal?.aborted || !current())
+      throw new PageObservationError(
+        "The browser context changed during observation.",
+      );
+  };
+  const wait = async <T>(operation: () => Promise<T>) => {
+    ensureCurrent();
+    const value = options.signal
+      ? await awaitAbortableOperation(
+          operation,
+          options.signal,
+          () =>
+            new PageObservationError("The browser observation was cancelled."),
+        )
+      : await operation();
+    ensureCurrent();
+    return value;
+  };
+  const start = await wait(() => beginPageObservation(session, tab));
+  if (!start)
+    throw new PageObservationError(
+      "The native browser context is unavailable. Observe the page again.",
+    );
+  const region = options.regionObservation;
+  if (region) {
+    if (
+      region.native.tabId !== session.tabId ||
+      region.native.windowId !== tab.windowId
+    )
+      throw new PageObservationError(
+        "This region belongs to a different browser context.",
+      );
+    if (region.native.frameId === 0) {
+      if (
+        region.native.documentId !== session.documentId ||
+        !region.regionId.startsWith("f0:")
+      )
+        throw new PageObservationError(
+          "This region belongs to a previous document.",
+        );
+      const result = await wait(() =>
+        api.tabs.sendMessage(
+          session.tabId,
+          {
+            type: "GET_PAGE",
+            sessionId: session.sessionId,
+            regionObservation: {
+              ...region,
+              regionId: region.regionId.slice(3),
+            },
+          },
+          { frameId: 0, documentId: start.documentId },
+        ),
+      );
+      if (result?.error)
+        throw new PageObservationError(
+          "This region is unavailable in the current scan.",
+        );
+    } else if (!(await wait(() => refreshFrameRegion(session, region))))
+      throw new PageObservationError(
+        "This region is unavailable in the current scan.",
+      );
+  }
+  if (
+    !(await wait(() =>
+      refreshPerceptionFrames(session, start, region?.native.frameId),
+    ))
+  )
+    throw new PageObservationError(
+      "The frame observation changed. Observe the page again.",
+    );
+  const reply = await wait(() =>
+    api.tabs.sendMessage(
+      session.tabId,
+      {
+        type: "GET_PAGE",
+        sessionId: session.sessionId,
+        ...(options.query ? { query: options.query } : {}),
+      },
+      { frameId: 0, documentId: start.documentId },
+    ),
+  );
+  const view = validPinnedView(session, reply?.view);
+  if (
+    reply?.error ||
+    !view?.page ||
+    view.page.revision !== reply.page?.revision ||
+    view.page.fingerprint !== reply.page?.fingerprint ||
+    view.page.stateKey !== reply.page?.stateKey
+  )
+    throw new PageObservationError(
+      "The page and journey observation do not match.",
+    );
+  const perception = await wait(() =>
+    bindPagePerception(session, tab, view.page!, reply.perception, start),
+  );
+  if (reply.perception && !perception)
+    throw new PageObservationError(
+      "The native page observation changed. Observe the page again.",
+    );
+  const viewportRevision =
+    Number.isSafeInteger(reply.viewportRevision) && reply.viewportRevision >= 0
+      ? (reply.viewportRevision as number)
+      : undefined;
+  return { page: view.page, view, perception, viewportRevision, start };
+}
 
 /** Refresh only existing authorized frame agents, under the same native span. */
 export async function refreshPerceptionFrames(

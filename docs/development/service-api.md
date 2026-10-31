@@ -109,9 +109,10 @@ authentication and final transmission checks. Cancellation can record uncertain
 work and abort the local operation, but never proves cross-replica/provider
 cancellation, zero billing or a completed installation/task.
 
-This milestone exposes transport to the trusted background owner. Integration
-with the single journey and its independent outcome verification is #41;
-expanded status/recovery presentation is #42. It does not enable automatic cloud
+The browser's [single journey integration](../architecture/navigation-contracts.md#background-proposal-integration)
+uses the ordinary local plan first, then explicitly opted-in service enrichment
+for that retained task. Network waits do not hold the local inference queue.
+Expanded status/recovery presentation is #42. This does not enable paid cloud
 guidance for ordinary users. Existing account-scoped errors preserve revoked
 access, unavailable service and exhausted credit/storage conditions without
 opening payment flows. Server-authoritative plans and durable cost enforcement

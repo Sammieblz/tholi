@@ -4,6 +4,7 @@ import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
 import { inspectPngData } from "../vision/png";
 import {
   SERVICE_LIMITS,
+  serviceErrorCodeSchema,
   serviceRequestPolicySchema,
   serviceRequestStatusSchema,
 } from "./contracts-service";
@@ -589,6 +590,49 @@ const serverTimingSchema = z
         NAVIGATION_LIMITS.maxLifetimeMs,
     "Invalid independent server lifetime.",
   );
+export const navigationProposalSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z.literal("guide"),
+        reference: navigationControlReferenceSchema,
+        message: label,
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("request-observation"),
+        reason: z.enum(["layout", "controls", "visual", "freshness"]),
+        message: label,
+        regionId: opaqueId.optional(),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("clarify"),
+        question: label,
+        choices: z
+          .array(z.object({ id: opaqueId, label }).strict())
+          .min(2)
+          .max(3)
+          .optional(),
+      })
+      .strict(),
+    z.object({ kind: z.literal("unsupported"), reason: label }).strict(),
+  ])
+  .superRefine((proposal, context) => {
+    if (
+      proposal.kind === "clarify" &&
+      proposal.choices &&
+      new Set(proposal.choices.map((choice) => choice.id)).size !==
+        proposal.choices.length
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Choice IDs must be distinct.",
+      });
+  });
+export type NavigationProposal = z.infer<typeof navigationProposalSchema>;
 export const navigationDecisionSchema = z
   .object({
     protocol: z.literal(NAVIGATION_PROTOCOL),
@@ -596,49 +640,9 @@ export const navigationDecisionSchema = z
     stamp: navigationStampSchema,
     native: nativeBrowserReferenceSchema,
     serverTiming: serverTimingSchema.optional(),
-    decision: z.discriminatedUnion("kind", [
-      z
-        .object({
-          kind: z.literal("guide"),
-          reference: navigationControlReferenceSchema,
-          message: label,
-        })
-        .strict(),
-      z
-        .object({
-          kind: z.literal("request-observation"),
-          reason: z.enum(["layout", "controls", "visual", "freshness"]),
-          message: label,
-          regionId: opaqueId.optional(),
-        })
-        .strict(),
-      z
-        .object({
-          kind: z.literal("clarify"),
-          question: label,
-          choices: z
-            .array(z.object({ id: opaqueId, label }).strict())
-            .min(2)
-            .max(3)
-            .optional(),
-        })
-        .strict(),
-      z.object({ kind: z.literal("unsupported"), reason: label }).strict(),
-    ]),
+    decision: navigationProposalSchema,
   })
-  .strict()
-  .superRefine((response, context) => {
-    if (
-      response.decision.kind === "clarify" &&
-      response.decision.choices &&
-      new Set(response.decision.choices.map((choice) => choice.id)).size !==
-        response.decision.choices.length
-    )
-      context.addIssue({
-        code: "custom",
-        message: "Choice IDs must be distinct.",
-      });
-  });
+  .strict();
 
 export type NavigationStamp = z.infer<typeof navigationStampSchema>;
 export type NativeBrowserReference = z.infer<
@@ -651,6 +655,20 @@ export type NavigationViewport = z.infer<typeof navigationViewportSchema>;
 export type NavigationContext = z.infer<typeof navigationContextSchema>;
 export type NavigationObservation = z.infer<typeof navigationObservationSchema>;
 export type NavigationDecision = z.infer<typeof navigationDecisionSchema>;
+
+/** Transient processing metadata, never a capture, saved route or arrival proof. */
+export const navigationServiceStateSchema = z
+  .object({
+    profile: z.literal("fake"),
+    requestId: z.string().uuid(),
+    state: z.enum(["pending", "guiding", "clarify", "unsupported", "error"]),
+    message: label.optional(),
+    code: serviceErrorCodeSchema.optional(),
+  })
+  .strict();
+export type NavigationServiceState = z.infer<
+  typeof navigationServiceStateSchema
+>;
 
 export const navigationValidationContextSchema = z
   .object({

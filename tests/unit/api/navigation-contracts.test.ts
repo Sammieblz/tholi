@@ -31,11 +31,31 @@ import {
   navigationViewportExtent,
   nativeBrowserReferenceSchema,
   navigationProjectionBytes,
+  navigationServiceStateSchema,
   type NavigationDecision,
   type NavigationObservation,
 } from "../../../packages/navigation-core/contracts-navigation";
 
 afterEach(() => vi.unstubAllGlobals());
+
+test("service processing status cannot expose captures, credentials or claim arrival", () => {
+  const state = {
+    profile: "fake",
+    requestId: "20000000-0000-4000-8000-000000000001",
+    state: "pending",
+  };
+  expect(navigationServiceStateSchema.parse(state)).toEqual(state);
+  for (const fields of [
+    { state: "completed" },
+    { profile: "vertex" },
+    { observation: observation() },
+    { token: "PRIVATE_CREDENTIAL" },
+    { message: "x".repeat(161) },
+  ])
+    expect(
+      navigationServiceStateSchema.safeParse({ ...state, ...fields }).success,
+    ).toBe(false);
+});
 
 test("service inference keeps transport identity separate from the original browser stamps and deadline", () => {
   const observed = observation();

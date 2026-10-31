@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  nativeBrowserReferenceSchema,
+  navigationProposalSchema,
+  navigationServiceStateSchema,
+} from "../navigation-core/contracts-navigation";
+import {
   requestSchema,
   clarificationSchema,
   resultSchema,
@@ -21,6 +26,33 @@ import {
   pendingNavigationSchema,
   routeFeedbackSchema,
 } from "../page-model";
+
+/** Ephemeral content binding after the background has joined the full proposal. */
+export const navigationProposalBindingSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    activeTaskId: z.string().uuid(),
+    journeyId: z.string().uuid(),
+    pageRevision: z.number().int().nonnegative().safe(),
+    viewportRevision: z.number().int().nonnegative().safe(),
+    contextRevision: z.number().int().nonnegative().safe(),
+    native: nativeBrowserReferenceSchema.refine(
+      (native) => native.frameId === 0,
+    ),
+  })
+  .strict();
+export const navigationProposalMessageSchema = z
+  .object({
+    type: z.literal("APPLY_NAVIGATION_PROPOSAL"),
+    sessionId: z.string().uuid(),
+    binding: navigationProposalBindingSchema,
+    decision: navigationProposalSchema,
+    profile: z.literal("fake"),
+  })
+  .strict();
+export type NavigationProposalMessage = z.infer<
+  typeof navigationProposalMessageSchema
+>;
 const risk = z.enum([
   "navigation",
   "preference",
@@ -281,6 +313,7 @@ export const messageSchema = z.discriminatedUnion("type", [
 ]);
 
 export const contentMessageSchema = z.discriminatedUnion("type", [
+  navigationProposalMessageSchema,
   z
     .object({
       type: z.literal("ASSIST_STEP"),
@@ -526,6 +559,7 @@ const diagnosticsSchema = z
   .strict();
 export const sessionViewSchema = z
   .object({
+    serviceNavigation: navigationServiceStateSchema.optional(),
     controls: z.array(controlSchema).max(600).optional(),
     page: pageSnapshotSchema.optional(),
     goalPlan: goalPlanSchema.optional(),

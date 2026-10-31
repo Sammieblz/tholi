@@ -40,10 +40,12 @@ export function registerNavigationEvents(context: Context) {
     invalidatePinned(tabId);
   });
   api.tabs.onActivated.addListener(({ windowId }) => {
+    cancelServiceInference();
     if (windowId === context.captureWindowId() && context.visionJob)
       context.cancelVision();
   });
   api.windows.onFocusChanged.addListener((windowId) => {
+    cancelServiceInference();
     const captured = context.captureWindowId();
     if (captured !== undefined && windowId !== captured && context.visionJob)
       context.cancelVision();

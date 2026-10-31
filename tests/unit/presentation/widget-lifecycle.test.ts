@@ -8,6 +8,8 @@ import { dockIntent } from "../../../apps/extension/src/ui/widget/presentation-s
 import { contentMessageSchema } from "../../../packages/route-schema/index";
 import { fixture } from "../../integration/nlp/fixtures";
 import { interpretRequest } from "../../../packages/nlp/interpret";
+import { beginJourney } from "../../../packages/goal-planner/task-journey";
+import { navigationModelObservation } from "../../support/navigation-model-fixture";
 
 const id = "6692779e-ad63-4da7-82cd-a878c1ae23e1";
 function environment(seed: Record<string, unknown> = {}) {
@@ -134,6 +136,441 @@ it("account RPC accepts only the exact privileged panel and never waits for jour
   );
   expect(enqueue).not.toHaveBeenCalled();
 });
+
+it("private service proposals cannot enter through public background messages", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  const enqueue = vi.fn();
+  registerMessages({ session, enqueue } as any);
+  const handle = listen.mock.calls[0][0];
+  for (const source of [
+    sender,
+    { ...sender, url: api.runtime.getURL("sidepanel.html") },
+  ]) {
+    const respond = vi.fn();
+    handle(
+      { type: "APPLY_NAVIGATION_PROPOSAL", sessionId: session.sessionId },
+      source,
+      respond,
+    );
+    expect(respond.mock.calls[0][0].error).toContain("background journey");
+  }
+  expect(enqueue).not.toHaveBeenCalled();
+  expect(api.tabs.sendMessage).not.toHaveBeenCalled();
+});
+
+it("page observation preserves authored recovery messages without exposing browser errors", async () => {
+  const { api, session, sender } = environment();
+  const listen = vi.fn();
+  Object.assign(api.runtime, { onMessage: { addListener: listen } });
+  const frames =
+    await import("../../../apps/extension/src/background/frame-coordinator");
+  const unavailable = "This region is unavailable in the current scan.";
+  vi.spyOn(frames, "observePinnedPage")
+    .mockRejectedValueOnce(new frames.PageObservationError(unavailable))
+    .mockRejectedValueOnce(new Error("browser-private-error-sentinel"));
+  const { registerMessages } =
+    await import("../../../apps/extension/src/background/message-router");
+  registerMessages({
+    session,
+    goalGeneration: 0,
+    live: () => true,
+    activeTab: async () => ({ id: session.tabId, windowId: 4 }),
+    enqueue: async (operation: () => Promise<unknown>) => operation(),
+  } as any);
+  const handle = listen.mock.calls[0][0];
+  for (const error of [
+    unavailable,
+    "The native page observation changed. Observe the page again.",
+  ]) {
+    const respond = vi.fn();
+    handle(
+      { type: "GET_PAGE" },
+      { ...sender, url: api.runtime.getURL("sidepanel.html") },
+      respond,
+    );
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith({ error }));
+  }
+});
+
+it.each([
+  "guide",
+  "unavailable",
+  "mutated",
+  "status-error",
+  "status-invalid",
+  "suggestion",
+  "coalesced",
+  "queued-cancel",
+] as const)(
+  "explicit service enrichment keeps the local queue available and handles %s without a second provider",
+  async (scenario) => {
+    const { api, session, sender } = environment();
+    const page = { ...fixture(), origin: session.origin! };
+    Object.assign(api.tabs, {
+      get: vi.fn(async () => ({
+        id: 7,
+        windowId: 4,
+        url: session.origin + "/",
+      })),
+    });
+    Object.assign(api, { permissions: { contains: vi.fn(async () => true) } });
+    const auth =
+      await import("../../../apps/extension/src/platform/service-auth");
+    const selection = {
+      configured: true,
+      profile: "fake",
+      enabled: true,
+      images: false,
+    };
+    const configuration = vi
+      .spyOn(auth, "serviceAuthCommand")
+      .mockResolvedValue(selection);
+    if (scenario === "status-error")
+      configuration.mockRejectedValue(
+        new Error("synthetic settings unavailable"),
+      );
+    if (scenario === "status-invalid")
+      configuration.mockResolvedValue({ configured: true });
+    const local = await import("../../../apps/extension/src/inference/client");
+    const planning = vi
+      .spyOn(local, "localNlp")
+      .mockImplementation(async (input, _site, suggestions) => {
+        if (suggestions) return [];
+        const request = interpretRequest(input.text);
+        request.id = input.requestId;
+        return {
+          requestId: input.requestId,
+          documentId: input.documentId,
+          revision: input.revision,
+          contextRevision: input.contextRevision,
+          protocolVersion: 2,
+          status: "unsupported",
+          request,
+          reason: "No local match.",
+          activity: {
+            embedded: 0,
+            cacheHits: 0,
+            llmCalls: 0,
+            modelRevision: "test",
+          },
+        };
+      });
+    const backend =
+      await import("../../../apps/extension/src/platform/backend-client");
+    const legacy = vi.spyOn(backend, "backendNlp").mockResolvedValue(undefined);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const native = {
+      ...navigationModelObservation().native,
+      tabId: 7,
+      windowId: 4,
+      documentId: session.documentId!,
+    };
+    const frames =
+      await import("../../../apps/extension/src/background/frame-coordinator");
+    vi.spyOn(frames, "observePinnedPage").mockImplementation(async () => {
+      const view = structuredClone({ ...session.view!, page });
+      return {
+        view,
+        page: structuredClone(page),
+        viewportRevision: 1,
+        start: {
+          epoch: 1,
+          zoom: 1,
+          tabId: 7,
+          windowId: 4,
+          documentId: session.documentId!,
+        },
+        perception: {
+          version: 1,
+          pageRevision: page.revision,
+          native,
+          frames: [
+            {
+              native,
+              viewport: navigationModelObservation().frames[0].viewport,
+              scanId: crypto.randomUUID(),
+              pageRevision: page.revision,
+            },
+          ],
+          regions: [],
+          controlRegions: page.controls.map((control) => ({
+            reference: { ...native, controlId: control.id },
+          })),
+          coverage: [
+            {
+              frameId: 0,
+              indexedControls: page.controls.length,
+              snapshotControls: page.controls.length,
+              regions: 0,
+              controlRegions: 0,
+              hierarchyTruncated: false,
+              partial: false,
+              reasons: [],
+            },
+          ],
+          omissions: {
+            frames: 0,
+            regions: 0,
+            controls: 0,
+            hierarchyTruncated: false,
+            partial: false,
+            reasons: [],
+          },
+        },
+      };
+    });
+    const remote = vi
+      .spyOn(backend, "backendNavigation")
+      .mockImplementation(async (input, _current, beforeSend) => {
+        await beforeSend();
+        await gate;
+        if (scenario === "unavailable")
+          throw new Error("synthetic service unavailable");
+        return {
+          requestId: input.requestId,
+          status: "completed",
+          replayed: false,
+          decision: {
+            protocol: input.observation.protocol,
+            version: input.observation.version,
+            native: input.observation.native,
+            stamp: input.observation.stamp,
+            decision: {
+              kind: "guide",
+              reference: input.observation.controls[0].reference,
+              message: "Use the current control.",
+            },
+          },
+        };
+      });
+    api.tabs.sendMessage.mockImplementation(async (_tab, message) => {
+      if (message.type === "GET_PAGE")
+        return { page: structuredClone(page), view: session.view };
+      if (message.type === "INSTALL_REQUEST") {
+        const request = message.result.request;
+        return {
+          view: {
+            ...session.view!,
+            page,
+            controls: page.controls,
+            request,
+            journey: {
+              ...beginJourney(request.original, session.origin!),
+              requestTaskId: request.tasks[request.active].id,
+            },
+          },
+        };
+      }
+      if (message.type === "APPLY_NAVIGATION_PROPOSAL")
+        return { view: session.view };
+      return { ok: true };
+    });
+    let queue: Promise<unknown> = Promise.resolve();
+    let queueGate: Promise<void> | undefined;
+    let releaseQueue: (() => void) | undefined;
+    let releaseConfiguration: (() => void) | undefined;
+    const context = {
+      goalGeneration: 0,
+      session,
+      enqueue: <T>(operation: () => Promise<T>): Promise<T> => {
+        const next = queue.then(async () => {
+          if (queueGate) await queueGate;
+          return operation();
+        });
+        queue = next.catch(() => {});
+        return next;
+      },
+      live: () => true,
+      inScope: () => true,
+      knownSites: new Map(),
+      knownTasks: new Map(),
+      suspended: [],
+      attemptVision: vi.fn(),
+      acceptView: async (view: any) => {
+        session.view = view;
+      },
+      save: vi.fn(),
+      remember: vi.fn(),
+    };
+    const { createJourneyService } =
+      await import("../../../apps/extension/src/background/journey-service");
+    const service = createJourneyService(context);
+    await service.handleNlp(
+      scenario === "suggestion"
+        ? { type: "NLP_SUGGEST", text: "Find the amber compass", requestId: id }
+        : {
+            type: "SET_GOAL",
+            goal: "Find the amber compass",
+            revision: page.revision,
+            sessionId: id,
+            documentId: session.documentId,
+          },
+      { ...sender, url: api.runtime.getURL("sidepanel.html") },
+    );
+    try {
+      if (
+        scenario === "status-error" ||
+        scenario === "status-invalid" ||
+        scenario === "suggestion"
+      ) {
+        expect(planning).toHaveBeenCalledOnce();
+        expect(legacy).not.toHaveBeenCalled();
+        expect(remote).not.toHaveBeenCalled();
+        expect(context.attemptVision).not.toHaveBeenCalled();
+        if (scenario !== "suggestion")
+          expect(session.view!.request?.original).toBe(
+            "Find the amber compass",
+          );
+        return;
+      }
+      if (scenario === "queued-cancel") {
+        queueGate = new Promise<void>((resolve) => {
+          releaseQueue = resolve;
+        });
+        await vi.waitFor(() =>
+          expect(session.view!.serviceNavigation?.state).toBe("pending"),
+        );
+        auth.cancelServiceInference();
+        await vi.waitFor(() =>
+          expect(session.view!.serviceNavigation).toMatchObject({
+            state: "error",
+            code: "CANCELLED",
+          }),
+        );
+        releaseQueue!();
+        queueGate = undefined;
+        await queue;
+        expect(remote).not.toHaveBeenCalled();
+        expect(planning).toHaveBeenCalledOnce();
+        return;
+      }
+      if (scenario === "coalesced") {
+        const request = session.view!.request!;
+        await Promise.all(
+          [1, 2].map(() =>
+            service.handleNlp(
+              { type: "NLP_REPLAN", sessionId: id, request },
+              { ...sender, url: "https://example.com/" },
+            ),
+          ),
+        );
+        const configurationGate = new Promise<void>((resolve) => {
+          releaseConfiguration = resolve;
+        });
+        configuration.mockImplementation(async () => {
+          await configurationGate;
+          return selection;
+        });
+        await vi.waitFor(() =>
+          expect(configuration.mock.calls.length).toBeGreaterThanOrEqual(6),
+        );
+        releaseConfiguration!();
+      }
+      await vi.waitFor(() => expect(remote).toHaveBeenCalledOnce());
+      expect(await context.enqueue(async () => "queue remains available")).toBe(
+        "queue remains available",
+      );
+      const request = session.view!.request;
+      expect(session.view!.serviceNavigation?.state).toBe("pending");
+      if (scenario === "mutated") {
+        page.revision++;
+        session.view!.page = structuredClone(page);
+      }
+      release();
+      await vi.waitFor(() =>
+        expect(session.view!.serviceNavigation?.state).toBe(
+          scenario === "guide" || scenario === "coalesced"
+            ? "guiding"
+            : "error",
+        ),
+      );
+      expect(session.view!.request!.id).toBe(request!.id);
+      expect(session.view!.verifiedSteps).toBe(3);
+      expect(planning).toHaveBeenCalledTimes(scenario === "coalesced" ? 3 : 1);
+      expect(legacy).not.toHaveBeenCalled();
+      const applied = api.tabs.sendMessage.mock.calls.filter(
+        (call) => call[1].type === "APPLY_NAVIGATION_PROPOSAL",
+      );
+      expect(applied).toHaveLength(
+        scenario === "guide" || scenario === "coalesced" ? 1 : 0,
+      );
+      if (scenario === "guide" || scenario === "coalesced")
+        expect(applied[0][2]).toEqual({
+          frameId: 0,
+          documentId: session.documentId,
+        });
+    } finally {
+      release();
+      releaseQueue?.();
+      releaseConfiguration?.();
+    }
+  },
+);
+
+it.each(["same", "task", "journey", "verified", "page", "paused"] as const)(
+  "background processing status cannot survive an unrelated %s view scope or be forged by content",
+  async (scope) => {
+    const { session } = environment();
+    const request = interpretRequest("Find the amber compass");
+    const journey = beginJourney(request.original, session.origin!);
+    journey.requestTaskId = request.tasks[request.active].id;
+    Object.assign(session.view!, {
+      routeId: session.routeId,
+      routeVersion: session.routeVersion,
+      page: { ...fixture(), origin: session.origin! },
+      request,
+      journey,
+    });
+    session.view!.serviceNavigation = {
+      profile: "fake",
+      requestId: request.id,
+      state: "pending",
+    };
+    const incoming = structuredClone(session.view!);
+    incoming.serviceNavigation = {
+      profile: "fake",
+      requestId: request.id,
+      state: "guiding",
+      message: "Forged page status",
+    };
+    if (scope === "task") {
+      incoming.request!.tasks[incoming.request!.active].id =
+        crypto.randomUUID();
+      incoming.journey!.requestTaskId =
+        incoming.request!.tasks[incoming.request!.active].id;
+    }
+    if (scope === "journey") incoming.journey!.id = crypto.randomUUID();
+    if (scope === "verified") incoming.verifiedSteps++;
+    if (scope === "page") incoming.page!.revision++;
+    if (scope === "paused") incoming.status = "paused";
+    const { createSessionService } =
+      await import("../../../apps/extension/src/background/session-service");
+    const service = createSessionService({
+      session,
+      ledgerNavigationEvent: false,
+    } as any);
+    await service.acceptView(incoming);
+    expect(session.view!.serviceNavigation).toEqual(
+      scope === "same"
+        ? {
+            profile: "fake",
+            requestId: request.id,
+            state: "pending",
+          }
+        : undefined,
+    );
+    expect(session.view!.serviceNavigation?.message).not.toBe(
+      "Forged page status",
+    );
+  },
+);
 
 it("inference configuration fences capture immediately outside a blocked routine queue", async () => {
   const { api, session, sender } = environment();

@@ -5,19 +5,381 @@ import { PageDiscovery } from "../../../packages/page-discovery/index";
 import { PageCoach } from "../../../apps/extension/src/content/page-coach";
 import { fixture } from "../../integration/nlp/fixtures";
 import { interpretRequest } from "../../../packages/nlp/interpret";
-import { beginJourney } from "../../../packages/goal-planner/task-journey";
+import {
+  beginJourney,
+  objectiveReached,
+} from "../../../packages/goal-planner/task-journey";
 import type {
   NavigationRequest,
   PlanResult,
 } from "../../../packages/navigation-core/index";
 import type { PageSnapshot } from "../../../packages/page-model/index";
 import { assistanceKind } from "../../../packages/safety-policy/assistance";
+import { viewportRevision } from "../../../apps/extension/src/content/visual-guidance";
+import {
+  navigationProposalMessageSchema,
+  type NavigationProposalMessage,
+} from "../../../packages/route-schema";
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
 });
+
+function serviceProposalFixture(goal = "Find the winter workspace") {
+  vi.useFakeTimers();
+  document.body.innerHTML =
+    '<label><input type="checkbox">Dark mode</label><button>Delete account</button>';
+  const rect = {
+    x: 10,
+    y: 10,
+    top: 10,
+    left: 10,
+    right: 210,
+    bottom: 50,
+    width: 200,
+    height: 40,
+    toJSON: () => ({}),
+  };
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
+    rect,
+  ] as any);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+    rect,
+  );
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const coach = new PageCoach(vi.fn());
+  coach.start();
+  const request = interpretRequest(goal);
+  const journey = beginJourney(request.original, location.origin);
+  journey.requestTaskId = request.tasks[request.active].id;
+  coach.view.request = request;
+  coach.view.journey = journey;
+  coach.view.goalPlan = {
+    goal: request.original,
+    source: "semantics",
+    status: "unresolved",
+    confidence: 0,
+    issue: "no-match",
+    reason: "No matching local route is known.",
+    steps: [],
+  };
+  const page = coach.getPage()!;
+  const target = page.controls.find((control) => control.kind === "toggle")!;
+  const native = {
+    kind: "browser" as const,
+    version: 1 as const,
+    windowId: 3,
+    tabId: 5,
+    frameId: 0,
+    documentId: "native-root-document",
+  };
+  const message: NavigationProposalMessage = {
+    type: "APPLY_NAVIGATION_PROPOSAL",
+    sessionId: crypto.randomUUID(),
+    profile: "fake",
+    binding: {
+      requestId: request.id,
+      activeTaskId: request.tasks[request.active].id,
+      journeyId: journey.id,
+      pageRevision: page.revision,
+      viewportRevision: viewportRevision(),
+      contextRevision: 0,
+      native,
+    },
+    decision: {
+      kind: "guide",
+      reference: { ...native, controlId: target.id },
+      message: "The model claims the task is complete.",
+    },
+  };
+  return { coach, message, request, journey, target };
+}
+
+it("a development proposal replaces old action controls while retaining the request and objective", () => {
+  const f = serviceProposalFixture();
+  try {
+    Object.assign(f.coach.view.goalPlan!, {
+      action: {
+        kind: "history-back",
+        entryId: "previous-entry",
+        tabId: 9,
+        expectedState: "previous-state",
+      },
+      route: {
+        strategy: "fastest",
+        clicks: 2,
+        minSeconds: 1,
+        maxSeconds: 2,
+        complete: false,
+        basis: "estimated",
+      },
+      recoveryStage: "vision",
+      budgetPending: true,
+    });
+    expect(navigationProposalMessageSchema.safeParse(f.message).success).toBe(
+      true,
+    );
+    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
+    expect(f.coach.view.request).toBe(f.request);
+    expect(f.coach.view.journey).toBe(f.journey);
+    expect(f.coach.view.request?.active).toBe(0);
+    expect(f.coach.view.selectedControlId).toBe(f.target.id);
+    expect(f.coach.view.verifiedSteps).toBe(0);
+    expect(f.coach.view.goalPlan).toMatchObject({
+      source: "semantics",
+      status: "guiding",
+      exploration: true,
+    });
+    expect(f.coach.view.goalPlan?.action).toBeUndefined();
+    expect(f.coach.view.goalPlan?.route).toBeUndefined();
+    expect(f.coach.view.goalPlan?.recoveryStage).toBeUndefined();
+    expect(f.coach.view.goalPlan?.budgetPending).toBeUndefined();
+    expect(f.coach.view.serviceNavigation).toMatchObject({
+      profile: "fake",
+      state: "guiding",
+      requestId: f.request.id,
+    });
+    expect(f.coach.view.instruction).toMatch(/^Development proposal\./);
+    expect(f.coach.view.instruction).not.toContain("task is complete");
+  } finally {
+    f.coach.stop();
+  }
+});
+
+it("a bound development proposal fences an older local replan without resetting recovery budgets", async () => {
+  const f = serviceProposalFixture();
+  let release!: (result: PlanResult) => void;
+  const planner = vi.fn(
+    () =>
+      new Promise<PlanResult>((resolve) => {
+        release = resolve;
+      }),
+  );
+  Object.assign(f.coach, {
+    requestPlanner: planner,
+    recoveryKey: "retained-recovery-budget",
+    recoveryStep: 2,
+  });
+  try {
+    f.coach.recheckJourney();
+    expect(planner).toHaveBeenCalledOnce();
+    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
+    release({
+      requestId: f.request.id,
+      documentId: f.message.binding.native.documentId,
+      revision: f.message.binding.pageRevision,
+      status: "unsupported",
+      request: f.request,
+      reason: "The older local planner found no match.",
+      activity: {
+        embedded: 0,
+        cacheHits: 0,
+        llmCalls: 0,
+        modelRevision: "test",
+      },
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.coach.view.selectedControlId).toBe(f.target.id);
+    expect(f.coach.view.goalPlan?.exploration).toBe(true);
+    expect(f.coach.view.instruction).toMatch(/^Development proposal\./);
+    expect(f.coach).toMatchObject({
+      recoveryKey: "retained-recovery-budget",
+      recoveryStep: 2,
+    });
+    document.querySelector("input")!.click();
+    f.coach.getPage();
+    expect(f.coach.view.verifiedSteps).toBe(1);
+    expect(f.coach.view.request?.id).toBe(f.request.id);
+    expect(f.coach.view.request?.status).toBe("active");
+  } finally {
+    f.coach.stop();
+  }
+});
+
+it.each([
+  "pause",
+  "stop",
+  "request replacement",
+  "active task",
+  "journey",
+  "page revision",
+  "viewport revision",
+  "workflow revision",
+  "consequential review",
+  "unknown target",
+  "consequential target",
+  "wrong native document",
+  "wrong frame",
+])("a %s mismatch cannot bind a late development proposal", (scenario) => {
+  const f = serviceProposalFixture();
+  try {
+    if (scenario === "pause") f.coach.pause();
+    if (scenario === "stop") f.coach.stop();
+    if (scenario === "request replacement")
+      f.coach.view.request!.id = crypto.randomUUID();
+    if (scenario === "active task")
+      f.coach.view.request!.tasks[0].id = crypto.randomUUID();
+    if (scenario === "journey") f.coach.view.journey!.id = crypto.randomUUID();
+    if (scenario === "page revision") f.message.binding.pageRevision++;
+    if (scenario === "viewport revision") f.message.binding.viewportRevision++;
+    if (scenario === "workflow revision") f.message.binding.contextRevision++;
+    if (scenario === "consequential review") {
+      f.coach.view.journey!.workflow = {
+        id: crypto.randomUUID(),
+        requestTaskId: f.request.tasks[0].id,
+        guideId: "github.repository",
+        guideVersion: "1",
+        original: f.request.original,
+        objective: f.request.original,
+        outcome: "review",
+        revision: 0,
+        entities: [],
+        exclusions: [],
+        activeMilestone: 0,
+        verified: [],
+        status: "review",
+        reason: "Review the consequential action on the website.",
+      };
+    }
+    if (f.message.decision.kind !== "guide")
+      throw Error("Expected guide fixture");
+    if (scenario === "unknown target")
+      f.message.decision.reference.controlId = "w0000000000000000-999";
+    if (scenario === "consequential target")
+      f.message.decision.reference.controlId = f.coach.view.page!.controls.find(
+        (control) => control.label === "Delete account",
+      )!.id;
+    if (scenario === "wrong native document")
+      f.message.decision.reference.documentId = "another-native-document";
+    if (scenario === "wrong frame") f.message.decision.reference.frameId = 2;
+    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("error");
+    expect(f.coach.view.selectedControlId).toBeUndefined();
+    expect(f.coach.view.verifiedSteps).toBe(0);
+    expect(f.coach.view.request?.status).not.toBe("completed");
+  } finally {
+    f.coach.stop();
+  }
+});
+
+it("an ignored click and another proposal cannot replace pending outcome verification", () => {
+  const f = serviceProposalFixture();
+  try {
+    f.coach.applyNavigationProposal(f.message);
+    const checkbox = document.querySelector("input")!;
+    checkbox.addEventListener("click", (event) => event.preventDefault());
+    checkbox.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }),
+    );
+    expect(checkbox.checked).toBe(false);
+    expect(f.coach.view.status).toBe("waiting");
+    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("error");
+    expect(f.coach.view.status).toBe("waiting");
+    expect(f.coach.view.verifiedSteps).toBe(0);
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    f.coach.getPage();
+    expect(f.coach.view.verifiedSteps).toBe(1);
+    expect(f.coach.view.request?.id).toBe(f.request.id);
+    expect(f.coach.view.request?.status).toBe("active");
+    expect(f.coach.view.journey?.status).toBe("active");
+    expect(f.coach.view.goalPlan?.status).toBe("unresolved");
+    expect(f.coach.view.liveDiagnostics?.events.at(-1)).toMatchObject({
+      outcome: "verified",
+      evidence: "checked-change",
+    });
+  } finally {
+    f.coach.stop();
+  }
+});
+
+it("an exploratory service step completes only when its explicit desired state is independently observed", () => {
+  const f = serviceProposalFixture("Set Dark mode to on");
+  try {
+    expect(f.journey.objective).toMatchObject({
+      purpose: "Dark mode",
+      value: "on",
+    });
+    expect(objectiveReached(f.journey, f.coach.view.page!)).toBe(false);
+    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
+    expect(f.coach.view.request?.status).toBe("active");
+    document.querySelector("input")!.click();
+    f.coach.getPage();
+    expect(objectiveReached(f.coach.view.journey!, f.coach.view.page!)).toBe(
+      true,
+    );
+    expect(f.coach.view.verifiedSteps).toBe(1);
+    expect(f.coach.view.goalPlan?.status).toBe("completed");
+    expect(f.coach.view.request?.status).toBe("completed");
+    expect(f.coach.view.journey?.status).toBe("completed");
+    expect(f.coach.view.liveDiagnostics?.events.at(-1)).toMatchObject({
+      outcome: "verified",
+      evidence: "checked-change",
+    });
+  } finally {
+    f.coach.stop();
+  }
+});
+
+it.each(["clarify", "unsupported", "request-observation"] as const)(
+  "%s stays bounded guidance without advancing the retained objective",
+  (kind) => {
+    const f = serviceProposalFixture();
+    try {
+      f.message.decision =
+        kind === "clarify"
+          ? { kind, question: "Which workspace do you mean?" }
+          : kind === "unsupported"
+            ? { kind, reason: "No eligible control is available." }
+            : { kind, reason: "visual", message: "Inspect the current page." };
+      expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
+      expect(f.coach.view.request).toBe(f.request);
+      expect(f.coach.view.journey).toBe(f.journey);
+      expect(f.coach.view.selectedControlId).toBeUndefined();
+      expect(f.coach.view.goalPlan?.status).toBe("unresolved");
+      expect(f.coach.view.verifiedSteps).toBe(0);
+      expect(f.coach.view.instruction).toMatch(/[Dd]evelopment service/);
+    } finally {
+      f.coach.stop();
+    }
+  },
+);
+
+it.each([false, true])(
+  "an independently admitted embedded exploration result (%s) cannot finish the whole destination",
+  (verified) => {
+    const f = serviceProposalFixture();
+    vi.stubGlobal("browser", {
+      runtime: { sendMessage: vi.fn().mockResolvedValue({}) },
+    });
+    const control = {
+      ...f.target,
+      reference: {
+        tabId: 5,
+        frameId: 2,
+        documentId: "native-child-document",
+        controlId: f.target.id,
+      },
+    };
+    try {
+      f.coach.view.page!.controls = [control];
+      f.coach.view.goalPlan = {
+        ...f.coach.view.goalPlan!,
+        status: "guiding",
+        exploration: true,
+      };
+      Object.assign(f.coach, { externalControl: control });
+      f.coach.frameInteraction(control.reference, control.signature, verified);
+      expect(f.coach.view.verifiedSteps).toBe(verified ? 1 : 0);
+      expect(f.coach.view.request?.status).toBe("active");
+      expect(f.coach.view.journey?.status).toBe("active");
+      expect(f.coach.view.goalPlan?.status).not.toBe("completed");
+    } finally {
+      f.coach.stop();
+    }
+  },
+);
 it("foreground planning fences old recovery callbacks and ignores an older lease release", async () => {
   vi.useFakeTimers();
   const page = { ...fixture(), controls: [] };
