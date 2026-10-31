@@ -14,7 +14,9 @@ export type RepositoryErrorCode =
   | "CONFLICT"
   | "IDEMPOTENCY_CONFLICT"
   | "RATE_LIMITED"
-  | "INSUFFICIENT_CREDITS";
+  | "INSUFFICIENT_CREDITS"
+  | "QUOTA_EXCEEDED"
+  | "INFERENCE_DISABLED";
 
 export class RepositoryError extends Error {
   constructor(
@@ -106,6 +108,80 @@ export interface CreditBalance {
   spent: bigint;
   reserved: bigint;
   available: bigint;
+  expired: bigint;
+  refunded: bigint;
+}
+
+export interface CreditHistoryEntry {
+  id: string;
+  kind: "grant" | "settlement" | "refund";
+  amount: bigint;
+  createdAt: Date;
+  source: string | null;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  expiresAt: Date | null;
+  policyVersion: string | null;
+}
+
+export interface InferencePolicy {
+  version: string;
+  provider: "fake" | "vertex";
+  model: string;
+  priceRevision: string;
+  maxCredits: bigint;
+  maxProviderUsdMicros: bigint;
+  maxInputUnits: number;
+  maxOutputUnits: number;
+  maxImages: number;
+  maxRetries: number;
+  maxJourneyRequests: number;
+  periodSeconds: number;
+  accountRequests: number;
+  workspaceRequests: number;
+  accountProviderUsdMicros: bigint;
+  workspaceProviderUsdMicros: bigint;
+  journeyProviderUsdMicros: bigint;
+}
+
+export interface InferenceReservation {
+  id: string;
+  requestId: string;
+  claimToken: string;
+  creditReservationId: string;
+  maxCredits: bigint;
+  expiresAt: Date;
+  policy: InferencePolicy;
+}
+
+export interface FinishInferenceInput {
+  id: string;
+  claimToken: string;
+  resolution: "not-sent" | "reported" | "unknown";
+  outcome: "completed" | "failed" | "cancelled" | "uncertain";
+  inputUnits?: bigint;
+  outputUnits?: bigint;
+  providerUsdMicros?: bigint;
+  chargedCredits?: bigint;
+  providerRequestId?: string;
+}
+
+export interface InferenceUsage {
+  id: string;
+  requestId: string;
+  provider: string;
+  model: string;
+  inputUnits: bigint | null;
+  outputUnits: bigint | null;
+  providerUsdMicros: bigint | null;
+  chargedCredits: bigint | null;
+  policyVersion: string | null;
+  createdAt: Date;
+}
+
+export interface RepositoryPage<T> {
+  items: T[];
+  nextCursor?: string;
 }
 
 export interface UsageRecord {

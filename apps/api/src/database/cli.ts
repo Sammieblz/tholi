@@ -5,6 +5,8 @@ import { createDatabasePool } from "./postgres";
 import { PostgresRepositories } from "./repositories";
 import { PostgresJobs } from "./jobs";
 import { REGISTERED_JOB_KINDS } from "../application/identity-maintenance";
+import { INFERENCE_RECONCILIATION_JOB_KIND } from "../application/quotas";
+import { registeredJobKinds } from "../application/job-contracts";
 import { z } from "zod";
 import { readSecurityAudit } from "./audit";
 
@@ -151,7 +153,10 @@ export async function runDatabaseCommand(
             kind: retry[3],
             version: retry[4],
           },
-          REGISTERED_JOB_KINDS,
+          registeredJobKinds([
+            ...REGISTERED_JOB_KINDS,
+            INFERENCE_RECONCILIATION_JOB_KIND,
+          ]),
         ))
       )
         throw new Error("The dead job is unavailable or its revision changed.");

@@ -4,9 +4,11 @@ import { isAbsolute } from "node:path";
 import { parseWorkerConfig, type Environment } from "./config";
 import { createServiceDatabase } from "./adapters/service-database";
 import { PostgresJobs } from "./database/jobs";
+import { PostgresRepositories } from "./database/repositories";
 import { JobWorker } from "./application/job-worker";
 import { JOB_HANDLERS } from "./application/identity-maintenance";
 import { createSupportJobHandlers } from "./application/support-jobs";
+import { createInferenceReconciliationHandler } from "./application/quotas";
 import { PostgresSupport } from "./database/support";
 import { createSmtpMailer } from "./adapters/smtp";
 import { createS3Objects } from "./adapters/s3";
@@ -92,7 +94,11 @@ export async function createWorkerRuntime(
         ...config.options,
         workerId: randomUUID(),
       },
-      [...JOB_HANDLERS, ...external],
+      [
+        ...JOB_HANDLERS,
+        createInferenceReconciliationHandler(new PostgresRepositories(pool)),
+        ...external,
+      ],
       observer,
     );
   } catch (error) {

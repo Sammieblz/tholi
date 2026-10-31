@@ -33,8 +33,10 @@ Configuring the [optional identity profile](service-identity.md) adds the
 service also advertises `tenant-authorization` and `purpose-consent` for its
 registered workspace, membership and consent operations. Its authentication and
 accountData availability flags describe these current account capabilities.
-Cloud-saved data, credit enforcement and billing remain later milestones. By
-default, decisions and billing availability stay false. Explicitly enabling the
+The composed accounting service adds [credit and usage reads](service-credits.md)
+and durable development inference limits. Cloud-saved data, production plans and
+billing remain later milestones. By default, decisions and billing availability
+stay false. Explicitly enabling the
 fake navigation transport adds the registered decision routes described below;
 this does not enable paid inference or grant a cloud plan.
 
@@ -58,8 +60,10 @@ is available. Job capabilities do not enable inference or billing.
 `THOLI_NAVIGATION_TRANSPORT_ENABLED=true` enables the existing service profile's
 fake navigation adapter. Identity and PostgreSQL must be configured, and
 `THOLI_MODEL_PROVIDER` must remain `fake`. The default is disabled, including in
-Compose. Live Vertex inference remains an operator experiment until durable cost
-controls are implemented; this flag cannot select it.
+Compose. Live Vertex inference remains a separately authorized operator experiment;
+the deferred quality comparison and production rollout gates still apply. This
+flag cannot select a live provider. Ordinary fake inference uses the durable
+development policy and requires explicitly provisioned test credits.
 
 The separate loopback-only [operator comparison runtime](testing/perception-comparison.md)
 reuses these authenticated routes with explicit `profile: "operator-evaluation"`

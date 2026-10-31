@@ -5,6 +5,11 @@ fixed Local/structured/multimodal experiment for #43. Its fake calibration check
 and explicit live-data/spending gate remain separate from deterministic PR checks
 and release certification.
 
+The [credit accounting validation record](credit-accounting-validation.md) tracks
+durable reservations, grant expiry, shared budgets and metadata-only reconciliation.
+Its fake and synthetic charged-provider checks remain separate from live billing
+evidence and the deferred perception quality gate.
+
 Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |

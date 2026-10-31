@@ -116,6 +116,56 @@ function expectRetryBudget(backoffMs: number) {
 }
 
 describe("durable job worker", () => {
+  it.each([false, true])(
+    "reports SQL accounting aggregates without inventing a success denominator (unsafe precision: %s)",
+    async (unsafe) => {
+      const metric = vi.fn();
+      const observer = { ...NO_OBSERVABILITY, enabled: true, metric };
+      const f = fixture(0, observer);
+      f.store.inferenceHealth = vi.fn(async () => ({
+        settledProviderUsdMicros: unsafe ? "9007199254740993" : "1234",
+        reservedProviderUsdMicros: "500",
+        uncertainCount: "2",
+        enabled: false,
+      }));
+      await f.worker.start();
+      await until(() =>
+        expect(metric).toHaveBeenCalledWith(
+          "inference.health.available",
+          unsafe ? 0 : 1,
+        ),
+      );
+      await f.worker.close();
+      if (unsafe) {
+        expect(
+          metric.mock.calls.some(
+            ([name]) => name === "inference.settled_usd_micros",
+          ),
+        ).toBe(false);
+      } else {
+        expect(metric).toHaveBeenCalledWith(
+          "inference.settled_usd_micros",
+          1234,
+        );
+        expect(metric).toHaveBeenCalledWith(
+          "inference.reserved_usd_micros",
+          500,
+        );
+        expect(metric).toHaveBeenCalledWith("inference.uncertain_count", 2);
+        expect(metric).toHaveBeenCalledWith("inference.enabled", 0);
+        expect(metric).toHaveBeenCalledWith(
+          "inference.verified_outcomes.available",
+          0,
+        );
+      }
+      expect(
+        metric.mock.calls.some(
+          ([name]) => name === "inference.cost_per_verified_success",
+        ),
+      ).toBe(false);
+    },
+  );
+
   it("keeps persisted originating correlation across real runner retries with fresh attempt spans", async () => {
     const lines: string[] = [];
     const observer = createObservability(

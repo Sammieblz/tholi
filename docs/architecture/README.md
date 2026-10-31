@@ -17,6 +17,7 @@
 - [Gateway, CDN, TLS and optional edge delivery](../development/service-delivery.md)
 - [Portable observability, audit metadata and consented analytics](../development/service-observability.md)
 - [Fake and Vertex model adapters, operator approval and budgets](../development/service-models.md)
+- [Durable quota reservations, credit expiry and accounting reads](../development/service-credits.md)
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 

@@ -65,3 +65,19 @@ groups:
         labels: { severity: warning }
         annotations:
           { summary: "Tholi telemetry was dropped or could not be exported." }
+      - alert: TholiInferenceAccountingUnavailable
+        expr: min(tholi_inference_health_available) == 0
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          {
+            summary: "Tholi accounting aggregates are unavailable; missing spend is not zero.",
+          }
+      - alert: TholiInferenceNeedsReconciliation
+        expr: max(tholi_inference_uncertain_count) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          {
+            summary: "Tholi retains unresolved inference liability for operator review.",
+          }

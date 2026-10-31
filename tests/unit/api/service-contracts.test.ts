@@ -40,6 +40,50 @@ import {
   NAVIGATION_PROTOCOL,
   NATIVE_BROWSER_VERSION,
 } from "../../../packages/navigation-core/contracts-navigation";
+import {
+  chargingPolicySchema,
+  creditUsagePageSchema,
+  fakeDevelopmentChargingPolicy,
+} from "../../../packages/navigation-core/contracts-credits";
+
+test("development credit disclosure cannot advertise live pricing or fabricated outcome costs", () => {
+  expect(chargingPolicySchema.parse(fakeDevelopmentChargingPolicy)).toEqual(
+    fakeDevelopmentChargingPolicy,
+  );
+  for (const change of [
+    { provider: "vertex" },
+    { billingAvailable: true },
+    { maxCredits: "2" },
+    { maxProviderCostUsdMicros: "100" },
+    { inputUsdMicrosPerMillion: "1" },
+    { maxRetries: 1 },
+    { maxImages: 2 },
+  ])
+    expect(
+      chargingPolicySchema.safeParse({
+        ...fakeDevelopmentChargingPolicy,
+        ...change,
+      }).success,
+    ).toBe(false);
+  expect(
+    creditUsagePageSchema.safeParse({
+      items: [],
+      verification: {
+        independentOutcomesAvailable: false,
+        costPerVerifiedSuccessUsdMicros: null,
+      },
+    }).success,
+  ).toBe(true);
+  expect(
+    creditUsagePageSchema.safeParse({
+      items: [],
+      verification: {
+        independentOutcomesAvailable: true,
+        costPerVerifiedSuccessUsdMicros: "0",
+      },
+    }).success,
+  ).toBe(false);
+});
 
 const applications: FastifyInstance[] = [];
 const releaseOperations: (() => void)[] = [];

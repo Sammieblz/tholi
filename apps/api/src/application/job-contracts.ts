@@ -65,6 +65,13 @@ export interface JobStore {
       oldest_age_ms: number;
     }[]
   >;
+  /** Global accounting aggregates only; never raw identities or hold capabilities. */
+  inferenceHealth?(): Promise<{
+    settledProviderUsdMicros: string;
+    reservedProviderUsdMicros: string;
+    uncertainCount: string;
+    enabled: boolean;
+  }>;
   /** Effect, result and database-local completion outbox acknowledgement commit together. */
   runJob(
     lease: JobLease,

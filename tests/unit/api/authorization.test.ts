@@ -43,6 +43,13 @@ import {
 } from "../../../apps/api/src/application/navigation";
 import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-navigation-model";
 import { ModelError } from "../../../apps/api/src/application/model-contracts";
+import { CreditService } from "../../../apps/api/src/application/quotas";
+import {
+  creditHistoryPageSchema,
+  creditUsagePageSchema,
+  fakeDevelopmentChargingPolicy,
+  workspaceCreditsSchema,
+} from "../../../packages/navigation-core/contracts-credits";
 import {
   navigationModelObservation,
   navigationModelValidation,
@@ -107,6 +114,7 @@ async function fixture(
   analyticsEnabled = true,
   navigationModel?: NavigationModel,
   evaluationFactory?: (session: IdentitySession) => NavigationEvaluationPolicy,
+  creditsEnabled = false,
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -177,6 +185,68 @@ async function fixture(
     getMembership: vi.fn(async () => membership),
     listMemberships: vi.fn(async () => [target]),
     listConsents: vi.fn(async () => consents),
+    creditBalance: vi.fn(async () => ({
+      granted: 9007199254740993n,
+      spent: 9007199254740993n,
+      reserved: 0n,
+      available: 0n,
+      expired: 0n,
+      refunded: 0n,
+    })),
+    getInferencePolicy: vi.fn(async () => ({
+      version: fakeDevelopmentChargingPolicy.version,
+      provider: "fake" as const,
+      model: fakeDevelopmentChargingPolicy.model,
+      priceRevision: fakeDevelopmentChargingPolicy.version,
+      maxCredits: 1n,
+      maxProviderUsdMicros: 0n,
+      maxInputUnits: 32768,
+      maxOutputUnits: 2048,
+      maxImages: 1,
+      maxRetries: 0,
+      maxJourneyRequests: 8,
+      periodSeconds: 3600,
+      accountRequests: 20,
+      workspaceRequests: 100,
+      globalRequests: 500,
+      accountProviderUsdMicros: 0n,
+      workspaceProviderUsdMicros: 0n,
+      globalProviderUsdMicros: 0n,
+      journeyProviderUsdMicros: 0n,
+    })),
+    listCreditHistory: vi.fn(
+      async (_query: { after?: string; limit?: number }) => ({
+        items: [
+          {
+            id: randomUUID(),
+            kind: "grant" as const,
+            amount: 9007199254740993n,
+            createdAt: new Date("2026-10-31T00:00:00Z"),
+            source: "fixture",
+            periodStart: null,
+            periodEnd: null,
+            expiresAt: null,
+            policyVersion: null,
+          },
+        ],
+      }),
+    ),
+    listUsage: vi.fn(async (_query: { after?: string; limit?: number }) => ({
+      items: [
+        {
+          id: randomUUID(),
+          requestId: randomUUID(),
+          provider: "fake",
+          model: fakeDevelopmentChargingPolicy.model,
+          inputUnits: null,
+          outputUnits: null,
+          providerUsdMicros: null,
+          chargedCredits: null,
+          policyVersion: fakeDevelopmentChargingPolicy.version,
+          createdAt: new Date("2026-10-31T00:00:00Z"),
+        },
+      ],
+    })),
     beginRequest: vi.fn<NavigationRequestTransaction["beginRequest"]>(
       async (input) => {
         const existing = [...navigationRequests.values()].find(
@@ -443,6 +513,14 @@ async function fixture(
         : {}),
       ...(supportEnabled ? { support } : {}),
       ...(navigation ? { navigation } : {}),
+      ...(creditsEnabled
+        ? {
+            credits: new CreditService(
+              repositories,
+              fakeDevelopmentChargingPolicy,
+            ),
+          }
+        : {}),
     },
   );
   applications.push(app);
@@ -1737,6 +1815,134 @@ describe("account support and private file HTTP contracts", () => {
     );
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
+  });
+});
+
+describe("credit accounting reads", () => {
+  it("keeps exhausted balances and history readable without inference consent and preserves exact quantities", async () => {
+    const f = await fixture(false, false, undefined, undefined, true);
+    const base = `/api/v1/workspaces/${f.workspace.id}`;
+    expect(f.consents).toEqual([]);
+    const response = await f.app.inject({
+      url: base + "/credits",
+      headers: bearer,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(workspaceCreditsSchema.parse(response.json())).toMatchObject({
+      balance: {
+        granted: "9007199254740993",
+        spent: "9007199254740993",
+        available: "0",
+      },
+      policy: { ...fakeDevelopmentChargingPolicy, billingAvailable: false },
+    });
+    expect(response.headers["cache-control"]).toBe("no-store");
+    const history = await f.app.inject({
+      url: base + "/credits/events?limit=1",
+      headers: bearer,
+    });
+    expect(history.statusCode).toBe(200);
+    expect(creditHistoryPageSchema.parse(history.json()).items[0].amount).toBe(
+      "9007199254740993",
+    );
+    expect(f.scoped.listCreditHistory).toHaveBeenCalledWith({ limit: 1 });
+    const usage = await f.app.inject({
+      url: base + "/usage",
+      headers: { cookie: f.cookie, origin: webOrigin },
+    });
+    expect(usage.statusCode).toBe(200);
+    expect(creditUsagePageSchema.parse(usage.json())).toMatchObject({
+      items: [
+        {
+          inputUnits: null,
+          outputUnits: null,
+          providerUsdMicros: null,
+          chargedCredits: null,
+        },
+      ],
+      verification: {
+        independentOutcomesAvailable: false,
+        costPerVerifiedSuccessUsdMicros: null,
+      },
+    });
+    expect(
+      (await f.app.inject({ url: "/api/v1/account", headers: bearer }))
+        .statusCode,
+    ).toBe(200);
+    for (const path of ["/credits", "/credits/events", "/usage"]) {
+      safeError(
+        await f.app.inject({ url: base + path + "?limit=101" }),
+        401,
+        "UNAUTHENTICATED",
+      );
+      safeError(
+        await f.app.inject({
+          url: base.replace(f.workspace.id, randomUUID()) + path,
+          headers: bearer,
+        }),
+        403,
+        "FORBIDDEN",
+      );
+    }
+    safeError(
+      await f.app.inject({ url: base + "/usage?limit=101", headers: bearer }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        url: base + "/credits/events?accountId=" + f.account.id,
+        headers: bearer,
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        url: base + "/credits",
+        headers: { cookie: f.cookie, origin: "https://help.tholi.io" },
+      }),
+      403,
+      "FORBIDDEN",
+    );
+  });
+
+  it("advertises only composed read operations and exposes no client financial mutation", async () => {
+    const f = await fixture(false, false, undefined, undefined, true);
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json();
+    expect(capabilities.capabilities).toContain("credit-accounting");
+    expect(capabilities.availability.billing).toBe(false);
+    const spec = (await f.app.inject({ url: "/api/v1/openapi.json" })).json();
+    for (const path of ["/credits", "/credits/events", "/usage"]) {
+      const route = spec.paths["/api/v1/workspaces/{workspaceId}" + path];
+      expect(Object.keys(route)).toEqual(["get"]);
+      expect(route.get.security).toEqual([
+        { NativeBearer: [] },
+        { WebSession: [] },
+      ]);
+      expect(
+        spec["x-tholi-route-inventory"].find((entry: { path: string }) =>
+          entry.path.endsWith(path),
+        ).status,
+      ).toBe("implemented");
+    }
+    const base = `/api/v1/workspaces/${f.workspace.id}/credits`;
+    expect(
+      (
+        await f.app.inject({
+          method: "POST",
+          url: base,
+          headers: bearer,
+          payload: { amount: "100" },
+        })
+      ).statusCode,
+    ).toBe(404);
+    const uncomposed = await fixture(false, false);
+    expect(
+      (await uncomposed.app.inject({ url: base, headers: bearer })).statusCode,
+    ).toBe(404);
   });
 });
 

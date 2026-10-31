@@ -105,11 +105,20 @@ export function authorizationRepositoryFailure(error: unknown): never {
         "RATE_LIMITED",
         "The request allowance has been reached. Try again later.",
       );
-    if (error.code === "INSUFFICIENT_CREDITS")
+    if (
+      error.code === "INSUFFICIENT_CREDITS" ||
+      error.code === "QUOTA_EXCEEDED"
+    )
       throw new AuthorizationError(
         429,
         "QUOTA_EXCEEDED",
         "The cloud allowance has been reached.",
+      );
+    if (error.code === "INFERENCE_DISABLED")
+      throw new AuthorizationError(
+        503,
+        "UNAVAILABLE",
+        "Cloud inference is disabled.",
       );
   }
   throw error;

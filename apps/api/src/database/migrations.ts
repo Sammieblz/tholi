@@ -7,6 +7,7 @@ import { tenantAuthorization } from "./migrations/004-tenant-authorization";
 import { durableJobs } from "./migrations/005-durable-jobs";
 import { mailStorageSupport } from "./migrations/006-mail-storage-support";
 import { portableObservability } from "./migrations/007-observability";
+import { inferenceAccounting } from "./migrations/008-inference-accounting";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -37,6 +38,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(5, "durable-jobs", durableJobs),
   migration(6, "mail-storage-support", mailStorageSupport),
   migration(7, "portable-observability", portableObservability),
+  migration(8, "inference-accounting", inferenceAccounting),
 ]);
 
 export interface MigrationOptions {
@@ -105,6 +107,15 @@ async function grantWorker(client: PoolClient, role: string) {
     await client.query(
       `GRANT EXECUTE ON FUNCTION tholi.prune_observability(integer),tholi.job_health(),tholi.valid_job_correlation(jsonb) TO ${identifier}`,
     );
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.reconcile_inference(uuid,uuid,uuid,uuid)') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.schedule_inference_reconciliation(integer,integer),
+      tholi.reconcile_inference(uuid,uuid,uuid,uuid),tholi.inference_health() TO ${identifier}`);
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {
@@ -343,6 +354,15 @@ async function grantRuntime(client: PoolClient, role: string) {
     await client.query(
       `GRANT EXECUTE ON FUNCTION tholi.valid_product_event(jsonb),tholi.valid_job_correlation(jsonb),tholi.lock_product_analytics_consent() TO ${identifier}`,
     );
+  }
+  if (existing.has("inference_reservations")) {
+    await client.query(`GRANT SELECT ON tholi.credit_allocations,tholi.credit_refunds,
+      tholi.inference_reservations,tholi.inference_policy_versions,tholi.inference_control TO ${identifier}`);
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.allocate_credit_lots(uuid,uuid),
+      tholi.reserve_inference(uuid,uuid,text,timestamptz),tholi.mark_inference_dispatched(uuid,uuid),
+      tholi.record_inference_outcome(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text),
+      tholi.finish_inference(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text),
+      tholi.inference_usage(uuid,uuid),tholi.refund_inference(uuid,uuid,text,bigint) TO ${identifier}`);
   }
 }
 

@@ -15,6 +15,7 @@ import { runAuthorizationChecks } from "./authorization-checks";
 import { runJobChecks } from "./job-checks";
 import { runSupportChecks } from "./support-checks";
 import { runObservabilityChecks } from "./observability-checks";
+import { runQuotaChecks } from "./quotas-checks";
 import {
   beginJourney,
   saveTask,
@@ -97,10 +98,202 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
             "INSERT INTO tholi.sessions (id,account_id,token_hash,expires_at) VALUES ($1,$2,$3,$4)",
             [foundationSessionId, accountId, Buffer.alloc(32, 1), future()],
           );
+          // Exercise the actual pre-allocation ledger during the v7 to v8
+          // upgrade, including a hold on a grant that has since expired.
+          await migrateDatabase(client, {
+            target: 7,
+            runtimeRole: "tholi_runtime",
+            workerRole,
+          });
+          const historicalCreditScope = {
+            accountId: randomUUID(),
+            workspaceId: randomUUID(),
+          };
+          await client.query("SELECT tholi.provision_personal_account($1,$2)", [
+            historicalCreditScope.accountId,
+            historicalCreditScope.workspaceId,
+          ]);
+          await client.query(
+            `INSERT INTO tholi.credit_grants
+             (workspace_id,id,idempotency_key,amount,created_at,expires_at)
+             VALUES ($1,$2,'historical-expired-period',100,
+               clock_timestamp()-interval '4 hours',
+               clock_timestamp()-interval '1 hour'),
+             ($1,$3,'historical-current-period',100,clock_timestamp(),NULL)`,
+            [historicalCreditScope.workspaceId, randomUUID(), randomUUID()],
+          );
+          for (const [status, amount] of [
+            ["settled", 60],
+            ["uncertain", 20],
+          ] as const) {
+            const requestId = randomUUID(),
+              reservationId = randomUUID();
+            await client.query(
+              `INSERT INTO tholi.requests
+               (workspace_id,id,account_id,operation,idempotency_key,payload_hash,created_at)
+               VALUES ($1,$2,$3,'navigation',$4,decode($5,'hex'),
+                 clock_timestamp()-interval '3 hours')`,
+              [
+                historicalCreditScope.workspaceId,
+                requestId,
+                historicalCreditScope.accountId,
+                `historical-${status}`,
+                "a".repeat(64),
+              ],
+            );
+            await client.query(
+              `INSERT INTO tholi.credit_reservations
+               (workspace_id,id,request_id,amount,status,created_at,expires_at)
+               VALUES ($1,$2,$3,$4,$5,clock_timestamp()-interval '3 hours',
+                 clock_timestamp()+interval '1 hour')`,
+              [
+                historicalCreditScope.workspaceId,
+                reservationId,
+                requestId,
+                amount,
+                status,
+              ],
+            );
+            if (status === "settled")
+              await client.query(
+                `INSERT INTO tholi.credit_settlements
+                 (workspace_id,id,reservation_id,amount,created_at)
+                 VALUES ($1,$2,$3,$4,clock_timestamp()-interval '2 hours')`,
+                [
+                  historicalCreditScope.workspaceId,
+                  randomUUID(),
+                  reservationId,
+                  amount,
+                ],
+              );
+          }
+          const overlappingScopes = [];
+          for (const previousStatus of ["settled", "released"] as const) {
+            const scope = {
+              accountId: randomUUID(),
+              workspaceId: randomUUID(),
+            };
+            overlappingScopes.push({ scope, previousStatus });
+            await client.query(
+              "SELECT tholi.provision_personal_account($1,$2)",
+              [scope.accountId, scope.workspaceId],
+            );
+            await client.query(
+              `INSERT INTO tholi.credit_grants
+               (workspace_id,id,idempotency_key,amount,created_at,expires_at)
+               VALUES ($1,$2,'overlap-first-lot',100,
+                 clock_timestamp()-interval '4 hours',
+                 clock_timestamp()-interval '1 hour'),
+               ($1,$3,'overlap-second-lot',100,
+                 clock_timestamp()-interval '3 hours',NULL)`,
+              [scope.workspaceId, randomUUID(), randomUUID()],
+            );
+            // The first lot was fully held when the second hold began. Its
+            // later zero settlement/release cannot retroactively fund that hold.
+            for (const [
+              key,
+              status,
+              reservedMinutesAgo,
+              finishedMinutesAgo,
+              spent,
+            ] of [
+              ["earlier", previousStatus, 210, 120, 0],
+              ["later", "settled", 165, 150, 100],
+            ] as const) {
+              const requestId = randomUUID(),
+                reservationId = randomUUID();
+              await client.query(
+                `INSERT INTO tholi.requests
+                 (workspace_id,id,account_id,operation,idempotency_key,payload_hash,created_at)
+                 VALUES ($1,$2,$3,'navigation',$4,decode($5,'hex'),
+                   clock_timestamp()-$6::integer*interval '1 minute')`,
+                [
+                  scope.workspaceId,
+                  requestId,
+                  scope.accountId,
+                  key,
+                  "a".repeat(64),
+                  reservedMinutesAgo,
+                ],
+              );
+              await client.query(
+                `INSERT INTO tholi.credit_reservations
+                 (workspace_id,id,request_id,amount,status,created_at,updated_at,expires_at)
+                 VALUES ($1,$2,$3,100,$4,
+                   clock_timestamp()-$5::integer*interval '1 minute',
+                   clock_timestamp()-$6::integer*interval '1 minute',
+                   clock_timestamp()+interval '1 hour')`,
+                [
+                  scope.workspaceId,
+                  reservationId,
+                  requestId,
+                  status,
+                  reservedMinutesAgo,
+                  finishedMinutesAgo,
+                ],
+              );
+              if (status === "settled")
+                await client.query(
+                  `INSERT INTO tholi.credit_settlements
+                   (workspace_id,id,reservation_id,amount,created_at)
+                   VALUES ($1,$2,$3,$4,
+                     clock_timestamp()-$5::integer*interval '1 minute')`,
+                  [
+                    scope.workspaceId,
+                    randomUUID(),
+                    reservationId,
+                    spent,
+                    finishedMinutesAgo,
+                  ],
+                );
+            }
+          }
           await migrateDatabase(client, {
             runtimeRole: "tholi_runtime",
             workerRole,
           });
+          assert.deepEqual(
+            (
+              await client.query(
+                `SELECT r.status,r.amount::text,
+                   COALESCE(s.amount,0)::text AS settled
+                 FROM tholi.credit_reservations r
+                 LEFT JOIN tholi.credit_settlements s
+                   ON s.workspace_id=r.workspace_id AND s.reservation_id=r.id
+                 WHERE r.workspace_id=$1 ORDER BY r.status`,
+                [historicalCreditScope.workspaceId],
+              )
+            ).rows,
+            [
+              { status: "settled", amount: "60", settled: "60" },
+              { status: "uncertain", amount: "20", settled: "0" },
+            ],
+            "The upgrade retains settled history and unknown liabilities.",
+          );
+          assert.equal(
+            (
+              await repositories.transaction(historicalCreditScope, (scoped) =>
+                scoped.creditBalance(),
+              )
+            ).available,
+            100n,
+            "Pre-upgrade spending and uncertainty remain allocated to their original grant period.",
+          );
+          for (const { scope, previousStatus } of overlappingScopes)
+            assert.deepEqual(
+              await repositories.transaction(scope, (scoped) =>
+                scoped.creditBalance(),
+              ),
+              {
+                granted: 200n,
+                spent: 100n,
+                reserved: 0n,
+                available: 0n,
+                expired: 100n,
+                refunded: 0n,
+              },
+              `A later ${previousStatus} hold cannot free an earlier held lot retroactively.`,
+            );
           assert.equal(
             (
               await client.query(
@@ -838,7 +1031,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 0n, reserved: 80n, available: 20n },
+          {
+            granted: 100n,
+            spent: 0n,
+            reserved: 80n,
+            available: 20n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         const settlementCommand = { reservationId: held.id, amount: 50n };
         const settlements = await Promise.all(
@@ -860,7 +1060,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 50n, reserved: 0n, available: 50n },
+          {
+            granted: 100n,
+            spent: 50n,
+            reserved: 0n,
+            available: 50n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         const request = await repositories.transaction(scope, (scoped) =>
           scoped.beginRequest({
@@ -894,7 +1101,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 50n, reserved: 0n, available: 50n },
+          {
+            granted: 100n,
+            spent: 50n,
+            reserved: 0n,
+            available: 50n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         await assert.rejects(
           () =>
@@ -937,7 +1151,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 50n, reserved: 30n, available: 20n },
+          {
+            granted: 100n,
+            spent: 50n,
+            reserved: 30n,
+            available: 20n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         await assert.rejects(
           () =>
@@ -961,7 +1182,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 70n, reserved: 0n, available: 30n },
+          {
+            granted: 100n,
+            spent: 70n,
+            reserved: 0n,
+            available: 30n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         const exactScope = await provision();
         const exactAmount = 9007199254740993n;
@@ -1014,7 +1242,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
           await repositories.transaction(mutableScope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 1n, spent: 0n, reserved: 0n, available: 1n },
+          {
+            granted: 1n,
+            spent: 0n,
+            reserved: 0n,
+            available: 1n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
         assert.equal(
           (
@@ -1386,6 +1621,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
       },
     );
 
+    await runQuotaChecks(runtime, migration, record, worker);
     await runIdentityChecks(runtime, migration, record);
     await runAuthorizationChecks(runtime, migration, record);
     if (worker) {
