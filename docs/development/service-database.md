@@ -5,8 +5,9 @@ foundation of the [portable backend decision](../plans/gemini-cloud-and-enterpri
 The same migrations and repositories run locally, on a VM or against hosted
 PostgreSQL. They never read, migrate or upload the private SQLite knowledge.
 The optional [identity profile](service-identity.md) uses these repositories for
-account authentication and session security. Navigation, saved-data and billing
-HTTP endpoints remain planned.
+account authentication and session security. Opt-in fake navigation and
+[credit/usage reads](service-credits.md) share these repositories. Cloud-saved-data
+and billing HTTP endpoints remain later milestones.
 
 ## Local setup
 
@@ -76,13 +77,13 @@ retaining a tombstone; an ordinary update cannot resurrect it. Sync uses bounded
 keyset pagination over monotonic workspace revisions. Saved-data export/delete
 persistence has no credit-balance gate.
 
-Credit quantities are PostgreSQL `bigint` and JavaScript `bigint`. Workspace-first
-locking and unique keys prevent concurrent overspending and duplicate settlement.
-The balance foundation conservatively subtracts historical settlements from
-unexpired grants and retains active/uncertain holds after their deadlines.
-Grant allocation, expiry reconciliation, refunds, pricing and provider uncertainty
-policy remain [#44](https://github.com/Sammieblz/tholi/issues/44). This is not a
-completed billing system. [Durable job claiming and execution](service-jobs.md)
+Credit quantities are PostgreSQL `bigint` and JavaScript `bigint`. The
+[accounting owner](service-credits.md) allocates holds to original grant lots and
+uses fixed-order locks for shared account, workspace and global admission.
+Historical spending on an expired grant does not consume a later grant again;
+uncertain allocations retain liability. Versioned fixture policy, refunds and
+metadata-only reconciliation do not make production billing available.
+[Durable job claiming and execution](service-jobs.md)
 use the same scoped repository owner with worker-only dispatch permissions.
 
 Row-level policies and role-specific application authorization extend the same

@@ -34,6 +34,12 @@ import {
   type CreditGrant,
   type CreditReservation,
   type CreditSettlement,
+  type CreditHistoryEntry,
+  type FinishInferenceInput,
+  type InferencePolicy,
+  type InferenceReservation,
+  type InferenceUsage,
+  type RepositoryPage,
   type Entitlement,
   type Job,
   type Membership,
@@ -130,9 +136,207 @@ function reservation(row: ReservationRow): CreditReservation {
   return { ...row, amount: BigInt(row.amount) };
 }
 
+function accountingError(error: unknown): never {
+  const code = (error as { code?: string }).code;
+  const codes: Partial<Record<string, RepositoryError["code"]>> = {
+    P4401: "QUOTA_EXCEEDED",
+    P4402: "INSUFFICIENT_CREDITS",
+    P4403: "CONFLICT",
+    P4404: "IDEMPOTENCY_CONFLICT",
+    P4405: "INFERENCE_DISABLED",
+    "42501": "FORBIDDEN",
+    "22023": "INVALID_INPUT",
+  };
+  const mapped = code ? codes[code] : undefined;
+  if (mapped)
+    throw new RepositoryError(
+      mapped,
+      "The accounting operation is unavailable or exceeds its original policy.",
+    );
+  throw error;
+}
+
+function historyCursor(value?: string): [string | null, string | null] {
+  if (!value) return [null, null];
+  try {
+    if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) throw Error();
+    const parsed: unknown = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    );
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length !== 2 ||
+      typeof parsed[0] !== "string" ||
+      typeof parsed[1] !== "string" ||
+      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3,6}Z$/.test(parsed[0]) ||
+      !Number.isFinite(Date.parse(parsed[0])) ||
+      !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(parsed[1])
+    )
+      throw Error();
+    return [parsed[0], parsed[1]];
+  } catch {
+    return invalid("Use the opaque history cursor returned by the service.");
+  }
+}
+function repositoryPage<T extends { id: string; createdAt: Date }>(
+  rows: T[],
+  size: number,
+  cursorTime?: string,
+): RepositoryPage<T> {
+  const more = rows.length > size,
+    items = rows.slice(0, size),
+    last = items.at(-1);
+  return {
+    items,
+    ...(more && last
+      ? {
+          nextCursor: Buffer.from(
+            JSON.stringify([
+              cursorTime ?? last.createdAt.toISOString(),
+              last.id,
+            ]),
+          ).toString("base64url"),
+        }
+      : {}),
+  };
+}
+type InferenceUsageRow = Omit<
+  InferenceUsage,
+  "inputUnits" | "outputUnits" | "providerUsdMicros" | "chargedCredits"
+> & {
+  inputUnits: string | null;
+  outputUnits: string | null;
+  providerUsdMicros: string | null;
+  chargedCredits: string | null;
+};
+type InferencePolicyRow = Int8Row<
+  InferencePolicy,
+  | "maxCredits"
+  | "maxProviderUsdMicros"
+  | "accountProviderUsdMicros"
+  | "workspaceProviderUsdMicros"
+  | "journeyProviderUsdMicros"
+>;
+const inferenceUsage = (row: InferenceUsageRow): InferenceUsage => ({
+  ...row,
+  inputUnits: row.inputUnits === null ? null : BigInt(row.inputUnits),
+  outputUnits: row.outputUnits === null ? null : BigInt(row.outputUnits),
+  providerUsdMicros:
+    row.providerUsdMicros === null ? null : BigInt(row.providerUsdMicros),
+  chargedCredits:
+    row.chargedCredits === null ? null : BigInt(row.chargedCredits),
+});
+
 /** Pool lifetime belongs to the runtime. Callbacks contain database work only. */
 export class PostgresRepositories {
   constructor(private readonly pool: Pool) {}
+
+  /** A persisted receipt makes a known outcome recoverable after an accounting outage. */
+  async finishInference(raw: FinishInferenceInput): Promise<InferenceUsage> {
+    const input = snapshot(raw);
+    const values = [
+      input.id,
+      input.claimToken,
+      input.resolution,
+      input.outcome,
+      input.inputUnits === undefined ? null : integer(input.inputUnits),
+      input.outputUnits === undefined ? null : integer(input.outputUnits),
+      input.providerUsdMicros === undefined
+        ? null
+        : integer(input.providerUsdMicros),
+      input.chargedCredits === undefined ? null : integer(input.chargedCredits),
+      input.providerRequestId === undefined
+        ? null
+        : text(input.providerRequestId, 200),
+    ];
+    try {
+      if (input.resolution !== "unknown")
+        await withTransaction(this.pool, (client) =>
+          client.query(
+            "SELECT tholi.record_inference_outcome($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+            values,
+          ),
+        );
+      return await withTransaction(this.pool, async (client) => {
+        await client.query(
+          "SELECT tholi.finish_inference($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+          values,
+        );
+        const result = await client.query<InferenceUsageRow>(
+          "SELECT * FROM tholi.inference_usage($1,$2)",
+          [input.id, input.claimToken],
+        );
+        if (!result.rows[0]) conflict();
+        return inferenceUsage(result.rows[0]);
+      });
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
+
+  async refundInference(raw: {
+    id: string;
+    claimToken: string;
+    idempotencyKey: string;
+    amount: bigint;
+  }) {
+    const input = snapshot(raw);
+    try {
+      const result = await withTransaction(this.pool, (client) =>
+        client.query<{ id: string; settlementId: string; amount: string }>(
+          'SELECT id,settlement_id AS "settlementId",amount FROM tholi.refund_inference($1,$2,$3,$4)',
+          [
+            input.id,
+            input.claimToken,
+            text(input.idempotencyKey, 200),
+            integer(input.amount, 1n),
+          ],
+        ),
+      );
+      return { ...result.rows[0], amount: BigInt(result.rows[0].amount) };
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
+
+  async scheduleInferenceReconciliation(raw: {
+    limit: number;
+    intervalMs: number;
+  }): Promise<number> {
+    const input = snapshot(raw);
+    if (
+      !Number.isInteger(input.intervalMs) ||
+      input.intervalMs < 1000 ||
+      input.intervalMs > 86400000
+    )
+      invalid("Use a bounded reconciliation interval.");
+    return (
+      await this.pool.query<{ scheduled: number }>(
+        "SELECT tholi.schedule_inference_reconciliation($1,$2) AS scheduled",
+        [limit(input.limit), input.intervalMs],
+      )
+    ).rows[0].scheduled;
+  }
+
+  async reconcileInference(raw: JobLease): Promise<JobResult> {
+    const lease = snapshot(raw);
+    if (lease.kind !== "inference.reconcile" || lease.version !== 1)
+      invalid("Use the registered accounting handler.");
+    try {
+      return await withTransaction(
+        this.pool,
+        async (client) =>
+          (
+            await client.query<JobResult>(
+              "SELECT * FROM tholi.reconcile_inference($1,$2,$3,$4)",
+              [lease.workspaceId, lease.accountId, lease.id, lease.leaseToken],
+            )
+          ).rows[0],
+      );
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
 
   /** Internal provisioning only; authentication and linking are implemented in #30. */
   async provisionAccount(
@@ -711,16 +915,25 @@ class ScopedRepositories {
       granted: string;
       spent: string;
       reserved: string;
+      expired: string;
+      refunded: string;
     }>("SELECT * FROM tholi.workspace_credit_totals($1)", [
       this.scope.workspaceId,
     ]);
-    const { granted, spent, reserved } = result.rows[0];
-    const available = BigInt(granted) - BigInt(spent) - BigInt(reserved);
+    const { granted, spent, reserved, expired, refunded } = result.rows[0];
+    const available =
+      BigInt(granted) -
+      BigInt(spent) -
+      BigInt(reserved) -
+      BigInt(expired) +
+      BigInt(refunded);
     return {
       granted: BigInt(granted),
       spent: BigInt(spent),
       reserved: BigInt(reserved),
       available: available > 0n ? available : 0n,
+      expired: BigInt(expired),
+      refunded: BigInt(refunded),
     };
   }
 
@@ -729,24 +942,57 @@ class ScopedRepositories {
     idempotencyKey: string;
     amount: bigint;
     expiresAt?: Date;
+    source?: string;
+    periodStart?: Date;
+    periodEnd?: Date;
+    policyVersion?: string;
   }): Promise<CreditGrant> {
     input = snapshot(input);
     const amount = integer(input.amount, 1n);
     const expiresAt = input.expiresAt ? timestamp(input.expiresAt) : null;
+    const source = text(input.source ?? "development", 100),
+      periodStart = input.periodStart ? timestamp(input.periodStart) : null,
+      periodEnd = input.periodEnd ? timestamp(input.periodEnd) : null,
+      policyVersion = input.policyVersion
+        ? text(input.policyVersion, 100)
+        : null;
+    if (
+      (periodStart === null) !== (periodEnd === null) ||
+      (periodStart && periodEnd && periodEnd <= periodStart)
+    )
+      invalid("Use a complete, increasing grant period.");
+    if (
+      ["free", "subscription"].includes(source) &&
+      (!periodStart || !periodEnd || !policyVersion)
+    )
+      invalid(
+        "Recurring grants require their original period and policy version.",
+      );
     await this.lockWorkspace(true);
     await this.client.query(
-      `INSERT INTO tholi.credit_grants (workspace_id, id, idempotency_key, amount, expires_at)
-       VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+      `INSERT INTO tholi.credit_grants (workspace_id, id, idempotency_key, amount, expires_at,source,period_start,period_end,policy_version)
+       VALUES ($1, $2, $3, $4, $5,$6,$7,$8,$9) ON CONFLICT DO NOTHING`,
       [
         this.scope.workspaceId,
         input.id || randomUUID(),
         text(input.idempotencyKey, 200),
         amount,
         expiresAt,
+        source,
+        periodStart,
+        periodEnd,
+        policyVersion,
       ],
     );
-    const result = await this.client.query<Int8Row<CreditGrant, "amount">>(
-      `SELECT id, amount::text, expires_at AS "expiresAt" FROM tholi.credit_grants
+    const result = await this.client.query<
+      Int8Row<CreditGrant, "amount"> & {
+        source: string;
+        periodStart: Date | null;
+        periodEnd: Date | null;
+        policyVersion: string | null;
+      }
+    >(
+      `SELECT id, amount::text, expires_at AS "expiresAt",source,period_start AS "periodStart",period_end AS "periodEnd",policy_version AS "policyVersion" FROM tholi.credit_grants
        WHERE workspace_id = $1 AND idempotency_key = $2`,
       [this.scope.workspaceId, input.idempotencyKey],
     );
@@ -754,10 +1000,14 @@ class ScopedRepositories {
     if (!row) conflict();
     if (
       row.amount !== amount ||
-      (row.expiresAt?.toISOString() || null) !== expiresAt
+      (row.expiresAt?.toISOString() || null) !== expiresAt ||
+      row.source !== source ||
+      (row.periodStart?.toISOString() ?? null) !== periodStart ||
+      (row.periodEnd?.toISOString() ?? null) !== periodEnd ||
+      row.policyVersion !== policyVersion
     )
       replayConflict();
-    return { ...row, amount: BigInt(row.amount) };
+    return { id: row.id, expiresAt: row.expiresAt, amount: BigInt(row.amount) };
   }
 
   private async ownedRequest(id: string) {
@@ -810,7 +1060,149 @@ class ScopedRepositories {
         expiresAt,
       ],
     );
+    try {
+      await this.client.query("SELECT tholi.allocate_credit_lots($1,$2)", [
+        this.scope.workspaceId,
+        result.rows[0].id,
+      ]);
+    } catch (error) {
+      return accountingError(error);
+    }
     return reservation(result.rows[0]);
+  }
+
+  async getInferencePolicy(
+    version = "fake-development-v1",
+  ): Promise<InferencePolicy | undefined> {
+    const found = await this.client.query<InferencePolicyRow>(
+      `SELECT version,provider,model,price_revision AS "priceRevision",
+      max_credits::text AS "maxCredits",max_provider_usd_micros::text AS "maxProviderUsdMicros",
+      max_input_units AS "maxInputUnits",max_output_units AS "maxOutputUnits",max_images AS "maxImages",
+      max_retries AS "maxRetries",max_journey_requests AS "maxJourneyRequests",period_seconds AS "periodSeconds",
+      account_requests AS "accountRequests",workspace_requests AS "workspaceRequests",
+      account_provider_usd_micros::text AS "accountProviderUsdMicros",workspace_provider_usd_micros::text AS "workspaceProviderUsdMicros",
+      journey_provider_usd_micros::text AS "journeyProviderUsdMicros"
+      FROM tholi.inference_policy_versions WHERE version=$1`,
+      [text(version, 100)],
+    );
+    const row = found.rows[0];
+    if (!row) return;
+    return {
+      ...row,
+      maxCredits: BigInt(row.maxCredits),
+      maxProviderUsdMicros: BigInt(row.maxProviderUsdMicros),
+      accountProviderUsdMicros: BigInt(row.accountProviderUsdMicros),
+      workspaceProviderUsdMicros: BigInt(row.workspaceProviderUsdMicros),
+      journeyProviderUsdMicros: BigInt(row.journeyProviderUsdMicros),
+    };
+  }
+
+  async reserveInference(raw: {
+    requestId: string;
+    journeyId: string;
+    policyVersion: string;
+    expiresAt: Date;
+  }): Promise<InferenceReservation> {
+    const input = snapshot(raw),
+      policy = await this.getInferencePolicy(input.policyVersion);
+    if (!policy) conflict();
+    try {
+      const result = await this.client.query<{
+        id: string;
+        requestId: string;
+        claimToken: string;
+        creditReservationId: string;
+        maxCredits: string;
+        expiresAt: Date;
+      }>(
+        `SELECT id,request_id AS "requestId",claim_token AS "claimToken",credit_reservation_id AS "creditReservationId",
+        max_credits AS "maxCredits",expires_at AS "expiresAt" FROM tholi.reserve_inference($1,$2,$3,$4)`,
+        [
+          input.requestId,
+          input.journeyId,
+          text(input.policyVersion, 100),
+          timestamp(input.expiresAt),
+        ],
+      );
+      const row = result.rows[0];
+      if (!row) conflict();
+      return { ...row, maxCredits: BigInt(row.maxCredits), policy };
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
+
+  async markInferenceDispatched(raw: {
+    id: string;
+    claimToken: string;
+  }): Promise<void> {
+    const input = snapshot(raw);
+    try {
+      await this.client.query("SELECT tholi.mark_inference_dispatched($1,$2)", [
+        input.id,
+        input.claimToken,
+      ]);
+    } catch (error) {
+      return accountingError(error);
+    }
+  }
+
+  async listCreditHistory(
+    options: { after?: string; limit?: number } = {},
+  ): Promise<RepositoryPage<CreditHistoryEntry>> {
+    options = snapshot(options);
+    const size = limit(options.limit),
+      cursor = historyCursor(options.after);
+    const result = await this.client.query<
+      Int8Row<CreditHistoryEntry, "amount"> & { cursorTime: string }
+    >(
+      `SELECT l.id,l.kind,l.amount::text,l.created_at AS "createdAt",
+      to_char(l.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime",
+      g.source,g.period_start AS "periodStart",g.period_end AS "periodEnd",g.expires_at AS "expiresAt",
+      COALESCE(g.policy_version,i.policy_version) AS "policyVersion"
+      FROM tholi.credit_ledger l LEFT JOIN tholi.credit_grants g ON g.workspace_id=l.workspace_id AND g.id=l.id AND l.kind='grant'
+      LEFT JOIN tholi.credit_refunds f ON f.workspace_id=l.workspace_id AND f.id=l.id AND l.kind='refund'
+      LEFT JOIN tholi.credit_settlements s ON s.workspace_id=l.workspace_id AND (s.id=l.id AND l.kind='settlement' OR s.id=f.settlement_id)
+      LEFT JOIN tholi.inference_reservations i ON i.workspace_id=s.workspace_id AND i.credit_reservation_id=s.reservation_id
+      WHERE l.workspace_id=$1 AND ($2::timestamptz IS NULL OR (l.created_at,l.id)>($2::timestamptz,$3::uuid))
+      ORDER BY l.created_at,l.id LIMIT $4`,
+      [this.scope.workspaceId, ...cursor, size + 1],
+    );
+    return repositoryPage(
+      result.rows.map(({ cursorTime, ...row }) => ({
+        ...row,
+        amount: BigInt(row.amount),
+      })),
+      size,
+      result.rows[Math.min(size, result.rows.length) - 1]?.cursorTime,
+    );
+  }
+
+  async listUsage(
+    options: { after?: string; limit?: number } = {},
+  ): Promise<RepositoryPage<InferenceUsage>> {
+    options = snapshot(options);
+    const size = limit(options.limit),
+      cursor = historyCursor(options.after);
+    const result = await this.client.query<
+      InferenceUsageRow & { cursorTime: string }
+    >(
+      `SELECT u.id,u.request_id AS "requestId",u.provider,u.model,
+      to_char(u.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime",
+      CASE WHEN i.resolution='unknown' THEN NULL ELSE u.input_units::text END AS "inputUnits",
+      CASE WHEN i.resolution='unknown' THEN NULL ELSE u.output_units::text END AS "outputUnits",u.provider_usd_micros::text AS "providerUsdMicros",
+      u.charged_credits::text AS "chargedCredits",u.policy_version AS "policyVersion",u.created_at AS "createdAt"
+      FROM tholi.usage_records u JOIN tholi.requests q ON q.workspace_id=u.workspace_id AND q.id=u.request_id
+      LEFT JOIN tholi.inference_reservations i ON i.workspace_id=u.workspace_id AND i.request_id=u.request_id
+      WHERE u.workspace_id=$1 AND q.account_id=$2
+        AND ($3::timestamptz IS NULL OR (u.created_at,u.id)>($3::timestamptz,$4::uuid)) ORDER BY u.created_at,u.id LIMIT $5`,
+      [...this.parameters, ...cursor, size + 1],
+    );
+    return repositoryPage(
+      result.rows.map(({ cursorTime, ...row }) => inferenceUsage(row)),
+      size,
+      result.rows[Math.min(size, result.rows.length) - 1]?.cursorTime,
+    );
   }
 
   private async ownedReservation(id: string): Promise<CreditReservation> {
@@ -832,7 +1224,7 @@ class ScopedRepositories {
     status: "settled" | "released" | "uncertain",
   ): Promise<CreditReservation> {
     const result = await this.client.query<ReservationRow>(
-      `UPDATE tholi.credit_reservations r SET status = $4, updated_at = now()
+      `UPDATE tholi.credit_reservations r SET status = $4, updated_at = clock_timestamp()
        WHERE r.workspace_id = $1 AND r.id = $3
          AND (r.status = 'active' OR ($4 = 'settled' AND r.status = 'uncertain'))
          AND EXISTS (SELECT 1 FROM tholi.requests q

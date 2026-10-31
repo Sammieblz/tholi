@@ -168,6 +168,49 @@ export class JobWorker {
                   this.observer.metric("job.health.available", 0);
                 }
               }
+              if (this.store.inferenceHealth && this.observer.enabled) {
+                try {
+                  const health = await this.store.inferenceHealth();
+                  const metrics = [
+                    [
+                      "inference.settled_usd_micros",
+                      health.settledProviderUsdMicros,
+                    ],
+                    [
+                      "inference.reserved_usd_micros",
+                      health.reservedProviderUsdMicros,
+                    ],
+                    ["inference.uncertain_count", health.uncertainCount],
+                  ] as const;
+                  const values = metrics.map(([name, raw]) => {
+                    if (!/^(0|[1-9][0-9]*)$/.test(raw))
+                      throw new Error("Invalid accounting aggregate.");
+                    const quantity = BigInt(raw);
+                    if (quantity > BigInt(Number.MAX_SAFE_INTEGER))
+                      throw new Error(
+                        "Accounting aggregate exceeds metric precision.",
+                      );
+                    return [name, Number(quantity)] as const;
+                  });
+                  if (typeof health.enabled !== "boolean")
+                    throw new Error("Invalid accounting control.");
+                  for (const [name, value] of values)
+                    this.observer.metric(name, value);
+                  this.observer.metric(
+                    "inference.enabled",
+                    health.enabled ? 1 : 0,
+                  );
+                  this.observer.metric(
+                    "inference.verified_outcomes.available",
+                    0,
+                  );
+                  this.observer.metric("inference.health.available", 1);
+                } catch {
+                  // Accounting remains authoritative in PostgreSQL. Missing or
+                  // imprecise metrics are unavailable, never rounded to zero.
+                  this.observer.metric("inference.health.available", 0);
+                }
+              }
             },
           );
           nextSchedule = Date.now() + this.options.scheduleIntervalMs;

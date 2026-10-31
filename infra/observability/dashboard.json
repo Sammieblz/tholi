@@ -412,7 +412,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "Provider spend, interactive model stale results, Local/Free/Paid activation and allowance exhaustion are unavailable until their authoritative roadmap milestones. Missing data is not zero. Store clicks do not establish installation; sign-in does not establish paid activation. Alerts require an operator-owned Prometheus and routing configuration."
+        "content": "Recorded provider cost and retained liability come from the authoritative PostgreSQL accounting owner. Live provider billing, cost per independently verified success, interactive model stale results and Local/Free/Paid activation remain unmeasured or unavailable. Missing data is not zero. A proposal does not establish arrival; sign-in does not establish paid activation. Alerts require an operator-owned Prometheus and routing configuration."
       }
     },
     {
@@ -442,6 +442,27 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Recorded provider cost and retained liability",
+      "description": "Global SQL aggregates are replicated by workers. Maximum avoids double-counting them; unavailable accounting health excludes stale series. This is not a provider invoice or cost per verified success.",
+      "gridPos": { "x": 0, "y": 52, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(tholi_inference_settled_usd_micros and (tholi_inference_health_available == 1)) / 1000000",
+          "legendFormat": "Recorded USD"
+        },
+        {
+          "refId": "B",
+          "expr": "max(tholi_inference_reserved_usd_micros and (tholi_inference_health_available == 1)) / 1000000",
+          "legendFormat": "Retained maximum USD"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] }
     }
   ]
 }

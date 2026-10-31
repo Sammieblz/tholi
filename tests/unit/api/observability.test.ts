@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import { createObservability } from "../../../apps/api/src/adapters/observability";
+import { INFERENCE_RECONCILIATION_JOB_KIND } from "../../../apps/api/src/application/quotas";
 import {
   correlationSchema,
   NO_OBSERVABILITY,
@@ -166,6 +167,15 @@ it("exports real OTLP HTTP JSON and stdout through the same strict privacy bound
       const provider = observer.start("identity.exchange", injected);
       provider.end("denied", { ...injected, statusCode: 401 });
       observer.metric("database.pool.wait_ms", 4, injected);
+      observer
+        .start("job.attempt", {
+          jobKind: INFERENCE_RECONCILIATION_JOB_KIND.kind,
+        })
+        .end("uncertain");
+      observer.metric("job.queue.count", 1, {
+        jobKind: INFERENCE_RECONCILIATION_JOB_KIND.kind,
+        jobStatus: "uncertain",
+      });
     });
     root.end("error", { statusCode: 500, errorCode: "INTERNAL_ERROR" });
     await observer.close();
@@ -202,6 +212,7 @@ it("exports real OTLP HTTP JSON and stdout through the same strict privacy bound
     expect(metrics).not.toContain(root.correlation!.requestId);
     expect(metrics).not.toContain(root.correlation!.jobId);
     expect(metrics).not.toContain(root.correlation!.traceId);
+    expect(metrics).toContain(INFERENCE_RECONCILIATION_JOB_KIND.kind);
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));

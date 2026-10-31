@@ -337,7 +337,8 @@ export function createNavigationModelService(model: NavigationModel) {
         return { decision: joined.decision, usage };
       } catch (error) {
         if (signal.aborted || Date.now() >= deadlineAt) throw interrupted();
-        if (error instanceof ModelError) throw error;
+        if (error instanceof ModelError || error instanceof AuthorizationError)
+          throw error;
         throw new ModelError("PROVIDER_ERROR", {
           outcome: sent ? "unknown" : "not-sent",
         });
@@ -375,8 +376,8 @@ const missingNavigationRequest = () =>
     "The navigation request is unavailable.",
   );
 
-/** Operator admission returns the existing model port, never browser authority. */
-export interface NavigationEvaluationOperation {
+/** Durable admission returns the existing model port, never browser authority. */
+export interface NavigationInferenceOperation {
   model: NavigationModel;
   budget: Partial<ModelBudget>;
   finish(result: {
@@ -385,8 +386,8 @@ export interface NavigationEvaluationOperation {
     error?: unknown;
   }): Promise<void>;
 }
-export interface NavigationEvaluationPolicy {
-  readonly metadata: OperatorEvaluationMetadata;
+export interface NavigationInferencePolicy {
+  readonly metadata?: OperatorEvaluationMetadata;
   prepare(
     input: NavigationTransportInput,
     scope: {
@@ -395,7 +396,11 @@ export interface NavigationEvaluationPolicy {
       context: ServiceRequestContext;
       revalidate: () => Promise<void>;
     },
-  ): Promise<NavigationEvaluationOperation>;
+  ): Promise<NavigationInferenceOperation>;
+}
+export type NavigationEvaluationOperation = NavigationInferenceOperation;
+export interface NavigationEvaluationPolicy extends NavigationInferencePolicy {
+  readonly metadata: OperatorEvaluationMetadata;
 }
 
 /** Scoped request metadata is durable; observations and proposals remain ephemeral. */
@@ -407,13 +412,13 @@ export class NavigationTransportService {
   constructor(
     private readonly repositories: NavigationRequestRepositories,
     private readonly model: NavigationModel,
-    private readonly evaluation?: NavigationEvaluationPolicy,
+    private readonly inference?: NavigationInferencePolicy,
   ) {
-    this.provider = evaluation ? "operator-evaluation" : "fake";
+    this.provider = inference?.metadata ? "operator-evaluation" : "fake";
   }
 
   get evaluationMetadata() {
-    return this.evaluation?.metadata;
+    return this.inference?.metadata;
   }
 
   private key(
@@ -567,19 +572,19 @@ export class NavigationTransportService {
     let admitted = true,
       claimed = false;
     const key = this.key(principal, workspaceId, input.requestId);
-    let evaluationOperation: NavigationEvaluationOperation | undefined;
+    let inferenceOperation: NavigationInferenceOperation | undefined;
     let finalizationAttempted = false;
     const finish = async (
-      result: Parameters<NavigationEvaluationOperation["finish"]>[0],
+      result: Parameters<NavigationInferenceOperation["finish"]>[0],
     ) => {
-      if (!evaluationOperation || finalizationAttempted) return;
+      if (!inferenceOperation || finalizationAttempted) return;
       // A failed/uncertain durable write is never automatically retried or
       // treated as released spending. The owner retains that liability.
       finalizationAttempted = true;
       // Accounting starts even when the caller has already stopped waiting.
       // Its durable owner serializes this one attempt and retains uncertain liability.
       const finalization = Promise.resolve().then(() =>
-        evaluationOperation!.finish(result),
+        inferenceOperation!.finish(result),
       );
       void finalization.catch(() => {});
       await awaitModelOperation(() => finalization, signal, interrupted);
@@ -644,8 +649,8 @@ export class NavigationTransportService {
         alive();
       };
       await guard();
-      if (this.evaluation) {
-        const preparation = this.evaluation.prepare(input, {
+      if (this.inference) {
+        const preparation = this.inference.prepare(input, {
           principal,
           workspaceId,
           context: operation,
@@ -653,14 +658,14 @@ export class NavigationTransportService {
         });
         void preparation
           .then(async (prepared) => {
-            if (signal.aborted && !evaluationOperation) {
+            if (signal.aborted && !inferenceOperation) {
               // A bounded HTTP response can precede a slow durable claim. It
               // still gets one cleanup attempt and can never dispatch a model.
               await prepared.finish({ error: interrupted() });
             }
           })
           .catch(() => {});
-        evaluationOperation = await awaitModelOperation(
+        inferenceOperation = await awaitModelOperation(
           () => preparation,
           signal,
           interrupted,
@@ -668,12 +673,12 @@ export class NavigationTransportService {
         await guard();
       }
       const result = await createNavigationModelService(
-        evaluationOperation?.model ?? this.model,
+        inferenceOperation?.model ?? this.model,
       ).propose(
         input.observation,
         current,
         operation,
-        evaluationOperation?.budget,
+        inferenceOperation?.budget,
       );
       await finish({ usage: result.usage, decision: result.decision });
       await identity();

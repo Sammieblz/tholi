@@ -17,6 +17,11 @@ import { ProductAnalyticsService } from "../application/analytics";
 import type { Observability } from "../application/observability";
 import { NavigationTransportService } from "../application/navigation";
 import { createFakeNavigationModel } from "./fake-navigation-model";
+import {
+  CreditService,
+  createNavigationQuotaPolicy,
+} from "../application/quotas";
+import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -38,10 +43,20 @@ export async function createIdentityRuntime(
     const authorization = new AuthorizationService(repositories);
     const jobs = new JobService(repositories);
     const analytics = new ProductAnalyticsService(repositories);
+    const credits = new CreditService(
+      repositories,
+      fakeDevelopmentChargingPolicy,
+    );
+    const model = createFakeNavigationModel();
     const navigation = navigationEnabled
       ? new NavigationTransportService(
           repositories,
-          createFakeNavigationModel(),
+          model,
+          createNavigationQuotaPolicy(
+            repositories,
+            model,
+            fakeDevelopmentChargingPolicy,
+          ),
         )
       : undefined;
     let support: SupportService | undefined;
@@ -70,6 +85,7 @@ export async function createIdentityRuntime(
       jobs,
       support,
       analytics,
+      credits,
       navigation,
       repositories,
       resources,

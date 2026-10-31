@@ -214,6 +214,18 @@ export class PostgresJobs implements JobStore {
     ).rows;
   }
 
+  async inferenceHealth() {
+    const result = await this.pool.query<{
+      settledProviderUsdMicros: string;
+      reservedProviderUsdMicros: string;
+      uncertainCount: string;
+      enabled: boolean;
+    }>(`SELECT settled_provider_usd_micros AS "settledProviderUsdMicros",
+      reserved_provider_usd_micros AS "reservedProviderUsdMicros",
+      uncertain_count AS "uncertainCount", enabled FROM tholi.inference_health()`);
+    return result.rows[0];
+  }
+
   /** Operator pool only. Registered kinds supply safety, never a client boolean. */
   async retryDead(
     input: {

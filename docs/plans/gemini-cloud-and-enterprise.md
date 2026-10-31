@@ -289,6 +289,14 @@ Before production, set retention schedules, recovery objectives, alert threshold
 
 ### Migration stages
 
+On October 31, 2026 the user authorized deferring the live evaluation in #43
+and continuing offline after the tested preparation in PR #82. Keep #43 open
+with its measured acceptance unperformed. Implement #44 and the subsequent
+sequence using fake inference and local PostgreSQL. The measured quality decision
+remains required before invited beta, commercial live validation or cloud release
+(#49, #51 and #52). This exception does not authorize provider calls, paid resources,
+deployment or publication. Desktop implementation #54 remains deferred.
+
 1. **Adopt this record:** review decision, capabilities, ports, trust and budgets; keep runtime and baseline bytes unchanged.
 2. **Separate runtime and add local profile:** implement #26 and #27 in sequence. Legacy tests must prove the private profile still starts and works; local service tests use a fake model and real local identity/database adapters.
 3. **Add service foundations:** PostgreSQL #28, versioned API #29, identity #30, authorization/consent #31 and durable jobs #32. Require cross-tenant, session/revocation, pool-reuse and retry/idempotency evidence before exposing service data.

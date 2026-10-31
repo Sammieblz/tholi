@@ -41,6 +41,7 @@ function serviceCapabilities(
   analyticsEnabled: boolean,
   navigationEnabled: boolean,
   evaluation?: OperatorEvaluationMetadata,
+  creditsEnabled = false,
 ) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -58,6 +59,7 @@ function serviceCapabilities(
       ...(jobsEnabled ? ["durable-jobs"] : []),
       ...(supportEnabled ? ["support-requests", "private-files"] : []),
       ...(analyticsEnabled ? ["product-analytics"] : []),
+      ...(creditsEnabled ? ["credit-accounting"] : []),
       ...(navigationEnabled
         ? [
             NAVIGATION_TRANSPORT_CAPABILITY,
@@ -91,6 +93,7 @@ export async function registerServiceApi(
   analyticsEnabled = false,
   navigationEnabled = false,
   evaluation?: OperatorEvaluationMetadata,
+  creditsEnabled = false,
 ) {
   const capabilities = serviceCapabilities(
     identityEnabled,
@@ -100,6 +103,7 @@ export async function registerServiceApi(
     analyticsEnabled,
     navigationEnabled,
     evaluation,
+    creditsEnabled,
   );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,

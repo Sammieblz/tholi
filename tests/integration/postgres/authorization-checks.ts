@@ -471,7 +471,14 @@ export async function runAuthorizationChecks(
           await repositories.transaction(scope, (scoped) =>
             scoped.creditBalance(),
           ),
-          { granted: 100n, spent: 25n, reserved: 30n, available: 45n },
+          {
+            granted: 100n,
+            spent: 25n,
+            reserved: 30n,
+            available: 45n,
+            expired: 0n,
+            refunded: 0n,
+          },
         );
       const raw = await withTransaction(
         runtime,
