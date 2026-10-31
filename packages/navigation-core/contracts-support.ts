@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { privateFileRequestSchema } from "./contracts-private-files";
+export { privateFileRequestSchema } from "./contracts-private-files";
 import { jobStatusSchema, type JobStatus } from "./contracts-jobs";
 import {
   serviceIdempotencyKeySchema,
@@ -58,13 +60,6 @@ export const supportRequestSchema = z
 export const diagnosticInputSchema = z
   .object({
     idempotencyKey: serviceIdempotencyKeySchema,
-  })
-  .strict();
-export const privateFileRequestSchema = z
-  .object({
-    requestId: z.string().uuid(),
-    jobId: z.string().uuid(),
-    fileId: z.string().uuid(),
   })
   .strict();
 export const diagnosticSchema = privateFileRequestSchema;

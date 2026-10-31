@@ -1,7 +1,7 @@
 # Saved-data validation
 
 Owner: [#59](https://github.com/Sammieblz/tholi/issues/59).
-Recorded October 31, 2026. Implementation verification is in progress.
+Recorded October 31, 2026. Preparation and later hosted evidence are separated below.
 
 ## Scope and guidance
 
@@ -202,8 +202,26 @@ remain pending on the final committed PR head. Their final evidence belongs in
 the PR/issue after completion; this pre-commit record does not claim those checks
 already passed. No version, archive, deployment or release change is included.
 
+## Post-merge hosted evidence
+
+After the preparation record was committed, exact source
+`53b7332a881c4b6b6a492a31dc3a5809e98c3203` passed all eight required jobs in
+[run 41238712944](https://github.com/Sammieblz/tholi/actions/runs/41238712944): build,
+core, UI, integration, native Firefox, unit, real containers and final validation.
+The existing Cloudflare preview check also passed. [PR #85](https://github.com/Sammieblz/tholi/pull/85)
+merged as `cb57ea625335a6fc57a391246fb8f37958c70993`. Issue #59's acceptance criteria
+are checked, its roadmap entry is complete and its Project state is Done/Complete.
+This later evidence does not relabel any failed, interrupted or narrower local
+run. Live model calls, production writes, paid plans and release certification
+remain unavailable or pending under their existing gates.
+
 The organization-export fixture models approved retained data moved by the
 migrator with real target-scope consent. It does not create a public organization
 Free enrollment path. Automated sender/permission mocks are not native permission
 prompt certification. Actual screen-reader speech, hosted provider retention,
 production scale and live model quality remain unperformed.
+
+The later [account dashboard validation](account-dashboard-validation.md) records
+an S3 purpose-dispatch correction found by real private-export browser coverage
+in #60. That follow-up extends the adapter regression owner without relabeling
+the earlier injected-object-store evidence here.

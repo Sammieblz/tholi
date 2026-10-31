@@ -10,6 +10,7 @@ import { portableObservability } from "./migrations/007-observability";
 import { inferenceAccounting } from "./migrations/008-inference-accounting";
 import { productPlans } from "./migrations/009-product-plans";
 import { savedData } from "./migrations/010-saved-data";
+import { accountLifecycle } from "./migrations/011-account-lifecycle";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -43,6 +44,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(8, "inference-accounting", inferenceAccounting),
   migration(9, "product-plans", productPlans),
   migration(10, "saved-data", savedData),
+  migration(11, "account-lifecycle", accountLifecycle),
 ]);
 
 export interface MigrationOptions {
@@ -141,6 +143,16 @@ async function grantWorker(client: PoolClient, role: string) {
       `GRANT EXECUTE ON FUNCTION tholi.authorize_saved_export(uuid,uuid,uuid,uuid),
         tholi.valid_saved_receipt(jsonb) TO ${identifier}`,
     );
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.cleanup_account_deletion(uuid,uuid,uuid,uuid,integer)') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.cleanup_account_deletion(uuid,uuid,uuid,uuid,integer),
+      tholi.authorize_account_export(uuid,uuid,uuid,uuid),tholi.valid_account_export_metadata(jsonb,boolean),
+      tholi.current_account_export_allowed(jsonb),tholi.valid_saved_text(jsonb,integer) TO ${identifier}`);
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {
@@ -407,6 +419,18 @@ async function grantRuntime(client: PoolClient, role: string) {
       `GRANT EXECUTE ON FUNCTION tholi.lock_saved_data_consent(),tholi.resolve_owned_file_workspace(uuid),
         tholi.valid_saved_text(jsonb,integer),tholi.valid_saved_data(text,jsonb,jsonb),
         tholi.valid_saved_receipt(jsonb),tholi.valid_saved_export(jsonb) TO ${identifier}`,
+    );
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.read_saved_data_storage()') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.read_saved_data_storage(),tholi.valid_account_export_metadata(jsonb,boolean),
+        tholi.valid_account_export(jsonb,text),tholi.current_account_export_allowed(jsonb),
+        tholi.revoke_current_account_grants(timestamptz),tholi.request_account_deletion(uuid,uuid,bigint,uuid) TO ${identifier}`,
     );
 }
 

@@ -18,6 +18,11 @@ The [saved-data validation record](saved-data-validation.md) tracks explicit
 privacy previews, scoped CRUD/import, offline conflicts, deletion tombstones,
 account-isolated caches and private exports through the existing worker owner.
 
+The [account dashboard validation record](account-dashboard-validation.md) tracks
+real local identity, private route isolation, all four saved-data types, exact
+credit and storage displays, account exports and pending deletion. These checks
+do not establish paid billing, deployment or the deferred live quality gate.
+
 Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 
 | Purpose                                          | Command                                      |

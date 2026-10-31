@@ -10,6 +10,7 @@ import { SERVICE_ROUTES } from "../routes/service-inventory";
 import { REGISTERED_JOB_KINDS } from "../application/identity-maintenance";
 import { SUPPORT_JOB_KINDS } from "../application/support-jobs";
 import { INFERENCE_RECONCILIATION_JOB_KIND } from "../application/quotas";
+import { ACCOUNT_DELETION_JOB } from "../application/account";
 import {
   correlationSchema,
   validateObservabilityOptions,
@@ -38,6 +39,7 @@ const kinds = new Set(
     ...REGISTERED_JOB_KINDS,
     ...SUPPORT_JOB_KINDS,
     INFERENCE_RECONCILIATION_JOB_KIND,
+    ACCOUNT_DELETION_JOB,
   ].map((job) => job.kind),
 );
 const codes = new Set<string>([

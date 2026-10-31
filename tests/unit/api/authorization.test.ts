@@ -71,6 +71,7 @@ import {
   savedDataChangesSchema,
   savedDataPageSchema,
   savedDataExportSnapshotSchema,
+  savedDataStorageUsageSchema,
 } from "../../../packages/navigation-core/contracts-saved-data";
 import {
   creditHistoryPageSchema,
@@ -91,6 +92,14 @@ import {
   navigationCancellationSchema,
 } from "../../../packages/navigation-core/contracts-navigation";
 import { SupportService } from "../../../apps/api/src/application/support";
+import {
+  AccountService,
+  type AccountStore,
+} from "../../../apps/api/src/application/account";
+import {
+  accountExportStatusSchema,
+  accountDeletionResultSchema,
+} from "../../../packages/navigation-core/contracts-account";
 import type {
   ObjectPort,
   PrivateFile,
@@ -148,6 +157,7 @@ async function fixture(
   creditsEnabled = false,
   plansEnvironment?: "development" | "production",
   savedDataEnvironment?: "development" | "production",
+  accountEnabled = false,
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -225,6 +235,11 @@ async function fixture(
     getSavedArtifact: vi.fn<SavedDataTransaction["getSavedArtifact"]>(
       async (id) => (id === savedArtifact.id ? savedRecord : undefined),
     ),
+    readSavedDataStorage: vi.fn(async () => ({
+      scope: "account" as const,
+      artifacts: "0",
+      bytes: "0",
+    })),
     listSavedArtifacts: vi.fn<SavedDataTransaction["listSavedArtifacts"]>(
       async () => ({ items: [savedRecord] }),
     ),
@@ -494,6 +509,7 @@ async function fixture(
     ),
     rotateSession: unexpected,
     listSessions: unexpected,
+    readContacts: vi.fn(async () => []),
     revokeSession: unexpected,
     revokeAllSessions: unexpected,
     revokeProviderSessions: unexpected,
@@ -595,6 +611,35 @@ async function fixture(
       jobId: job.id,
     })),
   };
+  const accountExport = {
+    generation: randomUUID(),
+    requestId: randomUUID(),
+    jobId: randomUUID(),
+    fileId: randomUUID(),
+    preparation: "partial" as const,
+    delivery: "pending" as const,
+    continuation: "opaque-owned-cursor",
+    expiresAt: file.expiresAt.toISOString(),
+  };
+  const accountDeletion = accountDeletionResultSchema.parse({
+    requestId: randomUUID(),
+    jobId: randomUUID(),
+    status: "deletion_pending",
+    signedOut: true,
+    retained: [
+      "identity-and-abuse-prevention",
+      "financial-liabilities",
+      "security-audit",
+      "deletion-tombstones",
+    ],
+  });
+  const accountStore: AccountStore = {
+    prepareExport: vi.fn(async () => accountExport),
+    exportStatus: vi.fn(async () => accountExport),
+    listExports: vi.fn(async () => ({ items: [accountExport] })),
+    requestDeletion: vi.fn(async () => accountDeletion),
+    cleanupDeletion: vi.fn(async () => {}),
+  };
   const app = await (
     evaluation ? createOperatorEvaluationApi : createServiceApi
   )(
@@ -632,6 +677,14 @@ async function fixture(
             ),
           }
         : {}),
+      ...(accountEnabled
+        ? {
+            account: new AccountService(accountStore, {
+              exportsAvailable: supportEnabled,
+              deletionAvailable: supportEnabled,
+            }),
+          }
+        : {}),
     },
   );
   applications.push(app);
@@ -653,6 +706,9 @@ async function fixture(
     savedRecord,
     savedTombstone,
     savedExports,
+    accountStore,
+    accountExport,
+    accountDeletion,
     navigationRequests,
     job,
     session,
@@ -2067,7 +2123,7 @@ describe("saved-data HTTP boundary", () => {
     );
     expect(f.store.listSessions).not.toHaveBeenCalled();
   });
-  it("registers the nine real library operations, admits all four typed artifacts and binds PATCH identities", async () => {
+  it("registers the ten real library operations, admits all four typed artifacts and binds PATCH identities", async () => {
     const f = await fixture(
       true,
       false,
@@ -2147,8 +2203,19 @@ describe("saved-data HTTP boundary", () => {
         "exportSavedArtifacts",
         "getSavedArtifactChanges",
         "importSavedArtifacts",
+        "getSavedDataStorageUsage",
       ].sort(),
     );
+    const storage = await f.app.inject({
+      url: `${base}/usage`,
+      headers: bound(f),
+    });
+    expect(storage.statusCode).toBe(200);
+    expect(savedDataStorageUsageSchema.parse(storage.json())).toEqual({
+      scope: "account",
+      artifacts: "0",
+      bytes: "0",
+    });
     for (const operation of operations)
       expect(operation.security).toEqual([
         { NativeBearer: [] },
@@ -3292,5 +3359,183 @@ describe("actor-private durable job routes", () => {
         status: "uncertain",
       }),
     ).toEqual({ limit: 50, after: job.id, status: "uncertain" });
+  });
+});
+
+describe("account export and deletion HTTP admission", () => {
+  it("requires current binding before body validation, shares cookie CSRF and clears only accepted web deletion credentials", async () => {
+    const f = await fixture(
+      true,
+      true,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      true,
+    );
+    const headers = {
+      ...bearer,
+      [SERVICE_ACCOUNT_BINDING_HEADER]: f.session.accountId,
+    };
+    const exportInput = { idempotencyKey: randomUUID() };
+    const deletionInput = {
+      operationId: randomUUID(),
+      expectedRevision: "1",
+      confirmation: "DELETE",
+    };
+    for (const actorHeaders of [
+      bearer,
+      { ...bearer, [SERVICE_ACCOUNT_BINDING_HEADER]: randomUUID() },
+    ]) {
+      safeError(
+        await f.app.inject({
+          url: "/api/v1/account/exports",
+          headers: actorHeaders,
+        }),
+        401,
+        "UNAUTHENTICATED",
+      );
+      safeError(
+        await f.app.inject({
+          method: "POST",
+          url: "/api/v1/account/deletion",
+          headers: actorHeaders,
+          payload: { confirmation: "INVALID_PRIVATE_BODY" },
+        }),
+        401,
+        "UNAUTHENTICATED",
+      );
+    }
+    expect(f.accountStore.listExports).not.toHaveBeenCalled();
+    expect(f.accountStore.requestDeletion).not.toHaveBeenCalled();
+    const nativeExport = await f.app.inject({
+      method: "POST",
+      url: "/api/v1/account/exports",
+      headers,
+      payload: exportInput,
+    });
+    expect(nativeExport.statusCode).toBe(200);
+    expect(accountExportStatusSchema.parse(nativeExport.json())).toEqual(
+      f.accountExport,
+    );
+    expect(vi.mocked(f.accountStore.prepareExport).mock.calls[0][0]).toEqual({
+      id: f.session.id,
+      accountId: f.session.accountId,
+      workspaceId: f.session.workspaceId,
+    });
+    expect(nativeExport.headers[SERVICE_ACCOUNT_BINDING_HEADER]).toBe(
+      f.session.accountId,
+    );
+    const cookieHeaders = {
+      cookie: f.cookie,
+      [SERVICE_ACCOUNT_BINDING_HEADER]: f.session.accountId,
+    };
+    for (const extra of [
+      {},
+      { origin: webOrigin },
+      { origin: "https://help.tholi.io", "x-tholi-csrf": f.csrf },
+    ])
+      safeError(
+        await f.app.inject({
+          method: "POST",
+          url: "/api/v1/account/exports",
+          headers: { ...cookieHeaders, ...extra },
+          payload: exportInput,
+        }),
+        403,
+        "FORBIDDEN",
+      );
+    expect(f.accountStore.prepareExport).toHaveBeenCalledTimes(1);
+    const webHeaders = {
+      ...cookieHeaders,
+      origin: webOrigin,
+      "x-tholi-csrf": f.csrf,
+    };
+    expect(
+      (
+        await f.app.inject({
+          method: "POST",
+          url: "/api/v1/account/exports",
+          headers: webHeaders,
+          payload: exportInput,
+        })
+      ).statusCode,
+    ).toBe(200);
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: "/api/v1/account/deletion",
+        headers,
+        payload: { ...deletionInput, accountId: randomUUID() },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    expect(f.accountStore.requestDeletion).not.toHaveBeenCalled();
+    const deleted = await f.app.inject({
+      method: "POST",
+      url: "/api/v1/account/deletion",
+      headers: webHeaders,
+      payload: deletionInput,
+    });
+    expect(deleted.statusCode).toBe(200);
+    expect(accountDeletionResultSchema.parse(deleted.json())).toEqual(
+      f.accountDeletion,
+    );
+    const cleared = deleted.headers["set-cookie"];
+    expect(Array.isArray(cleared)).toBe(true);
+    expect(cleared).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("__Host-tholi_session=;"),
+        expect.stringContaining("__Host-tholi_refresh=;"),
+      ]),
+    );
+    expect(f.accountStore.requestDeletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: f.session.accountId,
+        workspaceId: f.session.workspaceId,
+      }),
+      deletionInput,
+      expect.any(AbortSignal),
+    );
+    const nativeDelete = await f.app.inject({
+      method: "POST",
+      url: "/api/v1/account/deletion",
+      headers,
+      payload: deletionInput,
+    });
+    expect(nativeDelete.statusCode).toBe(200);
+    expect(nativeDelete.headers["set-cookie"]).toBeUndefined();
+    const spec = (await f.app.inject("/api/v1/openapi.json")).json();
+    expect(spec.paths["/api/v1/account/deletion"].post.operationId).toBe(
+      "requestAccountDeletion",
+    );
+    expect(spec.paths["/api/v1/account/exports"].get.operationId).toBe(
+      "listAccountExports",
+    );
+    const capabilities = (await f.app.inject("/api/v1/capabilities")).json()
+      .capabilities;
+    expect(capabilities).toEqual(
+      expect.arrayContaining(["account-export", "account-deletion"]),
+    );
+    const absent = await fixture();
+    const absentCapabilities = (
+      await absent.app.inject("/api/v1/capabilities")
+    ).json().capabilities;
+    expect(absentCapabilities).not.toContain("account-export");
+    expect(absentCapabilities).not.toContain("account-deletion");
+    expect(
+      (
+        await absent.app.inject({
+          method: "POST",
+          url: "/api/v1/account/deletion",
+          payload: deletionInput,
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (await absent.app.inject("/api/v1/account/exports")).statusCode,
+    ).toBe(404);
   });
 });

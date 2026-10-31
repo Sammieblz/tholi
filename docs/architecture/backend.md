@@ -25,9 +25,12 @@ Without identity configuration, the service exposes health and discovery without
 opening PostgreSQL or an identity provider. Configured identity adds account,
 session, workspace, membership, consent, durable-job and consented analytics
 routes through the same service runtime and SQL pool. Explicit support
-configuration also enables approved support requests and private diagnostic
-files. Navigation, general saved-data, credit and billing endpoints remain
-planned. A private bearer never grants
+configuration also enables approved support requests and private files. Current
+composed [credit](../development/service-credits.md),
+[plan](../development/service-plans.md), [saved-data](../development/service-saved-data.md)
+and [account lifecycle](../development/account-dashboard.md) owners share that
+pool. Explicit fake navigation remains a development transport; production cloud
+writes, paid inference and billing remain unavailable. A private bearer never grants
 service access. The service does not load SQLite, ONNX, OCR or their worker
 adapters. Importing either bootstrap does not listen; only running its executable
 or calling its exported start function does.

@@ -1,5 +1,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { ResolvedConfig } from "vite";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { websiteArtifactDirectory } from "../../../scripts/artifact-files.mjs";
 const fixture = vi.hoisted(() => ({
   entries: [] as { name: string; isFile(): boolean }[],
   writes: new Map<string, string>(),
@@ -44,7 +48,7 @@ vi.mock("vite", () => ({
 }));
 import { staticSite } from "../../../apps/web/build/static-site";
 
-function configured(
+async function configured(
   bundle: unknown = {
     entry: {
       type: "chunk",
@@ -52,13 +56,15 @@ function configured(
       name: "index",
     },
   },
+  options: { deploymentDirectory?: string; outDir?: string } = {},
 ) {
-  const plugin = staticSite();
+  const plugin = staticSite(options);
   (plugin.configResolved as (config: ResolvedConfig) => void)({
     root: "apps/web",
-    build: { outDir: "../../dist/web" },
+    build: { outDir: options.outDir ?? "../../dist/web" },
     mode: "production",
   } as ResolvedConfig);
+  await (plugin.buildStart as () => Promise<void>)();
   (plugin.writeBundle as (options: unknown, bundle: unknown) => void)(
     {},
     bundle,
@@ -77,6 +83,64 @@ beforeEach(() => {
   fixture.render.mockResolvedValue("<h1>Public shell</h1>");
 });
 
+it("keeps configured local-identity prerendering and its deployment adapter inside the side-build directory", async () => {
+  const plugin = await configured(undefined, {
+    outDir: "../../output/qa/identity-side/website",
+    deploymentDirectory: "output/qa/identity-side/website-deploy",
+  });
+  await (plugin.closeBundle as () => Promise<void>)();
+  const changed = [
+    ...fixture.writes.keys(),
+    ...fixture.remove.mock.calls.map(([path]) =>
+      String(path).replaceAll("\\", "/"),
+    ),
+  ];
+  expect(changed.length).toBeGreaterThan(0);
+  expect(
+    changed.every((path) => path.includes("/output/qa/identity-side/")),
+  ).toBe(true);
+  expect(
+    changed.some((path) =>
+      path.endsWith("/website-deploy/nginx-locations.conf"),
+    ),
+  ).toBe(true);
+});
+
+it("allows an explicit QA identity artifact path without allowing a release-output or unrelated-group override", () => {
+  const root = mkdtempSync(join(tmpdir(), "tholi-identity-artifacts-"));
+  try {
+    mkdirSync(join(root, "output/qa"), { recursive: true });
+    const selected = join(root, "output/qa/run/website");
+    expect(websiteArtifactDirectory(root, {})).toBe(resolve(root, "dist/web"));
+    expect(
+      websiteArtifactDirectory(root, {
+        THOLI_BROWSER_GROUP: "identity-web",
+        THOLI_IDENTITY_WEB_DIRECTORY: selected,
+      }),
+    ).toBe(selected);
+    for (const environment of [
+      { THOLI_BROWSER_GROUP: "ui", THOLI_IDENTITY_WEB_DIRECTORY: selected },
+      {
+        THOLI_BROWSER_GROUP: "identity-web",
+        THOLI_IDENTITY_WEB_DIRECTORY: join(root, "dist/web"),
+      },
+      {
+        THOLI_BROWSER_GROUP: "identity-web",
+        THOLI_IDENTITY_WEB_DIRECTORY: join(root, "output/qa"),
+      },
+      {
+        THOLI_BROWSER_GROUP: "identity-web",
+        THOLI_IDENTITY_WEB_DIRECTORY: "output/qa/run/website",
+      },
+    ])
+      expect(() => websiteArtifactDirectory(root, environment)).toThrow();
+  } finally {
+    if (!root.startsWith(resolve(tmpdir(), "tholi-identity-artifacts-")))
+      throw Error("Unexpected temporary artifact test directory.");
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 it("invalidates an earlier operator fragment before a new build and rejects untracked public assets", async () => {
   const plugin = staticSite();
   await (plugin.buildStart as () => Promise<void>)();
@@ -84,7 +148,7 @@ it("invalidates an earlier operator fragment before a new build and rejects untr
     expect.stringContaining("nginx-locations.conf"),
     { force: true },
   );
-  const current = configured();
+  const current = await configured();
   fixture.entries.push({ name: "account.json", isFile: () => true });
   await expect((current.closeBundle as () => Promise<void>)()).rejects.toThrow(
     "asset output differs",
@@ -94,7 +158,7 @@ it("invalidates an earlier operator fragment before a new build and rejects untr
 
 it("includes late-emitted CSS and route styles from the final written bundle", async () => {
   const stylesheet = "assets/account-1234abcd.css";
-  const plugin = configured({
+  const plugin = await configured({
     entry: {
       type: "chunk",
       fileName: "assets/index-1234abcd.js",
@@ -116,7 +180,7 @@ it("includes late-emitted CSS and route styles from the final written bundle", a
 });
 
 it("publishes the operator fragment outside public assets only after static rendering and server cleanup succeed", async () => {
-  const plugin = configured();
+  const plugin = await configured();
   fixture.close.mockRejectedValueOnce(new Error("SSR cleanup failed"));
   await expect((plugin.closeBundle as () => Promise<void>)()).rejects.toThrow(
     "SSR cleanup failed",

@@ -3,7 +3,11 @@ import { publicOrigin, repositoryUrl } from "../../config/project";
 import { articleCatalog } from "../docs/catalog";
 import { browsers, stores } from "../downloads/browsers";
 import { legalOperator } from "../legal/operator";
-import { accountAliases, accountPath } from "../account/paths";
+import {
+  ACCOUNT_SECTIONS,
+  accountAliases,
+  accountPath,
+} from "../account/paths";
 
 export type PageMetadata = {
   path: string;
@@ -117,13 +121,15 @@ export const publicPages: PageMetadata[] = [
     "AccountRoute",
     false,
   ),
-  page(
-    "/account",
-    "Account and security | Tholi",
-    "Review your Tholi account sessions and manage access on your browsers and devices.",
-    "Account",
-    "AccountRoute",
-    false,
+  ...ACCOUNT_SECTIONS.map((section) =>
+    page(
+      section.path,
+      `${section.title} | Tholi`,
+      section.description,
+      section.label,
+      "AccountRoute",
+      false,
+    ),
   ),
 ];
 export { accountAliases };

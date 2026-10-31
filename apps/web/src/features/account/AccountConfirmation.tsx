@@ -5,12 +5,14 @@ export function AccountConfirmation({
   title,
   description,
   label,
+  confirmLabel = "Confirm",
   busy,
   onConfirm,
 }: {
   title: string;
   description: string;
   label: string;
+  confirmLabel?: string;
   busy: boolean;
   onConfirm: () => void;
 }) {
@@ -24,7 +26,9 @@ export function AccountConfirmation({
           <AlertDialog.Description>{description}</AlertDialog.Description>
           <div className="account-actions">
             <AlertDialog.Close>Cancel</AlertDialog.Close>
-            <AlertDialog.Close onClick={onConfirm}>Confirm</AlertDialog.Close>
+            <AlertDialog.Close onClick={onConfirm}>
+              {confirmLabel}
+            </AlertDialog.Close>
           </div>
         </AlertDialog.Popup>
       </AlertDialog.Portal>

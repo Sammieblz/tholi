@@ -10,6 +10,7 @@ import {
 import {
   identityAuthorizeSchema,
   identityExchangeSchema,
+  identityProfileSchema,
   identityTokensSchema,
   type IdentityAuthorizeInput,
   type IdentityTokens,
@@ -197,7 +198,7 @@ export class IdentityService {
       context,
     });
     context.signal.throwIfAborted();
-    const account = await this.authorizedWrite(() =>
+    const account = await this.authorizedOperation(() =>
         this.store.resolveIdentity(identity),
       ),
       client = this.client(flow.clientId);
@@ -211,7 +212,7 @@ export class IdentityService {
       };
     if (!flow.codeChallenge || !flow.clientState) throw denied();
     const code = secret();
-    await this.authorizedWrite(() =>
+    await this.authorizedOperation(() =>
       this.store.createBroker({
         ...account,
         ...identity,
@@ -250,7 +251,7 @@ export class IdentityService {
       .update("tholi-csrf:" + id)
       .digest("base64url");
   }
-  private async authorizedWrite<T>(work: () => Promise<T>) {
+  private async authorizedOperation<T>(work: () => Promise<T>) {
     try {
       return await work();
     } catch (error) {
@@ -300,7 +301,7 @@ export class IdentityService {
       createdAt: now,
       lastUsedAt: now,
     };
-    await this.authorizedWrite(() => this.store.createSession(session));
+    await this.authorizedOperation(() => this.store.createSession(session));
     return { session, tokens: this.tokens(session, accessToken, refreshToken) };
   }
   private tokens(
@@ -358,6 +359,26 @@ export class IdentityService {
         ? { csrfToken: this.csrf(session.id) }
         : {}),
     };
+  }
+  async profile(session: IdentitySession, context: ServiceRequestContext) {
+    context.signal.throwIfAborted();
+    const contacts = await this.authorizedOperation(() =>
+      this.store.readContacts(session.accountId, {
+        identityId: session.identityId,
+      }),
+    );
+    context.signal.throwIfAborted();
+    return identityProfileSchema.parse({
+      accountId: session.accountId,
+      verifiedEmail:
+        contacts.find((contact) => contact.identityId === session.identityId)
+          ?.verifiedEmail ?? null,
+      provider: this.provider.accountManagement ?? {
+        managementUrl: null,
+        recoveryAvailable: false,
+        verificationAvailable: false,
+      },
+    });
   }
   async refresh(
     clientId: string,

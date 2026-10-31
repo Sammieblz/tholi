@@ -66,6 +66,13 @@ export function createOidcProvider(
   fetcher: typeof fetch = fetch,
   observer: Observability = NO_OBSERVABILITY,
 ): IdentityProvider {
+  const authorizationPath = new URL(options.authorizationEndpoint).pathname;
+  const recoveryAvailable = authorizationPath.endsWith(
+    "/protocol/openid-connect/auth",
+  );
+  const verificationAvailable = authorizationPath.includes(
+    "/protocol/openid-connect/",
+  );
   const keys = createRemoteJWKSet(new URL(options.jwksUri), {
     timeoutDuration: 5000,
     cooldownDuration: 5000,
@@ -128,10 +135,15 @@ export function createOidcProvider(
     return new Date(claims.iat! * 1000);
   }
   return {
+    accountManagement: {
+      managementUrl: options.accountManagementUrl ?? null,
+      recoveryAvailable,
+      verificationAvailable,
+    },
     authorize({ state, nonce, codeChallenge, action }) {
       const url = new URL(options.authorizationEndpoint);
       if (action === "recover") {
-        if (!url.pathname.endsWith("/protocol/openid-connect/auth"))
+        if (!recoveryAvailable)
           throw new IdentityError(
             400,
             "INVALID_REQUEST",
@@ -149,7 +161,7 @@ export function createOidcProvider(
       url.searchParams.set("code_challenge_method", "S256");
       if (action === "signup") url.searchParams.set("prompt", "create");
       if (action === "verify") {
-        if (!url.pathname.includes("/protocol/openid-connect/"))
+        if (!verificationAvailable)
           throw new IdentityError(
             400,
             "INVALID_REQUEST",

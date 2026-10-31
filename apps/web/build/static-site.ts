@@ -4,12 +4,17 @@ import { createServer, type Plugin } from "vite";
 import { createWebsiteDelivery } from "../../../scripts/lib/website-delivery.mjs";
 
 /** Emit crawler-readable pages from the same React owners used by the browser. */
-export function staticSite(): Plugin {
+export function staticSite(
+  options: { deploymentDirectory?: string } = {},
+): Plugin {
   let outputDirectory = "";
   let mode = "production";
   const styles = new Map<string, string[]>();
   const generatedAssets = new Set<string>();
-  const nginxFragment = resolve("output/deploy/website/nginx-locations.conf");
+  const nginxFragment = resolve(
+    options.deploymentDirectory ?? "output/deploy/website",
+    "nginx-locations.conf",
+  );
   return {
     name: "tholi-static-site",
     apply: "build",

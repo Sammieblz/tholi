@@ -26,6 +26,10 @@ import {
   useAccount,
 } from "../../../apps/web/src/features/account/session";
 import { ServiceClientError } from "../../../packages/navigation-core/service-client";
+import {
+  identityAccountResponseSchema,
+  identityLogoutResponseSchema,
+} from "../../../packages/navigation-core/contracts-identity";
 import { AccountAnalytics } from "../../../apps/web/src/features/account/AccountAnalytics";
 import { PreferencesProvider } from "../../../apps/web/src/features/preferences/PreferencesProvider";
 import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
@@ -112,6 +116,56 @@ it("same-account reload preserves durable pending cloud work while explicit logo
   expect(current.session).toBeUndefined();
   await act(async () => current.reload());
   expect((await current.savedData.cached()).outbox).toEqual([]);
+});
+
+it("a retained account view cannot send requests or discard a replacement account's approved cloud work", async () => {
+  let actor = session;
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return actor;
+      if (path === "/api/v1/capabilities")
+        return { capabilities: ["saved-data-write", "account-binding"] };
+      if (path.endsWith("/artifacts") && options.method === "POST")
+        throw new Error("offline");
+      throw new Error("A stale account action reached transport.");
+    },
+  );
+  await mount();
+  const previous = current;
+  actor = {
+    ...session,
+    account: {
+      ...session.account,
+      id: "00000000-0000-4000-8000-000000000004",
+      workspaceId: "00000000-0000-4000-8000-000000000005",
+    },
+    session: { ...session.session, id: "00000000-0000-4000-8000-000000000006" },
+  };
+  await act(async () => current.reload());
+  await expect(
+    current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
+  ).rejects.toThrow("offline");
+  const approved = (await current.savedData.cached()).outbox,
+    sent = transport.request.mock.calls.length;
+  expect(approved).toHaveLength(1);
+  await expect(
+    previous.request("/api/v1/account", identityAccountResponseSchema),
+  ).rejects.toMatchObject({ code: "CANCELLED" });
+  await expect(
+    previous.request(
+      "/api/v1/auth/logout",
+      identityLogoutResponseSchema,
+      "POST",
+      { all: false },
+    ),
+  ).rejects.toMatchObject({ code: "CANCELLED" });
+  await expect(previous.signOut()).rejects.toMatchObject({ code: "CANCELLED" });
+  await expect(previous.completeDeletion()).rejects.toMatchObject({
+    code: "CANCELLED",
+  });
+  expect(transport.request).toHaveBeenCalledTimes(sent);
+  expect(current.session?.account).toEqual(actor.account);
+  expect((await current.savedData.cached()).outbox).toEqual(approved);
 });
 
 it("peer account notices abort stale work and reload verified identity without trusting channel identities or broadcasting loops", async () => {

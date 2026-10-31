@@ -16,6 +16,8 @@ export interface IdentityOptions {
   tokenEndpoint: string;
   jwksUri: string;
   endSessionEndpoint: string;
+  /** Explicit provider-hosted account controls; never a caller-supplied redirect. */
+  accountManagementUrl?: string;
   clientId: string;
   clientSecret: string;
   callbackUrl: string;
@@ -83,6 +85,10 @@ export type RefreshResult =
 
 /** Each one-use/revocation method is atomic and commits before returning. */
 export interface IdentityStore {
+  readContacts(
+    accountId: string,
+    query?: IdentityContactQuery,
+  ): Promise<IdentityContact[]>;
   createFlow(flow: IdentityFlow): Promise<void>;
   consumeFlow(
     stateHash: string,
@@ -130,7 +136,21 @@ export interface IdentityStore {
     now: Date;
   }): Promise<void>;
 }
+export interface IdentityContact {
+  identityId: string;
+  verifiedEmail: string | null;
+}
+export interface IdentityContactQuery {
+  after?: string;
+  limit?: number;
+  identityId?: string;
+}
 export interface IdentityProvider {
+  readonly accountManagement?: {
+    managementUrl: string | null;
+    recoveryAvailable: boolean;
+    verificationAvailable: boolean;
+  };
   authorize(input: {
     state: string;
     nonce: string;

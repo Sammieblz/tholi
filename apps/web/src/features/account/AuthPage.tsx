@@ -92,8 +92,8 @@ export function AuthPage({ signup }: { signup: boolean }) {
         )}
         <p className="auth-legal small">
           Read our <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
-          <SiteLink to="/terms">terms</SiteLink>. Cloud guidance, paid plans and
-          credits are not available in this release.
+          <SiteLink to="/terms">terms</SiteLink>. Account features depend on the
+          connected service. Paid plans are not available yet.
         </p>
         <div className="auth-independent">
           <ShieldCheck width={18} aria-hidden="true" />

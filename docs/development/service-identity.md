@@ -5,9 +5,12 @@ The website and extension use one PostgreSQL-backed session owner, with differen
 credential delivery adapters. Installing or using Local Tholi needs no account,
 payment, identity provider or service upload. Practice remains isolated.
 
-This milestone enables account authentication and session security. It does not
-enable cloud inference, paid plans, credits or automatic synchronization of local
-knowledge. Their API inventory entries remain planned.
+This profile supplies account authentication and session security. Signing in
+does not grant inference, storage or product entitlements, or upload local
+knowledge. The [account workspace](account-dashboard.md) consumes the separately
+composed [credit](service-credits.md), [plan](service-plans.md) and
+[saved-data](service-saved-data.md) services. Current capabilities describe actual
+availability; paid plans and production cloud guidance remain unavailable.
 
 ## Local setup
 

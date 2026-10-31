@@ -74,6 +74,7 @@ function configured() {
     );
   });
   const store: IdentityStore = {
+    readContacts: unexpected,
     createFlow: unexpected,
     consumeFlow: unexpected,
     resolveIdentity: unexpected,

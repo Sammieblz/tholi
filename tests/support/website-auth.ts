@@ -8,9 +8,29 @@ import {
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
-import { identityAccountResponseSchema } from "../../packages/navigation-core/contracts-identity";
+import {
+  identityAccountResponseSchema,
+  identityProfileSchema,
+} from "../../packages/navigation-core/contracts-identity";
 import { serviceErrorEnvelopeSchema } from "../../packages/navigation-core/contracts-service";
 import type { NativeIdentityEnvironment } from "./webdriver-auth";
+import type { z } from "zod";
+import type { IdentityAccountResponse } from "../../packages/navigation-core/contracts-identity";
+import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../packages/navigation-core/contracts-service";
+
+import {
+  consentPageSchema,
+  consentSchema,
+} from "../../packages/navigation-core/contracts-authorization";
+import {
+  freeEnrollmentSchema,
+  productCatalogSchema,
+} from "../../packages/navigation-core/contracts-plans";
+import {
+  savedDataRecordSchema,
+  type SavedDataRecord,
+} from "../../packages/navigation-core/contracts-saved-data";
+import { savedDataArtifactFixture } from "./saved-data-fixture";
 
 const closedContexts = new WeakSet<BrowserContext>();
 export class WebsiteIdentityError extends Error {
@@ -24,6 +44,77 @@ export class WebsiteIdentityError extends Error {
       | "ACTION_LINK_MISSING",
   ) {
     super(reason);
+  }
+}
+
+/** Ordinary cookie, CSRF and displayed-account binding; no session fixture injection. */
+export async function websiteAccountRequest<T>(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  account: IdentityAccountResponse,
+  path: `/api/v1/${string}`,
+  schema: z.ZodType<T>,
+  method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
+  body?: unknown,
+): Promise<T> {
+  if (method !== "GET" && !account.csrfToken)
+    throw Error("DASHBOARD_CSRF_MISSING");
+  const response = await page.request.fetch(
+    new URL(path, environment.serviceOrigin).href,
+    {
+      method,
+      maxRedirects: 0,
+      failOnStatusCode: false,
+      headers: {
+        [SERVICE_ACCOUNT_BINDING_HEADER]: account.account.id,
+        ...(method !== "GET"
+          ? {
+              Origin: environment.webOrigin,
+              "X-Tholi-CSRF": account.csrfToken!,
+            }
+          : {}),
+      },
+      ...(body === undefined ? {} : { data: body }),
+    },
+  );
+  if (!response.ok()) throw Error(`DASHBOARD_API_${response.status()}`);
+  const parsed = schema.safeParse(await response.json().catch(() => undefined));
+  if (!parsed.success) throw Error("DASHBOARD_RESPONSE_INVALID");
+  return parsed.data;
+}
+
+/** Exercise the actual browser download while retaining no exported user data. */
+export async function downloadWebsiteJson<T>(
+  page: Page,
+  trigger: Locator,
+  filename: string | RegExp,
+  schema: z.ZodType<T>,
+  maxBytes: number,
+): Promise<T> {
+  const downloading = page.waitForEvent("download");
+  await trigger.click();
+  const download = await downloading;
+  try {
+    if (typeof filename === "string")
+      expect(download.suggestedFilename()).toBe(filename);
+    else expect(download.suggestedFilename()).toMatch(filename);
+    const stream = await download.createReadStream();
+    if (!stream) throw Error("PRIVATE_DOWNLOAD_STREAM_MISSING");
+    const chunks: Buffer[] = [];
+    let length = 0;
+    for await (const chunk of stream) {
+      const bytes = Buffer.from(chunk);
+      length += bytes.length;
+      if (length > maxBytes) throw Error("PRIVATE_DOWNLOAD_OVERSIZED");
+      chunks.push(bytes);
+    }
+    const parsed = schema.safeParse(
+      JSON.parse(Buffer.concat(chunks).toString("utf8")),
+    );
+    if (!parsed.success) throw Error("PRIVATE_DOWNLOAD_INVALID");
+    return parsed.data;
+  } finally {
+    await download.delete();
   }
 }
 
@@ -262,15 +353,69 @@ export async function waitForWebsiteAccount(
       url.origin === environment.webOrigin && url.pathname === "/account",
   );
   await expect(
-    page.getByRole("heading", { name: "Account and security", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Renew session", exact: true }),
+    page.getByRole("heading", { name: "Your Tholi account", exact: true }),
   ).toBeVisible();
   const result = await accountResponse(page, environment);
   if (result.status !== 200 || !result.value)
     throw new WebsiteIdentityError("ACCOUNT_SESSION_MISSING");
   return result.value;
+}
+
+type RegistrationStage =
+  | "form"
+  | "fields"
+  | "submitted"
+  | "pending-account"
+  | "verification-found"
+  | "verification-followed"
+  | "password-form"
+  | "password-set";
+/** Both website cohorts follow the real provider's registration, mail and password setup. */
+export async function registerWebsiteAccount(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  fixture: ReturnType<typeof syntheticWebsiteIdentity>,
+  stage: (
+    value: RegistrationStage,
+    account?: { status: number; errorCode: string },
+  ) => Promise<void> = async () => {},
+) {
+  const before = await capturedMessageIds(environment, fixture.email);
+  await page.goto(environment.webOrigin + "/signup");
+  await page
+    .getByRole("link", { name: "Continue to sign up", exact: true })
+    .click();
+  await page.waitForURL((url) => url.origin === environment.providerOrigin);
+  await expect(page.locator("#kc-register-form")).toBeVisible();
+  await stage("form");
+  for (const [id, value] of Object.entries({
+    username: fixture.username,
+    email: fixture.email,
+    firstName: "Local",
+    lastName: "Verification",
+  }))
+    await page.locator(`[id="${id}"]`).fill(value);
+  await stage("fields");
+  await page.locator('#kc-register-form input[type="submit"]').click();
+  await stage("submitted");
+  if ((await providerRegistrationError(page)) !== "none")
+    throw new WebsiteIdentityError("PROVIDER_FORM_REJECTED");
+  const pending = await accountResponse(page, environment);
+  await stage("pending-account", pending);
+  expect(pending.status).toBe(401);
+  const verification = await localEmailAction(
+    environment,
+    fixture.email,
+    before,
+  );
+  await stage("verification-found");
+  await page.goto(verification);
+  await stage("verification-followed");
+  await expect(page.locator("#kc-passwd-update-form")).toBeVisible();
+  await stage("password-form");
+  await setWebsitePassword(page, fixture.password);
+  await stage("password-set");
+  return waitForWebsiteAccount(page, environment);
 }
 export async function signInWebsite(
   page: Page,
@@ -412,9 +557,7 @@ export async function signOutWebsite(
 ) {
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: "Signed out of this Tholi session." }),
+    page.getByRole("status").filter({ hasText: "Signed out of Tholi." }),
   ).toBeVisible();
   if ((await accountResponse(page, environment)).status !== 401)
     throw Error("The website logout did not revoke its account session.");
@@ -422,7 +565,7 @@ export async function signOutWebsite(
     const popupPromise = page.waitForEvent("popup");
     await page
       .getByRole("link", {
-        name: "Also review sign-out with your identity provider",
+        name: "Review sign-out with your identity provider",
         exact: true,
       })
       .click();
@@ -472,4 +615,162 @@ export async function checkCookieBinding(
   } finally {
     await foreign.close();
   }
+}
+
+/** Shared ordinary signup and typed-data preparation for the real dashboard scenarios. */
+export async function prepareWebsiteDashboardAccount(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  fixture: ReturnType<typeof syntheticWebsiteIdentity>,
+  enrollment: "website" | "api",
+  reportStage: (stage: string) => void,
+) {
+  const checks: string[] = [];
+  await waitForIdentityGatewayCapacity();
+  await page.goto(environment.webOrigin + "/signup");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const owner = await registerWebsiteAccount(page, environment, fixture);
+  const workspace = `/api/v1/workspaces/${owner.account.workspaceId}` as const;
+  reportStage("explicit Free development enrollment");
+  if (enrollment === "website") {
+    await page.goto(environment.webOrigin + "/account/billing");
+    await expect(
+      page.getByRole("heading", { name: "Plans and billing", exact: true }),
+    ).toBeVisible();
+    const enable = page.getByRole("button", {
+      name: "Enable Free Cloud development",
+      exact: true,
+    });
+    await expect(enable).toBeEnabled();
+    await enable.click();
+    await expect(
+      page.getByRole("status").filter({
+        hasText:
+          "Your Free Cloud development allowance was confirmed. Your extension's processing choice is unchanged.",
+      }),
+    ).toBeVisible();
+    const catalog = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      "/api/v1/plans",
+      productCatalogSchema,
+    );
+    const paid = catalog.plans.filter((plan) => plan.mode === "paid");
+    expect(paid.length).toBeGreaterThan(0);
+    for (const plan of paid)
+      await expect(
+        page
+          .getByRole("article", { name: plan.name, exact: true })
+          .getByText("Checkout and payment collection are not enabled.", {
+            exact: true,
+          }),
+      ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Billing", exact: true }),
+    ).toContainText("There is no checkout or payment form in this version.");
+    expect(
+      await page
+        .locator(
+          'input[autocomplete="cc-number"], input[autocomplete="cc-csc"]',
+        )
+        .count(),
+    ).toBe(0);
+    checks.push(
+      "real Free enrollment creates no checkout or implicit local upload",
+    );
+  } else {
+    await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      `${workspace}/entitlements/free`,
+      freeEnrollmentSchema,
+      "POST",
+      {},
+    );
+    checks.push(
+      "ordinary authenticated fixture setup enables the bounded Free allowance",
+    );
+  }
+  reportStage("approved typed data preparation");
+  await waitForIdentityGatewayCapacity();
+  const current = await websiteAccountRequest(
+    page,
+    environment,
+    owner,
+    `${workspace}/consents`,
+    consentPageSchema,
+  );
+  const prior = current.items.find(
+    (entry) => entry.purpose === "cloud_saved_routes",
+  );
+  await websiteAccountRequest(
+    page,
+    environment,
+    owner,
+    `${workspace}/consents`,
+    consentSchema,
+    "POST",
+    {
+      purpose: "cloud_saved_routes",
+      policyVersion: "2",
+      granted: true,
+      expectedRevision: prior?.revision ?? "0",
+    },
+  );
+  const kinds = [
+    "saved_route",
+    "site_knowledge",
+    "conversation_excerpt",
+    "preferences",
+  ] as const;
+  const labels = [
+    "Dashboard route",
+    "Dashboard knowledge",
+    "Dashboard excerpt",
+    "Dashboard appearance",
+  ];
+  const records: SavedDataRecord[] = [];
+  for (const [index, kind] of kinds.entries()) {
+    const artifact = savedDataArtifactFixture(kind, {
+      metadata: {
+        label: labels[index],
+        folder: "Dashboard",
+        tags: ["review"],
+      },
+    });
+    records.push(
+      await websiteAccountRequest(
+        page,
+        environment,
+        owner,
+        `${workspace}/artifacts`,
+        savedDataRecordSchema,
+        "POST",
+        {
+          idempotencyKey: randomUUID(),
+          expectedRevision: "0",
+          approved: true,
+          artifact,
+        },
+      ),
+    );
+  }
+  const profile = await websiteAccountRequest(
+    page,
+    environment,
+    owner,
+    "/api/v1/account/profile",
+    identityProfileSchema,
+  );
+  expect(profile.verifiedEmail).toBe(fixture.email);
+  expect(profile.provider.managementUrl).toBe(
+    `${environment.providerOrigin}/realms/tholi-local/account/`,
+  );
+  expect(profile.provider.recoveryAvailable).toBe(true);
+
+  return { owner, workspace, records, labels, profile, checks };
 }

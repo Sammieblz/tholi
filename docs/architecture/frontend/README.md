@@ -9,7 +9,7 @@ apps/web/src/
   components/SiteLayout.tsx    Header, accessible mobile navigation, footer
   config/project.ts           Repository links derived from root package metadata
   features/
-    account/                  Unrouted mock drafts, excluded from production imports
+    account/                  Optional real identity and protected account/data/credit workspace
     demo/                     Sample workspace and interactive walkthrough
     downloads/                Manifest loading, download button, setup page
     docs/                     Allowlisted repository Markdown, safe GFM, search

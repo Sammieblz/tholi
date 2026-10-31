@@ -14,7 +14,7 @@ export function AccountRoute({ path }: { path: string }) {
       {path === "/signin" || path === "/signup" ? (
         <AuthPage signup={path === "/signup"} />
       ) : (
-        <WelcomePage />
+        <WelcomePage path={path} />
       )}
     </AccountProvider>
   );

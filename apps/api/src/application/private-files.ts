@@ -6,6 +6,10 @@ import {
 } from "../../../../packages/navigation-core/contracts-support";
 import type { PrivateFile } from "./support-contracts";
 import { savedDataExportSnapshotSchema } from "../../../../packages/navigation-core/contracts-saved-data";
+import {
+  accountExportPartSchema,
+  accountExportManifestSchema,
+} from "../../../../packages/navigation-core/contracts-account";
 
 const generatedKey =
   /^exports\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.json$/;
@@ -22,6 +26,30 @@ export function diagnosticBytes(value: unknown) {
 
 export function savedDataExportBytes(value: unknown) {
   return encodedBytes(savedDataExportSnapshotSchema.parse(value));
+}
+
+export function privateExportBytes(
+  value: unknown,
+  purpose: NonNullable<PrivateFile["purpose"]>,
+) {
+  switch (purpose) {
+    case "diagnostic":
+      return diagnosticBytes(value);
+    case "saved-data-export":
+      return savedDataExportBytes(value);
+    case "account-export-part":
+      return encodedBytes(accountExportPartSchema.parse(value));
+    case "account-export-manifest":
+      return encodedBytes(accountExportManifestSchema.parse(value));
+  }
+}
+
+export function validateAccountFile(file: PrivateFile, body: Uint8Array) {
+  if (file.purpose === "account-export-part")
+    return accountExportPartSchema.parse(verifiedJson(file, body));
+  if (file.purpose === "account-export-manifest")
+    return accountExportManifestSchema.parse(verifiedJson(file, body));
+  throw new Error("The private export purpose is invalid.");
 }
 
 function encodedBytes(value: unknown) {
@@ -64,6 +92,11 @@ export function validateSavedDataFile(file: PrivateFile, body: Uint8Array) {
 }
 
 export function validatePrivateFile(file: PrivateFile, body: Uint8Array) {
+  if (
+    file.purpose === "account-export-part" ||
+    file.purpose === "account-export-manifest"
+  )
+    return validateAccountFile(file, body);
   return file.purpose === "saved-data-export"
     ? validateSavedDataFile(file, body)
     : validateDiagnosticFile(file, body);

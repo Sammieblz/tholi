@@ -10,6 +10,7 @@ import {
 } from "../../../apps/web/src/features/seo/metadata";
 import { articleCatalog } from "../../../apps/web/src/features/docs/catalog";
 import { resolvePublicOrigin } from "../../../apps/web/src/config/project";
+import { ACCOUNT_SECTIONS } from "../../../apps/web/src/features/account/paths";
 
 describe("website search metadata contracts", () => {
   it("gives every public route a unique title, description and canonical with safe metadata", () => {
@@ -60,9 +61,20 @@ describe("website search metadata contracts", () => {
     expect(metadataForPath("/docs/no-such-article").index).toBe(false);
     expect(metadataForPath("/no-such-page").index).toBe(false);
     expect(metadataForPath("/onboarding").index).toBe(false);
-    for (const path of ["/signin", "/signup", "/account"]) {
+    for (const path of [
+      "/signin",
+      "/signup",
+      ...ACCOUNT_SECTIONS.map((item) => item.path),
+    ]) {
       expect(metadataForPath(path).path).toBe(path);
       expect(metadataForPath(path).index).toBe(false);
+      expect(metadataForPath(`${path}.html?code=private#section`).path).toBe(
+        path,
+      );
+      expect(metadataForPath(`${path}/`).index).toBe(false);
+      expect(publicPages.some((page) => page.path === path && page.index)).toBe(
+        false,
+      );
     }
     expect(metadataForPath("/welcome").path).toBe("/account");
     expect(metadataForPath("/welcome.html?code=private").path).toBe("/account");

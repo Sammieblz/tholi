@@ -2,16 +2,30 @@ import { mailStorageSupport } from "./006-mail-storage-support";
 import { portableObservability } from "./007-observability";
 
 /** Extend the frozen existing pipeline rather than maintain another copy of it. */
-function extendFileFunctions(source: string, names: readonly string[]) {
+export function extendFileFunctions(
+  source: string,
+  names: readonly string[],
+  replacements?: readonly (readonly [string, string])[],
+) {
   return names
     .map((name) => {
-      const start = source.indexOf(`CREATE FUNCTION tholi.${name}(`);
+      let start = source.indexOf(`CREATE FUNCTION tholi.${name}(`);
+      if (start < 0)
+        start = source.indexOf(`CREATE OR REPLACE FUNCTION tholi.${name}(`);
       const body = source.indexOf("$$", start);
       const end = source.indexOf("$$;", body + 2);
       if (start < 0 || body < 0 || end < 0)
         throw new Error(
           "The historical private-file migration is unavailable.",
         );
+      if (replacements) {
+        let definition = source
+          .slice(start, end + 3)
+          .replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION");
+        for (const [before, after] of replacements)
+          definition = definition.replaceAll(before, after);
+        return definition;
+      }
       return source
         .slice(start, end + 3)
         .replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION")

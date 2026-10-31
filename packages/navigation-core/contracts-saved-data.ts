@@ -6,8 +6,9 @@ import {
   servicePayloadHashSchema,
   serviceRevisionSchema,
   serviceSyncRevisionSchema,
+  serviceQuantitySchema,
 } from "./contracts-service";
-import { privateFileRequestSchema } from "./contracts-support";
+import { privateFileRequestSchema } from "./contracts-private-files";
 
 export const SAVED_DATA_LIMITS = Object.freeze({
   label: 120,
@@ -19,6 +20,15 @@ export const SAVED_DATA_LIMITS = Object.freeze({
   importItems: 20,
   conversationMessages: 12,
 });
+/** Logical saved-item bytes match database quota accounting, not physical disk usage. */
+export const savedDataStorageUsageSchema = z
+  .object({
+    scope: z.literal("account"),
+    artifacts: serviceQuantitySchema,
+    bytes: serviceQuantitySchema,
+  })
+  .strict();
+export type SavedDataStorageUsage = z.infer<typeof savedDataStorageUsageSchema>;
 const safeText = (maximum: number) =>
   z
     .string()

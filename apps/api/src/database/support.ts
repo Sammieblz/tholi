@@ -130,7 +130,11 @@ export class PostgresSupport implements SupportStore {
         lease,
         (queries) => queries.prepareExternal(lease),
         undefined,
-        lease.kind === "file.saved-data-export"
+        [
+          "file.saved-data-export",
+          "file.account-export-part",
+          "file.account-export-manifest",
+        ].includes(lease.kind)
           ? "saved-data.export"
           : "support.request",
       );
@@ -146,12 +150,21 @@ export class PostgresSupport implements SupportStore {
   ): Promise<boolean> {
     lease = structuredClone(lease);
     z.string().uuid().parse(attemptId);
-    if (lease.kind !== "file.saved-data-export" || lease.version !== 1)
+    if (
+      ![
+        "file.saved-data-export",
+        "file.account-export-part",
+        "file.account-export-manifest",
+      ].includes(lease.kind) ||
+      lease.version !== 1
+    )
       return false;
     return (
       (
         await this.pool.query<{ allowed: boolean }>(
-          "SELECT tholi.authorize_saved_export($1,$2,$3,$4) AS allowed",
+          lease.kind === "file.saved-data-export"
+            ? "SELECT tholi.authorize_saved_export($1,$2,$3,$4) AS allowed"
+            : "SELECT tholi.authorize_account_export($1,$2,$3,$4) AS allowed",
           [lease.workspaceId, lease.id, lease.leaseToken, attemptId],
         )
       ).rows[0]?.allowed === true

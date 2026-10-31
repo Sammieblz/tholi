@@ -35,7 +35,11 @@ export interface PrivateFile {
   expiresAt: Date;
   status: "pending" | "ready" | "deleting" | "deleted";
   /** Missing only in legacy adapter fixtures; database rows always select it. */
-  purpose?: "diagnostic" | "saved-data-export";
+  purpose?:
+    | "diagnostic"
+    | "saved-data-export"
+    | "account-export-part"
+    | "account-export-manifest";
 }
 export type ApprovedMail =
   | {
