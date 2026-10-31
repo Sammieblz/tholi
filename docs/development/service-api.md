@@ -112,8 +112,11 @@ cancellation, zero billing or a completed installation/task.
 The browser's [single journey integration](../architecture/navigation-contracts.md#background-proposal-integration)
 uses the ordinary local plan first, then explicitly opted-in service enrichment
 for that retained task. Network waits do not hold the local inference queue.
-Expanded status/recovery presentation is #42. This does not enable paid cloud
-guidance for ordinary users. Existing account-scoped errors preserve revoked
+The existing Guide presents current-request processing and explicit recovery;
+account settings distinguish Local from Connected development service and keep
+privacy withdrawal available during pending work. Cloud plans and actual credit
+balances remain unavailable in this development profile. This does not enable
+paid cloud guidance for ordinary users. Existing account-scoped errors preserve revoked
 access, unavailable service and exhausted credit/storage conditions without
 opening payment flows. Server-authoritative plans and durable cost enforcement
 remain #44 and #58.

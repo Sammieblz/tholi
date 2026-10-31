@@ -606,7 +606,61 @@ it("inference configuration fences capture immediately outside a blocked routine
   expect(enqueue).not.toHaveBeenCalled();
 });
 
-it("inference choices keep the native request in the enabling gesture and disabling never requests another grant", async () => {
+type AccountMessage = {
+  type: string;
+  enabled?: boolean;
+  images?: boolean;
+};
+function inferenceReply(enabled = false, images = false) {
+  return {
+    configured: true,
+    profile: "fake",
+    enabled,
+    images,
+    serverConsentUpdated: true,
+  };
+}
+function pendingAccountReply<T = unknown>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+function accountReply() {
+  return {
+    configured: true,
+    origin: "https://service.example.test",
+    account: {
+      id,
+      workspaceId: "00000000-0000-4000-8000-000000000002",
+      revision: "1",
+    },
+    session: {
+      id,
+      clientId: "extension-chromium",
+      clientKind: "extension",
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+    },
+  };
+}
+async function withAccountSettings(
+  options: {
+    initial?: { enabled: boolean; images: boolean };
+    reply?: (message: AccountMessage) => unknown;
+  },
+  verify: (fixture: {
+    container: HTMLDivElement;
+    local: HTMLInputElement;
+    connected: HTMLInputElement;
+    images: HTMLInputElement;
+    events: string[];
+    request: ReturnType<typeof vi.fn>;
+    rpc: ReturnType<typeof vi.fn>;
+  }) => Promise<void>,
+) {
   const { api } = environment();
   const events: string[] = [];
   const request = vi.fn(async () => {
@@ -614,45 +668,18 @@ it("inference choices keep the native request in the enabling gesture and disabl
     return true;
   });
   Object.assign(api, { permissions: { request } });
-  const origin = "https://service.example.test";
-  const rpc = vi.fn(
-    async (message: { type: string; enabled?: boolean; images?: boolean }) => {
-      if (message.type === "AUTH_STATUS")
-        return {
-          configured: true,
-          origin,
-          account: {
-            id,
-            workspaceId: "00000000-0000-4000-8000-000000000002",
-            revision: "1",
-          },
-          session: {
-            id,
-            clientId: "extension-chromium",
-            clientKind: "extension",
-            expiresAt: new Date(Date.now() + 60000).toISOString(),
-          },
-        };
-      if (message.type === "AUTH_INFERENCE_STATUS")
-        return {
-          configured: true,
-          profile: "fake",
-          enabled: false,
-          images: false,
-        };
-      if (message.type === "AUTH_INFERENCE_CONFIGURE") {
-        events.push(message.enabled ? "enable" : "disable");
-        return {
-          configured: true,
-          profile: "fake",
-          enabled: !!message.enabled,
-          images: !!message.images,
-          serverConsentUpdated: true,
-        };
-      }
-      throw new Error("Unexpected fixture command");
-    },
-  );
+  const rpc = vi.fn(async (message: AccountMessage) => {
+    const supplied = options.reply?.(message);
+    if (supplied !== undefined) return supplied;
+    if (message.type === "AUTH_STATUS") return accountReply();
+    if (message.type === "AUTH_INFERENCE_STATUS")
+      return inferenceReply(options.initial?.enabled, options.initial?.images);
+    if (message.type === "AUTH_INFERENCE_CONFIGURE") {
+      events.push(message.enabled ? "enable" : "disable");
+      return inferenceReply(!!message.enabled, !!message.images);
+    }
+    throw new Error("Unexpected fixture command");
+  });
   Object.assign(api.runtime, { sendMessage: rpc });
   const { AccountSettings } =
     await import("../../../apps/extension/src/ui/features/account/AccountSettings");
@@ -670,37 +697,329 @@ it("inference choices keep the native request in the enabling gesture and disabl
       ".tholi-inference-settings",
     )!;
     expect(fieldset).not.toBeNull();
-    const checkbox = fieldset.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]',
-    )!;
-    const described = checkbox.getAttribute("aria-describedby")!;
-    expect(document.getElementById(described)?.textContent).toContain(
-      "consent",
-    );
-    await act(async () => checkbox.click());
-    expect(request).not.toHaveBeenCalled();
-    const save = [...fieldset.querySelectorAll("button")].find(
-      (button) => button.textContent === "Save inference choices",
-    )!;
-    await act(async () => {
-      save.click();
-      expect(request).toHaveBeenCalledOnce();
-      expect(events).toEqual(["permission"]);
+    await verify({
+      container,
+      local: fieldset.querySelector<HTMLInputElement>('input[value="local"]')!,
+      connected: fieldset.querySelector<HTMLInputElement>(
+        'input[value="connected"]',
+      )!,
+      images: fieldset.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      )!,
+      events,
+      request,
+      rpc,
     });
-    expect(events).toEqual(["permission", "enable"]);
-    expect(request).toHaveBeenCalledWith({ origins: [origin + "/*"] });
-    await act(async () => checkbox.click());
-    expect(events).toEqual(["permission", "enable", "disable"]);
-    expect(request).toHaveBeenCalledOnce();
-    expect(container.querySelector('[role="status"]')?.textContent).toContain(
-      "withdrawal confirmed",
-    );
   } finally {
     await act(async () => root.unmount());
     container.remove();
     reactGlobals.IS_REACT_ACT_ENVIRONMENT = previousAct;
   }
+}
+
+it("inference choices keep native access in the enabling gesture, preserve the current choice if it throws and withdraw without another grant", async () => {
+  await withAccountSettings(
+    {},
+    async ({ container, local, connected, images, events, request, rpc }) => {
+      for (const control of [local, connected, images]) {
+        const described = control.getAttribute("aria-describedby")!;
+        expect(document.getElementById(described)?.textContent).toBeTruthy();
+      }
+      expect(container.textContent).toContain(
+        "separate image-transmission consent",
+      );
+      expect(container.textContent).toContain(
+        "authorizes sanitized page-context transmission",
+      );
+      expect(
+        container.querySelectorAll(".tholi-inference-settings button"),
+      ).toHaveLength(0);
+      await act(async () => {
+        connected.click();
+        expect(request).toHaveBeenCalledOnce();
+        expect(events).toEqual(["permission"]);
+      });
+      expect(events).toEqual(["permission", "enable"]);
+      expect(request).toHaveBeenCalledWith({
+        origins: ["https://service.example.test/*"],
+      });
+      const beforeFailure = rpc.mock.calls.length;
+      request.mockImplementationOnce(() => {
+        throw new Error("Native request unavailable");
+      });
+      await act(async () => images.click());
+      expect(connected.checked).toBe(true);
+      expect(images.checked).toBe(false);
+      expect(rpc.mock.calls).toHaveLength(beforeFailure);
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+        "processing choice is unchanged",
+      );
+      request.mockResolvedValueOnce(false);
+      await act(async () => images.click());
+      expect(connected.checked).toBe(true);
+      expect(images.checked).toBe(false);
+      expect(rpc.mock.calls).toHaveLength(beforeFailure);
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+        "access was not granted",
+      );
+      await act(async () => local.click());
+      expect(events).toEqual(["permission", "enable", "disable"]);
+      expect(request).toHaveBeenCalledTimes(3);
+      expect(container.querySelector('[role="status"]')?.textContent).toContain(
+        "withdrawal is confirmed",
+      );
+      expect(local.checked).toBe(true);
+    },
+  );
 });
+
+it.each(["native access", "service consent"])(
+  "Local immediately fences a pending first enable during %s and ignores its late result",
+  async (phase) => {
+    const enable = pendingAccountReply();
+    const access = pendingAccountReply<boolean>();
+    await withAccountSettings(
+      {
+        reply: (message) =>
+          phase === "service consent" &&
+          message.type === "AUTH_INFERENCE_CONFIGURE" &&
+          message.enabled
+            ? enable.promise
+            : undefined,
+      },
+      async ({ container, local, connected, request, rpc }) => {
+        if (phase === "native access")
+          request.mockImplementationOnce(() => access.promise);
+        await act(async () => connected.click());
+        expect(connected.checked).toBe(true);
+        expect(local.disabled).toBe(false);
+        await act(async () => {
+          local.click();
+          expect(rpc).toHaveBeenLastCalledWith({
+            type: "AUTH_INFERENCE_CONFIGURE",
+            profile: "fake",
+            enabled: false,
+            images: false,
+          });
+        });
+        await act(async () => {
+          access.resolve(true);
+          enable.resolve(inferenceReply(true));
+        });
+        expect(local.checked).toBe(true);
+        expect(connected.checked).toBe(false);
+        expect(request).toHaveBeenCalledOnce();
+        if (phase === "native access")
+          expect(
+            rpc.mock.calls.some(
+              ([message]) =>
+                message.type === "AUTH_INFERENCE_CONFIGURE" && message.enabled,
+            ),
+          ).toBe(false);
+        expect(
+          container.querySelector('[role="status"]')?.textContent,
+        ).toContain("withdrawal is confirmed");
+      },
+    );
+  },
+);
+
+it.each([
+  { type: "AUTH_STATUS", metadataFails: false },
+  { type: "AUTH_INFERENCE_STATUS", metadataFails: false },
+  { type: "AUTH_STATUS", metadataFails: true },
+])(
+  "Local fences initial $type, refreshes only account metadata and keeps its acknowledgement when metadataFails=$metadataFails",
+  async ({ type, metadataFails }) => {
+    const read = pendingAccountReply();
+    let firstRead = true;
+    let accountReads = 0;
+    await withAccountSettings(
+      {
+        reply: (message) => {
+          if (message.type === "AUTH_STATUS") {
+            accountReads++;
+            if (metadataFails && accountReads > 1)
+              return { error: "Metadata unavailable" };
+          }
+          if (message.type === type && firstRead) {
+            firstRead = false;
+            return read.promise;
+          }
+          return undefined;
+        },
+      },
+      async ({ container, local, connected, request, rpc }) => {
+        expect(local.checked).toBe(true);
+        expect(local.disabled).toBe(false);
+        expect(connected.disabled).toBe(true);
+        await act(async () => local.click());
+        expect(
+          rpc.mock.calls.filter(
+            ([message]) => message.type === "AUTH_INFERENCE_CONFIGURE",
+          ),
+        ).toEqual([
+          [
+            {
+              type: "AUTH_INFERENCE_CONFIGURE",
+              profile: "fake",
+              enabled: false,
+              images: false,
+            },
+          ],
+        ]);
+        await act(async () =>
+          read.resolve(
+            type === "AUTH_STATUS"
+              ? accountReply()
+              : inferenceReply(true, true),
+          ),
+        );
+        expect(local.checked).toBe(true);
+        expect(connected.checked).toBe(false);
+        expect(request).not.toHaveBeenCalled();
+        expect(accountReads).toBe(2);
+        if (metadataFails) {
+          expect(
+            container.querySelector('[role="alert"]')?.textContent,
+          ).toContain("account details could not be refreshed");
+          expect(
+            container.querySelector('[role="status"]')?.textContent,
+          ).toContain("Browser transmission is off");
+        } else {
+          expect(container.textContent).toContain("Signed in");
+          expect(connected.disabled).toBe(false);
+        }
+        if (type === "AUTH_STATUS")
+          expect(
+            rpc.mock.calls.some(
+              ([message]) => message.type === "AUTH_INFERENCE_STATUS",
+            ),
+          ).toBe(false);
+      },
+    );
+  },
+);
+
+it("image withdrawal fences a pending first image enable without requesting another grant", async () => {
+  const enable = pendingAccountReply();
+  await withAccountSettings(
+    {
+      initial: { enabled: true, images: false },
+      reply: (message) =>
+        message.type === "AUTH_INFERENCE_CONFIGURE" && message.images
+          ? enable.promise
+          : undefined,
+    },
+    async ({ connected, images, request, rpc }) => {
+      await act(async () => images.click());
+      expect(images.checked).toBe(true);
+      expect(images.disabled).toBe(false);
+      await act(async () => {
+        images.click();
+        expect(rpc).toHaveBeenLastCalledWith({
+          type: "AUTH_INFERENCE_CONFIGURE",
+          profile: "fake",
+          enabled: true,
+          images: false,
+        });
+      });
+      await act(async () => enable.resolve(inferenceReply(true, true)));
+      expect(connected.checked).toBe(true);
+      expect(images.checked).toBe(false);
+      expect(request).toHaveBeenCalledOnce();
+    },
+  );
+});
+
+it.each(["stale enabled read", "failed withdrawal read"])(
+  "processing failure recovery handles %s without claiming an unconfirmed choice",
+  async (scenario) => {
+    const recovery = pendingAccountReply();
+    let reads = 0;
+    await withAccountSettings(
+      {
+        initial: {
+          enabled: scenario === "failed withdrawal read",
+          images: false,
+        },
+        reply: (message) => {
+          if (message.type === "AUTH_INFERENCE_STATUS" && ++reads > 1)
+            return recovery.promise;
+          if (
+            message.type === "AUTH_INFERENCE_CONFIGURE" &&
+            (scenario === "failed withdrawal read"
+              ? !message.enabled
+              : message.enabled)
+          )
+            return { error: "test failure" };
+          return undefined;
+        },
+      },
+      async ({ local, connected, images, container }) => {
+        await act(async () =>
+          (scenario === "failed withdrawal read" ? local : connected).click(),
+        );
+        expect(reads).toBe(2);
+        if (scenario === "failed withdrawal read") {
+          await act(async () =>
+            recovery.reject(new Error("Status unavailable")),
+          );
+          expect(local.checked).toBe(false);
+          expect(connected.checked).toBe(true);
+          expect(
+            container.querySelector('[role="alert"]')?.textContent,
+          ).toContain("last confirmed choice is shown");
+          expect(
+            container.querySelector('[role="status"]')?.textContent,
+          ).not.toContain("transmission is off");
+          return;
+        }
+        await act(async () => local.click());
+        await act(async () => recovery.resolve(inferenceReply(true, true)));
+        expect(local.checked).toBe(true);
+        expect(connected.checked).toBe(false);
+        expect(images.checked).toBe(false);
+        expect(container.querySelector('[role="alert"]')?.textContent).toBe("");
+        expect(
+          container.querySelector('[role="status"]')?.textContent,
+        ).toContain("withdrawal is confirmed");
+      },
+    );
+  },
+);
+
+it.each(["AUTH_REFRESH", "AUTH_CONFIGURE"])(
+  "a completed old %s operation cannot reload enabled choices after Local",
+  async (type) => {
+    const operation = pendingAccountReply();
+    await withAccountSettings(
+      {
+        initial: { enabled: true, images: false },
+        reply: (message) =>
+          message.type === type ? operation.promise : undefined,
+      },
+      async ({ container, local, connected, rpc }) => {
+        const action = [...container.querySelectorAll("button")].find(
+          (button) =>
+            button.textContent ===
+            (type === "AUTH_REFRESH" ? "Renew session" : "Save service origin"),
+        )!;
+        await act(async () => action.click());
+        await act(async () => local.click());
+        const readCount = rpc.mock.calls.filter(
+          ([message]) => message.type === "AUTH_STATUS",
+        ).length;
+        await act(async () => operation.resolve({ ok: true }));
+        expect(
+          rpc.mock.calls.filter(([message]) => message.type === "AUTH_STATUS"),
+        ).toHaveLength(readCount);
+        expect(local.checked).toBe(true);
+        expect(connected.checked).toBe(false);
+      },
+    );
+  },
+);
 
 it("Pause and Stop bypass a blocked routine queue and unresponsive page without accepting stale controls", async () => {
   const { api, session, sender } = environment();

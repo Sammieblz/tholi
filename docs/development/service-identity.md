@@ -69,8 +69,9 @@ credentials from being installed for the replacement origin.
 
 Authentication requests only the service host and authentication consent. It does
 not authorize page-content/image transmission or broaden website grants. Local
-knowledge and legacy private-backend credentials remain separate. Cloud-data
-consent and inference adoption remain later milestones.
+knowledge and legacy private-backend credentials remain separate. The separately
+consented [development inference transport](service-api.md#opt-in-development-navigation-transport)
+uses the same protected account owner; it does not enable hosted cloud-data plans.
 
 ## Sessions and trust
 

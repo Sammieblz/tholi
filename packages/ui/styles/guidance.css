@@ -622,6 +622,23 @@
 .tholi-body button {
   margin: 4px 4px 4px 0;
 }
+.tholi-processing {
+  margin-block: 12px 4px;
+  padding-block: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.tholi-processing strong {
+  display: block;
+  color: var(--ink);
+}
+.tholi-processing p {
+  margin: 0 0 8px;
+}
+.tholi-processing button {
+  min-height: 44px;
+}
 .tholi-messages {
   display: flex;
   flex-direction: column;

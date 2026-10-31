@@ -1,6 +1,213 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
 import { setGoal } from "../../../support/acceptance-runner";
+import { openNavigationServiceFixture } from "../../../support/navigation-service-fixture";
+
+test("connected processing announces pending, explicit recovery and Local privacy choices without claiming arrival", async ({}, info) => {
+  const fixture = await openNavigationServiceFixture(
+    info.project.use.viewport || undefined,
+  );
+  const { app, decisions, consentWrites } = fixture;
+  try {
+    const initial = await setGoal(app, "Find the amber compass");
+    expect(initial.error).toBeUndefined();
+    await expect.poll(() => decisions.length).toBe(1);
+    const processing = app.panel.getByRole("status", {
+      name: "Processing",
+      exact: true,
+    });
+    await expect(processing).toHaveCount(1);
+    await expect(processing).toHaveAttribute("aria-live", "polite");
+    await expect(processing).toHaveAttribute("aria-atomic", "true");
+    await expect(processing).toContainText(
+      "Connected guidance is checking this page",
+    );
+    const original = await processing.elementHandle();
+    await expect(
+      app.panel.getByRole("button", { name: "Pause navigation", exact: true }),
+    ).toBeEnabled();
+    await expect(
+      app.panel.getByRole("button", { name: "Stop", exact: true }),
+    ).toBeEnabled();
+    await app.panel.screenshot({
+      path: info.outputPath("processing-pending-sidebar.png"),
+    });
+    decisions[0].release({ error: "UNAVAILABLE", status: 503 });
+    await expect(processing).toContainText("Connected service is unavailable");
+    expect((await app.view()).verifiedSteps).toBe(0);
+    expect((await app.view()).request.status).toBe("active");
+    expect(decisions).toHaveLength(1);
+    await expect(app.panel.locator("body")).not.toContainText(
+      "PRIVATE_SERVICE_BODY_SENTINEL",
+    );
+    // Keyboard interaction begins after the held HTTP response settles. The
+    // separate headless panel tab is not native-sidebar focus evidence.
+    await app.panel.evaluate(() =>
+      (globalThis as any).__tholiSidebarTab.hold(),
+    );
+    await app.panel.bringToFront();
+    const retry = app.panel.getByRole("button", {
+      name: "Try again",
+      exact: true,
+    });
+    await retry.focus();
+    await app.panel.keyboard.press("Enter");
+    await expect.poll(() => decisions.length).toBe(2);
+    expect(decisions[1].input.requestId).not.toBe(decisions[0].input.requestId);
+    expect(decisions[1].input.observation.context.goal).toBe(
+      initial.view.request.original,
+    );
+    await expect(
+      app.panel.getByLabel("Navigation goal", { exact: true }),
+    ).toBeFocused();
+    await expect(processing).toContainText(
+      "Connected guidance is checking this page",
+    );
+    decisions[1].release({
+      decision: {
+        kind: "unsupported",
+        reason: "No supported route is available in this fixture.",
+      },
+    });
+    await expect(processing).toContainText(
+      "Connected guidance cannot guide this page",
+    );
+    await expect(retry).toHaveCount(0);
+    await expect(
+      app.panel.getByRole("status", { name: "Navigation status", exact: true }),
+    ).not.toContainText("Arrived");
+    const conversation = app.panel.getByRole("button", {
+      name: "Conversation",
+      exact: true,
+    });
+    await conversation.focus();
+    await app.panel.keyboard.press("Enter");
+    await expect(processing).toBeVisible();
+    expect(
+      await processing.evaluate(
+        (element, prior) => element === prior,
+        original,
+      ),
+    ).toBe(true);
+    const settings = app.panel.getByRole("button", {
+      name: "Tholi settings",
+      exact: true,
+    });
+    await settings.focus();
+    await app.panel.keyboard.press("Enter");
+    const local = app.panel.getByRole("radio", { name: "Local", exact: true });
+    await expect(local).toBeVisible();
+    await expect(
+      app.panel.getByRole("radio", {
+        name: "Connected development service",
+        exact: true,
+      }),
+    ).toBeChecked();
+    await local.focus();
+    await app.panel.keyboard.press("Space");
+    await expect(local).toBeChecked();
+    await expect
+      .poll(() =>
+        consentWrites.some(
+          (consent) =>
+            consent.purpose === "cloud_inference" && !consent.granted,
+        ),
+      )
+      .toBe(true);
+    await expect(
+      app.panel.getByRole("checkbox", {
+        name: "Allow temporary masked images",
+        exact: true,
+      }),
+    ).not.toBeChecked();
+    await expect(
+      app.panel.getByRole("checkbox", {
+        name: "Allow temporary masked images",
+        exact: true,
+      }),
+    ).toBeDisabled();
+    await app.panel.keyboard.press("Escape");
+    await expect(settings).toBeFocused();
+    await setGoal(app, "Turn Dark on");
+    await expect
+      .poll(async () => (await app.view()).selectedControlId)
+      .toBeTruthy();
+    expect(decisions).toHaveLength(2);
+    expect((await app.view()).verifiedSteps).toBe(0);
+    await expect(processing).toBeHidden();
+    expect(fixture.failures).toEqual([]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+for (const allowance of ["RATE_LIMITED", "QUOTA_EXCEEDED"] as const)
+  test(`connected ${allowance} presentation preserves the destination and uses no client balance or automatic retry`, async ({}, info) => {
+    const fixture = await openNavigationServiceFixture(
+      info.project.use.viewport || undefined,
+    );
+    const { app, decisions } = fixture;
+    try {
+      await app.panel.setViewportSize({ width: 300, height: 800 });
+      await app.panel.emulateMedia({ reducedMotion: "reduce" });
+      if (allowance === "QUOTA_EXCEEDED")
+        await app.page.evaluate(() => {
+          document.body.style.background = "#111";
+          document.body.style.color = "#fff";
+        });
+      await setGoal(app, "Find the amber compass");
+      await expect.poll(() => decisions.length).toBe(1);
+      await expect(app.panel.locator("html")).toHaveAttribute(
+        "data-tholi-theme",
+        allowance === "QUOTA_EXCEEDED" ? "light" : "dark",
+      );
+      decisions[0].release({ error: allowance, status: 429 });
+      const processing = app.panel.getByRole("status", {
+        name: "Processing",
+        exact: true,
+      });
+      await expect(processing).toContainText(
+        allowance === "RATE_LIMITED"
+          ? "Connected service is busy"
+          : "Connected service limit reached",
+      );
+      await expect(
+        app.panel.getByRole("button", { name: "Try again", exact: true }),
+      ).toHaveCount(allowance === "RATE_LIMITED" ? 1 : 0);
+      await expect(processing).not.toContainText(
+        /PRIVATE_SERVICE|checkout|\$|\d+\s+(?:credits|requests)\s+(?:left|remaining)/i,
+      );
+      const view = await app.view();
+      expect(view.request.original).toBe("Find the amber compass");
+      expect(view.request.status).toBe("active");
+      expect(view.verifiedSteps).toBe(0);
+      expect(view.goalPlan.status).not.toBe("completed");
+      expect(decisions).toHaveLength(1);
+      expect(
+        await app.panel.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      expect(
+        await processing.evaluate(
+          (element) =>
+            element
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === "running").length,
+        ),
+      ).toBe(0);
+      await app.panel.screenshot({
+        path: info.outputPath(
+          `processing-${allowance.toLowerCase()}-narrow.png`,
+        ),
+        animations: "disabled",
+      });
+      expect(fixture.failures).toEqual([]);
+    } finally {
+      await fixture.close();
+    }
+  });
+
 test("panel exposes distinct status announcements, stable polling and usable keyboard controls", async ({}, info) => {
   const app = await openNavigatorExtension(
     info.project.use.viewport || undefined,

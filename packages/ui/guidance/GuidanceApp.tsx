@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Accordion } from "@base-ui/react/accordion";
 import { ChatBubble, NavArrowDown } from "iconoir-react";
 import { GuidanceHeader } from "./GuidanceHeader";
-import { CurrentStep, SessionActions } from "./CurrentStep";
+import { CurrentStep, ProcessingStatus, SessionActions } from "./CurrentStep";
 import { Conversation } from "./Conversation";
 import { DestinationComposer } from "./DestinationComposer";
 import type { GuidanceProps } from "./types";
@@ -222,6 +222,7 @@ export function GuidanceApp(props: GuidanceProps) {
                 </>
               )}
             </div>
+            <ProcessingStatus {...props} />
             <Accordion.Panel className="tholi-journey-panel">
               <div className="tholi-route-context">
                 <h2>Journey details</h2>

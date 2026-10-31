@@ -20,7 +20,7 @@
   font-weight: 600;
   margin-bottom: 8px;
 }
-.tholi-account-settings input:not([type="checkbox"]) {
+.tholi-account-settings input:not([type="checkbox"]):not([type="radio"]) {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -47,10 +47,14 @@
   min-height: 44px;
   line-height: 1.6;
 }
-.tholi-inference-choice input[type="checkbox"] {
+.tholi-inference-choice input:is([type="checkbox"], [type="radio"]) {
   flex: 0 0 auto;
+  min-height: auto;
+  width: 18px;
+  height: 18px;
   margin: 2px 0 0;
   padding: 0;
+  accent-color: var(--jade);
 }
 .tholi-account-id {
   overflow-wrap: anywhere;

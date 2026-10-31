@@ -1,47 +1,8 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
-import {
-  navigationServiceFixture,
-  navigationServicePageHtml,
-} from "../../../support/navigation-service-fixture";
+import { openNavigationServiceFixture as serviceJourney } from "../../../support/navigation-service-fixture";
 type App = Awaited<ReturnType<typeof openNavigatorExtension>>;
 
-async function serviceJourney(viewport?: { width: number; height: number }) {
-  const service = await navigationServiceFixture("extension-chromium");
-  let app: App | undefined;
-  const close = async () => {
-    try {
-      await app?.close();
-    } finally {
-      await service.close();
-    }
-  };
-  try {
-    app = await openNavigatorExtension(viewport);
-    // Only the trusted worker receives synthetic fixture credentials. Native
-    // permission and real sign-in prompts remain separate evidence.
-    await app.worker.evaluate(async (settings) => {
-      await chrome.storage.local.setAccessLevel({
-        accessLevel: "TRUSTED_CONTEXTS",
-      });
-      await chrome.storage.local.set({ "service-auth": settings });
-    }, service.settings);
-    await app.context.route(
-      "http://localhost:5173/service-journey/**",
-      (route) =>
-        route.fulfill({
-          contentType: "text/html; charset=utf-8",
-          body: navigationServicePageHtml,
-        }),
-    );
-    await app.page.goto("http://localhost:5173/service-journey/start");
-    await app.start();
-    return { ...service, app, close };
-  } catch (error) {
-    await close();
-    throw error;
-  }
-}
 async function setGoal(app: App, goal: string) {
   const reply = await app.panel.evaluate(async (goal) => {
     const r = await chrome.runtime.sendMessage({ type: "GET_PAGE" });

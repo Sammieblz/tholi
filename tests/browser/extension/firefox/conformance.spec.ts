@@ -7,6 +7,7 @@ import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
 import type { CaptureMetadata } from "../../../../packages/vision/contracts";
 import { createHash } from "node:crypto";
+import { Key } from "selenium-webdriver";
 import {
   navigationServiceFixture,
   navigationServicePageHtml,
@@ -14,19 +15,27 @@ import {
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
-test("Firefox binds an authenticated service proposal to its native document without inventing arrival", async ({}, info) => {
+async function firefoxServiceFixture(
+  info: import("@playwright/test").TestInfo,
+) {
   const service = await navigationServiceFixture("extension-firefox");
   const fixture = await acceptanceServer({
     "/service-journey/start": navigationServicePageHtml,
   });
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
+  const close = async () => {
+    try {
+      await app?.close();
+    } finally {
+      await Promise.all([fixture.close(), service.close()]);
+    }
+  };
   try {
     app = await openFirefoxExtension(
       new URL("/service-journey/start", fixture.url).href,
       info.project.use.viewport || undefined,
       backendDataPermissions,
     );
-    const current = app;
     const grants = await app.extension(async (categories: string[]) => {
       const api = (globalThis as any).browser;
       return {
@@ -95,6 +104,18 @@ test("Firefox binds an authenticated service proposal to its native document wit
       }
     }, service.settings);
     const started = await app.start();
+    return { app, service, started, close };
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
+
+test("Firefox binds an authenticated service proposal to its native document without inventing arrival", async ({}, info) => {
+  const fixture = await firefoxServiceFixture(info);
+  const { app, service, started } = fixture;
+  const current = app;
+  try {
     const local = await app.goal("Find the amber compass");
     expect(local.view.selectedControlId).toBeUndefined();
     await app.waitFor(
@@ -157,11 +178,117 @@ test("Firefox binds an authenticated service proposal to its native document wit
     expect(service.decisions.length).toBeLessThanOrEqual(2);
     expect(service.failures).toEqual([]);
   } finally {
-    try {
-      await app?.close();
-    } finally {
-      await Promise.all([fixture.close(), service.close()]);
-    }
+    await fixture.close();
+  }
+});
+
+test("Firefox announces connected processing and supports keyboard Local recovery", async ({}, info) => {
+  const fixture = await firefoxServiceFixture(info);
+  const { app, service } = fixture;
+  const processing = () =>
+    app.extension(() => {
+      const elements = document.querySelectorAll(
+        '[role="status"][aria-label="Processing"]',
+      );
+      const element = elements[0] as HTMLElement | undefined;
+      return {
+        count: elements.length,
+        text: element?.textContent,
+        visible: !!element?.getClientRects().length,
+        live: element?.getAttribute("aria-live"),
+        atomic: element?.getAttribute("aria-atomic"),
+      };
+    });
+  try {
+    const initial = await app.goal("Find the amber compass");
+    await app.waitFor(
+      async () => service.decisions.length,
+      (count) => count === 1,
+      "Firefox sends one connected request",
+    );
+    const pending = await app.waitFor(
+      processing,
+      (status) =>
+        status.text?.includes("Connected guidance is checking this page") ===
+          true && status.visible,
+      "Firefox exposes pending processing",
+    );
+    expect(pending).toMatchObject({ count: 1, live: "polite", atomic: "true" });
+    service.decisions[0].release({
+      decision: {
+        kind: "unsupported",
+        reason: "This fixture has no supported route.",
+      },
+    });
+    await app.waitFor(
+      processing,
+      (status) =>
+        status.text?.includes("Connected guidance cannot guide this page") ===
+          true && status.visible,
+      "Firefox exposes unsupported processing without arrival",
+    );
+    const view = await app.view();
+    expect(view.request.id).toBe(initial.view.request.id);
+    expect(view.request.status).toBe("active");
+    expect(view.verifiedSteps).toBe(0);
+    expect(view.goalPlan.status).not.toBe("completed");
+    expect(service.decisions).toHaveLength(1);
+    await app.driver.switchTo().window(app.panel);
+    expect(
+      await app.driver.findElements({
+        xpath: '//button[normalize-space(.)="Try again"]',
+      }),
+    ).toHaveLength(0);
+    await info.attach("processing-firefox-unsupported", {
+      body: Buffer.from(await app.driver.takeScreenshot(), "base64"),
+      contentType: "image/png",
+    });
+    const settings = await app.driver.findElement({
+      css: 'button[aria-label="Tholi settings"]',
+    });
+    await settings.sendKeys(Key.ENTER);
+    const local = await app.driver.wait(
+      async () => {
+        const elements = await app.driver.findElements({
+          css: 'input[type="radio"][value="local"]',
+        });
+        for (const element of elements)
+          if (await element.isDisplayed()) return element;
+        return false;
+      },
+      5000,
+      "Firefox shows the Local processing radio",
+    );
+    if (!local) throw Error("Local processing control unavailable");
+    await local.sendKeys(Key.SPACE);
+    await app.waitFor(
+      async () =>
+        service.consentWrites.some(
+          (consent) =>
+            consent.purpose === "cloud_inference" && !consent.granted,
+        ),
+      Boolean,
+      "Firefox records explicit processing withdrawal",
+    );
+    expect(await local.isSelected()).toBe(true);
+    await app.driver.actions().sendKeys(Key.ESCAPE).perform();
+    await app.waitFor(
+      () =>
+        app.extension(() => document.activeElement?.getAttribute("aria-label")),
+      (label) => label === "Tholi settings",
+      "Firefox restores settings focus after closing the popover",
+    );
+    await app.goal("Turn Dark on");
+    await app.waitFor(
+      () => app.view(),
+      (current) => !!current.selectedControlId,
+      "Firefox remains usable through Local guidance",
+    );
+    expect(service.decisions).toHaveLength(1);
+    expect((await app.view()).verifiedSteps).toBe(0);
+    expect(service.failures).toEqual([]);
+  } finally {
+    await fixture.close();
   }
 });
 
