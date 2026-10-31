@@ -77,6 +77,57 @@ test("service inference keeps transport identity separate from the original brow
     ).toBe(false);
 });
 
+test("operator evaluation requires explicit opaque trial binding and never upgrades a fake request", () => {
+  const observed = observation();
+  const evaluation = {
+    planSha256: "a".repeat(64),
+    trialId: crypto.randomUUID(),
+    generation: 0,
+  };
+  const input = {
+    requestId: crypto.randomUUID(),
+    observation: observed,
+    validation: context(observed),
+    profile: "operator-evaluation",
+    evaluation,
+  };
+  expect(navigationTransportInputSchema.safeParse(input).success).toBe(true);
+  for (const candidate of [
+    { ...input, evaluation: undefined },
+    { ...input, profile: "fake" },
+    { ...input, profile: "vertex" },
+    { ...input, evaluation: { ...evaluation, generation: 2 } },
+    { ...input, evaluation: { ...evaluation, expectedTarget: "oracle" } },
+  ])
+    expect(navigationTransportInputSchema.safeParse(candidate).success).toBe(
+      false,
+    );
+  const metadata = {
+    profile: "operator-evaluation",
+    requestId: observed.stamp.requestId,
+    state: "pending",
+    evaluation: {
+      planSha256: evaluation.planSha256,
+      trialId: evaluation.trialId,
+      provider: "vertex",
+      arm: "structured",
+    },
+  };
+  expect(navigationServiceStateSchema.safeParse(metadata).success).toBe(true);
+  expect(
+    navigationServiceStateSchema.safeParse({ ...metadata, state: "guiding" })
+      .success,
+  ).toBe(false);
+  expect(
+    navigationServiceStateSchema.safeParse({
+      ...metadata,
+      state: "observation",
+      transportRequestId: input.requestId,
+      evaluation: { ...metadata.evaluation, generation: 0 },
+    }).success,
+  ).toBe(true);
+});
+
 test("only an original completed service request may carry a model proposal", () => {
   const observed = observation();
   const base = {

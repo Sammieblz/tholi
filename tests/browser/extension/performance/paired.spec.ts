@@ -4,7 +4,7 @@ import { openFirefoxExtension } from "../../../support/firefox-extension";
 import { acceptanceServer } from "../../../support/fixture-server";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
-import { execFileSync } from "node:child_process";
+import { processSnapshot as processMemory } from "../../../support/process-sampling";
 import { imageCaptureFixture } from "../../../support/image-capture-fixture";
 async function measureBusyPage() {
   const root = document.getElementById("internet-navigator-overlay");
@@ -37,21 +37,6 @@ async function measureBusyPage() {
     sameHighlight:
       document.getElementById("internet-navigator-overlay") === root,
   };
-}
-function processMemory(processId: number) {
-  if (!Number.isSafeInteger(processId) || processId < 1)
-    throw Error("Browser process identity is required for memory measurements");
-  return JSON.parse(
-    execFileSync(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-Command",
-        `$taskRoot=${processId}; $taskProcesses=Get-CimInstance Win32_Process; $taskIds=@($taskRoot); do {$taskChildren=@($taskProcesses | Where-Object {$_.ParentProcessId -in $taskIds -and $_.ProcessId -notin $taskIds}); $taskIds+=@($taskChildren.ProcessId | Where-Object {$_})} while($taskChildren.Count); $taskOwned=@($taskProcesses | Where-Object {$_.ProcessId -in $taskIds}); @{processes=$taskOwned.Count;workingSetBytes=($taskOwned|Measure-Object WorkingSetSize -Sum).Sum;privateCommittedBytes=($taskOwned|Measure-Object PrivatePageCount -Sum).Sum}|ConvertTo-Json -Compress`,
-      ],
-      { encoding: "utf8" },
-    ),
-  );
 }
 // One serial experiment on the same host; pure model accuracy still runs once.
 test("paired browser CPU planning, OCR and busy-page measurements retain the same budgets", async ({}, info) => {

@@ -30,13 +30,19 @@ import {
   type RepositoryScope,
   type ServiceRequest,
 } from "../../../apps/api/src/database/contracts";
-import { createServiceApi } from "../../../apps/api/src/server";
+import {
+  createServiceApi,
+  createOperatorEvaluationApi,
+} from "../../../apps/api/src/server";
 import type { NavigationModel } from "../../../apps/api/src/capabilities";
 import {
   NavigationTransportService,
   type NavigationRequestTransaction,
+  type NavigationEvaluationPolicy,
+  type NavigationEvaluationOperation,
 } from "../../../apps/api/src/application/navigation";
 import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-navigation-model";
+import { ModelError } from "../../../apps/api/src/application/model-contracts";
 import {
   navigationModelObservation,
   navigationModelValidation,
@@ -100,6 +106,7 @@ async function fixture(
   supportEnabled = true,
   analyticsEnabled = true,
   navigationModel?: NavigationModel,
+  evaluationFactory?: (session: IdentitySession) => NavigationEvaluationPolicy,
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -415,7 +422,13 @@ async function fixture(
     },
     { publicOrigin: "https://api.tholi.io", linkLifetimeMs: 60_000 },
   );
-  const app = await createServiceApi(
+  const evaluation = evaluationFactory?.(session);
+  const navigation = navigationModel
+    ? new NavigationTransportService(repositories, navigationModel, evaluation)
+    : undefined;
+  const app = await (
+    evaluation ? createOperatorEvaluationApi : createServiceApi
+  )(
     {
       ...options,
       ...(navigationModel ? { navigation: { provider: "fake" as const } } : {}),
@@ -429,19 +442,14 @@ async function fixture(
         ? { analytics: new ProductAnalyticsService(repositories) }
         : {}),
       ...(supportEnabled ? { support } : {}),
-      ...(navigationModel
-        ? {
-            navigation: new NavigationTransportService(
-              repositories,
-              navigationModel,
-            ),
-          }
-        : {}),
+      ...(navigation ? { navigation } : {}),
     },
   );
   applications.push(app);
   return {
     app,
+    options,
+    navigation,
     identity,
     authorization,
     store,
@@ -527,6 +535,237 @@ function delayedNavigation() {
 }
 
 describe("opt-in authenticated navigation transport", () => {
+  const operatorMetadata = () => ({
+    profile: "operator-evaluation" as const,
+    planSha256: "a".repeat(64),
+    provider: "fake" as const,
+    runtimeManifestSha256: "b".repeat(64),
+    expiresAtMs: Date.now() + 60000,
+  });
+  const operatorInput = () => ({
+    ...navigationInput(),
+    profile: "operator-evaluation",
+    evaluation: {
+      planSha256: "a".repeat(64),
+      trialId: randomUUID(),
+      generation: 0,
+    },
+  });
+
+  it("ordinary fake composition rejects the operator profile without claiming work", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const f = await fixture(false, false, model);
+    grantNavigation(f);
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: bearer,
+        payload: operatorInput(),
+      }),
+      409,
+      "COMPATIBILITY_MISMATCH",
+    );
+    expect(infer).not.toHaveBeenCalled();
+    expect(f.scoped.beginRequest).not.toHaveBeenCalled();
+  });
+
+  it("operator composition advertises its explicit profile, forwards authenticated actor fields and never invokes the default model", async () => {
+    const fallback = createFakeNavigationModel(),
+      fallbackInfer = vi.spyOn(fallback, "infer");
+    const selected = createFakeNavigationModel(),
+      selectedInfer = vi.spyOn(selected, "infer");
+    const finish = vi.fn<NavigationEvaluationOperation["finish"]>(
+      async () => {},
+    );
+    const prepare = vi.fn<NavigationEvaluationPolicy["prepare"]>(async () => ({
+      model: selected,
+      budget: {},
+      finish,
+    }));
+    const metadata = operatorMetadata();
+    const f = await fixture(false, false, fallback, () => ({
+      metadata,
+      prepare,
+    }));
+    grantNavigation(f);
+    await expect(
+      createServiceApi({ ...f.options, navigation: { provider: "fake" } }, [], {
+        identity: f.identity,
+        authorization: f.authorization,
+        navigation: f.navigation,
+      }),
+    ).rejects.toThrow("ordinary service startup");
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities", headers: bearer })
+    ).json();
+    expect(capabilities.evaluation).toEqual(metadata);
+    expect(capabilities.capabilities).toContain(
+      "operator-navigation-evaluation",
+    );
+    expect(capabilities.capabilities).not.toContain("fake-navigation-model");
+    const path = `/api/v1/workspaces/${f.workspace.id}/decisions`;
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: path,
+        headers: bearer,
+        payload: navigationInput(),
+      }),
+      409,
+      "COMPATIBILITY_MISMATCH",
+    );
+    expect(prepare).not.toHaveBeenCalled();
+    const input = operatorInput();
+    const response = await f.app.inject({
+      method: "POST",
+      url: path,
+      headers: bearer,
+      payload: input,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(prepare.mock.calls[0][1]).toMatchObject({
+      workspaceId: f.workspace.id,
+      principal: {
+        accountId: f.account.id,
+        clientId: "extension-chromium",
+        clientKind: "extension",
+      },
+    });
+    expect(selectedInfer).toHaveBeenCalledOnce();
+    expect(fallbackInfer).not.toHaveBeenCalled();
+    expect(finish).toHaveBeenCalledOnce();
+    expect(finish.mock.calls[0][0]).toMatchObject({
+      decision: { native: input.observation.native },
+      usage: { provider: "fake" },
+    });
+    const replay = await f.app.inject({
+      method: "POST",
+      url: path,
+      headers: bearer,
+      payload: input,
+    });
+    expect(replay.json()).toEqual({
+      requestId: input.requestId,
+      status: "completed",
+      replayed: true,
+    });
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(selectedInfer).toHaveBeenCalledOnce();
+  });
+
+  it("operator admission rechecks consent after preparation before calling the model", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const finish = vi.fn<NavigationEvaluationOperation["finish"]>(
+      async () => {},
+    );
+    let withdraw = () => {};
+    const prepare = vi.fn<NavigationEvaluationPolicy["prepare"]>(async () => {
+      withdraw();
+      return { model, budget: {}, finish };
+    });
+    const f = await fixture(false, false, model, () => ({
+      metadata: operatorMetadata(),
+      prepare,
+    }));
+    grantNavigation(f);
+    withdraw = () => {
+      f.consents[0].granted = false;
+    };
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: bearer,
+        payload: operatorInput(),
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(infer).not.toHaveBeenCalled();
+    expect(finish).toHaveBeenCalledOnce();
+  });
+
+  it("a blocked operator preparation respects the HTTP deadline without calling the model", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    let entered!: () => void, release!: () => void;
+    const preparing = new Promise<void>((done) => {
+      entered = done;
+    });
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    const finish = vi.fn<NavigationEvaluationOperation["finish"]>(
+      async () => {},
+    );
+    const prepare = vi.fn<NavigationEvaluationPolicy["prepare"]>(async () => {
+      entered();
+      await held;
+      return { model, budget: {}, finish };
+    });
+    const f = await fixture(false, false, model, () => ({
+      metadata: operatorMetadata(),
+      prepare,
+    }));
+    grantNavigation(f);
+    const response = f.app
+      .inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: { ...bearer, "x-tholi-timeout-ms": "100" },
+        payload: operatorInput(),
+      })
+      .then((result) => result);
+    try {
+      await preparing;
+      safeError(await response, 504, "DEADLINE_EXCEEDED");
+      expect(infer).not.toHaveBeenCalled();
+    } finally {
+      release();
+    }
+    await vi.waitFor(() => expect(finish).toHaveBeenCalledOnce());
+    expect(finish.mock.calls[0][0]).toMatchObject({
+      error: { code: "DEADLINE_EXCEEDED" },
+    });
+    expect(infer).not.toHaveBeenCalled();
+  });
+
+  it("an uncertain operator settlement withholds the proposal and is never retried", async () => {
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer");
+    const finish = vi.fn<NavigationEvaluationOperation["finish"]>(async () => {
+      throw new ModelError("CONFIGURATION");
+    });
+    const prepare = vi.fn<NavigationEvaluationPolicy["prepare"]>(async () => ({
+      model,
+      budget: {},
+      finish,
+    }));
+    const f = await fixture(false, false, model, () => ({
+      metadata: operatorMetadata(),
+      prepare,
+    }));
+    grantNavigation(f);
+    const input = operatorInput();
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: `/api/v1/workspaces/${f.workspace.id}/decisions`,
+        headers: bearer,
+        payload: input,
+      }),
+      503,
+      "UNAVAILABLE",
+    );
+    expect(infer).toHaveBeenCalledOnce();
+    expect(finish).toHaveBeenCalledOnce();
+    expect(f.navigationRequests.get(input.requestId)?.status).toBe("uncertain");
+  });
+
   it.each(["credits", "storage"])(
     "propagates the authenticated %s allowance refusal without inferring or opening checkout",
     async (resource) => {
@@ -666,9 +905,16 @@ describe("opt-in authenticated navigation transport", () => {
     const documentedBody =
       spec.paths["/api/v1/workspaces/{workspaceId}/decisions"].post.requestBody
         .content["application/json"].schema;
+    const common = documentedBody.allOf.find(
+      (part: any) => part.properties?.observation,
+    );
+    const profiles = documentedBody.allOf.find(
+      (part: any) => part.anyOf,
+    )?.anyOf;
+    expect(profiles).toHaveLength(2);
     expect(
-      documentedBody.properties.observation.properties.frames.items.properties
-        .viewport.properties.width,
+      common.properties.observation.properties.frames.items.properties.viewport
+        .properties.width,
     ).toMatchObject({ minimum: 0, exclusiveMinimum: true });
   });
 
@@ -1075,7 +1321,7 @@ describe("opt-in authenticated navigation transport", () => {
     },
   );
 
-  it.each(["consent", "session"])(
+  it.each(["consent", "session", "clientId", "clientKind"])(
     "rechecks %s after model work and withholds a late proposal",
     async (change) => {
       const deferred = delayedNavigation(),
@@ -1088,6 +1334,8 @@ describe("opt-in authenticated navigation transport", () => {
         .then((response) => response);
       await deferred.entered;
       if (change === "consent") f.consents[0].granted = false;
+      else if (change === "clientId") f.session.clientId = "extension-firefox";
+      else if (change === "clientKind") f.session.clientKind = "desktop";
       else vi.mocked(f.store.authenticateSession).mockResolvedValue(null);
       deferred.release();
       safeError(

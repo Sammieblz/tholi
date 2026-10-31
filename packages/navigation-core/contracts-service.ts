@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { operatorEvaluationMetadataSchema } from "./contracts-evaluation";
 
 export const SERVICE_PROTOCOL = "tholi-service";
 export const SERVICE_CONTRACT_VERSION = 1;
@@ -39,6 +40,7 @@ export const serviceCapabilitiesSchema = z
     implementationVersion: implementationVersionSchema,
     supportedVersions: supportedVersionsSchema,
     capabilities: capabilitiesSchema,
+    evaluation: operatorEvaluationMetadataSchema.optional(),
     availability: z
       .object({
         authentication: z.boolean(),

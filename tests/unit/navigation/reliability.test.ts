@@ -192,6 +192,159 @@ test("complete capture masks all fields, frames and inherited closed-root text w
   );
 });
 
+test("a capture survives unchanged PageCoach rescans while retaining document, task, mutation, viewport and lifetime fences", async () => {
+  await withCaptureFixture(
+    "<button>Help</button>",
+    async ({ visual, rectangles }) => {
+      const rect = new DOMRect(10, 10, 120, 32);
+      rectangles.set(document.querySelector("button")!, [rect]);
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+        rect,
+      );
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+      const { PageCoach } =
+          await import("../../../apps/extension/src/content/page-coach"),
+        { interpretRequest } = await import("../../../packages/nlp/interpret"),
+        { beginJourney } =
+          await import("../../../packages/goal-planner/task-journey");
+      vi.useFakeTimers();
+      const coach = new PageCoach(vi.fn());
+      coach.start();
+      const request = interpretRequest("Find an unavailable winter workspace"),
+        journey = beginJourney(request.original, location.origin);
+      journey.requestTaskId = request.tasks[request.active].id;
+      coach.view.request = request;
+      coach.view.journey = journey;
+      const prepare = async () => {
+        visual.cancelCapture();
+        // A new capture begins only after the previous intentional change has
+        // drained the existing incremental observation and planning timers.
+        await vi.advanceTimersByTimeAsync(300);
+        const page = coach.getPage()!,
+          perception = coach.getPerception(page)!,
+          captureId = crypto.randomUUID();
+        expect(perception).toBeDefined();
+        const pending = visual.captureMetadata(
+          {
+            captureId,
+            scanId: perception.root.scanId,
+            observationRevision: page.revision,
+          },
+          coach.captureCurrent(page),
+        );
+        await vi.advanceTimersByTimeAsync(20);
+        await pending;
+        return { page, perception, captureId };
+      };
+      try {
+        const first = await prepare();
+        for (let index = 0; index < 3; index++) {
+          const page = coach.getPage()!;
+          expect(page).not.toBe(first.page);
+          expect(coach.getPerception(page)?.root.scanId).not.toBe(
+            first.perception.root.scanId,
+          );
+          expect(page.revision).toBe(first.page.revision);
+          expect((await visual.checkCapture(first.captureId)).current).toBe(
+            true,
+          );
+        }
+
+        request.tasks[request.active].target = "A different destination";
+        expect((await visual.checkCapture(first.captureId)).current).toBe(
+          false,
+        );
+        const progress = await prepare();
+        coach.view.verifiedSteps++;
+        expect((await visual.checkCapture(progress.captureId)).current).toBe(
+          false,
+        );
+
+        journey.workflow = {
+          id: crypto.randomUUID(),
+          requestTaskId: request.tasks[request.active].id,
+          guideId: "github.repository",
+          guideVersion: "1",
+          original: request.original,
+          objective: request.original,
+          outcome: "review",
+          revision: 0,
+          entities: [],
+          exclusions: [],
+          activeMilestone: 0,
+          verified: [],
+          status: "active",
+          reason: "Find a current control.",
+        };
+        const reviewing = await prepare();
+        journey.workflow.status = "review";
+        expect(journey.workflow.revision).toBe(0);
+        expect((await visual.checkCapture(reviewing.captureId)).current).toBe(
+          false,
+        );
+        journey.workflow = undefined;
+
+        const replaced = await prepare(),
+          button = document.querySelector("button")!,
+          replacement = button.cloneNode(true) as HTMLElement;
+        rectangles.set(replacement, [rect]);
+        button.replaceWith(replacement);
+        await Promise.resolve();
+        expect(coach.getPage()!.revision).toBeGreaterThan(
+          replaced.page.revision,
+        );
+        expect((await visual.checkCapture(replaced.captureId)).current).toBe(
+          false,
+        );
+
+        const resized = await prepare(),
+          beforeResize = visual.viewportRevision();
+        window.dispatchEvent(new Event("resize"));
+        expect(visual.viewportRevision()).toBeGreaterThan(beforeResize);
+        expect((await visual.checkCapture(resized.captureId)).current).toBe(
+          false,
+        );
+
+        const navigated = await prepare(),
+          sourceDocument = document;
+        vi.stubGlobal(
+          "document",
+          sourceDocument.implementation.createHTMLDocument(),
+        );
+        try {
+          expect((await visual.checkCapture(navigated.captureId)).current).toBe(
+            false,
+          );
+        } finally {
+          vi.stubGlobal("document", sourceDocument);
+        }
+
+        const expiring = await prepare(),
+          time = performance.now();
+        coach.getPage();
+        const clock = vi
+          .spyOn(performance, "now")
+          .mockReturnValue(time + 15001);
+        try {
+          expect((await visual.checkCapture(expiring.captureId)).current).toBe(
+            false,
+          );
+        } finally {
+          clock.mockRestore();
+        }
+        const stopped = await prepare();
+        coach.stop();
+        expect((await visual.checkCapture(stopped.captureId)).current).toBe(
+          false,
+        );
+      } finally {
+        coach.stop();
+        vi.useRealTimers();
+      }
+    },
+  );
+});
+
 test("capture inherits private shadow scope through assigned nodes without masking public siblings", async () => {
   await withCaptureFixture(
     '<div id="host">SYNTHETIC_PRIVATE_SLOT<span slot="public">Public sibling</span><span slot="private">SYNTHETIC_PRIVATE_NAMED</span><span slot="unmatched">Public unassigned</span></div>',

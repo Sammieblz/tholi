@@ -3,6 +3,11 @@ import {
   identityAccountSchema,
   identitySessionSchema,
 } from "../../../../packages/navigation-core/contracts-identity";
+import {
+  operatorEvaluationArmSchema,
+  operatorEvaluationMetadataSchema,
+} from "../../../../packages/navigation-core/contracts-evaluation";
+import { navigationProcessingProfileSchema } from "../../../../packages/navigation-core/contracts-navigation";
 export const serviceInferenceChoicesSchema = z
   .object({
     profile: z.literal("fake"),
@@ -14,15 +19,29 @@ export const serviceInferenceChoicesSchema = z
     message: "Image transmission requires inference transmission.",
   });
 /** Saved browser choices are not a plan, balance or provider-availability claim. */
+export const serviceOperatorEvaluationSchema = operatorEvaluationMetadataSchema
+  .extend({
+    trialId: z.string().uuid(),
+    arm: operatorEvaluationArmSchema.exclude(["local"]),
+  })
+  .strict();
 export const serviceInferenceStatusSchema = z
   .object({
     configured: z.boolean(),
-    profile: z.literal("fake"),
+    profile: navigationProcessingProfileSchema,
+    evaluation: serviceOperatorEvaluationSchema.optional(),
     enabled: z.boolean(),
     images: z.boolean(),
     serverConsentUpdated: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      value.profile === "operator-evaluation"
+        ? value.enabled && !!value.evaluation
+        : value.evaluation === undefined,
+    "Temporary evaluation must remain explicit and enabled.",
+  );
 export type ServiceInferenceStatus = z.infer<
   typeof serviceInferenceStatusSchema
 >;

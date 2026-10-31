@@ -26,7 +26,22 @@ import { serviceCapabilitiesSchema } from "../../../../packages/navigation-core/
 import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
+  NAVIGATION_EVALUATION_CAPABILITY,
+  nativeReferenceKey,
+  type NavigationObservation,
+  type NavigationTransportInput,
+  type NativeBrowserReference,
 } from "../../../../packages/navigation-core/contracts-navigation";
+import {
+  OPERATOR_EVALUATION_LIMITS,
+  operatorEvaluationPlanSchema,
+  operatorEvaluationMetadataSchema,
+  operatorEvaluationSha256,
+  operatorEvaluationManifestSha256,
+  type OperatorEvaluationPlan,
+  type OperatorEvaluationTrial,
+  type OperatorEvaluationBinding,
+} from "../../../../packages/navigation-core/contracts-evaluation";
 import {
   serviceInferenceChoicesSchema,
   type ServiceInferenceStatus,
@@ -70,6 +85,13 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("AUTH_INFERENCE_STATUS") }).strict(),
   z
     .object({
+      type: z.literal("AUTH_EVALUATION_ACTIVATE"),
+      planJson: z.string().min(1).max(OPERATOR_EVALUATION_LIMITS.maxPlanBytes),
+      trialId: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
       type: z.literal("AUTH_INFERENCE_CONFIGURE"),
       profile: z.literal("fake"),
       enabled: z.boolean(),
@@ -87,6 +109,39 @@ let inferencePending = new AbortController();
 let inferenceGeneration = 0;
 let configuringInference: number | undefined;
 let inferenceSuppressed = false;
+type OperatorEvaluation = {
+  plan: OperatorEvaluationPlan;
+  planSha256: string;
+  trial: OperatorEvaluationTrial & { arm: "structured" | "multimodal" };
+  accountId: string;
+  workspaceId: string;
+  sessionId: string;
+  origin: string;
+  tabId: number;
+  windowId: number;
+  nextGeneration: number;
+  issued?: OperatorEvaluationBinding & { native: string };
+};
+// Temporary operator authority belongs to this account lifecycle. It is never
+// persisted, restored, or inferred from a saved development-service choice.
+let evaluation: OperatorEvaluation | undefined;
+let evaluationTimer: ReturnType<typeof setTimeout> | undefined;
+function clearEvaluation() {
+  evaluation = undefined;
+  clearTimeout(evaluationTimer);
+  evaluationTimer = undefined;
+}
+export function revokeServiceEvaluation() {
+  if (!evaluation) return;
+  clearEvaluation();
+  inferenceSuppressed = true;
+  cancelServiceInference();
+}
+function currentEvaluation() {
+  if (evaluation && Date.now() >= evaluation.plan.expiresAtMs)
+    revokeServiceEvaluation();
+  return evaluation;
+}
 type Settings = z.infer<typeof settingsSchema>;
 function persist(
   value: Settings | ((latest: Settings | undefined) => Settings | undefined),
@@ -110,6 +165,7 @@ function invalidate() {
   pending.abort();
   pending = new AbortController();
   inferenceSuppressed = true;
+  clearEvaluation();
   cancelServiceInference();
 }
 /** Revoke a transmission span immediately without signing the account out. */
@@ -370,16 +426,173 @@ async function inferenceStatus(): Promise<ServiceInferenceStatus> {
   const expected = generation;
   const saved = await settings();
   current(expected);
+  const active = currentEvaluation();
+  if (active) {
+    if (
+      saved?.origin !== active.origin ||
+      saved.tokens?.account.id !== active.accountId ||
+      saved.tokens.account.workspaceId !== active.workspaceId ||
+      saved.tokens.sessionId !== active.sessionId
+    ) {
+      revokeServiceEvaluation();
+    } else {
+      return {
+        configured: true,
+        profile: "operator-evaluation",
+        enabled: true,
+        images: active.trial.arm === "multimodal",
+        evaluation: {
+          profile: "operator-evaluation",
+          planSha256: active.planSha256,
+          provider: active.plan.provider,
+          runtimeManifestSha256: active.plan.hashes.runtimeManifestSha256,
+          expiresAtMs: active.plan.expiresAtMs,
+          trialId: active.trial.id,
+          arm: active.trial.arm,
+        },
+      };
+    }
+  }
   return { configured: !!saved?.tokens, ...inferenceChoices(saved) };
 }
 
+function evaluationCase(active: OperatorEvaluation) {
+  return active.plan.cases.find((item) => item.id === active.trial.caseId)!;
+}
+async function evaluationNative(
+  active: OperatorEvaluation,
+  native?: NativeBrowserReference,
+) {
+  const tab = await api.tabs.get(active.tabId);
+  const frame = await api.webNavigation.getFrame({
+    tabId: active.tabId,
+    frameId: 0,
+  });
+  const url = new URL(frame?.url || tab.url || "");
+  if (
+    currentEvaluation() !== active ||
+    tab.windowId !== active.windowId ||
+    !frame?.documentId ||
+    !evaluationCase(active).scope.urls.includes(
+      url.origin + url.pathname + url.search,
+    ) ||
+    (native &&
+      (native.tabId !== active.tabId ||
+        native.windowId !== active.windowId ||
+        native.frameId !== 0 ||
+        native.documentId !== frame.documentId))
+  )
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "This native page is outside the operator evaluation scope.",
+    );
+}
+
+/** Reserve metadata only; the service ledger independently enforces every cap. */
+export async function reserveServiceEvaluation(
+  observation: NavigationObservation,
+) {
+  const active = currentEvaluation();
+  if (!active)
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "The operator evaluation is not active.",
+    );
+  if (
+    observation.context.goal !== evaluationCase(active).goal ||
+    (active.trial.arm === "multimodal") !== (observation.images.length === 1)
+  )
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "The operator trial scope or image policy changed.",
+    );
+  if (active.nextGeneration >= evaluationCase(active).maxGenerations)
+    throw new ServiceClientError(
+      "QUOTA_EXCEEDED",
+      0,
+      "The operator trial generation limit was reached.",
+    );
+  await evaluationNative(active, observation.native);
+  if (currentEvaluation() !== active)
+    throw new ServiceClientError(
+      "CANCELLED",
+      0,
+      "The operator evaluation ended.",
+    );
+  if (active.nextGeneration >= evaluationCase(active).maxGenerations)
+    throw new ServiceClientError(
+      "QUOTA_EXCEEDED",
+      0,
+      "The operator trial generation limit was reached.",
+    );
+  const binding: OperatorEvaluationBinding = {
+    planSha256: active.planSha256,
+    trialId: active.trial.id,
+    generation: active.nextGeneration++ as 0 | 1,
+  };
+  active.issued = {
+    ...binding,
+    native: nativeReferenceKey(observation.native),
+  };
+  return { ...binding, provider: active.plan.provider, arm: active.trial.arm };
+}
+export function serviceEvaluationHasGeneration() {
+  const active = currentEvaluation();
+  return (
+    !!active && active.nextGeneration < evaluationCase(active).maxGenerations
+  );
+}
+
+export function serviceInferenceCurrent(request: NavigationTransportInput) {
+  const active = currentEvaluation();
+  if (request.profile === "fake") {
+    if (!active) return;
+  } else if (
+    active &&
+    active.issued &&
+    active.issued.planSha256 === request.evaluation.planSha256 &&
+    active.issued.trialId === request.evaluation.trialId &&
+    active.issued.generation === request.evaluation.generation &&
+    active.issued.native === nativeReferenceKey(request.observation.native) &&
+    request.observation.context.goal === evaluationCase(active).goal &&
+    (active.trial.arm === "multimodal") ===
+      (request.observation.images.length === 1)
+  )
+    return;
+  throw new ServiceClientError(
+    "FORBIDDEN",
+    0,
+    "The operator evaluation binding is no longer current.",
+  );
+}
+
 /** Background metadata only. The returned binding never includes credentials. */
-export async function serviceInferenceAccess(images: boolean) {
+export async function serviceInferenceAccess(
+  images: boolean,
+  request?: NavigationTransportInput,
+) {
   const expected = generation;
   const expectedInference = inferenceGeneration;
   const saved = await connection(expected);
   if (!saved.tokens) throw new Error("Sign in to your Tholi account first.");
-  const choices = inferenceChoices(saved);
+  const active = currentEvaluation();
+  if (request) serviceInferenceCurrent(request);
+  else if (active)
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "Operator evaluation requires an explicit request binding.",
+    );
+  const choices = active
+    ? {
+        profile: "operator-evaluation" as const,
+        enabled: true,
+        images: active.trial.arm === "multimodal",
+      }
+    : inferenceChoices(saved);
   if (
     inferenceSuppressed ||
     configuringInference !== undefined ||
@@ -398,6 +611,21 @@ export async function serviceInferenceAccess(images: boolean) {
       "Inference transmission permission was declined or revoked.",
     );
   current(expected);
+  if (active) {
+    if (
+      saved.tokens.account.id !== active.accountId ||
+      saved.tokens.account.workspaceId !== active.workspaceId ||
+      saved.tokens.sessionId !== active.sessionId ||
+      saved.origin !== active.origin
+    )
+      throw new ServiceClientError(
+        "FORBIDDEN",
+        0,
+        "The operator account binding changed.",
+      );
+    await evaluationNative(active, request!.observation.native);
+    serviceInferenceCurrent(request!);
+  }
   if (
     expectedInference !== inferenceGeneration ||
     configuringInference !== undefined
@@ -456,11 +684,12 @@ async function readInferenceConsents(
 export async function serviceInferencePreflight(
   images: boolean,
   signal: AbortSignal,
+  request?: NavigationTransportInput,
 ) {
   signal.throwIfAborted();
-  const binding = await serviceInferenceAccess(images);
+  const binding = await serviceInferenceAccess(images, request);
   const guard = async (connected: ServiceAccountConnection) => {
-    const fresh = await serviceInferenceAccess(images);
+    const fresh = await serviceInferenceAccess(images, request);
     signal.throwIfAborted();
     if (
       connected.origin !== binding.origin ||
@@ -479,13 +708,31 @@ export async function serviceInferencePreflight(
     undefined,
     { signal, beforeSend: guard },
   );
-  requireFakeInferenceProfile(capabilities);
+  if (request?.profile === "operator-evaluation") {
+    const active = currentEvaluation();
+    if (!active)
+      throw new ServiceClientError(
+        "FORBIDDEN",
+        0,
+        "The operator evaluation ended.",
+      );
+    requireEvaluationCapability(capabilities, active);
+  } else requireFakeInferenceProfile(capabilities);
   const { policies, consents } = await readInferenceConsents(
     binding,
     signal,
     guard,
   );
   signal.throwIfAborted();
+  requireInferenceConsents(policies, consents, images);
+  return binding;
+}
+
+function requireInferenceConsents(
+  policies: z.infer<typeof policyCatalogSchema>,
+  consents: z.infer<typeof consentPageSchema>,
+  images: boolean,
+) {
   for (const purpose of images
     ? ["cloud_inference", "image_transmission"]
     : ["cloud_inference"]) {
@@ -507,7 +754,165 @@ export async function serviceInferencePreflight(
         "Current service consent is required before inference transmission.",
       );
   }
-  return binding;
+}
+
+function requireEvaluationCapability(
+  capabilities: z.infer<typeof serviceCapabilitiesSchema>,
+  active: Pick<OperatorEvaluation, "plan" | "planSha256">,
+) {
+  const metadata = operatorEvaluationMetadataSchema.safeParse(
+    capabilities.evaluation,
+  );
+  if (
+    !capabilities.availability.decisions ||
+    !capabilities.capabilities.includes(NAVIGATION_TRANSPORT_CAPABILITY) ||
+    !capabilities.capabilities.includes(NAVIGATION_EVALUATION_CAPABILITY) ||
+    !metadata.success ||
+    metadata.data.planSha256 !== active.planSha256 ||
+    metadata.data.provider !== active.plan.provider ||
+    metadata.data.runtimeManifestSha256 !==
+      active.plan.hashes.runtimeManifestSha256 ||
+    metadata.data.expiresAtMs !== active.plan.expiresAtMs ||
+    Date.now() >= metadata.data.expiresAtMs
+  )
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "The service does not admit this exact operator evaluation.",
+    );
+}
+
+async function activateEvaluation(planJson: string, trialId: string) {
+  cancelServiceInference();
+  clearEvaluation();
+  inferenceSuppressed = true;
+  const expected = generation,
+    operation = inferenceGeneration;
+  const signal = serviceInferenceSignal();
+  const check = () => {
+    current(expected);
+    signal.throwIfAborted();
+    if (operation !== inferenceGeneration)
+      throw new Error("The operator activation changed.");
+  };
+  if (
+    new TextEncoder().encode(planJson).byteLength >
+    OPERATOR_EVALUATION_LIMITS.maxPlanBytes
+  )
+    throw new Error("The operator declaration is too large.");
+  const plan = operatorEvaluationPlanSchema.parse(JSON.parse(planJson));
+  const trial = plan.trials.find((item) => item.id === trialId);
+  if (
+    !trial ||
+    trial.arm === "local" ||
+    Date.now() < plan.createdAtMs ||
+    Date.now() >= plan.expiresAtMs
+  )
+    throw new Error("A current declared provider trial is required.");
+  const planSha256 = await operatorEvaluationSha256(planJson);
+  const actualManifest = await operatorEvaluationManifestSha256(
+    api.runtime.getManifest(),
+  );
+  check();
+  if (actualManifest !== plan.hashes.runtimeManifestSha256)
+    throw new Error(
+      "The installed manifest differs from the operator declaration.",
+    );
+  const saved = await connection(expected);
+  check();
+  if (!saved.tokens || !(await hasBackendAccess(saved.origin)))
+    throw new Error(
+      "Current account and transmission permission are required.",
+    );
+  check();
+  if (
+    clientId() !== plan.operator.clientId ||
+    saved.tokens.account.id !== plan.operator.accountId ||
+    saved.tokens.account.workspaceId !== plan.operator.workspaceId
+  )
+    throw new Error(
+      "The signed-in operator differs from the declared account, workspace or browser client.",
+    );
+  // A service-worker restart or failed activation must return to Local, rather
+  // than revive a previously saved fake-profile transmission choice.
+  await persist((latest) => {
+    check();
+    if (!latest) return;
+    const { inference: _previous, ...rest } = latest;
+    return rest;
+  }, expected);
+  check();
+  const guarded = async (connected: ServiceAccountConnection) => {
+    check();
+    if (
+      connected.origin !== saved.origin ||
+      connected.account.id !== saved.tokens!.account.id ||
+      connected.account.workspaceId !== saved.tokens!.account.workspaceId
+    )
+      throw new Error("The operator account changed.");
+  };
+  const account = await serviceAuthorizedRequest(
+    "/api/v1/account",
+    identityAccountResponseSchema,
+    "GET",
+    undefined,
+    { signal, beforeSend: guarded },
+  );
+  check();
+  if (
+    account.account.id !== saved.tokens.account.id ||
+    account.account.workspaceId !== saved.tokens.account.workspaceId ||
+    account.session.id !== saved.tokens.sessionId ||
+    account.session.clientId !== plan.operator.clientId ||
+    account.session.clientKind !== "extension"
+  )
+    throw new Error("The operator session changed.");
+  const capabilities = await serviceAuthorizedRequest(
+    "/api/v1/capabilities",
+    serviceCapabilitiesSchema,
+    "GET",
+    undefined,
+    { signal, beforeSend: guarded },
+  );
+  check();
+  requireEvaluationCapability(capabilities, { plan, planSha256 });
+  const { policies, consents } = await readInferenceConsents(
+    { origin: saved.origin, account: saved.tokens.account },
+    signal,
+    guarded,
+  );
+  check();
+  requireInferenceConsents(policies, consents, trial.arm === "multimodal");
+  const [tab] = await api.tabs.query({ active: true, lastFocusedWindow: true });
+  check();
+  if (tab?.id === undefined || tab.windowId === undefined)
+    throw new Error("An active declared browser page is required.");
+  const active: OperatorEvaluation = {
+    plan,
+    planSha256,
+    trial: { ...trial, arm: trial.arm },
+    origin: saved.origin,
+    accountId: saved.tokens.account.id,
+    workspaceId: saved.tokens.account.workspaceId,
+    sessionId: saved.tokens.sessionId,
+    tabId: tab.id,
+    windowId: tab.windowId,
+    nextGeneration: 0,
+  };
+  evaluation = active;
+  try {
+    await evaluationNative(active);
+    check();
+  } catch (error) {
+    if (evaluation === active) clearEvaluation();
+    throw error;
+  }
+  inferenceSuppressed = false;
+  evaluationTimer = setTimeout(
+    revokeServiceEvaluation,
+    Math.max(1, plan.expiresAtMs - Date.now()),
+  );
+  return inferenceStatus();
 }
 
 async function configureInference(
@@ -516,6 +921,7 @@ async function configureInference(
   const choices = serviceInferenceChoicesSchema.parse(raw);
   // Fence immediately, before any private storage or service await.
   cancelServiceInference();
+  clearEvaluation();
   inferenceSuppressed = true;
   const operation = inferenceGeneration;
   configuringInference = operation;
@@ -765,6 +1171,7 @@ export async function serviceAuthCommand(raw: unknown): Promise<unknown> {
     )
   ) {
     inferenceSuppressed = true;
+    clearEvaluation();
     cancelServiceInference();
     const expected = generation;
     await persist((latest) => {
@@ -784,6 +1191,8 @@ export async function serviceAuthCommand(raw: unknown): Promise<unknown> {
         enabled: command.enabled,
         images: command.images,
       });
+    case "AUTH_EVALUATION_ACTIVATE":
+      return activateEvaluation(command.planJson, command.trialId);
     case "AUTH_CONFIGURE": {
       const origin = serviceOrigin(command.origin);
       if (!(await hasServiceAuthAccess(origin)))

@@ -22,6 +22,8 @@ import { backendNavigation, backendNlp } from "../platform/backend-client";
 import {
   serviceAuthCommand,
   serviceInferenceSignal,
+  reserveServiceEvaluation,
+  serviceEvaluationHasGeneration,
 } from "../platform/service-auth";
 import { serviceInferenceStatusSchema } from "../platform/service-auth-contract";
 import { ServiceClientError } from "../../../../packages/navigation-core/service-client";
@@ -30,6 +32,7 @@ import {
   nativeReferenceKey,
   type NavigationObservation,
   type NavigationStamp,
+  type NavigationServiceState,
 } from "../../../../packages/navigation-core/contracts-navigation";
 import { buildNavigationObservation } from "../../../../packages/goal-planner/model-context";
 import {
@@ -130,6 +133,26 @@ export function createJourneyService(context: Context) {
       await serviceAuthCommand({ type: "AUTH_INFERENCE_STATUS" }),
     );
     if (!selected.success || !selected.data.enabled) return;
+    const profile = selected.data.profile;
+    let evaluation: NavigationServiceState["evaluation"] = selected.data
+      .evaluation
+      ? {
+          planSha256: selected.data.evaluation.planSha256,
+          trialId: selected.data.evaluation.trialId,
+          provider: selected.data.evaluation.provider,
+          arm: selected.data.evaluation.arm,
+        }
+      : undefined;
+    let transportRequestId: string | undefined;
+    const processing = () => ({
+      profile,
+      ...(evaluation ? { evaluation } : {}),
+      ...(transportRequestId ? { transportRequestId } : {}),
+    });
+    const source =
+      profile === "operator-evaluation"
+        ? "operator evaluation"
+        : "connected development service";
     if (
       context.session !== candidate ||
       context.goalGeneration !== goalGeneration ||
@@ -181,14 +204,14 @@ export function createJourneyService(context: Context) {
       if (!ownerCurrent()) throw new Error("The inference task changed.");
     };
     const state = async (
-      value: "pending" | "guiding" | "clarify" | "unsupported" | "error",
+      value: NavigationServiceState["state"],
       message?: string,
       code?: string,
     ) => {
       if (!ownerCurrent()) return;
       const knownCode = serviceErrorCodeSchema.safeParse(code);
       candidate.view!.serviceNavigation = {
-        profile: "fake",
+        ...processing(),
         requestId,
         state: value,
         ...(message ? { message } : {}),
@@ -274,16 +297,10 @@ export function createJourneyService(context: Context) {
         nativeReferenceKey(b.perception.native);
     try {
       ensureOwner();
-      await state(
-        "pending",
-        "Requesting a proposal from the connected development service.",
-      );
+      await state("pending", `Requesting a proposal from the ${source}.`);
       observed = await observe();
       if (!candidate.view?.serviceNavigation)
-        await state(
-          "pending",
-          "Requesting a proposal from the connected development service.",
-        );
+        await state("pending", `Requesting a proposal from the ${source}.`);
       let visual = false;
       for (let attempt = 0; attempt < 2; attempt++) {
         ensureOwner();
@@ -354,6 +371,12 @@ export function createJourneyService(context: Context) {
               "The current page cannot provide bounded inference evidence.",
             );
           const observation = built.observation;
+          if (profile === "operator-evaluation") {
+            evaluation = await reserveServiceEvaluation(observation);
+            ensureOwner();
+          }
+          transportRequestId = crypto.randomUUID();
+          await state("pending", `Requesting a proposal from the ${source}.`);
           const validation = {
             currentStamp: stamp,
             currentNative: observation.native,
@@ -382,8 +405,17 @@ export function createJourneyService(context: Context) {
           };
           const response = await backendNavigation(
             {
-              requestId: crypto.randomUUID(),
-              profile: "fake",
+              requestId: transportRequestId,
+              ...(evaluation?.generation !== undefined
+                ? {
+                    profile: "operator-evaluation" as const,
+                    evaluation: {
+                      planSha256: evaluation.planSha256,
+                      trialId: evaluation.trialId,
+                      generation: evaluation.generation,
+                    },
+                  }
+                : { profile: "fake" as const }),
               observation,
               validation,
               policy: { timeoutMs: Math.max(1, deadlineAt - Date.now()) },
@@ -407,7 +439,13 @@ export function createJourneyService(context: Context) {
           if (!joined.accepted)
             throw new Error("The proposal is stale or unsupported.");
           const decision = joined.decision.decision;
-          if (decision.kind === "request-observation") {
+          if (
+            decision.kind === "request-observation" &&
+            !(
+              profile === "operator-evaluation" &&
+              !serviceEvaluationHasGeneration()
+            )
+          ) {
             if (attempt === 1) {
               await state(
                 "unsupported",
@@ -461,7 +499,7 @@ export function createJourneyService(context: Context) {
               {
                 type: "APPLY_NAVIGATION_PROPOSAL",
                 sessionId,
-                profile: "fake",
+                ...processing(),
                 binding: {
                   requestId,
                   activeTaskId: task.id,
@@ -482,16 +520,26 @@ export function createJourneyService(context: Context) {
               );
             await context.acceptView(reply.view);
             await state(
-              decision.kind === "guide" ? "guiding" : decision.kind,
               decision.kind === "guide"
-                ? "The development service proposal is bound to a current website control."
+                ? "guiding"
+                : decision.kind === "request-observation"
+                  ? "observation"
+                  : decision.kind,
+              decision.kind === "guide"
+                ? `The ${source} proposal is bound to a current website control.`
                 : decision.kind === "clarify"
                   ? decision.question
-                  : decision.reason,
+                  : decision.kind === "request-observation"
+                    ? "The operator provider requested more evidence. This trial permits no further generation; the task remains unverified."
+                    : decision.reason,
             );
           });
         };
-        if (attempt === 0 || !visual) {
+        const evaluationImages = evaluation?.arm === "multimodal";
+        if (
+          !evaluationImages &&
+          (profile === "operator-evaluation" || attempt === 0 || !visual)
+        ) {
           await propose();
         } else {
           if (!selected.data.images || !context.withMaskedNavigation)
@@ -510,15 +558,12 @@ export function createJourneyService(context: Context) {
         if (!needsObservation) return;
         observed = await observe(nextRegion);
         if (!candidate.view?.serviceNavigation)
-          await state(
-            "pending",
-            "Requesting a proposal from the connected development service.",
-          );
+          await state("pending", `Requesting a proposal from the ${source}.`);
       }
     } catch (error) {
       if (sameTaskOwner()) {
         candidate.view!.serviceNavigation = {
-          profile: "fake",
+          ...processing(),
           requestId,
           state: "error",
           message:

@@ -107,6 +107,9 @@ const errorMessages = {
   PROVIDER_ERROR: "The model provider could not complete the request.",
 } as const;
 export type ModelErrorCode = keyof typeof errorMessages;
+export const modelErrorCodeSchema = z.enum(
+  Object.keys(errorMessages) as [ModelErrorCode, ...ModelErrorCode[]],
+);
 export type ModelOutcome = "not-sent" | "unknown" | "reported";
 export class ModelError extends Error {
   readonly code: ModelErrorCode;

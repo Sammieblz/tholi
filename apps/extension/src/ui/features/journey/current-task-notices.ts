@@ -135,43 +135,59 @@ export function currentProcessing(
     !["guiding", "recovering"].includes(presentation.phase)
   )
     return;
+  const operator = service.profile === "operator-evaluation";
+  const source = operator ? "Operator evaluation" : "Connected guidance";
   switch (service.state) {
     case "pending":
       return {
         state: "pending",
-        title: "Connected guidance is checking this page",
-        detail:
-          "This request uses the development service. Pause and Stop remain available.",
+        title: `${source} is checking this page`,
+        detail: operator
+          ? `Temporary ${service.evaluation!.provider === "vertex" ? "Vertex" : "fake-provider"} evaluation with ${service.evaluation!.arm === "multimodal" ? "structured context and a fresh masked image" : "structured context only"}. Pause and Stop remain available.`
+          : "This request uses the development service. Pause and Stop remain available.",
       };
     case "guiding":
       return view.selectedControlId
         ? {
             state: "guiding",
-            title: "Connected guidance is ready",
-            detail:
-              "Development service proposal. Tholi still checks the result of each step.",
+            title: `${source} is ready`,
+            detail: `${operator ? "Temporary operator evaluation" : "Development service"} proposal. Tholi still checks the result of each step.`,
           }
         : undefined;
     case "clarify":
       return {
         state: "clarify",
-        title: "Connected guidance needs a clearer destination",
+        title: `${source} needs a clearer destination`,
         detail:
           "Describe what you want to find or change using the destination field.",
       };
     case "unsupported":
       return {
         state: "unsupported",
-        title: "Connected guidance cannot guide this page",
+        title: `${source} cannot guide this page`,
         detail:
           "Try a different destination or choose Local. This task has not been completed.",
         recovery: "settings",
       };
-    case "error":
+    case "observation":
       return {
+        state: "observation",
+        title: `${source} needs more page evidence`,
+        detail:
+          "This trial allows no further observation request. The destination remains unverified.",
+        recovery: "settings",
+      };
+    case "error": {
+      const error = {
         state: "error",
         ...(processingErrors[service.code || "INTERNAL_ERROR"] ||
           processingErrors.INTERNAL_ERROR),
       };
+      return {
+        ...error,
+        state: "error",
+        ...(operator ? { title: `Operator evaluation: ${error.title}` } : {}),
+      };
+    }
   }
 }

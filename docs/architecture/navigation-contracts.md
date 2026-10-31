@@ -131,6 +131,13 @@ existing masked-capture owner only with its separate image choice and current
 grants. No raw image or screenshot coordinate becomes a content command.
 Uncertain failures and status-only replays do not trigger another generation.
 
+Prepared capture currentness follows semantic page/perception and frozen task
+evidence, not allocated snapshot object identity or per-read scan UUIDs. Required
+fresh scans remain in place. The content runtime retains actual document/session
+ownership, visibility, masking/privacy revalidation and the original visual lease;
+DOM, viewport, task, review, progress or Stop changes invalidate that lease.
+See the [integrated comparison validation](../development/testing/perception-comparison-validation.md).
+
 The background joins a returned decision against the submitted allowlist, then
 targets the actual native document for fresh content binding. Both
 [Mozilla](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/sendMessage)

@@ -1,4 +1,4 @@
-import { test, expect, type Locator } from "../../support/browser-test";
+import { test, expect } from "../../support/browser-test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -11,6 +11,8 @@ import {
   sample,
   settlePageTop,
 } from "../../support/acceptance-runner";
+import { prepareNavigationOracle } from "../../support/navigation-oracle";
+import { registerPerceptionComparison } from "../../support/perception-comparison-runner";
 import * as modelProjection from "../../../packages/goal-planner/model-context";
 import { NAVIGATION_LIMITS } from "../../../packages/navigation-core/contracts-navigation";
 import {
@@ -78,7 +80,9 @@ test.beforeAll(async () => {
   expect(new Set(corpus.cases.map((task) => task.id)).size).toBe(18);
 });
 
-for (const task of corpus.cases) {
+const comparison = process.env.THOLI_BROWSER_GROUP === "perception-comparison";
+if (comparison) registerPerceptionComparison();
+for (const task of comparison ? [] : corpus.cases) {
   test(`${task.id}: ${task.goal}`, async ({}, info) => {
     const pregrantedOrigins =
       task.app === "github" ? ["https://github.com/*"] : [];
@@ -157,122 +161,24 @@ for (const task of corpus.cases) {
         response?.ok(),
         "The public page must load before measuring navigation",
       ).toBe(true);
-      let target: Locator;
-      let reveal: Locator | undefined;
-      let sectionLink: Locator | undefined;
-      let revealed: Locator | undefined;
-      let label = new RegExp(`^${task.target}(?:\\s|$)`, "i");
-      let matchesTarget: ((control: PageControl) => boolean) | undefined;
-      if (task.app === "github") {
-        // GitHub repeats destinations with different labels (for example a
-        // LICENSE.txt file link and a license tab). Either is a valid route.
-        label = /\S/;
-        const path = "path" in task ? task.path : "";
-        target = app.page
-          .locator(`a[href="${path}"]`)
-          .filter({ visible: true })
-          .first();
-        outcome = async () =>
-          new URL(app.page.url()).origin === "https://github.com" &&
-          new URL(app.page.url()).pathname === path &&
-          (await app.page.locator("main").isVisible());
-        matchesTarget = (control) =>
-          control.destination?.origin === "https://github.com" &&
-          control.destination.path === path;
-      } else if (task.kind === "choice") {
-        label = new RegExp(`(?:^|: )${task.target}$`, "i");
-        target = app.page.getByLabel(task.target, { exact: true });
-        reveal = app.page
-          .getByRole("button", { name: /Appearance/ })
-          .filter({ visible: true })
-          .first();
-        const hidden = !(await target.isVisible());
-        if (hidden) await reveal.click();
-        const initial = app.page.getByLabel(task.initialChoice ?? "", {
-          exact: true,
-        });
-        // Wikipedia uses "Standard" for both width and font size.
-        const name = await target.getAttribute("name");
-        const choices = await initial.all();
-        const sameGroup = [];
-        for (const choice of choices)
-          if ((await choice.getAttribute("name")) === name)
-            sameGroup.push(choice);
-        expect(sameGroup).toHaveLength(1);
-        await sameGroup[0].check();
-        if (hidden) await reveal.click();
-        outcome = () => target.isChecked();
-      } else if (task.kind === "section") {
-        target = app.page.locator(`#${task.target}`);
-        sectionLink = app.page
-          .locator(`a[href="#${task.target}"]`)
-          .filter({ visible: true })
-          .first();
-        label = new RegExp(`^(?:\\d+(?:\\.\\d+)*[. ]*)?${task.target}$`, "i");
-        outcome = async () => {
-          const box = await target.boundingBox();
-          return (
-            !!box && box.y >= 0 && box.y + box.height <= corpus.viewport.height
-          );
-        };
-      } else if (task.kind === "focus") {
-        target = app.page
-          .getByPlaceholder("Search Wikipedia", { exact: true })
-          .filter({ visible: true });
-        reveal = app.page
-          .locator('[role="search"] > a')
-          .filter({ visible: true });
-        outcome = () =>
-          target.evaluate((element) => element === document.activeElement);
-      } else if (task.kind === "expand") {
-        target = app.page
-          .getByRole("button", { name: /languages/i })
-          .filter({ visible: true })
-          .first();
-        label = /languages/i;
-        outcome = async () =>
-          (await app.page
-            .getByRole("link", { name: "Français", exact: true })
-            .filter({ visible: true })
-            .count()) > 0;
-      } else {
-        target = app.page
-          .getByRole("link", {
-            name: task.target,
-            exact: true,
-            includeHidden: true,
-          })
-          .first();
-        const query = new URLSearchParams("query" in task ? task.query : "");
-        outcome = async () => {
-          const actual = new URL(app.page.url());
-          return (
-            actual.origin === new URL(url).origin &&
-            [...query].every(([k, v]) => actual.searchParams.get(k) === v) &&
-            (await app.page.locator("main").isVisible())
-          );
-        };
-        matchesTarget = (control) =>
-          control.destination?.origin === new URL(url).origin &&
-          control.destination.path === "/w/index.php";
-        if ("reveal" in task) {
-          reveal = app.page
-            .getByRole("button", { name: task.reveal, exact: true })
-            .filter({ visible: true });
-          revealed = target;
-        }
-      }
-      await expect(
+      const {
         target,
-        "The declared independent target must exist",
-      ).toHaveCount(1, { timeout: corpus.timeoutMs });
-      if (task.kind === "navigation") {
-        const href = new URL((await target.getAttribute("href"))!, url);
-        measurement.targetHref = href.href;
-        if ("query" in task)
-          for (const [key, value] of new URLSearchParams(task.query))
-            expect(href.searchParams.get(key)).toBe(value);
-      }
+        reveal,
+        sectionLink,
+        revealed,
+        label,
+        matchesTarget,
+        outcome: declaredOutcome,
+        targetHref,
+      } = await prepareNavigationOracle(
+        app,
+        task,
+        url,
+        corpus.viewport,
+        corpus.timeoutMs,
+      );
+      outcome = declaredOutcome;
+      if (targetHref) measurement.targetHref = targetHref;
       await app.page.evaluate(settlePageTop);
       await app.start();
       const probe = chromiumProbe(app);

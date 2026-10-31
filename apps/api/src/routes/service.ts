@@ -26,7 +26,9 @@ import {
   navigationObservationSchema,
   NAVIGATION_TRANSPORT_CAPABILITY,
   NAVIGATION_FAKE_CAPABILITY,
+  NAVIGATION_EVALUATION_CAPABILITY,
 } from "../../../../packages/navigation-core/contracts-navigation";
+import type { OperatorEvaluationMetadata } from "../../../../packages/navigation-core/contracts-evaluation";
 import { ApiError, duringServiceRequest } from "../http";
 import { SERVICE_ROUTES } from "./service-inventory";
 import { identityCookieNames } from "./identity-cookies";
@@ -38,6 +40,7 @@ function serviceCapabilities(
   supportEnabled: boolean,
   analyticsEnabled: boolean,
   navigationEnabled: boolean,
+  evaluation?: OperatorEvaluationMetadata,
 ) {
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -56,7 +59,12 @@ function serviceCapabilities(
       ...(supportEnabled ? ["support-requests", "private-files"] : []),
       ...(analyticsEnabled ? ["product-analytics"] : []),
       ...(navigationEnabled
-        ? [NAVIGATION_TRANSPORT_CAPABILITY, NAVIGATION_FAKE_CAPABILITY]
+        ? [
+            NAVIGATION_TRANSPORT_CAPABILITY,
+            evaluation
+              ? NAVIGATION_EVALUATION_CAPABILITY
+              : NAVIGATION_FAKE_CAPABILITY,
+          ]
         : []),
     ],
     availability: {
@@ -66,6 +74,7 @@ function serviceCapabilities(
       billing: false,
     },
     limits: SERVICE_LIMITS,
+    ...(evaluation ? { evaluation } : {}),
   });
 }
 
@@ -81,6 +90,7 @@ export async function registerServiceApi(
   supportEnabled = false,
   analyticsEnabled = false,
   navigationEnabled = false,
+  evaluation?: OperatorEvaluationMetadata,
 ) {
   const capabilities = serviceCapabilities(
     identityEnabled,
@@ -89,6 +99,7 @@ export async function registerServiceApi(
     supportEnabled,
     analyticsEnabled,
     navigationEnabled,
+    evaluation,
   );
   const sharedSchemas = {
     ServiceError: serviceErrorEnvelopeSchema,

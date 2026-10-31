@@ -15,10 +15,17 @@ import { join, resolve, sep, basename } from "node:path";
 export async function openNavigatorExtension(
   viewport = { width: 1280, height: 900 },
   fixturePermissions: string[] = [],
-  options: { nativeViewport?: boolean; allowAutomaticDownloads?: boolean } = {},
+  options: {
+    nativeViewport?: boolean;
+    allowAutomaticDownloads?: boolean;
+    persistentPermissions?: boolean;
+    standalone?: boolean;
+  } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), "navigator-e2e-"));
-  const extension = await permissionVariant(fixturePermissions);
+  const extension = await permissionVariant(fixturePermissions, {
+    persistent: options.persistentPermissions,
+  });
   const { profilePath, downloadsPath, launchArgs } =
     await prepareChromiumProfile(directory, options);
   const launch = () =>
@@ -51,6 +58,99 @@ export async function openNavigatorExtension(
     );
     if (!options.nativeViewport)
       await panel.setViewportSize({ width: 380, height: 1000 });
+  };
+  /** Invoke the native action and measure real content geometry, without viewport emulation. */
+  const prepareNativeAction = async () => {
+    if (!options.nativeViewport || page.viewportSize() !== null)
+      throw Error(
+        "Native action setup requires an un-emulated browser viewport.",
+      );
+    await page.bringToFront();
+    const browserSession = await context.browser()!.newBrowserCDPSession();
+    try {
+      const targets = await browserSession.send("Target.getTargets", {
+        filter: [{ type: "tab", exclude: false }, { exclude: true }],
+      });
+      const candidates = targets.targetInfos.filter(
+        (target) => target.type === "tab" && target.url === page.url(),
+      );
+      if (candidates.length !== 1)
+        throw Error("The exact fixture tab target is unavailable.");
+      await browserSession.send("Extensions.triggerAction", {
+        id: new URL(worker.url()).host,
+        targetId: candidates[0].targetId,
+      });
+    } finally {
+      await browserSession.detach();
+    }
+    const pageSession = await context.newCDPSession(page);
+    let stable = 0;
+    try {
+      // Native side-panel opening changes the content area. Resize the real
+      // owned window and read it back; never replace browser viewport metadata.
+      await expect
+        .poll(
+          async () => {
+            const actual = await page.evaluate(() => ({
+              width: innerWidth,
+              height: innerHeight,
+            }));
+            if (
+              actual.width === viewport.width &&
+              actual.height === viewport.height
+            )
+              return ++stable >= 3;
+            stable = 0;
+            const { windowId, bounds } = await pageSession.send(
+              "Browser.getWindowForTarget",
+            );
+            if (
+              bounds.width === undefined ||
+              bounds.height === undefined ||
+              bounds.windowState !== "normal"
+            )
+              throw Error(
+                "A normal owned browser window is required for native geometry.",
+              );
+            await pageSession.send("Browser.setWindowBounds", {
+              windowId,
+              bounds: {
+                width: bounds.width + viewport.width - actual.width,
+                height: bounds.height + viewport.height - actual.height,
+              },
+            });
+            return false;
+          },
+          { timeout: 5000, intervals: [100, 100, 100] },
+        )
+        .toBe(true);
+    } finally {
+      await pageSession.detach();
+    }
+    await page.bringToFront();
+    const actual = await page.evaluate(() => ({
+      width: innerWidth,
+      height: innerHeight,
+      devicePixelRatio,
+      visualWidth: visualViewport?.width,
+      visualHeight: visualViewport?.height,
+      visualScale: visualViewport?.scale,
+      visualOffsetLeft: visualViewport?.offsetLeft,
+      visualOffsetTop: visualViewport?.offsetTop,
+    }));
+    if (
+      actual.width !== viewport.width ||
+      actual.height !== viewport.height ||
+      actual.visualWidth !== viewport.width ||
+      actual.visualHeight !== viewport.height ||
+      actual.visualScale !== 1 ||
+      actual.visualOffsetLeft !== 0 ||
+      actual.visualOffsetTop !== 0
+    )
+      throw Error(
+        "Native content geometry does not match the declared viewport.",
+      );
+    return actual;
   };
   const openDetails = async () => {
     await panel
@@ -148,13 +248,13 @@ export async function openNavigatorExtension(
       async () => await chrome.runtime.sendMessage({ type: "STOP" }),
     );
   const dispose = async (operation: () => Promise<void>) => {
-    const info = test.info(),
-      bodyBudget = info.timeout,
+    const info = options.standalone ? undefined : test.info(),
+      bodyBudget = info?.timeout,
       started = performance.now();
     const cleanupBudget = 30000;
     // Profile/trace disposal is infrastructure work. Keep the original body
     // deadline and allow only the time actually spent in bounded cleanup.
-    if (bodyBudget) info.setTimeout(bodyBudget + cleanupBudget);
+    if (info && bodyBudget) info.setTimeout(bodyBudget + cleanupBudget);
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
@@ -170,9 +270,9 @@ export async function openNavigatorExtension(
     } finally {
       clearTimeout(timer);
       const elapsedMs = performance.now() - started;
-      if (bodyBudget)
+      if (info && bodyBudget)
         info.setTimeout(bodyBudget + Math.min(elapsedMs, cleanupBudget));
-      await info.attach("browser-disposal", {
+      await info?.attach("browser-disposal", {
         body: Buffer.from(JSON.stringify({ elapsedMs, cleanupBudget })),
         contentType: "application/json",
       });
@@ -224,6 +324,7 @@ export async function openNavigatorExtension(
     view,
     openDetails,
     start,
+    prepareNativeAction,
     stop,
     close,
     restart,

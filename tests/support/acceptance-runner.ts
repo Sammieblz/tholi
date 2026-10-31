@@ -78,6 +78,7 @@ function progress(app: NavigatorApp) {
       journey: view.journey,
       goalPlan: view.goalPlan,
       selectedControlId: view.selectedControlId,
+      serviceNavigation: view.serviceNavigation,
     };
   });
 }
@@ -90,6 +91,8 @@ export interface AcceptanceProbe {
   view(): Promise<any>;
   progress(): Promise<any>;
   selected(): Promise<any>;
+  /** Optional provider-arm readiness, without changing the independent oracle. */
+  settle?(view: any): Promise<any>;
   resetClicks(): Promise<void>;
   clicks(): Promise<number>;
 }
@@ -193,6 +196,7 @@ export async function runGoalContract(
   const reply = await probe.setGoal(contract.goal);
   expect(reply.error).toBeUndefined();
   const acknowledged = reply.view;
+  if (probe.settle) reply.view = await probe.settle(reply.view);
   if (
     reply.view.status === "running" &&
     reply.view.goalPlan.status === "unresolved" &&
@@ -297,17 +301,19 @@ export async function runGoalContract(
       expect(result.completed).toBe(true);
       return;
     }
+    if (probe.settle) view = await probe.settle(view);
     expect(view.verifiedSteps).toBe(before + 1);
     selected = view.page.controls.find(
       (c: any) => c.id === view.selectedControlId,
     );
     await probe.resetClicks();
   }
-  const correct =
-    !!selected &&
-    selected.kind === oracle.kind &&
-    oracle.selectedLabel.test(selected.label) &&
-    (!oracle.matchesTarget || oracle.matchesTarget(selected));
+  const matchesSelection = (control: any) =>
+    !!control &&
+    control.kind === oracle.kind &&
+    oracle.selectedLabel.test(control.label) &&
+    (!oracle.matchesTarget || oracle.matchesTarget(control));
+  const correct = matchesSelection(selected);
   result.targets.push(correct);
   await recordAutomation(probe, result);
   expect(correct).toBe(true);
@@ -321,6 +327,15 @@ export async function runGoalContract(
         inViewport: true,
       });
     view = await probe.view();
+    if (probe.settle) {
+      view = await probe.settle(view);
+      selected = view.page.controls.find(
+        (control: any) => control.id === view.selectedControlId,
+      );
+      const freshCorrect = matchesSelection(selected);
+      result.targets.push(freshCorrect);
+      expect(freshCorrect).toBe(true);
+    }
   }
   if (oracle.kind === "choice") await oracle.target.check();
   else if (oracle.kind === "section" && selected.role === "heading")

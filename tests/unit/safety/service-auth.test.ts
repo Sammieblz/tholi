@@ -7,7 +7,13 @@ import {
 import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
+  NAVIGATION_EVALUATION_CAPABILITY,
 } from "../../../packages/navigation-core/contracts-navigation";
+import { operatorEvaluationPlanFixture } from "../../support/operator-evaluation-fixture";
+import {
+  operatorEvaluationManifestSha256,
+  operatorEvaluationSha256,
+} from "../../../packages/navigation-core/contracts-evaluation";
 import {
   navigationModelObservation,
   navigationModelValidation,
@@ -317,6 +323,273 @@ function inferenceFixture(images = false) {
     validation,
   };
 }
+
+async function operatorFixture(
+  arm: "structured" | "multimodal" = "structured",
+  provider: "fake" | "vertex" = "fake",
+) {
+  const f = inferenceFixture(arm === "multimodal");
+  f.input.observation.context.goal = "Find Help";
+  const manifest = {
+    manifest_version: 3,
+    name: "Contract fixture",
+    version: "0.11.0",
+  };
+  const native = f.input.observation.native;
+  let pageUrl = "https://github.com/microsoft/vscode";
+  const tab = () => ({
+    id: native.tabId,
+    windowId: native.windowId,
+    active: true,
+    url: pageUrl,
+  });
+  vi.stubGlobal("browser", {
+    runtime: {
+      getURL: () => "chrome-extension://operator-fixture/",
+      getManifest: () => manifest,
+    },
+    permissions: { contains, request },
+    tabs: { get: vi.fn(async () => tab()), query: vi.fn(async () => [tab()]) },
+    webNavigation: {
+      getFrame: vi.fn(async () => ({
+        documentId: native.documentId,
+        url: pageUrl,
+      })),
+    },
+  });
+  const plan = operatorEvaluationPlanFixture({
+    provider,
+    operator: {
+      accountId: account.id,
+      workspaceId: account.workspaceId,
+      clientId: "extension-chromium",
+    },
+    runtimeManifestSha256: await operatorEvaluationManifestSha256(manifest),
+  });
+  const trial = plan.trials.find((item) => item.arm === arm)!;
+  const planJson = JSON.stringify(plan);
+  const metadata = {
+    profile: "operator-evaluation",
+    planSha256: await operatorEvaluationSha256(planJson),
+    provider,
+    runtimeManifestSha256: plan.hashes.runtimeManifestSha256,
+    expiresAtMs: plan.expiresAtMs,
+  };
+  Object.assign(f.capabilities, {
+    capabilities: [
+      ...f.capabilities.capabilities,
+      NAVIGATION_EVALUATION_CAPABILITY,
+    ],
+    evaluation: metadata,
+  });
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) =>
+    String(url).endsWith("/api/v1/account")
+      ? json({
+          account,
+          session: { ...session, clientId: "extension-chromium" },
+        })
+      : original(url, init),
+  );
+  const auth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const activate = () =>
+    auth.serviceAuthCommand({
+      type: "AUTH_EVALUATION_ACTIVATE",
+      planJson,
+      trialId: trial.id,
+    });
+  const local = () =>
+    auth.serviceAuthCommand({
+      type: "AUTH_INFERENCE_CONFIGURE",
+      profile: "fake",
+      enabled: false,
+      images: false,
+    });
+  return {
+    ...f,
+    plan,
+    trial,
+    planJson,
+    metadata,
+    auth,
+    activate,
+    local,
+    setPageUrl: (url: string) => {
+      pageUrl = url;
+    },
+  };
+}
+
+it.each(["fake", "vertex"] as const)(
+  "temporary %s operator activation is explicit, native-bound and never persisted or inherited by fake requests",
+  async (provider) => {
+    const f = await operatorFixture("structured", provider);
+    try {
+      expect(await f.activate()).toMatchObject({
+        profile: "operator-evaluation",
+        enabled: true,
+        images: false,
+        evaluation: { provider, trialId: f.trial.id },
+      });
+      expect(saved).not.toHaveProperty("inference");
+      expect(
+        JSON.stringify(privateStore.setPrivateSetting.mock.calls),
+      ).not.toContain(f.planJson);
+      const { backendNavigation } =
+        await import("../../../apps/extension/src/platform/backend-client");
+      await expect(
+        backendNavigation(
+          f.input,
+          () => f.validation,
+          vi.fn(async () => {}),
+        ),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(
+        fetchMock.mock.calls.filter(([url]) =>
+          String(url).endsWith("/decisions"),
+        ),
+      ).toHaveLength(0);
+      const reserved = await f.auth.reserveServiceEvaluation(
+        f.input.observation,
+      );
+      expect(reserved).toMatchObject({
+        generation: 0,
+        provider,
+        arm: "structured",
+      });
+      const input = {
+        ...f.input,
+        profile: "operator-evaluation" as const,
+        evaluation: {
+          planSha256: reserved.planSha256,
+          trialId: reserved.trialId,
+          generation: reserved.generation,
+        },
+      };
+      await expect(
+        backendNavigation(
+          input,
+          () => f.validation,
+          vi.fn(async () => {}),
+        ),
+      ).resolves.toMatchObject({ status: "completed" });
+      const body = JSON.parse(
+        fetchMock.mock.calls.find(([url]) =>
+          String(url).endsWith("/decisions"),
+        )![1].body,
+      );
+      expect(body).toMatchObject({
+        profile: "operator-evaluation",
+        evaluation: input.evaluation,
+      });
+      expect(body).not.toHaveProperty("plan");
+      expect(body).not.toHaveProperty("planJson");
+      await f.local();
+      expect(
+        await f.auth.serviceAuthCommand({ type: "AUTH_INFERENCE_STATUS" }),
+      ).toMatchObject({ profile: "fake", enabled: false });
+      expect(() => f.auth.serviceInferenceCurrent(input)).toThrow(
+        "no longer current",
+      );
+    } finally {
+      await f.local();
+    }
+  },
+);
+
+it.each(["manifest", "capability", "consent", "scope", "operator"])(
+  "operator activation rejects changed %s before any generation",
+  async (scenario) => {
+    const f = await operatorFixture();
+    if (scenario === "manifest")
+      f.plan.hashes.runtimeManifestSha256 = "b".repeat(64);
+    if (scenario === "capability") f.metadata.provider = "vertex";
+    if (scenario === "consent") f.consents.items[0].granted = false;
+    if (scenario === "scope") f.setPageUrl("https://github.com/pallets/flask");
+    if (scenario === "operator")
+      f.plan.operator.accountId = crypto.randomUUID();
+    await expect(
+      f.auth.serviceAuthCommand({
+        type: "AUTH_EVALUATION_ACTIVATE",
+        planJson:
+          scenario === "manifest" || scenario === "operator"
+            ? JSON.stringify(f.plan)
+            : f.planJson,
+        trialId: f.trial.id,
+      }),
+    ).rejects.toThrow();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith("/decisions")),
+    ).toBe(false);
+    await expect(
+      f.auth.reserveServiceEvaluation(f.input.observation),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  },
+);
+
+it.each(["structured", "multimodal"] as const)(
+  "operator %s image policy, exact page/goal and finite generations are checked independently of the service",
+  async (arm) => {
+    const f = await operatorFixture(arm);
+    try {
+      await f.activate();
+      const wrongImage = structuredClone(f.input.observation);
+      if (arm === "structured") navigationModelCapture(wrongImage);
+      else wrongImage.images = [];
+      await expect(
+        f.auth.reserveServiceEvaluation(wrongImage),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      const wrongGoal = structuredClone(f.input.observation);
+      wrongGoal.context.goal = "Find an undeclared destination";
+      await expect(
+        f.auth.reserveServiceEvaluation(wrongGoal),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      f.setPageUrl("https://github.com/microsoft/vscode?unapproved=1");
+      await expect(
+        f.auth.reserveServiceEvaluation(f.input.observation),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      f.setPageUrl("https://github.com/microsoft/vscode");
+      const attempts = await Promise.allSettled(
+        [0, 1, 2].map(() =>
+          f.auth.reserveServiceEvaluation(f.input.observation),
+        ),
+      );
+      expect(
+        attempts
+          .filter((item) => item.status === "fulfilled")
+          .map((item) => item.status === "fulfilled" && item.value.generation),
+      ).toEqual([0, 1]);
+      expect(
+        attempts.filter((item) => item.status === "rejected"),
+      ).toHaveLength(1);
+      expect(f.auth.serviceEvaluationHasGeneration()).toBe(false);
+    } finally {
+      await f.local();
+    }
+  },
+);
+
+it("operator authority expires to Local and revocation invalidates the admitted span without restoring saved inference", async () => {
+  vi.useFakeTimers();
+  const f = await operatorFixture();
+  try {
+    await f.activate();
+    const signal = f.auth.serviceInferenceSignal();
+    await vi.advanceTimersByTimeAsync(60001);
+    expect(signal.aborted).toBe(true);
+    expect(
+      await f.auth.serviceAuthCommand({ type: "AUTH_INFERENCE_STATUS" }),
+    ).toMatchObject({ profile: "fake", enabled: false, images: false });
+    expect(saved).not.toHaveProperty("inference");
+    await expect(
+      f.auth.reserveServiceEvaluation(f.input.observation),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  } finally {
+    await f.local();
+    vi.useRealTimers();
+  }
+});
 
 it("saves explicit fake-profile processing/image consents for the current account without exposing tokens", async () => {
   const f = inferenceFixture();

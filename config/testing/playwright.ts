@@ -113,6 +113,20 @@ if (browserGroup === "navigation-baseline")
       use: { viewport: { width: 1280, height: 900 }, trace: "off" },
     }),
   );
+if (browserGroup === "perception-comparison")
+  projects.push(
+    project("perception-comparison", "perception-comparison", "live", {
+      testMatch: "navigation-baseline.spec.ts",
+      timeout: 90000,
+      retries: 0,
+      use: {
+        viewport: { width: 1280, height: 900 },
+        trace: "off",
+        screenshot: "off",
+        video: "off",
+      },
+    }),
+  );
 if (full) {
   projects.push(
     project(

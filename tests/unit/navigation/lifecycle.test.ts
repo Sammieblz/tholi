@@ -97,56 +97,74 @@ function serviceProposalFixture(goal = "Find the winter workspace") {
   return { coach, message, request, journey, target };
 }
 
-it("a development proposal replaces old action controls while retaining the request and objective", () => {
-  const f = serviceProposalFixture();
-  try {
-    Object.assign(f.coach.view.goalPlan!, {
-      action: {
-        kind: "history-back",
-        entryId: "previous-entry",
-        tabId: 9,
-        expectedState: "previous-state",
-      },
-      route: {
-        strategy: "fastest",
-        clicks: 2,
-        minSeconds: 1,
-        maxSeconds: 2,
-        complete: false,
-        basis: "estimated",
-      },
-      recoveryStage: "vision",
-      budgetPending: true,
-    });
-    expect(navigationProposalMessageSchema.safeParse(f.message).success).toBe(
-      true,
-    );
-    expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
-    expect(f.coach.view.request).toBe(f.request);
-    expect(f.coach.view.journey).toBe(f.journey);
-    expect(f.coach.view.request?.active).toBe(0);
-    expect(f.coach.view.selectedControlId).toBe(f.target.id);
-    expect(f.coach.view.verifiedSteps).toBe(0);
-    expect(f.coach.view.goalPlan).toMatchObject({
-      source: "semantics",
-      status: "guiding",
-      exploration: true,
-    });
-    expect(f.coach.view.goalPlan?.action).toBeUndefined();
-    expect(f.coach.view.goalPlan?.route).toBeUndefined();
-    expect(f.coach.view.goalPlan?.recoveryStage).toBeUndefined();
-    expect(f.coach.view.goalPlan?.budgetPending).toBeUndefined();
-    expect(f.coach.view.serviceNavigation).toMatchObject({
-      profile: "fake",
-      state: "guiding",
-      requestId: f.request.id,
-    });
-    expect(f.coach.view.instruction).toMatch(/^Development proposal\./);
-    expect(f.coach.view.instruction).not.toContain("task is complete");
-  } finally {
-    f.coach.stop();
-  }
-});
+it.each(["fake", "operator-evaluation"] as const)(
+  "a %s proposal replaces old action controls while retaining the request and objective",
+  (profile) => {
+    const f = serviceProposalFixture();
+    try {
+      f.message.profile = profile;
+      if (profile === "operator-evaluation") {
+        f.message.evaluation = {
+          planSha256: "a".repeat(64),
+          trialId: crypto.randomUUID(),
+          generation: 0,
+          provider: "vertex",
+          arm: "structured",
+        };
+        f.message.transportRequestId = crypto.randomUUID();
+      }
+      Object.assign(f.coach.view.goalPlan!, {
+        action: {
+          kind: "history-back",
+          entryId: "previous-entry",
+          tabId: 9,
+          expectedState: "previous-state",
+        },
+        route: {
+          strategy: "fastest",
+          clicks: 2,
+          minSeconds: 1,
+          maxSeconds: 2,
+          complete: false,
+          basis: "estimated",
+        },
+        recoveryStage: "vision",
+        budgetPending: true,
+      });
+      expect(navigationProposalMessageSchema.safeParse(f.message).success).toBe(
+        true,
+      );
+      expect(f.coach.applyNavigationProposal(f.message)).toHaveProperty("view");
+      expect(f.coach.view.request).toBe(f.request);
+      expect(f.coach.view.journey).toBe(f.journey);
+      expect(f.coach.view.request?.active).toBe(0);
+      expect(f.coach.view.selectedControlId).toBe(f.target.id);
+      expect(f.coach.view.verifiedSteps).toBe(0);
+      expect(f.coach.view.goalPlan).toMatchObject({
+        source: "semantics",
+        status: "guiding",
+        exploration: true,
+      });
+      expect(f.coach.view.goalPlan?.action).toBeUndefined();
+      expect(f.coach.view.goalPlan?.route).toBeUndefined();
+      expect(f.coach.view.goalPlan?.recoveryStage).toBeUndefined();
+      expect(f.coach.view.goalPlan?.budgetPending).toBeUndefined();
+      expect(f.coach.view.serviceNavigation).toMatchObject({
+        profile,
+        state: "guiding",
+        requestId: f.request.id,
+      });
+      expect(f.coach.view.instruction).toMatch(
+        profile === "operator-evaluation"
+          ? /^Operator evaluation proposal\./
+          : /^Development proposal\./,
+      );
+      expect(f.coach.view.instruction).not.toContain("task is complete");
+    } finally {
+      f.coach.stop();
+    }
+  },
+);
 
 it("a bound development proposal fences an older local replan without resetting recovery budgets", async () => {
   const f = serviceProposalFixture();

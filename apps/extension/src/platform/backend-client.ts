@@ -34,6 +34,7 @@ import {
   serviceInferenceAccess,
   serviceInferencePreflight,
   serviceInferenceSignal,
+  serviceInferenceCurrent,
 } from "./service-auth";
 type Settings = { url: string; token: string; enabled: boolean };
 const planning = new Set<AbortController>();
@@ -300,6 +301,7 @@ export async function backendNavigation(
     );
   const check = () => {
     signal.throwIfAborted();
+    serviceInferenceCurrent(input);
     const context = validateNavigationObservationContext(
       input.observation,
       currentContext(),
@@ -314,7 +316,7 @@ export async function backendNavigation(
   return awaitAbortableOperation(
     async () => {
       const images = input.observation.images.length > 0;
-      const binding = await serviceInferenceAccess(images);
+      const binding = await serviceInferenceAccess(images, input);
       check();
       const response = await serviceAuthorizedRequest(
         (account) => `/api/v1/workspaces/${account.workspaceId}/decisions`,
@@ -329,7 +331,11 @@ export async function backendNavigation(
             Math.floor(remaining - (performance.now() - started)),
           ),
           beforeSend: async (connected) => {
-            const fresh = await serviceInferencePreflight(images, signal);
+            const fresh = await serviceInferencePreflight(
+              images,
+              signal,
+              input,
+            );
             if (
               fresh.origin !== binding.origin ||
               connected.origin !== binding.origin ||
