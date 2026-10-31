@@ -232,7 +232,8 @@ export function useGuidanceController(widget = false) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Command failed.");
     } finally {
-      if (["STOP", "RESUME"].includes(type)) focusIntent.current = "composer";
+      if (["STOP", "RESUME", "SET_GOAL"].includes(type))
+        focusIntent.current = "composer";
       if (type === "PAUSE") focusIntent.current = "resume";
       setBusy(false);
     }

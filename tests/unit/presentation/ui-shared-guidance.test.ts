@@ -150,6 +150,57 @@ describe("shared guidance keeps controls reachable and outcomes honest", () => {
     await render({ ...props, presentation: { ...props.presentation } });
     expect(document.querySelector(".tholi-wayfinder svg")).toBe(marker);
   });
+  it("keeps one processing announcement across polling and modes without blocking session controls or retrying automatically", async () => {
+    const props = {
+      ...base(),
+      processing: {
+        state: "pending" as const,
+        title: "Connected guidance is checking this page",
+        detail: "The development service is checking current context.",
+      },
+      onRetryProcessing: vi.fn(),
+    };
+    await render(props);
+    const status = document.querySelector(
+      '[role="status"][aria-label="Processing"]',
+    )!;
+    const pause = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pause navigation"]',
+    )!;
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    expect(status.getAttribute("aria-atomic")).toBe("true");
+    expect(pause.disabled).toBe(false);
+    pause.focus();
+    await render({ ...props, processing: { ...props.processing } });
+    expect(document.activeElement).toBe(pause);
+    expect(document.querySelector('[aria-label="Processing"]')).toBe(status);
+    await render({
+      ...props,
+      preferences: { ...props.preferences, mode: "conversation" },
+      processing: {
+        state: "error",
+        title: "Connected service is unavailable",
+        detail: "Try again when you are ready, or choose Local.",
+        recovery: "retry",
+      },
+    });
+    expect(document.querySelector('[aria-label="Processing"]')).toBe(status);
+    expect(props.onRetryProcessing).not.toHaveBeenCalled();
+    const retry = Array.from(document.querySelectorAll("button")).find(
+      (button) => button.textContent === "Try again",
+    )!;
+    await act(async () => retry.click());
+    expect(props.onRetryProcessing).toHaveBeenCalledOnce();
+    await act(async () => pause.click());
+    expect(props.onCommand).toHaveBeenCalledWith("PAUSE");
+    const stop = Array.from(document.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Stop",
+    )!;
+    expect(stop.disabled).toBe(false);
+    await render({ ...props, processing: undefined });
+    expect(document.querySelector('[aria-label="Processing"]')).toBe(status);
+    expect(status.closest("section")?.hidden).toBe(true);
+  });
   it("preserves the SVG through terminal states and never re-arms a morph on visibility updates", async () => {
     const props = base();
     await render(props);

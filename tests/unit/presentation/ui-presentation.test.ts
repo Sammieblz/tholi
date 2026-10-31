@@ -9,6 +9,7 @@ import {
 } from "../../../packages/ui/presentation";
 import type { SessionView } from "../../../packages/shared-types/index";
 import { GuidanceOverlay } from "../../../packages/overlay-ui/index";
+import { currentProcessing } from "../../../apps/extension/src/ui/features/journey/current-task-notices";
 const view = (more: Partial<SessionView> = {}): SessionView => ({
   status: "running",
   instruction: "Open the account menu.",
@@ -108,6 +109,99 @@ describe("Tholi presentation preserves engine evidence", () => {
       });
     expect(rows).toHaveLength(80);
     expect(appendMessage(rows, rows[0])).toBe(rows);
+  });
+  it("joins processing notices to the current active request and defers to native decisions", () => {
+    const current = view({
+      request: {
+        id: "current-request",
+        status: "active",
+      } as SessionView["request"],
+      goalPlan: {
+        goal: "Find settings",
+        status: "unresolved",
+        source: "semantics",
+        confidence: 0,
+        reason: "No clear route",
+        steps: [],
+      },
+      serviceNavigation: {
+        profile: "fake",
+        requestId: "current-request",
+        state: "pending",
+      },
+    });
+    expect(currentProcessing(current, present(current))?.state).toBe("pending");
+    for (const phase of [
+      "access",
+      "authentication",
+      "clarification",
+      "review",
+      "planning",
+      "paused",
+      "arrived",
+    ] as const)
+      expect(
+        currentProcessing(current, { ...present(current), phase }),
+      ).toBeUndefined();
+    for (const changed of [
+      { ...current, status: "paused" as const },
+      { ...current, status: "stopped" as const },
+      { ...current, frameAccess: ["https://embedded.test"] },
+      {
+        ...current,
+        request: { ...current.request!, status: "completed" as const },
+      },
+      {
+        ...current,
+        serviceNavigation: {
+          ...current.serviceNavigation!,
+          requestId: "old-request",
+        },
+      },
+    ])
+      expect(currentProcessing(changed, present(changed))).toBeUndefined();
+    expect(currentProcessing(undefined, present())).toBeUndefined();
+  });
+  it("uses canonical service recovery without credit claims, cancellation certainty or service body text", () => {
+    const current = view({
+      selectedControlId: "current-control",
+      request: {
+        id: "current-request",
+        status: "active",
+      } as SessionView["request"],
+      serviceNavigation: {
+        profile: "fake",
+        requestId: "current-request",
+        state: "error",
+        code: "QUOTA_EXCEEDED",
+        message: "private-service-body-sentinel",
+      },
+    });
+    const quota = currentProcessing(current, present(current));
+    expect(quota).toMatchObject({
+      title: "Connected service limit reached",
+      recovery: "settings",
+    });
+    expect(quota?.detail).toContain("Credit balances are not available");
+    expect(JSON.stringify(quota)).not.toContain(
+      "private-service-body-sentinel",
+    );
+    current.serviceNavigation!.code = "CANCELLED";
+    const cancelled = currentProcessing(current, present(current));
+    expect(cancelled).toMatchObject({ title: "Connected request stopped" });
+    expect(cancelled?.detail).toContain("still unverified");
+    expect(cancelled?.recovery).toBeUndefined();
+    current.serviceNavigation!.code = "UNAVAILABLE";
+    expect(currentProcessing(current, present(current))?.recovery).toBe(
+      "retry",
+    );
+    current.serviceNavigation!.state = "guiding";
+    expect(currentProcessing(current, present(current))?.detail).toContain(
+      "still checks the result",
+    );
+    expect(present(current).phase).not.toBe("arrived");
+    current.selectedControlId = undefined;
+    expect(currentProcessing(current, present(current))).toBeUndefined();
   });
 });
 describe("highlight lifecycle", () => {

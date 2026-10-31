@@ -16,6 +16,7 @@ import { useGuidanceController } from "./useGuidanceController";
 import { presentRouteProgress } from "../../../../../packages/ui/route-progress";
 import {
   currentFrameAccess,
+  currentProcessing,
   currentTaskNotices,
 } from "../features/journey/current-task-notices";
 
@@ -56,6 +57,26 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       presentation={presentation}
       verifiedSteps={displayedView?.verifiedSteps}
       progress={presentRouteProgress(displayedView, presentation)}
+      processing={currentProcessing(displayedView, presentation)}
+      onRetryProcessing={() => {
+        const request = displayedView?.request;
+        const revision = displayedView?.page?.revision;
+        const session = context?.session;
+        if (
+          !request ||
+          !session?.documentId ||
+          revision === undefined ||
+          !Number.isSafeInteger(revision) ||
+          revision < 0
+        )
+          return;
+        void command("SET_GOAL", {
+          goal: request.original,
+          revision,
+          sessionId: session.sessionId,
+          documentId: session.documentId,
+        });
+      }}
       preferences={preferences}
       assistanceAvailable
       onPreferences={(next) => void changePreferences(next)}

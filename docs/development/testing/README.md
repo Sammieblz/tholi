@@ -47,6 +47,11 @@ The [journey-proposal integration record](journey-proposals-validation.md) track
 outcomes. Fixture authentication and pregrants do not establish native consent
 prompts or real model quality.
 
+The [processing-presentation record](processing-presentation-validation.md)
+tracks #42's current-request status, purpose-specific choices, withdrawal and
+explicit recovery. Automated accessibility checks remain distinct from native
+permission interaction and actual screen-reader speech.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`

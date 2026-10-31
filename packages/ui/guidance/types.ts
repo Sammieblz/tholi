@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { RouteProgress } from "../route-progress";
 import type { WidgetLayoutAction } from "../widget-density";
+import type { NavigationServiceState } from "../../navigation-core/contracts-navigation";
 import type {
   ConversationMessage,
   GuidancePresentation,
@@ -16,6 +17,12 @@ export const defaultPreferences: UIPreferences = {
   surface: "sidebar",
   advanced: false,
 };
+export interface ProcessingPresentation {
+  state: NavigationServiceState["state"];
+  title: string;
+  detail: string;
+  recovery?: "retry" | "settings";
+}
 export type GuidanceProps = {
   presentation: GuidancePresentation;
   preferences: UIPreferences;
@@ -32,6 +39,9 @@ export type GuidanceProps = {
   error?: string;
   verifiedSteps?: number;
   progress?: RouteProgress;
+  /** Current-request information, independent of journey completion and saved processing choices. */
+  processing?: ProcessingPresentation;
+  onRetryProcessing?: () => void;
   onCommand: (type: string) => void;
   primary?: ReactNode;
   details?: ReactNode;

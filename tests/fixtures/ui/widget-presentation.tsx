@@ -8,7 +8,9 @@ declare global {
     widgetFixture: {
       blocking: (value: boolean) => void;
       phase: (phase: GuidanceProps["presentation"]["phase"]) => void;
+      processing: (value: GuidanceProps["processing"]) => void;
       expansions: number;
+      retries: number;
     };
   }
 }
@@ -24,10 +26,13 @@ function Fixture() {
   const [blocking, setBlocking] = useState(false);
   const [phase, setPhase] =
     useState<GuidanceProps["presentation"]["phase"]>("guiding");
+  const [processing, setProcessing] = useState<GuidanceProps["processing"]>();
   window.widgetFixture = {
     blocking: setBlocking,
     phase: setPhase,
+    processing: setProcessing,
     expansions: window.widgetFixture?.expansions || 0,
+    retries: window.widgetFixture?.retries || 0,
   };
   return (
     <GuidanceApp
@@ -41,6 +46,10 @@ function Fixture() {
       active={phase === "guiding"}
       paused={phase === "paused"}
       pending={false}
+      processing={processing}
+      onRetryProcessing={() => {
+        window.widgetFixture.retries++;
+      }}
       presentation={{
         phase: blocking ? "clarification" : phase,
         stepId: `fixture:${blocking}:${phase}`,
