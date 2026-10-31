@@ -2,11 +2,13 @@ import type { z } from "zod";
 import {
   SERVICE_LIMITS,
   SERVICE_TIMEOUT_HEADER,
+  SERVICE_ACCOUNT_BINDING_HEADER,
   serviceErrorEnvelopeSchema,
   serviceTimeoutSchema,
 } from "./contracts-service";
 import { NAVIGATION_TRANSPORT_LIMITS } from "./contracts-navigation";
 import { awaitAbortableOperation } from "./abort";
+import { identityAccountSchema } from "./contracts-identity";
 
 /** One URL policy for the website configuration and trusted native settings. */
 export function serviceOrigin(value: string): string {
@@ -40,7 +42,7 @@ export class ServiceClientError extends Error {
 }
 
 export interface ServiceRequestOptions {
-  method?: "GET" | "POST" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   credentials?: "include" | "omit";
   headers?: Record<string, string>;
@@ -48,6 +50,8 @@ export interface ServiceRequestOptions {
   profile?: "navigation";
   timeoutMs?: number;
   beforeSend?: () => Promise<void>;
+  expectedAccountId?: string;
+  requireAccountBinding?: boolean;
 }
 
 /** Storage, cookies and bearer credentials remain with their client-specific owners. */
@@ -60,6 +64,17 @@ export async function serviceRequest<T>(
   const base = serviceOrigin(origin);
   const target = new URL(path, base);
   const navigation = options.profile === "navigation";
+  if (
+    (options.expectedAccountId !== undefined &&
+      !identityAccountSchema.shape.id.safeParse(options.expectedAccountId)
+        .success) ||
+    (options.requireAccountBinding && options.expectedAccountId === undefined)
+  )
+    throw new ServiceClientError(
+      "INVALID_REQUEST",
+      0,
+      "An expected account is required for this account operation.",
+    );
   if (
     target.origin !== base ||
     !target.pathname.startsWith("/api/v1/") ||
@@ -152,7 +167,16 @@ export async function serviceRequest<T>(
           headers: {
             Accept: "application/json",
             ...(body ? { "Content-Type": "application/json" } : {}),
-            ...options.headers,
+            ...Object.fromEntries(
+              Object.entries(options.headers ?? {}).filter(
+                ([name]) =>
+                  options.expectedAccountId === undefined ||
+                  name.toLowerCase() !== SERVICE_ACCOUNT_BINDING_HEADER,
+              ),
+            ),
+            ...(options.expectedAccountId
+              ? { [SERVICE_ACCOUNT_BINDING_HEADER]: options.expectedAccountId }
+              : {}),
             ...(options.timeoutMs === undefined
               ? {}
               : { [SERVICE_TIMEOUT_HEADER]: String(remainingMs) }),
@@ -162,6 +186,27 @@ export async function serviceRequest<T>(
       signal,
       interrupted,
     );
+    const actor = response.headers.get(SERVICE_ACCOUNT_BINDING_HEADER);
+    if (
+      options.expectedAccountId &&
+      actor !== null &&
+      actor !== options.expectedAccountId
+    ) {
+      void response.body?.cancel().catch(() => {});
+      throw new ServiceClientError(
+        "UNAUTHENTICATED",
+        401,
+        "The account changed. Open your account again before continuing.",
+      );
+    }
+    if (options.requireAccountBinding && actor === null) {
+      void response.body?.cancel().catch(() => {});
+      throw new ServiceClientError(
+        "INVALID_RESPONSE",
+        response.status,
+        "The connected service did not verify the expected account.",
+      );
+    }
     if (
       navigation &&
       (response.redirected ||

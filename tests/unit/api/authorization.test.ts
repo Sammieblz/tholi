@@ -56,6 +56,23 @@ import {
 } from "../../../packages/navigation-core/contracts-plans";
 import { createProductCatalogFixture } from "../../support/product-plan-fixture";
 import {
+  SavedDataService,
+  type SavedDataRepositories,
+  type SavedDataTransaction,
+  type SavedDataExports,
+} from "../../../apps/api/src/application/saved-data";
+import {
+  savedDataArtifactFixture,
+  savedDataRecordFixture,
+} from "../../support/saved-data-fixture";
+import {
+  savedDataRecordSchema,
+  savedDataImportHash,
+  savedDataChangesSchema,
+  savedDataPageSchema,
+  savedDataExportSnapshotSchema,
+} from "../../../packages/navigation-core/contracts-saved-data";
+import {
   creditHistoryPageSchema,
   creditUsagePageSchema,
   fakeDevelopmentChargingPolicy,
@@ -91,7 +108,10 @@ import {
   policyCatalogSchema,
   workspacePageSchema,
 } from "../../../packages/navigation-core/contracts-authorization";
-import { serviceErrorEnvelopeSchema } from "../../../packages/navigation-core/contracts-service";
+import {
+  serviceErrorEnvelopeSchema,
+  SERVICE_ACCOUNT_BINDING_HEADER,
+} from "../../../packages/navigation-core/contracts-service";
 import {
   ProductAnalyticsService,
   type ProductAnalyticsTransaction,
@@ -127,6 +147,7 @@ async function fixture(
   evaluationFactory?: (session: IdentitySession) => NavigationEvaluationPolicy,
   creditsEnabled = false,
   plansEnvironment?: "development" | "production",
+  savedDataEnvironment?: "development" | "production",
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -170,6 +191,14 @@ async function fixture(
     revision: 2n,
   };
   const consents: Consent[] = [];
+  const savedArtifact = savedDataArtifactFixture("preferences", {
+    metadata: { label: "Appearance", folder: "Settings", tags: ["work"] },
+  });
+  const savedRecord = savedDataRecordFixture(savedArtifact);
+  const savedTombstone = savedDataRecordFixture(savedArtifact, {
+    revision: "2",
+    deleted: true,
+  });
   let effectivePlan: EffectiveProductPlan | null = null;
   const navigationRequests = new Map<string, ServiceRequest>();
   const job: Job & { leaseOwner: string; leaseToken: string } = {
@@ -193,6 +222,27 @@ async function fixture(
     leaseToken: "PRIVATE_FENCE_SENTINEL",
   };
   const scoped = {
+    getSavedArtifact: vi.fn<SavedDataTransaction["getSavedArtifact"]>(
+      async (id) => (id === savedArtifact.id ? savedRecord : undefined),
+    ),
+    listSavedArtifacts: vi.fn<SavedDataTransaction["listSavedArtifacts"]>(
+      async () => ({ items: [savedRecord] }),
+    ),
+    savedArtifactChanges: vi.fn<SavedDataTransaction["savedArtifactChanges"]>(
+      async () => ({ items: [savedTombstone], nextAfter: "2", hasMore: false }),
+    ),
+    saveSavedArtifact: vi.fn<SavedDataTransaction["saveSavedArtifact"]>(
+      async (input) => savedDataRecordFixture(input.artifact),
+    ),
+    deleteSavedArtifact: vi.fn<SavedDataTransaction["deleteSavedArtifact"]>(
+      async () => savedTombstone,
+    ),
+    importSavedArtifacts: vi.fn<SavedDataTransaction["importSavedArtifacts"]>(
+      async (input) => ({
+        items: input.items.map((item) => savedDataRecordFixture(item.artifact)),
+        replayed: false,
+      }),
+    ),
     readEffectivePlan: vi.fn(async () => effectivePlan),
     listEntitlements: vi.fn(async () => []),
     enrollFree: vi.fn(async () => {
@@ -393,7 +443,9 @@ async function fixture(
         throw new RepositoryError("FORBIDDEN", "PRIVATE_SCOPE_SENTINEL");
       return work(scoped);
     },
-  } satisfies AuthorizationRepositories & PlanRepositories;
+  } satisfies AuthorizationRepositories &
+    PlanRepositories &
+    SavedDataRepositories;
   vi.spyOn(repositories, "transaction");
   const session: IdentitySession = {
     id: randomUUID(),
@@ -524,9 +576,10 @@ async function fixture(
       issue: vi.fn(async () => "signed.download-proof"),
       verify: vi.fn(async () => ({
         accountId: session.accountId,
-        workspaceId: session.workspaceId,
+        workspaceId: file.workspaceId ?? session.workspaceId,
         fileId: file.id,
         revision: "1",
+        expiresAt: file.expiresAt,
       })),
     },
     { publicOrigin: "https://api.tholi.io", linkLifetimeMs: 60_000 },
@@ -535,6 +588,13 @@ async function fixture(
   const navigation = navigationModel
     ? new NavigationTransportService(repositories, navigationModel, evaluation)
     : undefined;
+  const savedExports: SavedDataExports = {
+    requestSavedExport: vi.fn(async () => ({
+      requestId: file.requestId,
+      fileId: file.id,
+      jobId: job.id,
+    })),
+  };
   const app = await (
     evaluation ? createOperatorEvaluationApi : createServiceApi
   )(
@@ -563,6 +623,15 @@ async function fixture(
       ...(plansEnvironment
         ? { plans: new PlanService(repositories, plansEnvironment) }
         : {}),
+      ...(savedDataEnvironment
+        ? {
+            savedData: new SavedDataService(
+              repositories,
+              supportEnabled ? savedExports : undefined,
+              savedDataEnvironment,
+            ),
+          }
+        : {}),
     },
   );
   applications.push(app);
@@ -580,6 +649,10 @@ async function fixture(
     membership,
     target,
     consents,
+    savedArtifact,
+    savedRecord,
+    savedTombstone,
+    savedExports,
     navigationRequests,
     job,
     session,
@@ -689,7 +762,9 @@ describe("opt-in authenticated navigation transport", () => {
     );
     expect(infer).not.toHaveBeenCalled();
     expect(f.scoped.beginRequest).not.toHaveBeenCalled();
-  });
+    // The first isolated HTTP fixture also pays dynamic module/schema compilation.
+    // This is a startup allowance; request deadlines remain independently tested.
+  }, 10000);
 
   it("operator composition advertises its explicit profile, forwards authenticated actor fields and never invokes the default model", async () => {
     const fallback = createFakeNavigationModel(),
@@ -1635,7 +1710,63 @@ describe("account support and private file HTTP contracts", () => {
     expect(response.payload).not.toContain('"schemaVersion"');
     expect(response.headers["content-disposition"]).toBeUndefined();
   });
-  it("advertises only composed support/file handlers and leaves general saved-data export planned", async () => {
+  it("withholds an organization export when membership changes during the final valid personal-session check", async () => {
+    const f = await fixture();
+    f.file.workspaceId = f.workspace.id;
+    f.file.purpose = "saved-data-export";
+    f.file.key = `exports/${f.workspace.id}/${f.file.id}.json`;
+    const body = Buffer.from(
+      JSON.stringify(
+        savedDataExportSnapshotSchema.parse({
+          schemaVersion: 1,
+          kind: "saved-data-export",
+          createdAt: new Date().toISOString(),
+          items: [f.savedRecord],
+        }),
+      ),
+    );
+    f.file.bytes = body.byteLength;
+    f.file.sha256 = createHash("sha256").update(body).digest("hex");
+    vi.mocked(f.objects.read).mockResolvedValue(body);
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const paused = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const original = vi
+      .mocked(f.store.authenticateSession)
+      .getMockImplementation()!;
+    let count = 0;
+    vi.mocked(f.store.authenticateSession).mockImplementation(
+      async (...args) => {
+        const session = await original(...args);
+        if (++count === 2) {
+          entered();
+          await paused;
+        }
+        return session;
+      },
+    );
+    const pending = f.app
+      .inject({
+        url: `/api/v1/account/files/${f.file.id}/download?token=signed.proof`,
+        headers: bearer,
+      })
+      .then((response) => response);
+    await started;
+    vi.mocked(f.supportStore.getFile).mockRejectedValue(
+      new AuthorizationError(403, "FORBIDDEN", "The workspace is unavailable."),
+    );
+    release();
+    const response = await pending;
+    safeError(response, 403, "FORBIDDEN");
+    expect(count).toBe(2);
+    expect(response.headers["content-disposition"]).toBeUndefined();
+    expect(response.payload).not.toContain('"schemaVersion"');
+  });
+  it("advertises only composed support/file handlers and leaves absent saved-data composition planned", async () => {
     const { app } = await fixture();
     const disabled = (await fixture(false)).app;
     for (const [current, enabled] of [
@@ -1857,6 +1988,411 @@ describe("account support and private file HTTP contracts", () => {
     );
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
+  });
+});
+
+describe("saved-data HTTP boundary", () => {
+  const bound = (f: Awaited<ReturnType<typeof fixture>>) => ({
+    ...bearer,
+    [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+  });
+  const grant = (f: Awaited<ReturnType<typeof fixture>>) =>
+    f.consents.push({
+      id: randomUUID(),
+      purpose: "cloud_saved_routes",
+      policyVersion: "2",
+      granted: true,
+      revision: 1n,
+    });
+
+  it("checks the expected account before body/data access and never treats the binding as identity", async () => {
+    const f = await fixture(
+      true,
+      false,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      "development",
+    );
+    const url = `/api/v1/workspaces/${f.workspace.id}/artifacts`;
+    safeError(
+      await f.app.inject({ url, headers: bearer }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await f.app.inject({
+        url,
+        headers: { [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id },
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await f.app.inject({
+        url,
+        headers: {
+          ...bound(f),
+          [SERVICE_ACCOUNT_BINDING_HEADER]: randomUUID(),
+        },
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    expect(f.scoped.listSavedArtifacts).not.toHaveBeenCalled();
+    const response = await f.app.inject({ url, headers: bound(f) });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers[SERVICE_ACCOUNT_BINDING_HEADER]).toBe(f.account.id);
+    vi.mocked(f.store.authenticateSession).mockResolvedValue({
+      ...f.session,
+      id: randomUUID(),
+      accountId: randomUUID(),
+      workspaceId: randomUUID(),
+      clientId: "web",
+      clientKind: "web",
+      accessHash: identityHash(webToken),
+    });
+    safeError(
+      await f.app.inject({
+        url: "/api/v1/account/sessions",
+        headers: {
+          cookie: f.cookie,
+          origin: webOrigin,
+          [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+        },
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    expect(f.store.listSessions).not.toHaveBeenCalled();
+  });
+  it("registers the nine real library operations, admits all four typed artifacts and binds PATCH identities", async () => {
+    const f = await fixture(
+      true,
+      false,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      "development",
+    );
+    grant(f);
+    const base = `/api/v1/workspaces/${f.workspace.id}/artifacts`;
+    for (const kind of [
+      "saved_route",
+      "site_knowledge",
+      "conversation_excerpt",
+      "preferences",
+    ] as const) {
+      const artifact = savedDataArtifactFixture(kind);
+      const response = await f.app.inject({
+        method: "POST",
+        url: base,
+        headers: bound(f),
+        payload: {
+          idempotencyKey: randomUUID(),
+          expectedRevision: "0",
+          approved: true,
+          artifact,
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(savedDataRecordSchema.parse(response.json())).toMatchObject({
+        id: artifact.id,
+        kind,
+      });
+      expect(response.headers["cache-control"]).toBe("no-store");
+    }
+    const patch = {
+      idempotencyKey: randomUUID(),
+      expectedRevision: "1",
+      approved: true,
+      artifact: f.savedArtifact,
+    };
+    expect(
+      (
+        await f.app.inject({
+          method: "PATCH",
+          url: base + "/" + f.savedArtifact.id,
+          headers: bound(f),
+          payload: patch,
+        })
+      ).statusCode,
+    ).toBe(200);
+    safeError(
+      await f.app.inject({
+        method: "PATCH",
+        url: base + "/" + randomUUID(),
+        headers: bound(f),
+        payload: patch,
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    const spec = (await f.app.inject({ url: "/api/v1/openapi.json" })).json();
+    const operations = Object.values(
+      spec.paths as Record<string, Record<string, any>>,
+    )
+      .flatMap((path) => Object.values(path))
+      .filter((operation) => operation.tags?.includes("saved-data"));
+    expect(operations.map((operation) => operation.operationId).sort()).toEqual(
+      [
+        "listSavedArtifacts",
+        "createSavedArtifact",
+        "getSavedArtifact",
+        "updateSavedArtifact",
+        "deleteSavedArtifact",
+        "searchSavedArtifacts",
+        "exportSavedArtifacts",
+        "getSavedArtifactChanges",
+        "importSavedArtifacts",
+      ].sort(),
+    );
+    for (const operation of operations)
+      expect(operation.security).toEqual([
+        { NativeBearer: [] },
+        { WebSession: [] },
+      ]);
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json();
+    expect(capabilities.capabilities).toEqual(
+      expect.arrayContaining([
+        "saved-data",
+        "saved-data-write",
+        "saved-data-export",
+      ]),
+    );
+    expect(capabilities.availability.billing).toBe(false);
+  });
+
+  it("authenticates before bodies and enforces cookie CSRF, strict data, scope, query bounds and exact import approval", async () => {
+    const f = await fixture(
+      true,
+      false,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      "development",
+    );
+    grant(f);
+    const base = `/api/v1/workspaces/${f.workspace.id}`;
+    const input = {
+      idempotencyKey: randomUUID(),
+      expectedRevision: "0",
+      approved: true,
+      artifact: f.savedArtifact,
+    };
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/artifacts",
+        headers: { "content-type": "application/json" },
+        payload: "{",
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/artifacts",
+        headers: {
+          cookie: f.cookie,
+          [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+          origin: webOrigin,
+        },
+        payload: input,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/artifacts",
+        headers: bound(f),
+        payload: {
+          ...input,
+          artifact: { ...f.savedArtifact, screenshot: "PRIVATE_PIXELS" },
+        },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        url: base + "/artifacts?accountId=" + f.account.id,
+        headers: bound(f),
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        url: base + "/artifacts?limit=101",
+        headers: bound(f),
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({
+        url: base.replace(f.workspace.id, randomUUID()) + "/artifacts",
+        headers: bound(f),
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    const items = [{ expectedRevision: "0", artifact: f.savedArtifact }];
+    const importInput = {
+      idempotencyKey: randomUUID(),
+      approved: true,
+      previewHash: await savedDataImportHash(
+        { accountId: f.account.id, workspaceId: f.workspace.id },
+        items,
+      ),
+      items,
+    };
+    const imported = await f.app.inject({
+      method: "POST",
+      url: base + "/sync/import",
+      headers: {
+        cookie: f.cookie,
+        [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+        origin: webOrigin,
+        "x-tholi-csrf": f.csrf,
+      },
+      payload: importInput,
+    });
+    expect(imported.statusCode).toBe(200);
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/sync/import",
+        headers: bound(f),
+        payload: {
+          ...importInput,
+          items: [{ ...items[0], expectedRevision: "1" }],
+        },
+      }),
+      409,
+      "CONFLICT",
+    );
+    expect(f.scoped.importSavedArtifacts).toHaveBeenCalledTimes(1);
+    const search = await f.app.inject({
+      url:
+        base +
+        "/artifacts/search?limit=1&query=Appearance&kind=preferences&folder=Settings&tag=work",
+      headers: bound(f),
+    });
+    expect(search.statusCode).toBe(200);
+    expect(savedDataPageSchema.parse(search.json()).items).toHaveLength(1);
+    expect(f.scoped.listSavedArtifacts).toHaveBeenCalledWith({
+      limit: 1,
+      query: "Appearance",
+      kind: "preferences",
+      folder: "Settings",
+      tag: "work",
+    });
+  });
+
+  it("keeps read, export and deletion available without write consent and disables unavailable production writes", async () => {
+    const f = await fixture(
+      true,
+      false,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      "production",
+    );
+    const base = `/api/v1/workspaces/${f.workspace.id}`;
+    expect(
+      (
+        await f.app.inject({
+          url: base + "/artifacts/" + f.savedArtifact.id,
+          headers: bound(f),
+        })
+      ).statusCode,
+    ).toBe(200);
+    safeError(
+      await f.app.inject({
+        url: base + "/artifacts/" + randomUUID(),
+        headers: bound(f),
+      }),
+      404,
+      "NOT_FOUND",
+    );
+    const changes = await f.app.inject({
+      url: base + "/sync/changes?after=1&limit=1",
+      headers: bound(f),
+    });
+    expect(changes.statusCode).toBe(200);
+    expect(savedDataChangesSchema.parse(changes.json())).toMatchObject({
+      items: [
+        {
+          data: null,
+          metadata: { label: "Deleted item", folder: null, tags: [] },
+        },
+      ],
+      nextAfter: "2",
+    });
+    const deleted = await f.app.inject({
+      method: "DELETE",
+      url: base + "/artifacts/" + f.savedArtifact.id,
+      headers: bound(f),
+      payload: {
+        idempotencyKey: randomUUID(),
+        expectedRevision: "1",
+        approved: true,
+      },
+    });
+    expect(deleted.statusCode).toBe(200);
+    expect(savedDataRecordSchema.parse(deleted.json()).data).toBeNull();
+    const exported = await f.app.inject({
+      method: "POST",
+      url: base + "/artifacts/export",
+      headers: bound(f),
+      payload: { idempotencyKey: randomUUID(), ids: [f.savedArtifact.id] },
+    });
+    expect(exported.statusCode).toBe(200);
+    expect(exported.json()).toMatchObject({
+      fileId: f.file.id,
+      requestId: f.file.requestId,
+    });
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base + "/artifacts",
+        headers: bound(f),
+        payload: {
+          idempotencyKey: randomUUID(),
+          expectedRevision: "0",
+          approved: true,
+          artifact: f.savedArtifact,
+        },
+      }),
+      503,
+      "UNAVAILABLE",
+    );
+    expect(f.scoped.saveSavedArtifact).not.toHaveBeenCalled();
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json().capabilities;
+    expect(capabilities).toContain("saved-data");
+    expect(capabilities).not.toContain("saved-data-write");
+    const uncomposed = await fixture(false, false);
+    expect(
+      (
+        await uncomposed.app.inject({
+          url: base + "/artifacts",
+          headers: bound(f),
+        })
+      ).statusCode,
+    ).toBe(404);
   });
 });
 

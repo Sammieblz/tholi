@@ -9,6 +9,7 @@ import { mailStorageSupport } from "./migrations/006-mail-storage-support";
 import { portableObservability } from "./migrations/007-observability";
 import { inferenceAccounting } from "./migrations/008-inference-accounting";
 import { productPlans } from "./migrations/009-product-plans";
+import { savedData } from "./migrations/010-saved-data";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -41,6 +42,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(7, "portable-observability", portableObservability),
   migration(8, "inference-accounting", inferenceAccounting),
   migration(9, "product-plans", productPlans),
+  migration(10, "saved-data", savedData),
 ]);
 
 export interface MigrationOptions {
@@ -127,6 +129,17 @@ async function grantWorker(client: PoolClient, role: string) {
   )
     await client.query(
       `GRANT EXECUTE ON FUNCTION tholi.refill_free_plans(integer) TO ${identifier}`,
+    );
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.authorize_saved_export(uuid,uuid,uuid,uuid)') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.authorize_saved_export(uuid,uuid,uuid,uuid),
+        tholi.valid_saved_receipt(jsonb) TO ${identifier}`,
     );
 }
 
@@ -383,6 +396,18 @@ async function grantRuntime(client: PoolClient, role: string) {
       `GRANT SELECT ON tholi.free_program_enrollments,tholi.free_program_grants TO ${identifier}`,
     );
   }
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.lock_saved_data_consent()') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.lock_saved_data_consent(),tholi.resolve_owned_file_workspace(uuid),
+        tholi.valid_saved_text(jsonb,integer),tholi.valid_saved_data(text,jsonb,jsonb),
+        tholi.valid_saved_receipt(jsonb),tholi.valid_saved_export(jsonb) TO ${identifier}`,
+    );
 }
 
 /**

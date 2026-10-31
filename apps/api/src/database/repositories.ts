@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -6,6 +6,23 @@ import {
   type SavedTask,
 } from "../../../../packages/page-model";
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
+import {
+  savedDataRecordSchema,
+  savedDataMutationSchema,
+  savedDataDeleteInputSchema,
+  savedDataImportInputSchema,
+  savedDataListQuerySchema,
+  savedDataExportInputSchema,
+  savedDataImportHash,
+  type SavedDataRecord,
+  type SavedDataMutation,
+  type SavedDataDeleteInput,
+  type SavedDataImportInput,
+  type SavedDataImportResult,
+  type SavedDataListQuery,
+  type SavedDataPage,
+  type SavedDataChanges,
+} from "../../../../packages/navigation-core/contracts-saved-data";
 import {
   productCatalogSchema,
   effectiveProductPlanSchema,
@@ -64,10 +81,20 @@ import {
 
 type Int8Row<T, K extends keyof T> = Omit<T, K> & Record<K, string>;
 type ArtifactRow = Int8Row<SavedArtifact, "revision" | "syncRevision">;
+type StoredArtifactRow = Omit<ArtifactRow, "kind" | "content"> & {
+  kind: string;
+  content: unknown;
+  formatVersion: 1 | 2;
+  metadata: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+};
 type ReservationRow = Int8Row<CreditReservation, "amount">;
 const maxInt8 = 9223372036854775807n;
 const artifactColumns = `id, owner_account_id AS "ownerAccountId", kind, content,
   revision::text, sync_revision::text AS "syncRevision", deleted_at AS "deletedAt"`;
+const storedArtifactColumns = `${artifactColumns},format_version AS "formatVersion",metadata,
+  created_at AS "createdAt",updated_at AS "updatedAt"`;
 const requestColumns = `id, operation, idempotency_key AS "idempotencyKey",
   encode(payload_hash, 'hex') AS "payloadHash", status`;
 const reservationColumns = `id, request_id AS "requestId", amount::text,
@@ -134,10 +161,29 @@ function snapshot<T>(input: T): T {
 
 function artifact(row: ArtifactRow): SavedArtifact {
   return {
-    ...row,
+    id: row.id,
+    ownerAccountId: row.ownerAccountId,
+    kind: row.kind,
+    content: row.content,
+    deletedAt: row.deletedAt,
     revision: BigInt(row.revision),
     syncRevision: BigInt(row.syncRevision),
   };
+}
+
+function savedDataRecord(row: StoredArtifactRow): SavedDataRecord {
+  return savedDataRecordSchema.parse({
+    id: row.id,
+    schemaVersion: 1,
+    kind: row.kind,
+    data: row.content,
+    metadata: row.metadata,
+    revision: row.revision,
+    syncRevision: row.syncRevision,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    deletedAt: row.deletedAt?.toISOString() ?? null,
+  });
 }
 
 function reservation(row: ReservationRow): CreditReservation {
@@ -501,8 +547,11 @@ class ScopedRepositories {
 
   async withSupport<T>(
     work: (queries: ScopedSupport) => Promise<T>,
+    ownerOnly = true,
+    accountLock = false,
   ): Promise<T> {
-    await this.lockWorkspace(true);
+    if (accountLock) await this.lockAccount();
+    await this.lockWorkspace(ownerOnly);
     return work(new ScopedSupport(this.client, this.scope, this));
   }
 
@@ -688,6 +737,10 @@ class ScopedRepositories {
   }): Promise<Consent> {
     input = snapshot(input);
     integer(input.expectedRevision);
+    // Match saved-data admission before locking consent. The audit's foreign
+    // keys must not invert account/workspace locks during withdrawal.
+    await this.lockAccount();
+    await this.lockWorkspace();
     const parameters = [
       ...this.parameters,
       text(input.purpose, 100),
@@ -1408,7 +1461,7 @@ class ScopedRepositories {
     const row = (
       await this.client.query<ArtifactRow>(
         `SELECT ${artifactColumns} FROM tholi.saved_artifacts
-       WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3`,
+       WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3 AND format_version=1`,
         [...this.parameters, id],
       )
     ).rows[0];
@@ -1425,7 +1478,7 @@ class ScopedRepositories {
     const pageSize = limit(options.limit);
     const result = await this.client.query<ArtifactRow>(
       `SELECT ${artifactColumns} FROM tholi.saved_artifacts
-       WHERE workspace_id = $1 AND owner_account_id = $2 AND sync_revision > $3
+       WHERE workspace_id = $1 AND owner_account_id = $2 AND sync_revision > $3 AND format_version=1
          AND ($4::boolean OR deleted_at IS NULL)
        ORDER BY sync_revision, id LIMIT $5`,
       [
@@ -1454,6 +1507,231 @@ class ScopedRepositories {
     return result.rows[0].revision;
   }
 
+  async getSavedArtifact(id: string): Promise<SavedDataRecord | undefined> {
+    savedDataExportInputSchema.shape.ids.parse([id]);
+    const result = await this.client.query<StoredArtifactRow>(
+      `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts
+       WHERE workspace_id=$1 AND owner_account_id=$2 AND id=$3 AND format_version=2`,
+      [...this.parameters, id],
+    );
+    return result.rows[0] && savedDataRecord(result.rows[0]);
+  }
+
+  async listSavedArtifacts(raw: SavedDataListQuery): Promise<SavedDataPage> {
+    const query = savedDataListQuerySchema.parse(snapshot(raw));
+    const fingerprint = createHash("sha256")
+      .update(
+        JSON.stringify({
+          ...this.scope,
+          ...query,
+          cursor: undefined,
+        }),
+      )
+      .digest("hex");
+    let after = "0";
+    if (query.cursor) {
+      try {
+        const cursor: unknown = JSON.parse(
+          Buffer.from(query.cursor, "base64url").toString("utf8"),
+        );
+        if (
+          !Array.isArray(cursor) ||
+          cursor.length !== 2 ||
+          cursor[1] !== fingerprint ||
+          typeof cursor[0] !== "string" ||
+          !/^(?:0|[1-9][0-9]*)$/.test(cursor[0])
+        )
+          throw Error();
+        after = integer(BigInt(cursor[0]));
+      } catch {
+        invalid("The saved-data page has changed. Start again.");
+      }
+    }
+    const result = await this.client.query<StoredArtifactRow>(
+      `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts
+       WHERE workspace_id=$1 AND owner_account_id=$2 AND format_version=2 AND deleted_at IS NULL
+         AND sync_revision>$3 AND ($4::text IS NULL OR kind=$4)
+         AND ($5::text IS NULL OR metadata->>'folder'=$5)
+         AND ($6::text IS NULL OR metadata->'tags' ? $6)
+         AND ($7::text IS NULL OR strpos(lower(metadata::text||' '||content::text),lower($7))>0)
+       ORDER BY sync_revision LIMIT $8`,
+      [
+        ...this.parameters,
+        after,
+        query.kind ?? null,
+        query.folder ?? null,
+        query.tag ?? null,
+        query.query ?? null,
+        query.limit + 1,
+      ],
+    );
+    const items = result.rows.slice(0, query.limit).map(savedDataRecord);
+    return {
+      items,
+      ...(result.rows.length > query.limit
+        ? {
+            nextCursor: Buffer.from(
+              JSON.stringify([items.at(-1)!.syncRevision, fingerprint]),
+            ).toString("base64url"),
+          }
+        : {}),
+    };
+  }
+
+  async savedArtifactChanges(
+    options: { after?: string; limit?: number } = {},
+  ): Promise<SavedDataChanges> {
+    if (!/^(?:0|[1-9][0-9]*)$/.test(options.after ?? "0"))
+      invalid("Use a saved-data sync revision.");
+    const after = integer(BigInt(options.after ?? "0")),
+      pageSize = limit(options.limit);
+    const result = await this.client.query<StoredArtifactRow>(
+      `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts WHERE workspace_id=$1
+        AND owner_account_id=$2 AND format_version=2 AND sync_revision>$3 ORDER BY sync_revision LIMIT $4`,
+      [...this.parameters, after, pageSize + 1],
+    );
+    const items = result.rows.slice(0, pageSize).map(savedDataRecord);
+    return {
+      items,
+      nextAfter: items.at(-1)?.syncRevision ?? after,
+      hasMore: result.rows.length > pageSize,
+    };
+  }
+
+  /** Receipts retain IDs only; replay reads current rows, including deletion tombstones. */
+  private async savedMutation(
+    operation: string,
+    idempotencyKey: string,
+    payload: unknown,
+    work: () => Promise<SavedDataRecord[]>,
+  ): Promise<SavedDataImportResult> {
+    await this.lockAccount();
+    await this.lockWorkspace();
+    const { request, replayed } = await this.beginRequest({
+      operation,
+      idempotencyKey,
+      payloadHash: createHash("sha256")
+        .update(JSON.stringify(payload))
+        .digest("hex"),
+    });
+    if (replayed) {
+      const result = await this.client.query<{
+        receipt: { schemaVersion: number; ids: string[] } | null;
+      }>(
+        `SELECT saved_data_receipt AS receipt FROM tholi.requests WHERE workspace_id=$1 AND account_id=$2 AND id=$3`,
+        [...this.parameters, request.id],
+      );
+      const receipt = result.rows[0]?.receipt;
+      if (!receipt || receipt.schemaVersion !== 1) conflict();
+      const ids = savedDataExportInputSchema.shape.ids.parse(receipt.ids);
+      const items: SavedDataRecord[] = [];
+      for (const id of ids) {
+        const current = await this.getSavedArtifact(id);
+        if (!current) conflict();
+        items.push(current);
+      }
+      return { items, replayed: true };
+    }
+    const items = await work();
+    await this.client.query(
+      `UPDATE tholi.requests SET saved_data_receipt=$4::jsonb,status='completed',updated_at=clock_timestamp()
+       WHERE workspace_id=$1 AND account_id=$2 AND id=$3 AND saved_data_receipt IS NULL`,
+      [
+        ...this.parameters,
+        request.id,
+        JSON.stringify({ schemaVersion: 1, ids: items.map((item) => item.id) }),
+      ],
+    );
+    return { items, replayed: false };
+  }
+
+  async saveSavedArtifact(raw: SavedDataMutation): Promise<SavedDataRecord> {
+    const input = savedDataMutationSchema.parse(snapshot(raw));
+    const result = await this.savedMutation(
+      "saved-data.save.v1",
+      input.idempotencyKey,
+      {
+        expectedRevision: input.expectedRevision,
+        approved: input.approved,
+        artifact: input.artifact,
+      },
+      async () => [
+        savedDataRecord(
+          await this.writeArtifact({
+            id: input.artifact.id,
+            expectedRevision: BigInt(input.expectedRevision),
+            kind: input.artifact.kind,
+            formatVersion: 2,
+            content: input.artifact.data,
+            metadata: input.artifact.metadata,
+          }),
+        ),
+      ],
+    );
+    return result.items[0];
+  }
+
+  async importSavedArtifacts(
+    raw: SavedDataImportInput,
+  ): Promise<SavedDataImportResult> {
+    const input = savedDataImportInputSchema.parse(snapshot(raw));
+    if (
+      (await savedDataImportHash(this.scope, input.items)) !== input.previewHash
+    )
+      invalid(
+        "The saved-data preview no longer matches this account and workspace.",
+      );
+    return this.savedMutation(
+      "saved-data.import.v1",
+      input.idempotencyKey,
+      {
+        approved: input.approved,
+        previewHash: input.previewHash,
+        items: input.items,
+      },
+      async () => {
+        const items: SavedDataRecord[] = [];
+        for (const item of input.items)
+          items.push(
+            savedDataRecord(
+              await this.writeArtifact({
+                id: item.artifact.id,
+                expectedRevision: BigInt(item.expectedRevision),
+                kind: item.artifact.kind,
+                formatVersion: 2,
+                content: item.artifact.data,
+                metadata: item.artifact.metadata,
+              }),
+            ),
+          );
+        return items;
+      },
+    );
+  }
+
+  async deleteSavedArtifact(
+    id: string,
+    raw: SavedDataDeleteInput,
+  ): Promise<SavedDataRecord> {
+    savedDataExportInputSchema.shape.ids.parse([id]);
+    const input = savedDataDeleteInputSchema.parse(snapshot(raw));
+    const result = await this.savedMutation(
+      "saved-data.delete.v1",
+      input.idempotencyKey,
+      {
+        id,
+        expectedRevision: input.expectedRevision,
+        approved: input.approved,
+      },
+      async () => [
+        savedDataRecord(
+          await this.deleteArtifact(id, BigInt(input.expectedRevision), 2),
+        ),
+      ],
+    );
+    return result.items[0];
+  }
+
   async saveArtifact(input: {
     id?: string;
     expectedRevision: bigint;
@@ -1467,36 +1745,86 @@ class ScopedRepositories {
     const parsed = savedTaskSchema.safeParse(input.content);
     if (!parsed.success) invalid("Only a supported saved route can be stored.");
     const content = parameterizedTask(parsed.data);
+    const row = await this.writeArtifact({
+      id: input.id || randomUUID(),
+      expectedRevision: input.expectedRevision,
+      kind: "saved_route",
+      formatVersion: 1,
+      content,
+      metadata: null,
+    });
+    return artifact({
+      ...row,
+      kind: "saved_route",
+      content: savedTaskSchema.parse(row.content),
+    });
+  }
+
+  /** Both legacy and public formats share one revision, quota and mutation owner. */
+  private async writeArtifact(input: {
+    id: string;
+    expectedRevision: bigint;
+    kind: string;
+    formatVersion: 1 | 2;
+    content: unknown;
+    metadata: unknown;
+  }): Promise<StoredArtifactRow> {
+    integer(input.expectedRevision);
     // Product storage is account-bounded across workspaces. Match accounting's
     // account-before-workspace order before the existing sync/row mutation.
     await this.lockAccount();
     await this.lockWorkspace();
+    if (
+      input.expectedRevision === 0n &&
+      (
+        await this.client.query(
+          "SELECT id FROM tholi.saved_artifacts WHERE workspace_id=$1 AND owner_account_id=$2 AND id=$3",
+          [...this.parameters, input.id],
+        )
+      ).rowCount
+    )
+      conflict();
+    if (input.formatVersion === 2) {
+      const consent = await this.client.query<{ allowed: boolean }>(
+        "SELECT tholi.lock_saved_data_consent() AS allowed",
+      );
+      if (!consent.rows[0]?.allowed)
+        throw new RepositoryError(
+          "FORBIDDEN",
+          "Current saved-data consent is required.",
+        );
+    }
     const stamp = await this.nextSyncRevision();
     const values = [
       ...this.parameters,
-      input.id || randomUUID(),
-      JSON.stringify(content),
+      input.id,
+      JSON.stringify(input.content),
       stamp,
+      input.kind,
+      input.formatVersion,
+      input.metadata === null ? null : JSON.stringify(input.metadata),
     ];
     try {
       const result =
         input.expectedRevision === 0n
-          ? await this.client.query<ArtifactRow>(
+          ? await this.client.query<StoredArtifactRow>(
               `INSERT INTO tholi.saved_artifacts
-             (workspace_id, owner_account_id, id, kind, content, sync_revision)
-           VALUES ($1, $2, $3, 'saved_route', $4::jsonb, $5)
-           ON CONFLICT DO NOTHING RETURNING ${artifactColumns}`,
+             (workspace_id, owner_account_id, id, kind, content, sync_revision,format_version,metadata)
+           VALUES ($1, $2, $3, $6, $4::jsonb, $5,$7,$8::jsonb)
+           ON CONFLICT DO NOTHING RETURNING ${storedArtifactColumns}`,
               values,
             )
-          : await this.client.query<ArtifactRow>(
+          : await this.client.query<StoredArtifactRow>(
               `UPDATE tholi.saved_artifacts SET content = $4::jsonb,
-             sync_revision = $5, revision = revision + 1, updated_at = now()
+             sync_revision = $5,kind=$6,format_version=$7,metadata=$8::jsonb,
+             revision = revision + 1, updated_at = clock_timestamp()
            WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3
-             AND revision = $6 AND deleted_at IS NULL RETURNING ${artifactColumns}`,
+             AND revision = $9 AND deleted_at IS NULL AND format_version<=$7
+             RETURNING ${storedArtifactColumns}`,
               [...values, input.expectedRevision.toString()],
             );
       if (!result.rows[0]) conflict();
-      return artifact(result.rows[0]);
+      return result.rows[0];
     } catch (error) {
       return accountingError(error);
     }
@@ -1506,18 +1834,34 @@ class ScopedRepositories {
     id: string,
     expectedRevision: bigint,
   ): Promise<SavedArtifact> {
+    const row = await this.deleteArtifact(id, expectedRevision, 1);
+    return artifact({ ...row, kind: "saved_route", content: null });
+  }
+
+  private async deleteArtifact(
+    id: string,
+    expectedRevision: bigint,
+    formatVersion: 1 | 2,
+  ): Promise<StoredArtifactRow> {
     integer(expectedRevision, 1n);
     await this.lockWorkspace();
     const stamp = await this.nextSyncRevision();
-    const result = await this.client.query<ArtifactRow>(
+    const result = await this.client.query<StoredArtifactRow>(
       `UPDATE tholi.saved_artifacts SET content = NULL, deleted_at = now(),
-         revision = revision + 1, sync_revision = $5, updated_at = now()
+         metadata=CASE WHEN format_version=2 THEN '{"label":"Deleted item","folder":null,"tags":[]}'::jsonb ELSE NULL END,
+         revision = revision + 1, sync_revision = $5, updated_at = clock_timestamp()
        WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3
-         AND revision = $4 AND deleted_at IS NULL RETURNING ${artifactColumns}`,
-      [...this.parameters, id, expectedRevision.toString(), stamp],
+         AND revision = $4 AND deleted_at IS NULL AND format_version=$6 RETURNING ${storedArtifactColumns}`,
+      [
+        ...this.parameters,
+        id,
+        expectedRevision.toString(),
+        stamp,
+        formatVersion,
+      ],
     );
     if (!result.rows[0]) conflict();
-    return artifact(result.rows[0]);
+    return result.rows[0];
   }
 
   private async checkReferences(references: RecordReferences) {

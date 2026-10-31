@@ -94,7 +94,7 @@ afterEach(() => {
     .forEach((element) => element.remove());
 });
 
-it("account RPC accepts only the exact privileged panel and never waits for journey work", async () => {
+it("account and cloud-data RPC accept only the exact privileged panel and never wait for journey work", async () => {
   const { api, session, sender } = environment();
   const listen = vi.fn();
   Object.assign(api.runtime, { onMessage: { addListener: listen } });
@@ -103,6 +103,10 @@ it("account RPC accepts only the exact privileged panel and never waits for jour
   const operation = vi
     .spyOn(auth, "serviceAuthCommand")
     .mockResolvedValue({ configured: false });
+  const data = await import("../../../apps/extension/src/platform/saved-data");
+  const cloudOperation = vi
+    .spyOn(data, "savedDataCommand")
+    .mockResolvedValue({ items: [] });
   const { registerMessages } =
     await import("../../../apps/extension/src/background/message-router");
   const enqueue = vi.fn(() => new Promise(() => {}));
@@ -119,10 +123,13 @@ it("account RPC accepts only the exact privileged panel and never waits for jour
     { ...sender, url: api.runtime.getURL("sidepanel.html") + "?spoof=1" },
   ]) {
     const respond = vi.fn();
-    handle({ type: "AUTH_STATUS" }, untrusted, respond);
-    expect(respond.mock.calls[0][0].error).toBeTruthy();
+    for (const type of ["AUTH_STATUS", "SAVED_DATA_CACHED"]) {
+      handle({ type }, untrusted, respond);
+      expect(respond.mock.calls.at(-1)![0].error).toBeTruthy();
+    }
   }
   expect(operation).not.toHaveBeenCalled();
+  expect(cloudOperation).not.toHaveBeenCalled();
   const respond = vi.fn();
   expect(
     handle(
@@ -133,6 +140,33 @@ it("account RPC accepts only the exact privileged panel and never waits for jour
   ).toBe(true);
   await vi.waitFor(() =>
     expect(respond).toHaveBeenCalledWith({ configured: false }),
+  );
+  const cloudReply = vi.fn();
+  expect(
+    handle(
+      { type: "SAVED_DATA_CACHED" },
+      { ...sender, url: api.runtime.getURL("sidepanel.html") },
+      cloudReply,
+    ),
+  ).toBe(true);
+  await vi.waitFor(() =>
+    expect(cloudReply).toHaveBeenCalledWith({ items: [] }),
+  );
+  const { ServiceClientError } =
+    await import("../../../packages/navigation-core/service-client");
+  cloudOperation.mockRejectedValueOnce(
+    new ServiceClientError("CONFLICT", 409, "PRIVATE_SERVICE_BODY"),
+  );
+  const failedReply = vi.fn();
+  handle(
+    { type: "SAVED_DATA_CACHED" },
+    { ...sender, url: api.runtime.getURL("sidepanel.html") },
+    failedReply,
+  );
+  await vi.waitFor(() => expect(failedReply).toHaveBeenCalledOnce());
+  expect(failedReply.mock.calls[0][0]).toMatchObject({ code: "CONFLICT" });
+  expect(JSON.stringify(failedReply.mock.calls)).not.toContain(
+    "PRIVATE_SERVICE_BODY",
   );
   expect(enqueue).not.toHaveBeenCalled();
 });

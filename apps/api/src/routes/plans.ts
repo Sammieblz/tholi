@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   enrollFreeInputSchema,
   freeEnrollmentSchema,
@@ -10,7 +9,7 @@ import {
 import type { IdentityService } from "../application/identity";
 import type { IdentitySession } from "../application/identity-contracts";
 import type { PlanService } from "../application/plans";
-import { createIdentityAccess, identityRouteSchema } from "./identity-access";
+import { createIdentityAccess, identityRouteOptions } from "./identity-access";
 
 const workspaceParams = z.object({ workspaceId: z.string().uuid() }).strict();
 
@@ -32,37 +31,18 @@ export async function registerPlansApi(
     operationId: string,
     response: z.ZodTypeAny,
     input: { protected?: boolean; body?: z.ZodTypeAny } = {},
-  ) => {
-    const contract = (target: "openApi3" | "jsonSchema7") => ({
-      ...identityRouteSchema(
-        operationId,
-        {
-          ...input,
-          tags: ["plans"],
-          response,
-        },
-        target,
-      ),
-      ...(!input.protected
-        ? {
+  ) =>
+    identityRouteOptions(operationId, {
+      ...input,
+      tags: ["plans"],
+      response,
+      ...(input.protected
+        ? { params: workspaceParams }
+        : {
             description:
               "Read public plan availability. This grants no account access, allowance or installation capability.",
-          }
-        : {}),
-      ...(input.protected
-        ? { params: zodToJsonSchema(workspaceParams, { target }) }
-        : {}),
+          }),
     });
-    return {
-      schema: contract("jsonSchema7"),
-      config: {
-        swaggerTransform: ({ url }: { url: string }) => ({
-          url,
-          schema: contract("openApi3"),
-        }),
-      },
-    };
-  };
   app.get(
     "/api/v1/plans",
     schema("listPublishedPlans", productCatalogSchema),

@@ -46,6 +46,7 @@ import {
   serviceInferenceChoicesSchema,
   type ServiceInferenceStatus,
 } from "./service-auth-contract";
+import type { SavedDataConnection } from "../../../../packages/navigation-core/saved-data-client";
 
 const inferenceSettingsSchema = z
   .object({
@@ -109,6 +110,45 @@ let inferencePending = new AbortController();
 let inferenceGeneration = 0;
 let configuringInference: number | undefined;
 let inferenceSuppressed = false;
+const accountChangeListeners = new Set<
+  (previous: Promise<SavedDataConnection | undefined>) => Promise<void>
+>();
+let accountChanging = 0;
+let accountCleanup = Promise.resolve();
+let accountScopeRead = Promise.resolve<SavedDataConnection | undefined>(
+  undefined,
+);
+
+/** Credentials stay here; dependent private caches receive only invalidation. */
+export function onServiceAccountChange(
+  listener: (
+    previous: Promise<SavedDataConnection | undefined>,
+  ) => Promise<void>,
+) {
+  accountChangeListeners.add(listener);
+  return () => accountChangeListeners.delete(listener);
+}
+function invalidateAccountData() {
+  // Capture only the old cache key before any credential replacement. Native
+  // cold-start logout has no previously leased data client to supply this scope.
+  const previous = serviceAccountCleanupScope();
+  accountScopeRead = previous;
+  void previous.catch(() => {});
+  const changes = [...accountChangeListeners].map((listener) => {
+    try {
+      return listener(previous);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  });
+  accountCleanup = Promise.all([
+    accountCleanup.catch(() => {}),
+    ...changes,
+  ]).then(() => {});
+  // Explicit account changes await cleanup. Background invalidation also
+  // fences immediately; later data access retains any cleanup failure.
+  void accountCleanup.catch(() => {});
+}
 type OperatorEvaluation = {
   plan: OperatorEvaluationPlan;
   planSha256: string;
@@ -150,6 +190,9 @@ function persist(
   const write = writes
     .catch(() => {})
     .then(async () => {
+      // Wait only for the settings snapshot, never the listeners that may be
+      // awaiting this owner's cleanup. A delayed storage read must see old keys.
+      await accountScopeRead;
       if (generation !== expected)
         throw new Error("The account connection changed.");
       const next =
@@ -167,6 +210,7 @@ function invalidate() {
   inferenceSuppressed = true;
   clearEvaluation();
   cancelServiceInference();
+  if (!accountChanging) invalidateAccountData();
 }
 /** Revoke a transmission span immediately without signing the account out. */
 export function cancelServiceInference() {
@@ -198,6 +242,18 @@ async function settings() {
       "The saved account connection is invalid. Save the service origin again.",
     );
   return parsed.data;
+}
+async function serviceAccountCleanupScope(): Promise<
+  SavedDataConnection | undefined
+> {
+  const previous = await settings();
+  return previous?.tokens
+    ? {
+        serviceOrigin: previous.origin,
+        accountId: previous.tokens.account.id,
+        workspaceId: previous.tokens.account.workspaceId,
+      }
+    : undefined;
 }
 async function connection(expected = generation) {
   const saved = await settings();
@@ -297,18 +353,30 @@ export interface ServiceAccountConnection {
   origin: string;
   account: IdentityTokens["account"];
 }
+export async function serviceAccountConnection(): Promise<
+  ServiceAccountConnection | undefined
+> {
+  if (accountChanging) return;
+  await accountCleanup;
+  const expected = generation;
+  const saved = await connection(expected);
+  current(expected);
+  if (accountChanging || !saved.tokens) return;
+  return { origin: saved.origin, account: saved.tokens.account };
+}
 interface AuthorizedOptions {
   signal?: AbortSignal;
   beforeSend?: (connection: ServiceAccountConnection) => Promise<void>;
   profile?: "navigation";
   timeoutMs?: number;
+  requireAccountBinding?: boolean;
 }
 export async function serviceAuthorizedRequest<T>(
   path:
     | `/api/v1/${string}`
     | ((account: IdentityTokens["account"]) => `/api/v1/${string}`),
   schema: z.ZodType<T>,
-  method: "GET" | "POST" | "DELETE" = "GET",
+  method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
   body?: unknown,
   options: AuthorizedOptions = {},
 ) {
@@ -338,6 +406,8 @@ export async function serviceAuthorizedRequest<T>(
         body,
         signal,
         headers: { Authorization: `Bearer ${tokens.accessToken}` },
+        expectedAccountId: tokens.account.id,
+        requireAccountBinding: options.requireAccountBinding,
         ...(options.profile ? { profile: options.profile } : {}),
         ...(options.timeoutMs !== undefined
           ? { timeoutMs: options.timeoutMs }
@@ -1165,82 +1235,102 @@ async function signIn(action: "signin" | "signup") {
 /** Called only after the message router has verified the exact privileged panel sender. */
 export async function serviceAuthCommand(raw: unknown): Promise<unknown> {
   const command = commandSchema.parse(raw);
-  if (
-    ["AUTH_CONFIGURE", "AUTH_SIGN_IN", "AUTH_SIGN_OUT", "AUTH_REVOKE"].includes(
-      command.type,
-    )
-  ) {
-    inferenceSuppressed = true;
-    clearEvaluation();
-    cancelServiceInference();
-    const expected = generation;
-    await persist((latest) => {
-      if (!latest) return;
-      const { inference: _previous, ...rest } = latest;
-      return rest;
-    }, expected);
+  const changing = ["AUTH_CONFIGURE", "AUTH_SIGN_IN", "AUTH_SIGN_OUT"].includes(
+    command.type,
+  );
+  if (changing) {
+    accountChanging++;
+    invalidateAccountData();
   }
-  switch (command.type) {
-    case "AUTH_STATUS":
-      return status();
-    case "AUTH_INFERENCE_STATUS":
-      return inferenceStatus();
-    case "AUTH_INFERENCE_CONFIGURE":
-      return configureInference({
-        profile: command.profile,
-        enabled: command.enabled,
-        images: command.images,
-      });
-    case "AUTH_EVALUATION_ACTIVATE":
-      return activateEvaluation(command.planJson, command.trialId);
-    case "AUTH_CONFIGURE": {
-      const origin = serviceOrigin(command.origin);
-      if (!(await hasServiceAuthAccess(origin)))
-        throw new Error(
-          "Grant account access before saving this service origin.",
-        );
-      invalidate();
-      await persist({ origin });
-      return status();
-    }
-    case "AUTH_SIGN_IN":
-      return signIn(command.action);
-    case "AUTH_REFRESH":
-      await refresh();
-      return status();
-    case "AUTH_SESSIONS":
-      return serviceAuthorizedRequest(
-        "/api/v1/account/sessions",
-        identitySessionsSchema,
-      );
-    case "AUTH_REVOKE": {
+  try {
+    if (
+      [
+        "AUTH_CONFIGURE",
+        "AUTH_SIGN_IN",
+        "AUTH_SIGN_OUT",
+        "AUTH_REVOKE",
+      ].includes(command.type)
+    ) {
+      inferenceSuppressed = true;
+      clearEvaluation();
+      cancelServiceInference();
       const expected = generation;
-      await serviceAuthorizedRequest(
-        `/api/v1/account/sessions/${command.id}`,
-        identityRevokedSchema,
-        "DELETE",
-      );
-      const saved = await settings();
-      current(expected);
-      if (saved?.tokens?.sessionId === command.id) {
+      await persist((latest) => {
+        if (!latest) return;
+        const { inference: _previous, ...rest } = latest;
+        return rest;
+      }, expected);
+    }
+    switch (command.type) {
+      case "AUTH_STATUS":
+        return status();
+      case "AUTH_INFERENCE_STATUS":
+        return inferenceStatus();
+      case "AUTH_INFERENCE_CONFIGURE":
+        return configureInference({
+          profile: command.profile,
+          enabled: command.enabled,
+          images: command.images,
+        });
+      case "AUTH_EVALUATION_ACTIVATE":
+        return activateEvaluation(command.planJson, command.trialId);
+      case "AUTH_CONFIGURE": {
+        const origin = serviceOrigin(command.origin);
+        if (!(await hasServiceAuthAccess(origin)))
+          throw new Error(
+            "Grant account access before saving this service origin.",
+          );
         invalidate();
-        await persist({ origin: saved.origin });
+        await persist({ origin });
+        return status();
       }
-      return { revoked: true };
+      case "AUTH_SIGN_IN":
+        return signIn(command.action);
+      case "AUTH_REFRESH":
+        await refresh();
+        return status();
+      case "AUTH_SESSIONS":
+        return serviceAuthorizedRequest(
+          "/api/v1/account/sessions",
+          identitySessionsSchema,
+        );
+      case "AUTH_REVOKE": {
+        const expected = generation;
+        await serviceAuthorizedRequest(
+          `/api/v1/account/sessions/${command.id}`,
+          identityRevokedSchema,
+          "DELETE",
+        );
+        const saved = await settings();
+        current(expected);
+        if (saved?.tokens?.sessionId === command.id) {
+          invalidate();
+          await persist({ origin: saved.origin });
+        }
+        return { revoked: true };
+      }
+      case "AUTH_SIGN_OUT": {
+        const expected = generation;
+        await serviceAuthorizedRequest(
+          "/api/v1/auth/logout",
+          identityLogoutResponseSchema,
+          "POST",
+          { all: command.all ?? false },
+        );
+        const saved = await settings();
+        current(expected);
+        invalidate();
+        if (saved) await persist({ origin: saved.origin });
+        return status();
+      }
     }
-    case "AUTH_SIGN_OUT": {
-      const expected = generation;
-      await serviceAuthorizedRequest(
-        "/api/v1/auth/logout",
-        identityLogoutResponseSchema,
-        "POST",
-        { all: command.all ?? false },
-      );
-      const saved = await settings();
-      current(expected);
-      invalidate();
-      if (saved) await persist({ origin: saved.origin });
-      return status();
+  } finally {
+    if (changing) {
+      try {
+        await accountCleanup;
+      } finally {
+        accountChanging--;
+      }
     }
   }
 }

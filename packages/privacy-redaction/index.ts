@@ -45,14 +45,36 @@ export function isPixelPrivateElement(element: Element): boolean {
     'input,select,textarea,iframe,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="searchbox"],[role="combobox"],[role="spinbutton"],[data-sensitive="true"]',
   );
 }
-export function sanitizeText(value: string): string {
+function redactText(value: string): string {
   return value
     .replace(/(?:Bearer\s+)?[A-Za-z0-9_-]{24,}/g, "[redacted]")
     .replace(/\b(?:\d[ -]?){13,19}\b/g, "[redacted]")
     .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[redacted]")
     .replace(/https?:\/\/\S+/gi, "[url]")
-    .trim()
-    .slice(0, 160);
+    .trim();
+}
+export function sanitizeText(value: string): string {
+  return redactText(value).slice(0, 160);
+}
+
+/** Explicit saved text is previewed before egress; never silently truncate a task. */
+export function sanitizeSavedText(value: string, maximum = 1000): string {
+  if (
+    !Number.isInteger(maximum) ||
+    maximum < 1 ||
+    maximum > 1000 ||
+    value.length > maximum
+  )
+    throw new Error("Saved text exceeds its supported length.");
+  const saved = redactText(sanitizeGoal(value))
+    .replace(
+      /\b(?:password|passcode|secret|token|api[ _-]?key)\s*(?:[:=]|is\b)\s*[^\s,;]+/gi,
+      "[redacted]",
+    )
+    .trim();
+  if (saved.length > maximum)
+    throw new Error("Saved text exceeds its supported length.");
+  return saved;
 }
 // Read structure only. Never read input.value, textareas, editable user content or document-wide text.
 export function safeName(element: Element): string {

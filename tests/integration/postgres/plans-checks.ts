@@ -6,16 +6,13 @@ import type {
   RepositoryScope,
   SavedArtifact,
 } from "../../../apps/api/src/database/contracts";
-import {
-  FREE_DEVELOPMENT_PROGRAM,
-  productCatalogSchema,
-  type PlanCaps,
-} from "../../../packages/navigation-core/contracts-plans";
+import { FREE_DEVELOPMENT_PROGRAM } from "../../../packages/navigation-core/contracts-plans";
 import {
   beginJourney,
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
 import { inferenceFixture } from "./inference-fixture";
+import { planFixture } from "./plan-fixture";
 
 /** Product plans share the existing database harness, scoped ports and ledger. */
 export async function runPlanChecks(
@@ -25,12 +22,10 @@ export async function runPlanChecks(
   worker?: Pool,
 ) {
   const repositories = new PostgresRepositories(runtime);
-  const catalog = productCatalogSchema.parse(
-    await repositories.readPlanCatalog(),
+  const { catalog, free, allowance, selectFree, restore } = await planFixture(
+    runtime,
+    migration,
   );
-  const free = catalog.plans.find((plan) => plan.mode === "free-cloud");
-  assert.ok(free?.developmentAllowance);
-  const allowance = free.developmentAllowance;
   const { reserveDecision, dispatch, finish } = inferenceFixture(repositories);
   const enroll = (scope: RepositoryScope) =>
     repositories.transaction(scope, (scoped) => scoped.enrollFree());
@@ -38,48 +33,6 @@ export async function runPlanChecks(
     repositories.transaction(scope, (scoped) => scoped.readEffectivePlan());
   const balance = (scope: RepositoryScope) =>
     repositories.transaction(scope, (scoped) => scoped.creditBalance());
-  let nextVersion = free.version;
-  const selectFree = async (
-    caps: Partial<PlanCaps> = {},
-    programId = allowance.programId,
-  ) => {
-    const catalogVersion = `pg-catalog-${randomUUID()}`;
-    const selected = {
-      ...free,
-      version: ++nextVersion,
-      developmentAllowance: {
-        ...allowance,
-        programId,
-        caps: { ...allowance.caps, ...caps },
-      },
-    };
-    productCatalogSchema.parse({
-      ...catalog,
-      catalogVersion,
-      plans: catalog.plans.map((plan) =>
-        plan.id === free.id ? selected : plan,
-      ),
-    });
-    await migration.query(
-      "INSERT INTO tholi.plan_versions(plan_id,version,name,definition) VALUES($1,$2,$3,$4::jsonb)",
-      [selected.id, selected.version, selected.name, JSON.stringify(selected)],
-    );
-    await migration.query(
-      "INSERT INTO tholi.product_catalog_releases(version,charging_policy_version) VALUES($1,$2)",
-      [catalogVersion, catalog.chargingPolicyVersion],
-    );
-    await migration.query(
-      `INSERT INTO tholi.product_catalog_entries(catalog_version,plan_id,plan_version,position)
-       SELECT $1,plan_id,CASE WHEN plan_id=$2 THEN $3 ELSE plan_version END,position
-       FROM tholi.product_catalog_entries WHERE catalog_version=$4`,
-      [catalogVersion, selected.id, selected.version, catalog.catalogVersion],
-    );
-    await migration.query(
-      "UPDATE tholi.product_catalog_control SET current_version=$1 WHERE singleton",
-      [catalogVersion],
-    );
-    return selected;
-  };
   const organization = async (accountId: string): Promise<RepositoryScope> => {
     const workspaceId = randomUUID();
     await migration.query(
@@ -574,10 +527,7 @@ export async function runPlanChecks(
       },
     );
   } finally {
-    await migration.query(
-      "UPDATE tholi.product_catalog_control SET current_version=$1 WHERE singleton",
-      [catalog.catalogVersion],
-    );
+    await restore();
     await migration.query(
       "UPDATE tholi.inference_control SET enabled=false,revision=revision+1 WHERE singleton",
     );

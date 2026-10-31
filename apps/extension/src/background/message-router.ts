@@ -43,6 +43,13 @@ import {
   setBackendSettings,
 } from "../platform/backend-client";
 import { tabAppearance, validThemeSender } from "../ui/theme/theme-worker";
+import { savedDataCommand } from "../platform/saved-data";
+import { ServiceClientError } from "../../../../packages/navigation-core/service-client";
+import { serviceErrorCodeSchema } from "../../../../packages/navigation-core/contracts-service";
+import {
+  SavedDataClientError,
+  savedDataClientErrorCodeSchema,
+} from "../../../../packages/navigation-core/saved-data-client";
 import {
   clearFrames,
   observePinnedPage,
@@ -100,6 +107,29 @@ interface Context {
 
 export function registerMessages(context: Context) {
   api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (typeof raw?.type === "string" && raw.type.startsWith("SAVED_DATA_")) {
+      if (!isPanel(sender)) {
+        respond({ error: "Open cloud-saved data from the Tholi sidebar." });
+        return;
+      }
+      // Account data has its own bounded lifecycle and cannot block the journey queue.
+      void savedDataCommand(raw)
+        .then(respond)
+        .catch((error) => {
+          const code =
+            error instanceof ServiceClientError
+              ? serviceErrorCodeSchema.safeParse(error.code)
+              : error instanceof SavedDataClientError
+                ? savedDataClientErrorCodeSchema.safeParse(error.code)
+                : undefined;
+          respond({
+            error:
+              "The cloud data request could not be completed. Review your account, access and pending changes before trying again.",
+            ...(code?.success ? { code: code.data } : {}),
+          });
+        });
+      return true;
+    }
     if (raw?.type === "APPLY_NAVIGATION_PROPOSAL") {
       respond({
         error:

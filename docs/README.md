@@ -23,6 +23,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Redacted operational telemetry, audit metadata and consented analytics](development/service-observability.md)
 - [Durable inference quotas and credits](development/service-credits.md)
 - [Product catalog and development Free allowances](development/service-plans.md)
+- [Explicit cloud-saved data, synchronization and private exports](development/service-saved-data.md)
 - [Diagnostics](guides/troubleshooting.md)
 
 ## Public help

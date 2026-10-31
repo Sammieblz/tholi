@@ -60,13 +60,14 @@ export const diagnosticInputSchema = z
     idempotencyKey: serviceIdempotencyKeySchema,
   })
   .strict();
-export const diagnosticSchema = z
+export const privateFileRequestSchema = z
   .object({
     requestId: z.string().uuid(),
     jobId: z.string().uuid(),
     fileId: z.string().uuid(),
   })
   .strict();
+export const diagnosticSchema = privateFileRequestSchema;
 export const privateFileSchema = z
   .object({
     id: z.string().uuid(),

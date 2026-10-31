@@ -23,6 +23,7 @@ import {
 } from "../application/quotas";
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 import { PlanService } from "../application/plans";
+import { SavedDataService } from "../application/saved-data";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -64,6 +65,7 @@ export async function createIdentityRuntime(
         )
       : undefined;
     let support: SupportService | undefined;
+    let supportStore: PostgresSupport | undefined;
     if (supportOptions) {
       const objects = createS3Objects(
         supportOptions.objects,
@@ -76,13 +78,19 @@ export async function createIdentityRuntime(
         stop() {},
         close: () => objects.close(),
       });
+      supportStore = new PostgresSupport(pool);
       support = new SupportService(
-        new PostgresSupport(pool),
+        supportStore,
         objects,
         createFileLinks(supportOptions.fileLinkSecret),
         supportOptions.options,
       );
     }
+    const savedData = new SavedDataService(
+      repositories,
+      supportStore,
+      planEnvironment,
+    );
     return {
       service,
       authorization,
@@ -90,6 +98,7 @@ export async function createIdentityRuntime(
       support,
       analytics,
       plans,
+      savedData,
       credits,
       navigation,
       repositories,

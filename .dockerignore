@@ -17,6 +17,8 @@
 !tests/integration/
 !tests/integration/postgres/
 !tests/integration/postgres/**
+!tests/support/
+!tests/support/saved-data-fixture.ts
 
 # Never copy local dependencies, generated output or secrets from allowed trees.
 **/node_modules

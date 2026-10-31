@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { z } from "zod";
+import { z } from "zod";
 import {
   identityAccountResponseSchema,
   identityLogoutResponseSchema,
@@ -20,12 +20,43 @@ import {
   ServiceClientError,
 } from "../../../../../packages/navigation-core/service-client";
 import { serviceApiOrigin } from "../../config/project";
+import { SavedDataClient } from "../../../../../packages/navigation-core/saved-data-client";
+import { IndexedDBCloudDataStore } from "../../../../../packages/site-memory/cloud-data";
+import {
+  savedDataScopeSchema,
+  type SavedDataScope,
+} from "../../../../../packages/navigation-core/contracts-saved-data";
+
+const accountNoticeSchema = z
+  .object({
+    type: z.literal("account-change"),
+    source: z.string().uuid(),
+    scope: savedDataScopeSchema.nullable(),
+  })
+  .strict();
+const accountScope = (
+  account: IdentityAccountResponse["account"],
+): SavedDataScope => ({
+  accountId: account.id,
+  workspaceId: account.workspaceId,
+});
+const sameAccountScope = (
+  left: SavedDataScope | null,
+  right: SavedDataScope | null,
+) =>
+  left?.accountId === right?.accountId &&
+  left?.workspaceId === right?.workspaceId;
+const cloudConnection = (scope: SavedDataScope | null | undefined) =>
+  scope && serviceApiOrigin
+    ? { ...scope, serviceOrigin: serviceApiOrigin }
+    : undefined;
 
 type AccountContextValue = {
   configured: boolean;
   loading: boolean;
   error: string;
   session?: IdentityAccountResponse;
+  savedData: SavedDataClient;
   authorizationUrl: (
     action: "signin" | "signup" | "recover" | "verify",
   ) => string | undefined;
@@ -37,7 +68,7 @@ type AccountContextValue = {
   request: <T>(
     path: `/api/v1/${string}`,
     schema: z.ZodType<T>,
-    method?: "GET" | "POST" | "DELETE",
+    method?: "GET" | "POST" | "PATCH" | "DELETE",
     body?: unknown,
     signal?: AbortSignal,
   ) => Promise<T>;
@@ -54,7 +85,37 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const generation = useRef(0);
   const pending = useRef(new AbortController());
-  const clear = useCallback(() => {
+  const savedData = useRef<SavedDataClient | undefined>(undefined);
+  const accountChanging = useRef(false);
+  const requestRef = useRef<AccountContextValue["request"] | undefined>(
+    undefined,
+  );
+  const channel = useRef<BroadcastChannel | undefined>(undefined);
+  const channelSource = useRef<string | undefined>(undefined);
+  const lastNotice = useRef<SavedDataScope | null | undefined>(undefined);
+  const announce = useCallback((scope: SavedDataScope | null) => {
+    if (
+      lastNotice.current !== undefined &&
+      sameAccountScope(lastNotice.current, scope)
+    )
+      return;
+    lastNotice.current = scope;
+    if (channel.current && channelSource.current)
+      try {
+        channel.current.postMessage({
+          type: "account-change",
+          source: channelSource.current,
+          scope,
+        });
+      } catch {}
+  }, []);
+  const clear = useCallback((preserveCloud = false) => {
+    const previous = sessionRef.current
+      ? accountScope(sessionRef.current.account)
+      : lastNotice.current;
+    if (preserveCloud) savedData.current?.suspend();
+    else
+      void savedData.current?.reset(cloudConnection(previous)).catch(() => {});
     generation.current++;
     pending.current.abort();
     pending.current = new AbortController();
@@ -66,7 +127,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     async <T,>(
       path: `/api/v1/${string}`,
       schema: z.ZodType<T>,
-      method: "GET" | "POST" | "DELETE" = "GET",
+      method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
       body?: unknown,
       signal?: AbortSignal,
     ): Promise<T> => {
@@ -83,6 +144,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           method,
           body,
           credentials: "include",
+          expectedAccountId: sessionRef.current?.account.id,
+          requireAccountBinding:
+            /^\/api\/v1\/workspaces\/[^/]+\/(artifacts(?:\/|\?|$)|sync\/)/.test(
+              path,
+            ),
           signal: signal
             ? AbortSignal.any([pending.current.signal, signal])
             : pending.current.signal,
@@ -108,41 +174,96 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     },
     [clear],
   );
-  const reload = useCallback(async () => {
-    clear();
-    setError("");
-    if (!serviceApiOrigin) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const revision = generation.current;
-    try {
-      const next = await request(
-        "/api/v1/account",
-        identityAccountResponseSchema,
-      );
-      if (revision === generation.current) {
-        sessionRef.current = next;
-        setSession(next);
+  requestRef.current = request;
+  if (!savedData.current)
+    savedData.current = new SavedDataClient({
+      store: new IndexedDBCloudDataStore(),
+      connection: async () => {
+        const current = sessionRef.current;
+        return !accountChanging.current && current && serviceApiOrigin
+          ? {
+              serviceOrigin: serviceApiOrigin,
+              accountId: current.account.id,
+              workspaceId: current.account.workspaceId,
+            }
+          : undefined;
+      },
+      request: (path, schema, method, body, signal) =>
+        requestRef.current!(path, schema, method, body, signal),
+    });
+  const reload = useCallback(
+    async (notifyPeers = true) => {
+      const previous = sessionRef.current
+        ? accountScope(sessionRef.current.account)
+        : lastNotice.current;
+      clear(true);
+      setError("");
+      if (!serviceApiOrigin) {
+        setLoading(false);
+        return;
       }
-    } catch (failure) {
-      if (
-        revision === generation.current &&
-        !(failure instanceof ServiceClientError && failure.status === 401)
-      )
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : "Your account could not be opened.",
+      setLoading(true);
+      const revision = generation.current;
+      try {
+        const next = await request(
+          "/api/v1/account",
+          identityAccountResponseSchema,
         );
-    } finally {
-      if (revision === generation.current) setLoading(false);
-    }
-  }, [clear, request]);
+        if (revision === generation.current) {
+          if (
+            previous &&
+            !sameAccountScope(previous, accountScope(next.account))
+          )
+            await savedData.current?.reset(cloudConnection(previous));
+          if (revision !== generation.current) return;
+          sessionRef.current = next;
+          setSession(next);
+          if (notifyPeers) announce(accountScope(next.account));
+          else lastNotice.current = accountScope(next.account);
+        }
+      } catch (failure) {
+        if (
+          revision === generation.current &&
+          !(failure instanceof ServiceClientError && failure.status === 401)
+        )
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Your account could not be opened.",
+          );
+      } finally {
+        if (revision === generation.current) setLoading(false);
+      }
+    },
+    [clear, request, announce],
+  );
   useEffect(() => {
+    let peer: BroadcastChannel | undefined;
+    if (serviceApiOrigin && typeof BroadcastChannel === "function") {
+      channelSource.current ??= crypto.randomUUID();
+      try {
+        peer = new BroadcastChannel("tholi-account-lifecycle-v1");
+      } catch {}
+      if (peer) {
+        channel.current = peer;
+        peer.onmessage = (event) => {
+          const notice = accountNoticeSchema.safeParse(event.data);
+          if (!notice.success || notice.data.source === channelSource.current)
+            return;
+          const current = sessionRef.current
+            ? accountScope(sessionRef.current.account)
+            : null;
+          if (sameAccountScope(current, notice.data.scope)) return;
+          // Peer messages invalidate only. The account endpoint supplies identity proof.
+          void reload(false);
+        };
+      }
+    }
     void reload();
     return () => {
+      peer?.close();
+      if (channel.current === peer) channel.current = undefined;
+      savedData.current?.suspend();
       generation.current++;
       pending.current.abort();
     };
@@ -152,6 +273,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     session,
+    savedData: savedData.current,
     reload,
     request,
     authorizationUrl: (action) => {
@@ -184,14 +306,25 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (sessionRef.current?.session.id === id) clear();
     },
     signOut: async (all = false) => {
-      const result = await request(
-        "/api/v1/auth/logout",
-        identityLogoutResponseSchema,
-        "POST",
-        { all },
-      );
-      clear();
-      return result.providerLogoutUrl;
+      accountChanging.current = true;
+      const previous = sessionRef.current
+        ? accountScope(sessionRef.current.account)
+        : lastNotice.current;
+      const cleanup = savedData.current!.reset(cloudConnection(previous));
+      try {
+        const result = await request(
+          "/api/v1/auth/logout",
+          identityLogoutResponseSchema,
+          "POST",
+          { all },
+        );
+        clear(true);
+        await cleanup;
+        announce(null);
+        return result.providerLogoutUrl;
+      } finally {
+        accountChanging.current = false;
+      }
     },
   };
   return (

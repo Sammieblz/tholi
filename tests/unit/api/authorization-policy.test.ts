@@ -295,6 +295,11 @@ describe("server-derived authorization policy", () => {
     expect(evaluateAuthorization(scope, "saved-data.import").allowed).toBe(
       false,
     );
+    scope.consents = [
+      { purpose: "cloud_saved_routes", policyVersion: "1", granted: true },
+    ];
+    for (const action of ["saved-data.write", "saved-data.import"] as const)
+      expect(evaluateAuthorization(scope, action).allowed).toBe(false);
     scope.consents = AUTHORIZATION_CONSENT_POLICIES.map((policy) => ({
       ...policy,
       granted: true,
@@ -320,7 +325,7 @@ describe("server-derived authorization policy", () => {
     const scope = context();
     const change = {
       purpose: "cloud_saved_routes",
-      policyVersion: "1",
+      policyVersion: "2",
       granted: true,
     };
     expect(

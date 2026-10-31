@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   SERVICE_LIMITS,
   SERVICE_TIMEOUT_HEADER,
+  SERVICE_ACCOUNT_BINDING_HEADER,
 } from "../../../packages/navigation-core/contracts-service";
 import {
   NAVIGATION_FAKE_CAPABILITY,
@@ -10,6 +11,8 @@ import {
   NAVIGATION_EVALUATION_CAPABILITY,
 } from "../../../packages/navigation-core/contracts-navigation";
 import { operatorEvaluationPlanFixture } from "../../support/operator-evaluation-fixture";
+import { savedDataRecordFixture } from "../../support/saved-data-fixture";
+import { savedDataImportInputSchema } from "../../../packages/navigation-core/contracts-saved-data";
 import {
   operatorEvaluationManifestSha256,
   operatorEvaluationSha256,
@@ -1085,3 +1088,238 @@ it("serialized token refresh cannot restore a concurrently disabled inference ch
   expect(saved).toMatchObject({ tokens: rotated });
   expect(saved).not.toHaveProperty("inference");
 });
+
+it("account changes fence cloud dependents immediately and await cleanup without exposing credentials", async () => {
+  saved = { origin, tokens };
+  let complete!: () => void;
+  const cleanup = new Promise<void>((resolve) => {
+    complete = resolve;
+  });
+  const auth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const changed = vi.fn(() => cleanup);
+  const unsubscribe = auth.onServiceAccountChange(changed);
+  fetchMock.mockImplementation(async (url) => {
+    if (String(url).endsWith("/auth/logout"))
+      return json({
+        signedOut: true,
+        providerLogoutUrl: "https://identity.example.test/logout",
+      });
+    throw new Error("Unexpected account request.");
+  });
+  const signingOut = auth.serviceAuthCommand({ type: "AUTH_SIGN_OUT" });
+  expect(changed).toHaveBeenCalledOnce();
+  await expect(auth.serviceAccountConnection()).resolves.toBeUndefined();
+  let settled = false;
+  void signingOut.then(() => {
+    settled = true;
+  });
+  await vi.waitFor(() => expect(saved).not.toHaveProperty("tokens"));
+  expect(settled).toBe(false);
+  complete();
+  await signingOut;
+  expect(changed).toHaveBeenCalledOnce();
+  unsubscribe();
+});
+
+it("revoking another device does not discard the current account's pending cloud work", async () => {
+  saved = { origin, tokens };
+  const auth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const changed = vi.fn(async () => {});
+  const unsubscribe = auth.onServiceAccountChange(changed);
+  fetchMock.mockResolvedValueOnce(json({ revoked: true }));
+  await auth.serviceAuthCommand({
+    type: "AUTH_REVOKE",
+    id: "00000000-0000-4000-8000-000000000099",
+  });
+  expect(changed).not.toHaveBeenCalled();
+  expect(await auth.serviceAccountConnection()).toEqual({ origin, account });
+  unsubscribe();
+});
+
+it("the native local import adapter previews without HTTP and reconciles the same approved operation only after transmission access", async () => {
+  const { IDBFactory } = await import("fake-indexeddb");
+  vi.stubGlobal("indexedDB", new IDBFactory());
+  saved = { origin, tokens };
+  let transmission = false;
+  contains.mockImplementation(
+    async (permissions) =>
+      !permissions.data_collection?.includes("websiteContent") || transmission,
+  );
+  const { IndexedDBSiteMemory } = await import("../../../packages/site-memory");
+  const { beginJourney, saveTask } =
+    await import("../../../packages/goal-planner/task-journey");
+  const local = new IndexedDBSiteMemory(),
+    task = saveTask(beginJourney("Find Help", "https://example.test"));
+  await local.saveTask(task);
+  const { savedDataCommand } =
+    await import("../../../apps/extension/src/platform/saved-data");
+  const scope = { accountId: account.id, workspaceId: account.workspaceId };
+  const preview = await savedDataCommand({
+    type: "SAVED_DATA_PREVIEW_IMPORT",
+    scope,
+    selection: [
+      {
+        kind: "saved_route",
+        origin: task.origin,
+        id: task.id,
+        metadata: { label: "Help route", folder: null, tags: [] },
+      },
+    ],
+  });
+  if (!preview || !("hash" in preview))
+    throw new Error("Expected a local import preview.");
+  expect(fetchMock).not.toHaveBeenCalled();
+  const bound = (value: unknown) => {
+    const response = json(value);
+    response.headers.set(SERVICE_ACCOUNT_BINDING_HEADER, account.id);
+    return response;
+  };
+  fetchMock.mockImplementation(async (url, init) => {
+    const path = new URL(String(url)).pathname;
+    if (path === "/api/v1/capabilities")
+      return json({
+        protocol: "tholi-service",
+        version: 1,
+        implementationVersion: "test",
+        supportedVersions: [1],
+        capabilities: ["saved-data", "saved-data-write", "account-binding"],
+        availability: {
+          authentication: true,
+          accountData: true,
+          decisions: false,
+          billing: false,
+        },
+        limits: SERVICE_LIMITS,
+      });
+    if (path.endsWith("/sync/changes"))
+      return bound({ items: [], nextAfter: "0", hasMore: false });
+    if (path.endsWith("/sync/import")) {
+      const input = savedDataImportInputSchema.parse(JSON.parse(init.body));
+      return bound({
+        items: input.items.map((item) => savedDataRecordFixture(item.artifact)),
+        replayed: false,
+      });
+    }
+    if (path.endsWith("/auth/logout"))
+      return bound({
+        signedOut: true,
+        providerLogoutUrl: "https://identity.example.test/logout",
+      });
+    throw new Error("Unexpected saved-data request.");
+  });
+  await expect(
+    savedDataCommand({
+      type: "SAVED_DATA_CONFIRM_IMPORT",
+      scope,
+      hash: preview.hash,
+      approved: true,
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+  expect(
+    fetchMock.mock.calls.some(([url]) => String(url).endsWith("/sync/import")),
+  ).toBe(false);
+  expect(request).not.toHaveBeenCalled();
+  const cached = await savedDataCommand({ type: "SAVED_DATA_CACHED", scope });
+  if (!cached || !("outbox" in cached))
+    throw new Error("Expected a private cloud outbox.");
+  const operationId = cached.outbox[0].operation.body.idempotencyKey;
+  transmission = true;
+  const reconciled = await savedDataCommand({
+    type: "SAVED_DATA_RECONCILE",
+    scope,
+    approved: true,
+  });
+  if (!reconciled || !("outbox" in reconciled))
+    throw new Error("Expected reconciled cloud state.");
+  expect(reconciled.outbox).toEqual([]);
+  const imports = fetchMock.mock.calls.filter(([url]) =>
+    String(url).endsWith("/sync/import"),
+  );
+  expect(imports).toHaveLength(1);
+  expect(JSON.parse(imports[0][1].body).idempotencyKey).toBe(operationId);
+  expect((await local.tasks(task.origin)).map((entry) => entry.id)).toContain(
+    task.id,
+  );
+
+  const { IndexedDBCloudDataStore } =
+    await import("../../../packages/site-memory/cloud-data");
+  const store = new IndexedDBCloudDataStore(),
+    previous = { ...scope, serviceOrigin: origin },
+    otherScope = {
+      serviceOrigin: origin,
+      accountId: crypto.randomUUID(),
+      workspaceId: crypto.randomUUID(),
+    },
+    other = savedDataRecordFixture();
+  await store.update(
+    otherScope,
+    (state) => ({ ...state, records: [other] }),
+    () => {},
+  );
+  expect((await store.read(previous, () => {})).records).toHaveLength(1);
+
+  // A restarted worker has never leased a data scope. Delay its first settings
+  // read to prove logout cannot replace the keys before scoped cleanup captures them.
+  vi.resetModules();
+  await import("../../../apps/extension/src/platform/saved-data");
+  const coldAuth =
+    await import("../../../apps/extension/src/platform/service-auth");
+  let releaseRead!: () => void;
+  privateStore.getPrivateSetting.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        releaseRead = () => resolve(saved);
+      }),
+  );
+  const writesBefore = privateStore.setPrivateSetting.mock.calls.length,
+    signingOut = coldAuth.serviceAuthCommand({ type: "AUTH_SIGN_OUT" });
+  await vi.waitFor(() => expect(releaseRead).toBeTypeOf("function"));
+  expect(privateStore.setPrivateSetting).toHaveBeenCalledTimes(writesBefore);
+  releaseRead();
+  await signingOut;
+  expect(saved).not.toHaveProperty("tokens");
+  expect((await store.read(previous, () => {})).records).toEqual([]);
+  expect((await store.read(otherScope, () => {})).records).toEqual([other]);
+  expect((await local.tasks(task.origin)).map((entry) => entry.id)).toContain(
+    task.id,
+  );
+});
+
+it.each(["wrong", "missing-required", "legacy-optional", "correct"])(
+  "account-binding echo verification rejects changed or unverified actors while preserving older optional endpoints (%s)",
+  async (mode) => {
+    const { z } = await import("zod");
+    const { serviceRequest } =
+      await import("../../../packages/navigation-core/service-client");
+    fetchMock.mockImplementation(async () => {
+      const response = json({ ok: true });
+      if (mode === "wrong" || mode === "correct")
+        response.headers.set(
+          SERVICE_ACCOUNT_BINDING_HEADER,
+          mode === "correct"
+            ? account.id
+            : "00000000-0000-4000-8000-000000000099",
+        );
+      return response;
+    });
+    const response = serviceRequest(
+      origin,
+      "/api/v1/account",
+      z.object({ ok: z.literal(true) }).strict(),
+      {
+        expectedAccountId: account.id,
+        requireAccountBinding: mode !== "legacy-optional",
+      },
+    );
+    if (mode === "wrong" || mode === "missing-required")
+      await expect(response).rejects.toMatchObject({
+        code: mode === "wrong" ? "UNAUTHENTICATED" : "INVALID_RESPONSE",
+      });
+    else await expect(response).resolves.toEqual({ ok: true });
+    expect(
+      fetchMock.mock.calls[0][1].headers[SERVICE_ACCOUNT_BINDING_HEADER],
+    ).toBe(account.id);
+  },
+);

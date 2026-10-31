@@ -7,6 +7,11 @@ import {
 } from "../../../../packages/navigation-core/contracts-support";
 import { jobStatusSchema } from "../../../../packages/navigation-core/contracts-jobs";
 import { diagnosticBytes } from "../application/private-files";
+import { savedDataExportBytes } from "../application/private-files";
+import {
+  savedDataExportInputSchema,
+  savedDataExportSnapshotSchema,
+} from "../../../../packages/navigation-core/contracts-saved-data";
 import type {
   ApprovedMail,
   DiagnosticRecord,
@@ -22,8 +27,8 @@ import type { PostgresRepositories } from "./repositories";
 type ScopeOwner = Parameters<
   Parameters<PostgresRepositories["transaction"]>[1]
 >[0];
-const fileColumns = `id,request_id AS "requestId",revision::text,object_key AS key,bytes,
-  encode(checksum,'hex') AS sha256,content_type AS "contentType",expires_at AS "expiresAt",status`;
+const fileColumns = `id,workspace_id AS "workspaceId",request_id AS "requestId",revision::text,object_key AS key,bytes,
+  encode(checksum,'hex') AS sha256,content_type AS "contentType",expires_at AS "expiresAt",status,purpose`;
 type FileRow = Omit<PrivateFile, "revision"> & {
   revision: string;
   snapshot?: unknown;
@@ -209,31 +214,84 @@ export class ScopedSupport {
       role: "owner",
       jobs,
     });
-    const encoded = diagnosticBytes(snapshot),
+    return this.createFile(request.id, snapshot, "diagnostic");
+  }
+
+  private async createFile(
+    requestId: string,
+    snapshot: unknown,
+    purpose: NonNullable<PrivateFile["purpose"]>,
+  ): Promise<DiagnosticRecord> {
+    const encoded =
+        purpose === "diagnostic"
+          ? diagnosticBytes(snapshot)
+          : savedDataExportBytes(snapshot),
       id = randomUUID();
     await this.client.query(
-      `INSERT INTO tholi.private_files(workspace_id,account_id,id,request_id,object_key,content_type,bytes,checksum,snapshot,expires_at)
-        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,clock_timestamp()+$9*interval '1 millisecond')`,
+      `INSERT INTO tholi.private_files(workspace_id,account_id,id,request_id,object_key,content_type,bytes,checksum,snapshot,expires_at,purpose)
+        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,clock_timestamp()+$9*interval '1 millisecond',$10)`,
       [
         ...this.parameters,
         id,
-        request.id,
+        requestId,
         `exports/${this.scope.workspaceId}/${id}.json`,
         encoded.bytes,
         encoded.sha256,
         JSON.stringify(snapshot),
         SUPPORT_LIMITS.fileRetentionMs,
+        purpose,
       ],
     );
     const queued = await this.owner.enqueueJob({
-      requestId: request.id,
-      kind: "file.diagnostic",
+      requestId,
+      kind:
+        purpose === "diagnostic" ? "file.diagnostic" : "file.saved-data-export",
       version: 1,
       replaySafe: true,
-      idempotencyKey: `diagnostic:${request.id}`,
-      recordReferences: { requestId: request.id },
+      idempotencyKey: `${purpose}:${requestId}`,
+      recordReferences: { requestId },
     });
-    return { requestId: request.id, jobId: queued.id, fileId: id };
+    return { requestId, jobId: queued.id, fileId: id };
+  }
+
+  async requestSavedExport(raw: {
+    idempotencyKey: string;
+    payloadHash: string;
+    ids: string[];
+  }): Promise<DiagnosticRecord> {
+    const input = savedDataExportInputSchema.parse({
+      idempotencyKey: raw.idempotencyKey,
+      ids: raw.ids,
+    });
+    const { request, replayed } = await this.owner.beginRequest({
+      operation: "saved-data.export.v1",
+      idempotencyKey: input.idempotencyKey,
+      payloadHash: raw.payloadHash,
+    });
+    if (replayed) {
+      const old = await this.client.query<DiagnosticRecord>(
+        `SELECT f.request_id AS "requestId",j.id AS "jobId",f.id AS "fileId" FROM tholi.private_files f
+         JOIN tholi.jobs j ON j.workspace_id=f.workspace_id AND j.request_id=f.request_id AND j.kind='file.saved-data-export'
+         WHERE f.workspace_id=$1 AND f.account_id=$2 AND f.request_id=$3 AND f.purpose='saved-data-export'`,
+        [...this.parameters, request.id],
+      );
+      if (!old.rows[0]) throw unavailable();
+      return old.rows[0];
+    }
+    await this.quota("saved-data.export.v1");
+    const items = [];
+    for (const id of input.ids) {
+      const item = await this.owner.getSavedArtifact(id);
+      if (!item || item.deletedAt !== null) throw unavailable();
+      items.push(item);
+    }
+    const snapshot = savedDataExportSnapshotSchema.parse({
+      schemaVersion: 1,
+      kind: "saved-data-export",
+      createdAt: new Date().toISOString(),
+      items,
+    });
+    return this.createFile(request.id, snapshot, "saved-data-export");
   }
 
   async getFile(id: string): Promise<PrivateFile | null> {
@@ -247,9 +305,12 @@ export class ScopedSupport {
   async prepareExternal(lease: JobLease): Promise<PreparedExternal | null> {
     if (
       lease.version !== 1 ||
-      !["support.operator", "support.received", "file.diagnostic"].includes(
-        lease.kind,
-      )
+      ![
+        "support.operator",
+        "support.received",
+        "file.diagnostic",
+        "file.saved-data-export",
+      ].includes(lease.kind)
     )
       throw unavailable();
     const selected = await this.client.query<{
@@ -274,15 +335,26 @@ export class ScopedSupport {
     )
       throw unavailable();
     let command: PreparedExternal["command"];
-    if (lease.kind === "file.diagnostic") {
+    if (
+      lease.kind === "file.diagnostic" ||
+      lease.kind === "file.saved-data-export"
+    ) {
       const found = await this.client.query<FileRow>(
         `SELECT ${fileColumns},snapshot FROM tholi.private_files WHERE workspace_id=$1 AND account_id=$2 AND request_id=$3
           AND status='pending' AND expires_at>clock_timestamp()`,
         [...this.parameters, row.request_id],
       );
       if (!found.rows[0]) throw unavailable();
-      const { snapshot, ...metadata } = found.rows[0],
-        encoded = diagnosticBytes(snapshot);
+      const { snapshot, ...metadata } = found.rows[0];
+      if (
+        metadata.purpose !==
+        (lease.kind === "file.diagnostic" ? "diagnostic" : "saved-data-export")
+      )
+        throw unavailable();
+      const encoded =
+        metadata.purpose === "diagnostic"
+          ? diagnosticBytes(snapshot)
+          : savedDataExportBytes(snapshot);
       if (
         encoded.bytes !== metadata.bytes ||
         encoded.sha256 !== metadata.sha256

@@ -20,7 +20,10 @@ export type ConsentPurpose = z.infer<typeof consentPurposeSchema>;
 /** Current service policy versions, independent of host grants and product releases. */
 export const AUTHORIZATION_CONSENT_POLICIES = Object.freeze(
   consentPurposeSchema.options.map((purpose) =>
-    Object.freeze({ purpose, policyVersion: "1" }),
+    Object.freeze({
+      purpose,
+      policyVersion: purpose === "cloud_saved_routes" ? "2" : "1",
+    }),
   ),
 );
 

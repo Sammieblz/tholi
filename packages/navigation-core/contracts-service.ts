@@ -11,6 +11,7 @@ export const SERVICE_LIMITS = Object.freeze({
   maxDeadlineMs: 25000,
 } as const);
 export const SERVICE_TIMEOUT_HEADER = "x-tholi-timeout-ms";
+export const SERVICE_ACCOUNT_BINDING_HEADER = "x-tholi-account";
 
 const capabilityNameSchema = z
   .string()

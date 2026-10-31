@@ -2,6 +2,17 @@ import type { SavedTask } from "../../../../packages/page-model";
 import type { DatabaseScope } from "./postgres";
 import type { ServiceRequestStatus } from "../../../../packages/navigation-core/contracts-service";
 import type { EffectiveProductPlan } from "../../../../packages/navigation-core/contracts-plans";
+export type {
+  SavedDataArtifact,
+  SavedDataRecord,
+  SavedDataMutation,
+  SavedDataDeleteInput,
+  SavedDataImportInput,
+  SavedDataImportResult,
+  SavedDataListQuery,
+  SavedDataPage,
+  SavedDataChanges,
+} from "../../../../packages/navigation-core/contracts-saved-data";
 import type {
   JobErrorCode,
   JobResult,

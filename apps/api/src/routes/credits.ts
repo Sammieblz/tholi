@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   creditHistoryPageSchema,
   creditPageQuerySchema,
@@ -10,7 +9,7 @@ import {
 import type { IdentityService } from "../application/identity";
 import type { IdentitySession } from "../application/identity-contracts";
 import type { CreditService } from "../application/quotas";
-import { createIdentityAccess, identityRouteSchema } from "./identity-access";
+import { createIdentityAccess, identityRouteOptions } from "./identity-access";
 
 const workspaceParams = z.object({ workspaceId: z.string().uuid() }).strict();
 
@@ -25,34 +24,14 @@ export async function registerCreditsApi(
   const early = safe(async (request) => {
     sessions.set(request, (await authenticate(request)).session);
   });
-  const schema = (
-    operationId: string,
-    response: z.ZodTypeAny,
-    paged = false,
-  ) => {
-    const contract = (target: "openApi3" | "jsonSchema7") => ({
-      ...identityRouteSchema(
-        operationId,
-        {
-          protected: true,
-          tags: ["credits", "usage"],
-          response,
-          ...(paged ? { query: creditPageQuerySchema } : {}),
-        },
-        target,
-      ),
-      params: zodToJsonSchema(workspaceParams, { target }),
+  const schema = (operationId: string, response: z.ZodTypeAny, paged = false) =>
+    identityRouteOptions(operationId, {
+      protected: true,
+      tags: ["credits", "usage"],
+      params: workspaceParams,
+      response,
+      ...(paged ? { query: creditPageQuerySchema } : {}),
     });
-    return {
-      schema: contract("jsonSchema7"),
-      config: {
-        swaggerTransform: ({ url }: { url: string }) => ({
-          url,
-          schema: contract("openApi3"),
-        }),
-      },
-    };
-  };
   app.get(
     "/api/v1/workspaces/:workspaceId/credits",
     {
