@@ -164,21 +164,23 @@ still optional: it accepts OTLP HTTP and writes local debug output; send synthet
 data only. Its production observability adapter belongs to the telemetry ticket.
 Read generated storage credentials from `.env`; do not copy them into client bundles.
 
-The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. At this stage
-that is a cloud-free policy, not a navigation endpoint. Configured identity adds
+The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. Ordinary
+HTTP/Compose remains cloud-free, without a cloud navigation endpoint. Configured identity adds
 accounts, session security, tenant policy, durable jobs and configured support,
-without cloud navigation. The typed deterministic
-fake and Gemini inference adapters belong
-to [#39](https://github.com/Sammieblz/tholi/issues/39). The legacy private API keeps
+without cloud navigation. The typed deterministic fake and Vertex/Gemini adapter
+are available through the separate [operator model experiment](service-models.md).
+The legacy private API keeps
 its existing local NLP/OCR behavior independently.
 
 `infra/local/compose.gemini.yaml` is a separate explicit opt-in configuration. It
-requires spend-limit and opt-in settings. This version **rejects live
-inference at startup**, even when those settings are supplied, because it cannot
-yet enforce a provider budget. It has no paid-call capability. Do not enable
-network egress or add provider credentials to the default profile. The later
-adapter must implement actual admission/reservation and billed-usage limits
-before live experiments can be authorized.
+requires spend-limit and opt-in settings. Ordinary service startup **rejects live
+inference**, even when those settings are supplied; the experiment does not enable
+Compose or browser transmission. That transport and purpose-specific consent
+belong to [#40](https://github.com/Sammieblz/tholi/issues/40). Do not enable network
+egress or add provider credentials to the default profile. An operator experiment
+requires separate exact-data and bounded-spending approval, ADC and a durable
+single-use approval store. Its reservation is separate from the production
+quota/credit ledger in [#44](https://github.com/Sammieblz/tholi/issues/44).
 
 ## Stop, retain or delete data
 

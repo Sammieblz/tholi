@@ -32,6 +32,11 @@ native capture-plane measurements, complete privacy evidence, mask-before-transf
 processing and final native/egress guards. It keeps failed probes distinct and does
 not certify arbitrary pixels, provider inference or a release.
 
+The [model-adapter validation record](model-adapters-validation.md) tracks #39
+deterministic proposals, shared reference admission, the bounded Vertex adapter
+and single-use operator approvals. Injected provider tests do not establish live
+availability, billing, retention or navigation quality. Ordinary CI stays cloud-free.
+
 PRs and main pushes run types, fast contracts, deterministic extension/browser tests and focused website/layout coverage. Feature-branch pushes do not duplicate PR checks. Superseded PR runs are canceled. The aggregate required `validate` job fails when any dependency fails or is canceled.
 
 The separate Linux `containers` job runs `npm run test:local-stack -- --optional`
