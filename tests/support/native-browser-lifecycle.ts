@@ -24,30 +24,24 @@ type MacFirefoxOwnership = Pick<
   "processId" | "profile" | "reportedProfile"
 > & { macProcess: MacFirefoxProcess };
 
-function inspectMacProcess(processId: number): MacFirefoxProcess | undefined {
+export function inspectMacProcess(
+  processId: number,
+  read: (fields: string[]) => string = (fields) =>
+    execFileSync("ps", ["-ww", "-p", String(processId), ...fields], {
+      encoding: "utf8",
+      env: { ...process.env, LC_ALL: "C" },
+      timeout: 500,
+      maxBuffer: 32768,
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+): MacFirefoxProcess | undefined {
   let output: string;
+  let executable: string;
   try {
-    output = execFileSync(
-      "ps",
-      [
-        "-ww",
-        "-p",
-        String(processId),
-        "-o",
-        "comm=",
-        "-o",
-        "lstart=",
-        "-o",
-        "args=",
-      ],
-      {
-        encoding: "utf8",
-        env: { ...process.env, LC_ALL: "C" },
-        timeout: 500,
-        maxBuffer: 32768,
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    ).trim();
+    output = read(["-o", "lstart=", "-o", "args="]).trim();
+    // Darwin truncates a middle comm column even with -ww. Read it as the
+    // final column, while retaining the separate start time and exact profile.
+    executable = read(["-o", "comm="]).trim();
   } catch (error) {
     const failure = error as {
       status?: number;
@@ -62,12 +56,12 @@ function inspectMacProcess(processId: number): MacFirefoxProcess | undefined {
       return;
     throw Error("The owned Firefox process could not be inspected.");
   }
-  if (!output) return;
+  if (!output || !executable) return;
   const match = output.match(
-    /^(.*?)\s+([A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+)$/,
+    /^([A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.+)$/,
   );
   if (!match) throw Error("The owned Firefox process identity is unavailable.");
-  return { executable: match[1], started: match[2], command: match[3] };
+  return { executable, started: match[1], command: match[2] };
 }
 
 /** Canonical paths handle macOS's /var -> /private/var temporary-directory alias. */
@@ -118,9 +112,7 @@ export function assertOwnedMacFirefoxProcess(
             ? "lifetime"
             : undefined;
   if (failed)
-    throw Error(
-      `Disposable Firefox process identity changed (${failed}${failed === "executable" ? ":" + JSON.stringify(executable) : ""}).`,
-    );
+    throw Error(`Disposable Firefox process identity changed (${failed}).`);
 }
 
 /** Only the registered root PID is signalled; this does not certify every browser child. */

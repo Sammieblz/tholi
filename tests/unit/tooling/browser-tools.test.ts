@@ -10,6 +10,7 @@ import {
 } from "../../support/browser-tools";
 import {
   assertOwnedMacFirefoxProcess,
+  inspectMacProcess,
   ownedFirefoxProfile,
   registerFirefoxDriver,
   stopOwnedMacFirefoxProcess,
@@ -175,6 +176,22 @@ function ownership() {
     macProcess: macProcess(),
   };
 }
+
+test("Darwin process inspection retains the full executable when a middle comm column would be truncated", () => {
+  const process = macProcess();
+  const observed = inspectMacProcess(9001, (fields) => {
+    if (fields.includes("comm="))
+      return fields.length === 2
+        ? process.executable
+        : process.executable.slice(0, -5);
+    return `${process.started} ${process.command}\n`;
+  });
+  expect(observed).toEqual(process);
+  expect(() =>
+    assertOwnedMacFirefoxProcess(ownership(), observed!),
+  ).not.toThrow();
+  expect(inspectMacProcess(9001, () => "")).toBeUndefined();
+});
 
 test("macOS cleanup requires the exact profile, headless executable and original process identity", () => {
   const expected = ownership();
