@@ -1,5 +1,6 @@
 import { expect, type TestInfo } from "@playwright/test";
 import { By, Key, until } from "selenium-webdriver";
+import { Select } from "selenium-webdriver/lib/select.js";
 import firefox from "selenium-webdriver/firefox.js";
 import type chrome from "selenium-webdriver/chrome.js";
 import { openBrandedExtension } from "./branded-extension";
@@ -150,9 +151,17 @@ export async function verifyWebDriverPrivateLearning(
       async () => (await selector.findElements(By.css("option"))).length === 2,
       10_000,
     );
-    await selector.sendKeys(Key.ARROW_DOWN, Key.ENTER);
+    // Use WebDriver's native option selection instead of assuming that the
+    // platform commits a closed select after the same arrow-key sequence.
+    await new Select(selector).selectByValue(service.provider.id);
+    if ((await selector.getAttribute("value")) !== service.provider.id)
+      throw Error("The native provider selection was not acknowledged.");
     const chooseProvider = await named("Use selected provider");
-    await current.driver.wait(until.elementIsEnabled(chooseProvider), 10_000);
+    await current.driver.wait(
+      until.elementIsEnabled(chooseProvider),
+      10_000,
+      "The selected provider action remained disabled after native selection.",
+    );
     await chooseProvider.sendKeys(Key.ENTER);
     await current.waitFor(
       async () => {
