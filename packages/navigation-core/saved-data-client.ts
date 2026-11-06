@@ -236,6 +236,7 @@ export class SavedDataClient {
   private pending = new AbortController();
   private bound?: SavedDataConnection;
   private boundGeneration = 0;
+  private readCompatibility?: { generation: number; connection: string };
   private preview?: ImportPreview;
   private clearing = Promise.resolve();
   private binding = Promise.resolve();
@@ -247,6 +248,7 @@ export class SavedDataClient {
     this.pending.abort();
     this.pending = new AbortController();
     this.preview = undefined;
+    this.readCompatibility = undefined;
     this.flushing = undefined;
     this.binding = Promise.resolve();
   }
@@ -382,24 +384,42 @@ export class SavedDataClient {
         : suffix === "artifacts/export"
           ? "saved-data-export"
           : undefined;
-    if (capability || view === 2) {
-      const offered = await awaitAbortableOperation(
-        () =>
-          this.options.request(
-            "/api/v1/capabilities",
-            serviceCapabilitiesSchema,
-            "GET",
-            undefined,
-            signal,
-            ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
-          ),
-        signal,
-        interrupted,
-      );
-      current();
+    const epoch = {
+      generation: this.generation,
+      connection: savedDataConnectionKey(lease.scope),
+    };
+    const compatibleRead = () =>
+      this.readCompatibility?.generation === epoch.generation &&
+      this.readCompatibility.connection === epoch.connection;
+    if (capability || (view === 2 && (method !== "GET" || !compatibleRead()))) {
+      let offered: z.infer<typeof serviceCapabilitiesSchema>;
+      try {
+        offered = await awaitAbortableOperation(
+          () =>
+            this.options.request(
+              "/api/v1/capabilities",
+              serviceCapabilitiesSchema,
+              "GET",
+              undefined,
+              signal,
+              ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
+            ),
+          signal,
+          interrupted,
+        );
+        current();
+      } catch (error) {
+        if (compatibleRead()) this.readCompatibility = undefined;
+        throw error;
+      }
+      const namespaceCompatible =
+        offered.capabilities.includes("saved-data-schema-2") &&
+        offered.capabilities.includes("account-binding");
+      if (!namespaceCompatible && compatibleRead())
+        this.readCompatibility = undefined;
       if (
         (capability && !offered.capabilities.includes(capability)) ||
-        (view === 2 && !offered.capabilities.includes("saved-data-schema-2")) ||
+        (view === 2 && !namespaceCompatible) ||
         !offered.capabilities.includes("account-binding")
       )
         throw new ServiceClientError(
@@ -407,25 +427,41 @@ export class SavedDataClient {
           503,
           "This cloud data operation is unavailable on the connected service.",
         );
+      // This is only public protocol compatibility, never cached authorization.
+      // Every mutation discovers its current feature, and every actual request
+      // retains the existing account, host, consent and final send checks.
+      if (view === 2) this.readCompatibility = epoch;
     }
-    const result = await awaitAbortableOperation(
-      () =>
-        this.options.request(
-          this.path(
-            lease,
-            view === 2
-              ? `${suffix}${suffix.includes("?") ? "&" : "?"}schemaVersion=2`
-              : suffix,
+    let result: T;
+    try {
+      result = await awaitAbortableOperation(
+        () =>
+          this.options.request(
+            this.path(
+              lease,
+              view === 2
+                ? `${suffix}${suffix.includes("?") ? "&" : "?"}schemaVersion=2`
+                : suffix,
+            ),
+            schema,
+            method,
+            body,
+            signal,
+            ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
           ),
-          schema,
-          method,
-          body,
-          signal,
-          ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
-        ),
-      signal,
-      interrupted,
-    );
+        signal,
+        interrupted,
+      );
+    } catch (error) {
+      if (
+        view === 2 &&
+        compatibleRead() &&
+        error instanceof ServiceClientError &&
+        ["INVALID_RESPONSE", "COMPATIBILITY_MISMATCH"].includes(error.code)
+      )
+        this.readCompatibility = undefined;
+      throw error;
+    }
     current();
     return result;
   }

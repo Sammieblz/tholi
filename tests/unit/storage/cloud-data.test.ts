@@ -16,6 +16,7 @@ import { savedDataImportInputSchema } from "../../../packages/navigation-core/co
 import { SERVICE_LIMITS } from "../../../packages/navigation-core/contracts-service";
 import { AUTHORIZATION_CONSENT_POLICIES } from "../../../packages/navigation-core/contracts-authorization";
 import { navigationKnowledgeQuerySchema } from "../../../packages/navigation-core/contracts-navigation-knowledge";
+import { ServiceClientError } from "../../../packages/navigation-core/service-client";
 import {
   savedDataArtifactFixture,
   savedDataRecordFixture,
@@ -105,6 +106,217 @@ function fixture() {
     },
   };
 }
+
+const graphCapabilities = [
+  "saved-data",
+  "saved-data-write",
+  "saved-data-export",
+  "saved-data-schema-2",
+  "account-binding",
+];
+function graphFixture() {
+  const f = fixture();
+  f.setScope({ ...f.scope, schemaVersion: 2 });
+  f.capabilities([...graphCapabilities]);
+  return f;
+}
+
+test("schema-2 read compatibility is discovered once within the current bound epoch", async () => {
+  const f = graphFixture(),
+    record = savedDataRecordFixture(savedDataArtifactFixture());
+  f.reply
+    .mockResolvedValueOnce({ items: [record] })
+    .mockResolvedValueOnce(record)
+    .mockResolvedValueOnce({
+      origin: "https://example.test",
+      revision: "0",
+      collect: false,
+      use: false,
+      updatedAt: null,
+    })
+    .mockResolvedValueOnce({ items: [record] });
+  await f.client.list();
+  await f.client.read(record.id);
+  await f.client.siteSettings("https://example.test");
+  await f.client.list();
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(1);
+  expect(f.reply).toHaveBeenCalledTimes(4);
+  expect(
+    f.calls
+      .filter((call) => call.path !== "/api/v1/capabilities")
+      .every((call) => call.path.includes("schemaVersion=2")),
+  ).toBe(true);
+});
+
+test.each([
+  "suspend",
+  "reset",
+  "service",
+  "account",
+  "workspace",
+  "view",
+] as const)(
+  "%s invalidates the prior schema-2 compatibility proof without transferring it to another epoch",
+  async (change) => {
+    const f = graphFixture();
+    f.reply.mockResolvedValue({ items: [] });
+    await f.client.list();
+    if (change === "suspend") f.client.suspend();
+    else if (change === "reset") await f.client.reset();
+    else if (change === "view") {
+      f.client.suspend();
+      f.setScope({ ...f.scope, schemaVersion: undefined });
+      await f.client.list();
+      expect(
+        f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+      ).toHaveLength(1);
+      f.client.suspend();
+      f.setScope({ ...f.scope, schemaVersion: 2 });
+    } else {
+      const before = f.calls.length;
+      f.setScope({
+        ...f.scope,
+        ...(change === "service"
+          ? { serviceOrigin: "https://other.example.test" }
+          : change === "account"
+            ? { accountId: crypto.randomUUID() }
+            : { workspaceId: crypto.randomUUID() }),
+      });
+      await expect(f.client.list()).rejects.toMatchObject({
+        code: "ACCOUNT_CHANGED",
+      });
+      expect(f.calls).toHaveLength(before);
+    }
+    await f.client.list();
+    await f.client.list();
+    expect(
+      f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+    ).toHaveLength(2);
+  },
+);
+
+test("a read compatibility proof cannot authorize writes or exports and failed compatibility is not retained", async () => {
+  const f = graphFixture(),
+    artifact = savedDataArtifactFixture("preferences");
+  f.reply.mockResolvedValue({ items: [] });
+  await f.client.list();
+  f.capabilities(["saved-data", "saved-data-schema-2", "account-binding"]);
+  await expect(f.client.save(artifact, "0")).rejects.toMatchObject({
+    code: "UNAVAILABLE",
+  });
+  await expect(f.client.export([artifact.id])).rejects.toMatchObject({
+    code: "UNAVAILABLE",
+  });
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(3);
+  expect(f.reply).toHaveBeenCalledOnce();
+  f.capabilities(["saved-data", "account-binding"]);
+  await expect(f.client.export([artifact.id])).rejects.toMatchObject({
+    code: "UNAVAILABLE",
+  });
+  await expect(f.client.list()).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(5);
+  expect(f.reply).toHaveBeenCalledOnce();
+  f.capabilities([...graphCapabilities]);
+  await f.client.list();
+  await f.client.list();
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(6);
+});
+
+test("an invalid versioned response clears compatibility without retry while an ordinary missing item does not", async () => {
+  const f = graphFixture();
+  f.reply.mockResolvedValue({ items: [] });
+  await f.client.list();
+  const invalid = new ServiceClientError(
+    "INVALID_RESPONSE",
+    200,
+    "The namespace response is invalid.",
+  );
+  f.reply.mockRejectedValueOnce(invalid);
+  await expect(f.client.list()).rejects.toBe(invalid);
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(1);
+  expect(f.reply).toHaveBeenCalledTimes(2);
+  await f.client.list();
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(2);
+  const missing = new ServiceClientError(
+    "NOT_FOUND",
+    404,
+    "The item is unavailable.",
+  );
+  f.reply.mockRejectedValueOnce(missing);
+  await expect(f.client.read(crypto.randomUUID())).rejects.toBe(missing);
+  await f.client.list();
+  expect(
+    f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+  ).toHaveLength(2);
+});
+
+test("a late capability response cannot replace the current account epoch's successful proof", async () => {
+  const f = graphFixture(),
+    discovery = deferred<void>(),
+    started = deferred<void>(),
+    settled = deferred<void>();
+  let discoveries = 0;
+  const client = new SavedDataClient({
+    ...f.options,
+    async request<T>(
+      path: `/api/v1/${string}`,
+      schema: z.ZodType<T>,
+      method: "GET" | "POST" | "PATCH" | "DELETE",
+      body: unknown,
+      signal: AbortSignal,
+      beforeSend?: () => Promise<void>,
+    ): Promise<T> {
+      if (path === "/api/v1/capabilities" && ++discoveries === 1) {
+        started.resolve();
+        await discovery.promise;
+        try {
+          return await f.options.request(
+            path,
+            schema,
+            method,
+            body,
+            signal,
+            beforeSend,
+          );
+        } finally {
+          settled.resolve();
+        }
+      }
+      return f.options.request(path, schema, method, body, signal, beforeSend);
+    },
+  });
+  f.reply.mockResolvedValue({ items: [] });
+  const previous = client.list();
+  const rejected = expect(previous).rejects.toMatchObject({
+    code: "ACCOUNT_CHANGED",
+  });
+  await started.promise;
+  await client.reset();
+  f.setScope({
+    ...f.scope,
+    accountId: crypto.randomUUID(),
+    workspaceId: crypto.randomUUID(),
+  });
+  await rejected;
+  await client.list();
+  discovery.resolve();
+  await settled.promise;
+  await client.list();
+  expect(discoveries).toBe(2);
+  expect(f.reply).toHaveBeenCalledTimes(2);
+});
 
 test("local import preview has no egress and changed source revisions require a new review", async () => {
   const f = fixture(),
@@ -368,9 +580,14 @@ test("explicit site enabling grants the reviewed workspace policy once while red
   ).toHaveLength(1);
 });
 
-test.each(["abort", "native-guard"])(
-  "%s during authentication stops private query transmission at the final send boundary",
-  async (mode) => {
+test.each([
+  ["abort", "query"],
+  ["native-guard", "query"],
+  ["abort", "cached-read"],
+  ["native-guard", "cached-read"],
+] as const)(
+  "%s during authentication stops %s transmission at the final send boundary",
+  async (mode, route) => {
     const f = fixture();
     f.setScope({ ...f.scope, schemaVersion: 2 });
     f.capabilities([
@@ -394,41 +611,59 @@ test.each(["abort", "native-guard"])(
         signal: AbortSignal,
         beforeSend?: () => Promise<void>,
       ): Promise<T> {
-        if (path === "/api/v1/capabilities")
+        if (path === "/api/v1/capabilities" || path.includes("/artifacts?"))
           return f.options.request(path, schema, method, body, signal);
         started.resolve();
         await authentication.promise;
         await beforeSend?.();
         signal.throwIfAborted();
         sent();
-        return schema.parse({
-          context: null,
-          sources: [],
-          siteSettings: null,
-          contextDigest: null,
-          snapshotDigest: "a".repeat(64),
-          diagnostics: {
-            candidates: 0,
-            selected: 0,
-            omitted: 0,
-            reason: "disabled",
-          },
-        });
+        return schema.parse(
+          route === "cached-read"
+            ? {
+                origin: "https://example.test",
+                revision: "0",
+                collect: false,
+                use: false,
+                updatedAt: null,
+              }
+            : {
+                context: null,
+                sources: [],
+                siteSettings: null,
+                contextDigest: null,
+                snapshotDigest: "a".repeat(64),
+                diagnostics: {
+                  candidates: 0,
+                  selected: 0,
+                  omitted: 0,
+                  reason: "disabled",
+                },
+              },
+        );
       },
     });
-    const operation = client.retrieveKnowledge(
-      navigationKnowledgeQuerySchema.parse({
-        origin: "https://example.test",
-        query: "Find Help",
-        controls: [],
-      }),
-      {
-        signal: controller.signal,
-        beforeSend: async () => {
-          if (!authorized) throw new Error("The native grant changed.");
-        },
+    if (route === "cached-read") {
+      f.reply.mockResolvedValueOnce({ items: [] });
+      await client.list();
+    }
+    const execution = {
+      signal: controller.signal,
+      beforeSend: async () => {
+        if (!authorized) throw new Error("The native grant changed.");
       },
-    );
+    };
+    const operation =
+      route === "cached-read"
+        ? client.siteSettings("https://example.test", execution)
+        : client.retrieveKnowledge(
+            navigationKnowledgeQuerySchema.parse({
+              origin: "https://example.test",
+              query: "Find Help",
+              controls: [],
+            }),
+            execution,
+          );
     await started.promise;
     if (mode === "abort") {
       controller.abort();
@@ -441,6 +676,9 @@ test.each(["abort", "native-guard"])(
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sent).not.toHaveBeenCalled();
+    expect(
+      f.calls.filter((call) => call.path === "/api/v1/capabilities"),
+    ).toHaveLength(1);
   },
 );
 

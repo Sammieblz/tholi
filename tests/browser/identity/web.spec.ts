@@ -1789,18 +1789,20 @@ test("real account privately controls versioned website knowledge without dispat
           response.request().method() === method
         );
       });
-    stage = "acknowledged refresh and explicit collection/reuse";
+    stage = "refresh acknowledged private-learning settings";
     const refreshing = siteResponse("GET");
     await panel
       .getByRole("button", { name: "Refresh learning settings", exact: true })
       .click();
     expect((await refreshing).status()).toBe(200);
     await expect(collect).toBeEnabled();
+    stage = "enable private knowledge collection";
     const enablingCollection = siteResponse("PATCH");
     await collect.click();
     expect((await enablingCollection).status()).toBe(200);
     await expect(collect).toBeChecked();
     await expect(use).toBeEnabled();
+    stage = "enable private knowledge reuse";
     const enablingReuse = siteResponse("PATCH");
     await use.click();
     expect((await enablingReuse).status()).toBe(200);

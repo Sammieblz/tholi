@@ -141,10 +141,28 @@ export async function verifyWebDriverPrivateLearning(
                 ".tholi-private-learning fieldset",
               );
               if (field && !field.disabled) return "ready";
+              const popup = document.querySelector<HTMLElement>(
+                ".tholi-settings-popup",
+              );
+              if (
+                !popup ||
+                !popup.getClientRects().length ||
+                getComputedStyle(popup).visibility === "hidden"
+              )
+                return "settings-closed";
+              const account = document.querySelector(".tholi-account-settings");
+              if (!account) return "account-unmounted";
               const accountError = document.getElementById(
                 "tholi-account-error",
               );
               if (accountError && !accountError.hidden) return "account-error";
+              if (
+                account.querySelector<HTMLInputElement>("#tholi-service-origin")
+                  ?.disabled
+              )
+                return "account-loading";
+              if (!account.querySelector(".tholi-account-id"))
+                return "account-signed-out";
               if (
                 document.querySelector('.tholi-private-learning [role="alert"]')
               )

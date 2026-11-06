@@ -191,6 +191,50 @@ projects, containers, networks, volumes and private environments were cleaned,
 with default artifacts unchanged. Final eight-case evidence must follow these
 fixture corrections and the rebuilt final source.
 
+Firefox's synthetic sidebar tab was unsuitable for native draft typing: making
+it active correctly triggered the product's other-tab guard. The restart fixture
+now reuses the existing real-widget surface owner, performs actual typing and
+platform-specific clearing, and uses Firefox's genuine toolbar toggle to close
+the native sidebar. Its exact retained-draft, native identity, memory, frame and
+outcome assertions remain. A fresh Windows Firefox run passed **1/1**, including
+the strict graceful shutdown gate, run `2952377a-d8f8-4480-91ff-374ef5b956ff`.
+Evidence is under `output/qa/87-widget-native/2952377a-d8f8-4480-91ff-374ef5b956ff/`;
+report SHA-256 is
+`5bca337226fb02478b39e671fc9358eea2ab33472ea8ab7d70570bdd43332b67`.
+Earlier typing, gesture, visibility and shutdown failures remain separate.
+
+The subsequent configured cohort passed **6/8** and isolated two Firefox
+failures. A bounded Firefox diagnostic confirmed successful PATCH and readback
+records, followed by a compatibility GET returning 429. It also observed a
+site-settings OPTIONS request returning 429 before the mutation dispatched,
+alongside 65 successful preflights. Its report is
+`output/qa/87-configured-web/tholi-smoke-mw4m7xwg-735e0aca/validation.json`.
+The temporary gateway logger recorded only fixed route categories, method and
+status. Its override, private environment and browser probes were removed after
+owned teardown. The default artifact manifest remained unchanged. This evidence
+justifies eliminating redundant read compatibility discovery; it does not
+justify raising gateway or inference limits.
+
+The existing saved-data client now retains only successful public schema-2
+compatibility for its exact service, account, workspace, view and generation.
+Read-only GET operations reuse that proof. Suspend, reset and scope/view changes
+invalidate it; a late old-account reply cannot replace a newer proof. Mutation,
+export and private-query feature checks remain fresh. Every actual request still
+uses its current authentication, host, account binding, signal and final send
+guard. Unsupported or malformed namespace responses clear the matching proof
+without retry or fallback; an ordinary missing item does not.
+
+The permanent regression first reproduced **four discovery calls for four
+reads**, where one is required, in
+`output/qa/87-v2-read-discovery-before.json`. After the correction, all **50/50**
+focused client, website, privacy and API checks passed on Node 24.19.0. Report
+`output/qa/87-v2-read-discovery-focused.json` has SHA-256
+`6464103f5b85e38f3dda065c2e9bd45af82398b536e03e61859fc63ab1976a26`.
+These checks include epoch changes, fresh write/export admission, delayed
+discovery, malformed replies and cancellation/native-grant fencing after a
+cached read. Fresh configured-browser evidence must follow this production
+correction; the earlier six-case result is not relabeled as passing.
+
 ## Database feedback
 
 The default cloud-free stack passed **27 top-level checks and 112 PostgreSQL

@@ -3,11 +3,15 @@ import backendDataPermissions from "../../../../config/backend-data-permissions.
 import firefox from "selenium-webdriver/firefox.js";
 import { test, expect } from "../../../support/browser-test";
 import { openFirefoxExtension } from "../../../support/firefox-extension";
-import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
+import {
+  closeFirefoxSidebar,
+  verifyWebDriverSurfaces,
+  webDriverWidget,
+} from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
 import type { CaptureMetadata } from "../../../../packages/vision/contracts";
 import { createHash } from "node:crypto";
-import { By, Key } from "selenium-webdriver";
+import { Key } from "selenium-webdriver";
 import {
   navigationServiceFixture,
   navigationServicePageHtml,
@@ -530,12 +534,19 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     await app.goal("Show search");
     const before = await app.message({ type: "GET_SESSION" });
     await app.message({ type: "PAUSE" });
-    // Let the live presentation owner persist real typing before suspension;
-    // an out-of-band storage write can race its pending initial draft save.
-    await app.driver.switchTo().window(app.panel);
-    const draft = await app.driver.findElement(
-      By.id("tholi-destination-input"),
-    );
+    // Native typing belongs in the widget on the pinned website. The synthetic
+    // panel tab correctly becomes another tab when it receives focus.
+    const widget = webDriverWidget(app);
+    const closeWidget = async () => {
+      await widget.dock("firefox");
+      await closeFirefoxSidebar(app!.driver);
+      expect(
+        await app!.extension(() =>
+          (globalThis as any).browser.sidebarAction.isOpen({}),
+        ),
+      ).toBe(false);
+    };
+    const draft = await widget.openDraft();
     await draft.clear();
     await draft.sendKeys("Retained after event-page suspension");
     expect(await draft.getAttribute("value")).toBe(
@@ -546,6 +557,7 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       (value) => value.draft === "Retained after event-page suspension",
       "The typed draft is acknowledged before event-page suspension",
     );
+    await closeWidget();
     const settings = {
       url: "http://127.0.0.1:8787",
       token: "SYNTHETIC_PRIVATE_TOKEN_FOR_ISOLATION",
@@ -655,10 +667,7 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     );
     // Later tasks use the background fixture; clear the proven retained draft
     // through its UI owner so they do not mix with unrelated draft suggestions.
-    await current.driver.switchTo().window(current.panel);
-    const restoredDraft = await current.driver.findElement(
-      By.id("tholi-destination-input"),
-    );
+    const restoredDraft = await widget.openDraft();
     await restoredDraft.sendKeys(
       Key.chord(
         current.runtimePlatform.os === "mac" ? Key.COMMAND : Key.CONTROL,
@@ -672,6 +681,7 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       (value) => value.draft === "",
       "Clearing the retained draft is acknowledged before resuming",
     );
+    await closeWidget();
     expect(await current.message({ type: "GET_BACKEND" })).toEqual(settings);
     await app.driver.switchTo().window(app.website);
     expect(
