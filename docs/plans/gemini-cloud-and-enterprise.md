@@ -13,8 +13,18 @@ Issue #25 changes documentation only. The profiles, ports and hosted routes desc
 
 ## Current execution scope
 
-The latest user instruction authorizes the remaining backend, cloud and website
-roadmap work while excluding desktop implementation. This is an execution-scope
+On 2026-11-05 the user authorized [#87](https://github.com/Sammieblz/tholi/issues/87):
+macOS Chrome/Firefox compatibility, customer-funded provider connections and private
+navigation learning. This follows the completed #60 account workspace and replaces
+the earlier stop-after-#60 instruction only for this bounded feature. Implement
+native Mac coverage first, then provider/admission work, private knowledge and the
+website/extension integration. First-run onboarding #61 and the later production,
+commercial and release gates remain separate. No paid resources or external model
+calls are authorized.
+
+The earlier authorization covered remaining backend, cloud and website
+roadmap work while excluding desktop implementation. Its architecture boundaries
+continue to apply to this bounded addition. This is an execution-scope
 amendment, not a new implementation or validation claim. The adopted ADR and its
 dated evidence retain their historical meaning; current capability and acceptance
 evidence belongs to each subsequent issue and pull request.
@@ -45,6 +55,67 @@ The matching GitHub dependencies and scope notes must record this amendment.
 Customer evidence, approved data, cost controls, independent outcome verification
 and each milestone's deployment/release gates remain required. The server never
 acquires an active browser or future native journey or action authority.
+
+### macOS, BYOK and private learning decisions
+
+- Validate the existing Chrome and Firefox extension targets on native Apple
+  Silicon and Intel, using macOS 15 and 26 and standard free public-repository
+  runners. Preserve Windows, current browser minimums, native document identity,
+  host grants, masking and safety budgets. The user reported an interface that
+  opens but cannot guide; versions and error text are unknown. Record demonstrated
+  failures rather than assuming an Apple Silicon or model cause. Native store,
+  permission and screen-reader checks require their own observed evidence.
+- Extend shared browser discovery and owned-process cleanup. Add content-free
+  host/worker/model/storage/perception failure stages and visible recovery through
+  existing lifecycle owners. Do not create a separate Mac engine or desktop app.
+- Signed-in users may store one encrypted connection per provider/account for
+  OpenAI, Anthropic and OpenRouter. Use a dedicated versioned encryption keyring,
+  account/provider/connection-bound authenticated encryption and metadata-only
+  responses. Saving a key makes no provider request. Keys never reach content
+  scripts, extension storage, prompts, logs or exports. Removal deletes Tholi's
+  credential; it does not revoke the provider's actual key.
+- Extend the current model boundary with OpenAI Responses, Anthropic Messages and
+  OpenRouter Chat Completions. The initial curated catalog is `gpt-5.6-terra`,
+  `claude-sonnet-5-5` and `anthropic/claude-sonnet-5.5`. Pin OpenRouter to the
+  approved Anthropic upstream, deny data collection, require supported parameters
+  and disable fallback. Reject arbitrary endpoints and unlisted models. Managed
+  Gemini keeps its existing gates and remains disabled.
+- Customer-funded requests use the existing admission, request/usage ledger and
+  uncertainty fences without managed-credit charges or paid enrollment. Separate
+  customer cost from Tholi liability. Canonical usage v2 includes reasoning once
+  in total output, with nullable cache/reasoning details. Preserve old policy and
+  usage records. Initial development limits remain six generations per 24 hours,
+  two per minute, one foreground request, two generations per journey and the
+  existing input/output/image budgets. These are not commercial promises.
+- Bind the exact connection revision, provider/model/routing policy and retrieval
+  snapshot to each request. Recheck scope and consent before dispatch and response
+  release; never silently retry or substitute a key/provider/model after a failure.
+- Keep the four saved artifact kinds. Introduce an explicitly negotiated
+  `site_knowledge` schema v2 view using new migrations, distinct cursor/cache/sync
+  epochs and new graph UUIDs. Old static records remain unchanged. Extend existing
+  quotas, exports, private-file validation, tombstones and account cleanup.
+- Private learning is separately opt-in per account/workspace/site. Once approved,
+  automatically persist only bounded sanitized structural evidence and verified
+  ordinary outcomes. Provide pause, inspect, forget and delete controls. Local
+  mode stops cloud navigation retrieval, inference and learning transmission.
+- Bound each graph to one origin/normalization version, eight states, 48 controls,
+  16 verified edges and 16 KiB including metadata. Exclude paths, queries, goals,
+  field values, selectors, pixels, geometry, credentials and native identifiers.
+  Omit ambiguous/user-generated labels. A click or proposed action is not verified
+  evidence. Never store final consequential submissions as reusable action edges.
+- Reuse PostgreSQL, BM25 and existing local semantic ranking without a paid
+  embedding service or another database. Filter by current scope, origin, schema,
+  deletion and freshness before ranking; return at most five bundles and 6 KiB
+  within the existing context budget. Fresh perception takes priority. Retain at
+  most 90 days and consider shortcuts only within 30 days with matching structure.
+- Rebind every route hint against current native controls and independently verify
+  outcomes. Measure calls/tokens per completed task as well as completion and stale
+  route rejection. Uploaded history stays private and untrusted; this is stored
+  knowledge improvement, not model training or a community corpus.
+- Develop with local HTTP provider fixtures and zero external model calls. Follow
+  local commit, push, then PR review with the complete deterministic CI gate.
+  Keep versions unchanged during preparation. Deployment, packaging, store updates
+  and archive changes need their separate authorization and release certification.
 
 ## Goals and ownership
 

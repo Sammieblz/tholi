@@ -1,0 +1,79 @@
+name: Native macOS extension validation
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        type: string
+        required: true
+      tier:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  matrix:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: targets
+        run: node scripts/platform-matrix.mjs
+  browsers:
+    if: github.event.repository.private == false
+    needs: matrix
+    runs-on: ${{ matrix.target.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target: ${{ fromJSON(needs.matrix.outputs.targets) }}
+    env:
+      THOLI_BUILD_PREPARED: "1"
+      THOLI_VALIDATION_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+      THOLI_TEST_TIER: ${{ inputs.tier }}
+      THOLI_PLATFORM_VARIANT: ${{ matrix.target.runner }}
+      THOLI_BROWSER_SCALE: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+      - run: node scripts/build-manifest.mjs --verify
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/selenium
+          key: ${{ runner.os }}-${{ runner.arch }}-selenium-${{ hashFiles('config/testing/browser-tools.json') }}-native
+      - run: npm run test:${{ inputs.tier == 'full' && 'full' || 'ci' }} -- --group platform
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-platform-${{ matrix.target.runner }}-${{ github.run_attempt }}
+          path: |
+            output/qa/platform
+            output/qa/timing-*-platform.json
+            output/build-manifest.json
+  verify:
+    if: github.event.repository.private == false
+    needs: browsers
+    runs-on: ubuntu-latest
+    env:
+      THOLI_VALIDATION_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-platform-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: output
+      - run: node scripts/build-manifest.mjs --verify
+      - run: node scripts/verify-platform.mjs

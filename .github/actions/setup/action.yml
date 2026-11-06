@@ -18,4 +18,4 @@ runs:
           assets/ocr
         key: ${{ runner.os }}-inference-${{ hashFiles('assets/model-lock.json', 'assets/ocr-lock.json') }}
     - run: npm ci
-      shell: pwsh
+      shell: bash

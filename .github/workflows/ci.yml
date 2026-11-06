@@ -89,12 +89,18 @@ jobs:
         with:
           name: pr-evidence-containers-${{ github.run_attempt }}
           path: output/qa/local-stack/**/smoke.json
+  native-platform:
+    needs: build
+    uses: ./.github/workflows/native-platform-validation.yml
+    with:
+      artifact_name: ${{ needs.build.outputs.artifact_name }}
+      tier: pr
   validate:
     if: always()
-    needs: [build, tests, containers]
+    needs: [build, tests, containers, native-platform]
     runs-on: windows-latest
     steps:
       - name: Require every fast gate
         shell: pwsh
         run: |
-          if ('${{ needs.build.result }}' -ne 'success' -or '${{ needs.tests.result }}' -ne 'success' -or '${{ needs.containers.result }}' -ne 'success') { exit 1 }
+          if ('${{ needs.build.result }}' -ne 'success' -or '${{ needs.tests.result }}' -ne 'success' -or '${{ needs.containers.result }}' -ne 'success' -or '${{ needs.native-platform.result }}' -ne 'success') { exit 1 }

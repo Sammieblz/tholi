@@ -3,9 +3,17 @@ import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import edge from "selenium-webdriver/edge.js";
 import { existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { attachWebDriverExtension, seleniumBidi } from "./webdriver-extension";
+import {
+  installedBrowserBinary,
+  nativeBrowserScale,
+  resolveBrowserTools,
+} from "./browser-tools";
+import {
+  attachWebDriverExtension,
+  seleniumBidi,
+  setNativeViewport,
+} from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
@@ -26,10 +34,17 @@ export async function openBrandedExtension(
     "--enable-unsafe-extension-debugging",
     "--remote-debugging-pipe",
   );
+  const scale = nativeBrowserScale();
+  if (scale !== undefined)
+    options.addArguments(`--force-device-scale-factor=${scale}`);
   options.set("webSocketUrl", true);
   const builder = new Builder().forBrowser(
     name === "edge" ? "MicrosoftEdge" : "chrome",
   );
+  if (name === "chrome") {
+    const binary = installedBrowserBinary("chrome");
+    if (binary) (options as chrome.Options).setChromeBinaryPath(binary);
+  }
   if (name === "brave") {
     const binary =
       process.env.THOLI_BRAVE_BINARY ||
@@ -45,30 +60,19 @@ export async function openBrandedExtension(
     (options as chrome.Options).setChromeBinaryPath(binary);
     // Hosted runners put Chrome's driver on PATH. Resolve Brave's own engine
     // instead, which can be a different Chromium major from installed Chrome.
-    const paths = JSON.parse(
-      execFileSync(
-        resolve(
-          "node_modules/selenium-webdriver/bin/windows/selenium-manager.exe",
-        ),
-        [
-          "--browser",
-          "chrome",
-          "--browser-path",
-          binary,
-          "--skip-driver-in-path",
-          "--output",
-          "json",
-          "--avoid-stats",
-        ],
-        { encoding: "utf8" },
-      ),
-    ).result;
-    builder.setChromeService(new chrome.ServiceBuilder(paths.driver_path));
+    const paths = resolveBrowserTools({
+      browser: "chrome",
+      binary,
+      skipDriverInPath: true,
+    });
+    builder.setChromeService(new chrome.ServiceBuilder(paths.driverPath));
   }
   if (name === "edge") builder.setEdgeOptions(options as edge.Options);
   else builder.setChromeOptions(options as chrome.Options);
   const driver = await builder.build();
   try {
+    if (scale !== undefined)
+      await setNativeViewport(driver, { width: 1280, height: 900 });
     await driver.manage().setTimeouts({ script: 35000, pageLoad: 30000 });
     const installed = await (
       driver as typeof driver & {

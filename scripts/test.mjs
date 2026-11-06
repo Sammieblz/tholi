@@ -97,6 +97,7 @@ const browserGroups = {
   integration: ["nlp", "multi-app", "continuity", "reliability"],
   ui: ["ui-extension", "ui-website", "ui-website-firefox"],
   firefox: ["firefox-extension"],
+  platform: ["platform-chrome", "platform-firefox", "platform-vision"],
   brands: ["branded-browsers"],
   "browser-performance": ["browser-performance"],
   live: ["live-desktop", "live-narrow"],

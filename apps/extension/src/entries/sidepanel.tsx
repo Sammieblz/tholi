@@ -1,15 +1,14 @@
-import { api } from "../platform/api";
 import { createRoot } from "react-dom/client";
 import { GuidanceController } from "../ui/app/GuidanceController";
+import { WidgetRegistration } from "../ui/app/WidgetRegistration";
 
 const root = document.getElementById("root")!;
-if (location.pathname.endsWith("/widget.html")) {
-  void api.runtime.sendMessage({ type: "UI_REGISTER" }).then((result) => {
-    if (result.error) {
-      root.textContent =
-        "Reconnecting to this website. Open Tholi from the toolbar if access is needed.";
-      return;
-    }
-    createRoot(root).render(<GuidanceController widget />);
-  });
-} else createRoot(root).render(<GuidanceController />);
+createRoot(root).render(
+  location.pathname.endsWith("/widget.html") ? (
+    <WidgetRegistration>
+      <GuidanceController widget />
+    </WidgetRegistration>
+  ) : (
+    <GuidanceController />
+  ),
+);

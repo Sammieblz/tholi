@@ -4,6 +4,10 @@ import {
   type FeatureExtractionPipeline,
 } from "@huggingface/transformers";
 import { MODEL, DIMENSIONS } from "./constants";
+import {
+  LocalEngineError,
+  modelInitializationFailure,
+} from "./local-engine-error";
 export { MODEL, MODEL_REVISION, DIMENSIONS } from "./constants";
 export interface Embedder {
   embed(texts: string[], signal?: AbortSignal): Promise<number[][]>;
@@ -27,12 +31,24 @@ export class MiniLM implements Embedder {
       env.backends.onnx.wasm.proxy = false;
       if (this.wasmRoot) env.backends.onnx.wasm.wasmPaths = this.wasmRoot;
     }
-    this.extractor ||= pipeline("feature-extraction", MODEL, {
-      dtype: "q8",
-      device: this.wasmRoot ? "wasm" : "cpu",
-      local_files_only: true,
-      session_options: { intraOpNumThreads: 1, interOpNumThreads: 1 },
-    }) as Promise<FeatureExtractionPipeline>;
+    if (!this.extractor) {
+      const pending: Promise<FeatureExtractionPipeline> = Promise.resolve()
+        .then(
+          () =>
+            pipeline("feature-extraction", MODEL, {
+              dtype: "q8",
+              device: this.wasmRoot ? "wasm" : "cpu",
+              local_files_only: true,
+              session_options: { intraOpNumThreads: 1, interOpNumThreads: 1 },
+            }) as Promise<FeatureExtractionPipeline>,
+        )
+        .catch((failure: unknown) => {
+          // A failed attempt must not poison the worker or clear a newer lifetime.
+          if (this.extractor === pending) this.extractor = undefined;
+          throw modelInitializationFailure(failure);
+        });
+      this.extractor = pending;
+    }
     const extractor = await this.extractor;
     const result: number[][] = [];
     // Small batches let foreground queries/cancellation run between inference calls.
@@ -52,14 +68,17 @@ export class MiniLM implements Embedder {
         vector.length !== DIMENSIONS ||
         vector.some((v) => !Number.isFinite(v))
       )
-        throw new Error("Invalid MiniLM vector");
+        throw new LocalEngineError("MODEL_OUTPUT_INVALID");
       result.push(vector);
       signal?.throwIfAborted();
     }
     return result;
   }
   async dispose() {
-    if (this.extractor) await (await this.extractor).dispose();
+    const pending = this.extractor;
     this.extractor = undefined;
+    // Initialization has already reported its failure to the request owner.
+    const extractor = await pending?.catch(() => undefined);
+    await extractor?.dispose();
   }
 }

@@ -12,6 +12,24 @@ export interface SeleniumBidi {
 export function seleniumBidi(driver: WebDriver) {
   return (driver as unknown as { getBidi(): Promise<SeleniumBidi> }).getBidi();
 }
+/** WebDriver window bounds include chrome; fixtures specify the content viewport. */
+export async function setNativeViewport(
+  driver: WebDriver,
+  viewport: { width: number; height: number },
+) {
+  await driver.manage().window().setRect(viewport);
+  const inset = await driver.executeScript<{ x: number; y: number }>(() => ({
+    x: outerWidth - innerWidth,
+    y: outerHeight - innerHeight,
+  }));
+  await driver
+    .manage()
+    .window()
+    .setRect({
+      width: viewport.width + inset.x,
+      height: viewport.height + inset.y,
+    });
+}
 export async function attachWebDriverExtension(
   driver: WebDriver,
   website: string,
@@ -167,6 +185,14 @@ export async function attachWebDriverExtension(
     site,
     waitFor,
     version: (await driver.getCapabilities()).get("browserVersion") as string,
+    platform: (await driver.getCapabilities()).get("platformName") as string,
+    runtimePlatform: await extension(() => {
+      const api = (globalThis as any).browser || (globalThis as any).chrome;
+      return api.runtime.getPlatformInfo() as Promise<{
+        os: string;
+        arch: string;
+      }>;
+    }),
     extension,
     async start() {
       await driver.switchTo().window(website);

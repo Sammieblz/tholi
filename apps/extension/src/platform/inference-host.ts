@@ -1,32 +1,42 @@
 import { api, browserTarget, chromiumApi } from "./api";
 import { createInferenceHost } from "../inference/worker-host";
+import { LocalEngineError } from "../../../../packages/nlp/local-engine-error";
 let creating: Promise<void> | undefined;
 let disposing: Promise<void> | undefined;
 let host: ReturnType<typeof createInferenceHost> | undefined;
+function throwHostFailure(failure: unknown, signal?: AbortSignal): never {
+  signal?.throwIfAborted();
+  if (failure instanceof Error && failure.name === "AbortError") throw failure;
+  throw new LocalEngineError("HOST_UNAVAILABLE");
+}
 export async function ensureInferenceHost(signal?: AbortSignal) {
-  await disposing;
-  signal?.throwIfAborted();
-  if (browserTarget() === "firefox") {
-    host ||= createInferenceHost();
-    return;
+  try {
+    await disposing;
+    signal?.throwIfAborted();
+    if (browserTarget() === "firefox") {
+      host ||= createInferenceHost();
+      return;
+    }
+    const native = chromiumApi();
+    if (!native?.offscreen?.createDocument)
+      throw new LocalEngineError("HOST_UNAVAILABLE");
+    const contexts = await native.runtime.getContexts({
+      contextTypes: [native.runtime.ContextType.OFFSCREEN_DOCUMENT],
+    });
+    signal?.throwIfAborted();
+    if (contexts.length) return;
+    await (creating ||= native.offscreen
+      .createDocument({
+        url: "offscreen.html",
+        reasons: [native.offscreen.Reason.WORKERS],
+        justification: "Run the packaged CPU NLP model in a local worker.",
+      })
+      .finally(() => {
+        creating = undefined;
+      }));
+  } catch (failure) {
+    throwHostFailure(failure, signal);
   }
-  const native = chromiumApi();
-  if (!native?.offscreen?.createDocument)
-    throw Error("This browser cannot host local inference.");
-  const contexts = await native.runtime.getContexts({
-    contextTypes: [native.runtime.ContextType.OFFSCREEN_DOCUMENT],
-  });
-  signal?.throwIfAborted();
-  if (contexts.length) return;
-  await (creating ||= native.offscreen
-    .createDocument({
-      url: "offscreen.html",
-      reasons: [native.offscreen.Reason.WORKERS],
-      justification: "Run the packaged CPU NLP model in a local worker.",
-    })
-    .finally(() => {
-      creating = undefined;
-    }));
 }
 export async function requestInferenceHost(
   message: Record<string, unknown>,
@@ -35,9 +45,13 @@ export async function requestInferenceHost(
   signal?.throwIfAborted();
   await ensureInferenceHost(signal);
   signal?.throwIfAborted();
-  return browserTarget() === "firefox"
-    ? host!.request(message)
-    : api.runtime.sendMessage({ ...message, target: "offscreen" });
+  try {
+    return await (browserTarget() === "firefox"
+      ? host!.request(message)
+      : api.runtime.sendMessage({ ...message, target: "offscreen" }));
+  } catch (failure) {
+    throwHostFailure(failure, signal);
+  }
 }
 export async function disposeInferenceHost() {
   return (disposing ||= (async () => {

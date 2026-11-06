@@ -18,6 +18,8 @@ for (const browser of ["chrome", "edge", "brave"] as const)
               name: browser,
               version: app.version,
               target: "chromium",
+              platform: app.platform,
+              runtimePlatform: app.runtimePlatform,
             }),
           ),
           contentType: "application/json",

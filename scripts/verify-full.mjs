@@ -5,6 +5,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { requireFullEvidence, digest } from "./evidence.mjs";
 import assert from "node:assert/strict";
 import { syncVersion } from "./version.mjs";
+import { platformEvidence } from "./verify-platform.mjs";
 export async function verifyFull() {
   await syncVersion("--check");
   await verifyBuildManifest();
@@ -45,6 +46,11 @@ export async function verifyFull() {
       "Evidence must match both target builds",
     );
   targetMatch(acceptance);
+  await platformEvidence(buildTargets, {
+    full: true,
+    artifactFiles: files,
+    identity,
+  });
   const reports = [
     "output/qa/unit.json",
     "output/qa/ui-build.json",

@@ -23,7 +23,10 @@ real local identity, private route isolation, all four saved-data types, exact
 credit and storage displays, account exports and pending deletion. These checks
 do not establish paid billing, deployment or the deferred live quality gate.
 
-Use Windows and Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
+Use Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
+Windows retains the existing complete validation owners. Native macOS coverage
+uses the same built extension targets through the shared browser harness, as
+described in the [macOS and provider feature record](macos-byok-learning-validation.md).
 
 | Purpose                                          | Command                                      |
 | ------------------------------------------------ | -------------------------------------------- |
@@ -140,7 +143,17 @@ Retain permanent tests for distinct contracts or regressions. Search existing ow
 
 ## Browser targets
 
-The normal build creates both targets. `node scripts/test.mjs firefox` uses Selenium/geckodriver to execute installed Firefox. Resolution checks Windows App Paths, including Microsoft Store registration; `THOLI_FIREFOX_BINARY` selects an isolated official build if needed. Playwright Firefox projects test the website. Branded checks use installed Chrome/Edge and pinned official Brave portable (`npm run fetch:browser-tools`, or `THOLI_BRAVE_BINARY`). Disposable profiles never alter a user profile.
+The normal build creates both targets. `node scripts/test.mjs firefox` uses Selenium/geckodriver to execute installed Firefox. Resolution checks Windows App Paths, including Microsoft Store registration, and macOS application bundles. `THOLI_FIREFOX_BINARY` and `THOLI_CHROME_BINARY` select explicit isolated binaries or macOS app bundles; existing driver overrides remain available. Selenium Manager selects platform-correct drivers. Playwright Firefox projects test the website. Branded checks use installed Chrome/Edge and pinned official Brave portable (`npm run fetch:browser-tools`, or `THOLI_BRAVE_BINARY`). Disposable profiles never alter a user profile.
+
+The public-repository native matrix uses the standard `macos-15`,
+`macos-15-intel`, `macos-26` and `macos-26-intel` runners. It downloads the caller's
+immutable build and runs `npm run test:ci -- --group platform`, or the full-tier
+equivalent. Each target records OS, host and browser architecture, browser/driver
+versions and both extension digests separately. `THOLI_BROWSER_SCALE=2` requests
+a measured 2x browser backing scale across the existing zoom/privacy checks; it
+does not certify a physical Retina display. Full certification requires all four
+native reports from the same full run and build. Native store installation,
+permission interaction and screen-reader speech remain separate checks.
 
 Full validation includes paired `browser-performance` measurements on the same hardware, with unchanged 750 ms warm planning, 2000 ms warm OCR and 1000 ms Stop limits. Cold timings and busy-page frames are reported without promising identical execution times. Both target digests, browser versions and one validation identity are required. Frozen acceptance IDs use shared contracts and independent oracles; pure engine/model tests run once.
 

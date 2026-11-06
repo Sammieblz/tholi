@@ -304,6 +304,8 @@ test("Firefox uses native document identity, local planning and independently ve
           name: "firefox",
           version: app.version,
           target: "firefox",
+          platform: app.platform,
+          runtimePlatform: app.runtimePlatform,
         }),
       ),
       contentType: "application/json",

@@ -6,11 +6,14 @@ import { acceptanceServer } from "../../../support/fixture-server";
 import { nativeVisionPixels } from "../../../support/native-vision";
 import { privateCapturePage } from "../../../fixtures/vision/private-page";
 import { readFile } from "node:fs/promises";
+import { nativeBrowserScale } from "../../../support/browser-tools";
+import { matchesBrowserBackingScale } from "../../../../scripts/verify-platform.mjs";
 
 // Private captures and prepared PNGs remain inside the installed extension/worker.
 test.use({ trace: "off", screenshot: "off", video: "off" });
 for (const target of ["chromium", "firefox"] as const) {
   test(`${target} native private pixels are opaque before navigation crops, OCR and comparison`, async ({}, info) => {
+    const requestedBackingScale = nativeBrowserScale();
     const fixture = await acceptanceServer({
       "/acceptance/fixture": privateCapturePage,
     });
@@ -26,6 +29,8 @@ for (const target of ["chromium", "firefox"] as const) {
             name: target === "chromium" ? "chrome" : "firefox",
             version: app.version,
             target,
+            platform: app.platform,
+            runtimePlatform: app.runtimePlatform,
           }),
         ),
         contentType: "application/json",
@@ -74,6 +79,11 @@ for (const target of ["chromium", "firefox"] as const) {
         });
         measurements.push(proof);
         expect(proof.browserZoom).toBe(zoom);
+        if (requestedBackingScale !== undefined)
+          expect(
+            matchesBrowserBackingScale(proof, requestedBackingScale),
+            "The native browser must observe the requested backing scale at its actual zoom.",
+          ).toBe(true);
         expect(proof.privateRectCount).toBeGreaterThanOrEqual(21);
         expect(proof.maskCount).toBeGreaterThanOrEqual(proof.privateRectCount);
         expect(proof.identityMatched).toBe(true);
@@ -215,6 +225,7 @@ for (const target of ["chromium", "firefox"] as const) {
             humanActivation: "pending",
             firefoxClassicGutter: "unmeasured and rejected by production",
             imagesPersisted: false,
+            requestedBackingScale: requestedBackingScale ?? null,
             measurements,
             lease,
             animationRejected,

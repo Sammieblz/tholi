@@ -144,8 +144,14 @@ jobs:
         with:
           name: full-traces-${{ matrix.group }}-${{ github.run_attempt }}
           path: test-results
+  native-platform:
+    needs: build
+    uses: ./.github/workflows/native-platform-validation.yml
+    with:
+      artifact_name: ${{ needs.build.outputs.artifact_name }}
+      tier: full
   certify:
-    needs: [build, tests]
+    needs: [build, tests, native-platform]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -157,6 +163,11 @@ jobs:
         with:
           path: output
           pattern: full-evidence-*-${{ github.run_attempt }}
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          path: output
+          pattern: native-platform-*-${{ github.run_attempt }}
           merge-multiple: true
       - run: node scripts/build-manifest.mjs --verify
       - run: node scripts/verify-full.mjs

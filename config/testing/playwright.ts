@@ -81,6 +81,23 @@ const projects: Project[] = [
       : { grepInvert: /all website routes reflow|scroll companion stays/ }),
   }),
 ];
+if (browserGroup === "platform")
+  projects.push(
+    project("platform-chrome", "platform", "extension/branded", {
+      grep: /chrome loads the built Chromium target/,
+      timeout: 120_000,
+      use: { trace: "off", screenshot: "off", video: "off" },
+    }),
+    project("platform-firefox", "platform", "extension/firefox", {
+      timeout: 120_000,
+      use: { trace: "off", screenshot: "off", video: "off" },
+    }),
+    project("platform-vision", "platform", "extension/performance", {
+      testMatch: "capture-privacy.spec.ts",
+      timeout: 240_000,
+      use: { trace: "off", screenshot: "off", video: "off" },
+    }),
+  );
 if (browserGroup === "identity")
   projects.push(
     project("native-identity", "identity", "identity", {
@@ -183,6 +200,7 @@ export default defineConfig({
       "navigation-baseline",
       "firefox",
       "brands",
+      "platform",
       "browser-performance",
       "acceptance-firefox",
       "identity",
