@@ -91,14 +91,128 @@ for (const width of [375, 768, 1024, 1440])
             (element) => element.getAnimations({ subtree: true }).length,
           ),
         ).toBe(0);
+        await page.evaluate(() =>
+          window.scrollTo({ top: 0, behavior: "instant" }),
+        );
         await page.screenshot({
           path: info.outputPath(`signup-${width}-${theme}-${step}.png`),
           fullPage: true,
         });
+        if (step === 2) {
+          await page
+            .getByRole("button", {
+              name: "Floating widget preview",
+              exact: true,
+            })
+            .click();
+          await expect(scene.locator(".tholi-scene-browser")).toHaveAttribute(
+            "data-surface",
+            "widget",
+          );
+          await expect(scene.locator("figcaption")).toContainText(
+            "Floating widget guidance",
+          );
+          expect(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          ).toBe(true);
+          await expect
+            .poll(() =>
+              scene.evaluate(
+                (element) => element.getAnimations({ subtree: true }).length,
+              ),
+            )
+            .toBe(0);
+          await page.evaluate(() =>
+            window.scrollTo({ top: 0, behavior: "instant" }),
+          );
+          await page.screenshot({
+            path: info.outputPath(`signup-${width}-${theme}-widget.png`),
+            fullPage: true,
+          });
+          await page
+            .getByRole("button", { name: "Sidebar preview", exact: true })
+            .click();
+        }
         if (step < 3)
           await page.getByRole("button", { name: "Next", exact: true }).click();
       }
     });
+
+test("signup onboarding previews explain guidance with bounded motion and keep keyboard choices immediate", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/signup?step=2");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const scene = page.locator(".tholi-introduction-scene");
+  await expect(scene).toHaveAttribute("data-playing", "true");
+  const motion = await scene
+    .locator(".tholi-introduction-art")
+    .evaluate((element) =>
+      element.getAnimations({ subtree: true }).map((animation) => ({
+        name: animation instanceof CSSAnimation ? animation.animationName : "",
+        duration: animation.effect?.getTiming().duration,
+        iterations: animation.effect?.getTiming().iterations,
+      })),
+    );
+  expect(
+    motion.some((animation) => animation.name === "tholi-introduction-explain"),
+  ).toBe(true);
+  expect(
+    motion.every(
+      (animation) =>
+        typeof animation.duration === "number" &&
+        animation.duration <= 2400 &&
+        animation.iterations === 1,
+    ),
+  ).toBe(true);
+  await expect
+    .poll(() =>
+      scene.evaluate(
+        (element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState === "running").length,
+      ),
+    )
+    .toBe(0);
+  await expect(page).toHaveURL(/\/signup\?step=2$/);
+  await page.setViewportSize({ width: 1280, height: 320 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect
+    .poll(() =>
+      scene.evaluate((element) => element.getBoundingClientRect().bottom),
+    )
+    .toBeLessThan(0);
+  await expect(scene).toHaveAttribute("data-playing", "false");
+  expect(
+    await scene
+      .locator(".tholi-introduction-art")
+      .evaluate((element) => element.getAnimations({ subtree: true }).length),
+  ).toBe(0);
+  const preview = page.getByRole("button", {
+    name: "Floating widget preview",
+    exact: true,
+  });
+  await preview.focus();
+  await page.keyboard.press("Space");
+  await expect(preview).toBeFocused();
+  await expect(preview).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-input", "keyboard");
+  await expect(scene.locator(".tholi-scene-browser")).toHaveAttribute(
+    "data-surface",
+    "widget",
+  );
+  expect(
+    await scene
+      .locator(".tholi-introduction-art")
+      .evaluate((element) => element.getAnimations({ subtree: true }).length),
+  ).toBe(0);
+});
 
 test("mobile account-free navigation offers browser selection and both stores", async ({
   page,

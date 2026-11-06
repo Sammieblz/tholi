@@ -3,6 +3,7 @@
   margin: 20px auto 64px;
   color: var(--ink);
   font-family: var(--web-font-body, var(--font-body));
+  scroll-margin-top: 108px;
 }
 .tholi-introduction-progress {
   display: flex;
@@ -48,6 +49,7 @@
   letter-spacing: -0.03em;
   margin: 20px 0 24px;
   text-wrap: balance;
+  scroll-margin-top: 108px;
 }
 .tholi-introduction-copy > p {
   max-width: 42ch;
@@ -58,6 +60,26 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.07em;
+}
+.tholi-introduction-examples {
+  border-left: 2px solid var(--amber);
+  padding-left: 18px;
+  margin-block: 24px;
+}
+.tholi-introduction-examples p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.tholi-introduction-examples ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tholi-introduction-examples li + li {
+  margin-top: 8px;
 }
 .tholi-introduction-actions {
   display: flex;
@@ -127,11 +149,11 @@
   margin: 0;
 }
 .tholi-introduction-art {
-  aspect-ratio: 1.2;
   display: grid;
   place-items: center;
   border-block: 1px solid var(--line);
-  padding: 30px 0;
+  padding-block: 24px;
+  min-height: 400px;
 }
 .tholi-introduction-scene figcaption {
   padding-top: 16px;
@@ -145,130 +167,321 @@
   border: 1px solid var(--field-line);
   border-radius: 12px;
   overflow: hidden;
+  font-size: clamp(11px, 1.05vw, 14px);
 }
 .tholi-scene-toolbar {
   display: flex;
-  gap: 5px;
-  padding: 14px;
+  gap: 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   align-items: center;
+  color: var(--muted);
+  font-size: 11px;
 }
-.tholi-scene-toolbar > i {
+.tholi-scene-window-dots {
+  display: flex;
+  gap: 4px;
+}
+.tholi-scene-window-dots i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--field-line);
 }
-.tholi-scene-toolbar > span {
-  font-size: 10px;
-  color: var(--muted);
-  margin-left: 10px;
+.tholi-scene-toolbar > svg {
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
 }
 .tholi-scene-browser-body {
   display: grid;
-  grid-template-columns: 1fr 0.85fr;
-  min-height: 240px;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 356px;
+  position: relative;
 }
 .tholi-scene-page {
-  padding: 24px 18px;
+  padding: 20px 16px;
   min-width: 0;
 }
-.tholi-scene-page > span {
-  font-size: 8px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+.tholi-scene-workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
 }
-.tholi-scene-page strong {
-  display: block;
-  font-size: 19px;
+.tholi-scene-workspace-header strong {
+  font-size: 13px;
   line-height: 1.3;
-  margin-block: 18px;
 }
-.tholi-scene-page > div {
+.tholi-scene-workspace-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  font-size: 11px;
-  padding: 10px 6px;
-  margin-bottom: 18px;
+  border-radius: 7px;
 }
-.tholi-scene-page > .tholi-scene-highlight {
+.tholi-scene-workspace-mark svg {
+  width: 16px;
+  height: 16px;
+}
+.tholi-scene-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tholi-scene-menu > span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 6px;
+  color: var(--muted);
+  line-height: 1.4;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+.tholi-scene-menu svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.tholi-scene-menu > .tholi-scene-highlight {
+  color: var(--ink);
+  border-color: var(--field-line);
   outline: 2px solid var(--jade);
   outline-offset: 3px;
 }
-.tholi-scene-page > i {
+.tholi-scene-workspace-content {
+  margin-top: 24px;
+  min-width: 0;
+}
+.tholi-scene-workspace-content > span {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.tholi-scene-workspace-content > strong {
   display: block;
-  height: 5px;
-  margin-block: 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  margin-block: 8px 14px;
+}
+.tholi-scene-document {
+  margin-top: 12px;
+}
+.tholi-scene-document i {
+  display: block;
+  height: 4px;
+  margin-top: 7px;
   background: var(--line);
   border-radius: 2px;
 }
-.tholi-scene-page > i:last-child {
+.tholi-scene-document i:last-child {
   width: 60%;
 }
 .tholi-scene-guide {
-  border-left: 1px solid var(--line);
-  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  border-left: 1px solid var(--line);
+  padding: 18px 14px 14px;
+  background: var(--surface);
 }
-.tholi-scene-guide .tholi-wayfinder {
-  width: 24px;
-  height: 24px;
-}
-.tholi-scene-guide > strong {
-  display: block;
-  font-size: 13px;
-  margin-block: 10px;
-}
-.tholi-scene-request {
-  border-bottom: 2px solid var(--amber);
-  padding-block: 10px;
-  font-size: 12px;
-}
-.tholi-scene-guide > p {
-  font-size: 11px;
-  line-height: 1.7;
-}
-.tholi-scene-guide > span:last-child {
+.tholi-scene-guide-brand {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 20px;
-  font-size: 10px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
-.tholi-scene-guide > span:last-child svg {
+.tholi-scene-guide .tholi-wayfinder {
+  width: 22px;
+  height: 22px;
+}
+.tholi-scene-guide-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.tholi-scene-guide-tabs > span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-bottom: 8px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.tholi-scene-guide-tabs [data-selected="true"] {
+  color: var(--ink);
+  border-color: var(--amber);
+  font-weight: 700;
+}
+.tholi-scene-guide-tabs svg {
   width: 12px;
   height: 12px;
 }
-.tholi-scene-guide > span:last-child span {
-  margin-left: auto;
+.tholi-scene-conversation > p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.tholi-scene-request {
+  border: 1px solid var(--field-line);
+  border-radius: 9px 9px 2px 9px;
+  padding: 12px 10px;
+  line-height: 1.55;
+  background: var(--card);
+}
+.tholi-scene-guide-start {
+  display: block;
+  padding-block: 9px;
+  margin-top: 12px;
+  text-align: center;
+  background: var(--jade);
+  color: var(--on-jade);
+  font-weight: 700;
+  border-radius: 6px;
+}
+.tholi-scene-step-label {
+  color: var(--jade);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.tholi-scene-instruction p {
+  margin-block: 12px;
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+.tholi-scene-destination {
+  display: block;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.tholi-scene-guide-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 20px;
+  margin-top: auto;
+  font-size: 10px;
+}
+.tholi-scene-guide-controls span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  border: 1px solid var(--field-line);
+  border-radius: 5px;
+  padding-block: 7px;
+}
+.tholi-scene-guide-controls svg {
+  width: 12px;
+  height: 12px;
+}
+.tholi-scene-browser[data-surface="widget"] .tholi-scene-browser-body {
+  grid-template-columns: 1fr;
+}
+.tholi-scene-browser[data-surface="widget"] .tholi-scene-workspace-layout {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr;
+  gap: 24px;
+}
+.tholi-scene-browser[data-surface="widget"] .tholi-scene-workspace-content {
+  margin-top: 0;
+}
+.tholi-scene-browser[data-surface="widget"] .tholi-scene-guide {
+  position: absolute;
+  bottom: 16px;
+  right: 14px;
+  width: 51%;
+  border: 1px solid var(--field-line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.tholi-scene-surface-choice {
+  padding-block: 16px 4px;
+}
+.tholi-scene-surface-choice > span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.tholi-scene-surface-choice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.tholi-scene-surface-choice button {
+  padding: 10px 2px;
+  font-size: 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.tholi-introduction-scene
+  .tholi-scene-surface-choice
+  button[aria-pressed="true"] {
+  background: transparent;
+  border-color: var(--amber);
+  color: var(--ink);
+  font-weight: 700;
 }
 .tholi-scene-choice {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
+  gap: 24px;
   width: 100%;
 }
-.tholi-scene-choice > .tholi-wayfinder-host {
+.tholi-scene-choice-heading {
   grid-column: 1 / -1;
-  justify-self: center;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: var(--web-font-display, var(--font-display));
+  font-size: clamp(22px, 2.5vw, 30px);
+  line-height: 1.2;
 }
-.tholi-scene-choice > div {
+.tholi-scene-choice-area {
   display: flex;
   flex-direction: column;
   gap: 10px;
   border-top: 2px solid var(--line);
-  padding-top: 22px;
+  padding-top: 20px;
 }
-.tholi-scene-choice > div:first-of-type {
+.tholi-scene-choice-area:nth-child(2) {
   border-color: var(--amber);
 }
-.tholi-scene-choice > div > svg {
+.tholi-scene-choice-area > svg {
   color: var(--jade);
   width: 32px;
   height: 32px;
-  margin-bottom: 10px;
 }
-.tholi-scene-choice > div > span {
+.tholi-scene-choice-area > span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.tholi-scene-private-record {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.tholi-scene-private-record small {
+  display: block;
   color: var(--muted);
   font-size: 12px;
 }
@@ -306,6 +519,18 @@
     transform: none;
   }
 }
+@keyframes tholi-introduction-follow {
+  0%,
+  35% {
+    opacity: 0.2;
+    transform: translateY(8px);
+  }
+  70%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   html:not([data-input="keyboard"])
     .tholi-introduction-scene[data-playing="true"]
@@ -317,9 +542,14 @@
     :is(
       .tholi-scene-request,
       .tholi-scene-highlight,
-      .tholi-scene-choice > div
+      .tholi-scene-choice-area
     ) {
     animation: tholi-introduction-explain 2.4s var(--ease-out) both;
+  }
+  html:not([data-input="keyboard"])
+    .tholi-introduction-scene[data-playing="true"]
+    :is(.tholi-scene-guide-start, .tholi-scene-instruction) {
+    animation: tholi-introduction-follow 2.4s var(--ease-out) both;
   }
   .tholi-introduction-actions :is(button, a) {
     transition: transform 140ms var(--ease-out);
@@ -348,13 +578,19 @@
     gap: 24px;
   }
   .tholi-introduction-art {
-    aspect-ratio: auto;
+    min-height: 0;
     padding-block: 20px;
   }
   .tholi-introduction-copy > p {
     max-width: none;
   }
-  .tholi-scene-browser-body {
-    min-height: 210px;
+  .tholi-scene-page {
+    padding-inline: 12px;
+  }
+  .tholi-scene-guide {
+    padding-inline: 12px;
+  }
+  .tholi-scene-choice {
+    gap: 18px;
   }
 }

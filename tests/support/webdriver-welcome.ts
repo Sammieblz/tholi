@@ -45,6 +45,19 @@ export async function verifyFreshWelcomeSetup(app: App) {
   expect(await welcomeTabCount(app)).toBe(1);
   const welcome = await openWelcomeSetup(app);
   expect(welcome).toBeTruthy();
+  await app.driver
+    .findElement(
+      By.xpath('//button[normalize-space(.)="Floating widget preview"]'),
+    )
+    .click();
+  expect(
+    await app.driver
+      .findElement(By.css(".welcome-choice .tholi-scene-browser"))
+      .getAttribute("data-surface"),
+  ).toBe("widget");
+  await app.driver
+    .findElement(By.xpath('//button[normalize-space(.)="Sidebar preview"]'))
+    .click();
   const signup = await app.driver.wait(async () => {
     const signup = await app.driver.findElement(
       By.xpath('//button[normalize-space(.)="Sign up"]'),

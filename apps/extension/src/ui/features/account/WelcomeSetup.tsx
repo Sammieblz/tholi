@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Introduction } from "../../../../../../packages/ui/onboarding";
+import {
+  Introduction,
+  IntroductionPreview,
+} from "../../../../../../packages/ui/onboarding";
 import { Wayfinder } from "../../../../../../packages/ui/WayfinderMark";
 import { useInputModality } from "../../../../../../packages/ui/motion/useInputModality";
 import { api } from "../../../platform/api";
@@ -255,8 +258,9 @@ export function WelcomeSetup() {
               </p>
               <h1>Find your way forward.</h1>
               <p>
-                Welcome to Tholi. Get clear guidance on the website in front of
-                you, while you stay in control.
+                Less searching through menus. A clearer next step. Tell Tholi
+                what you want to do, then follow guidance on the website while
+                you stay in control of every click.
               </p>
               <div className="welcome-actions">
                 <button
@@ -283,10 +287,7 @@ export function WelcomeSetup() {
                 enable cloud processing.
               </p>
             </div>
-            <div className="welcome-mark" aria-hidden="true">
-              <Wayfinder state="guiding" animate={false} />
-              <span>Your next step, made clear.</span>
-            </div>
+            <IntroductionPreview step={2} />
           </section>
         )}
       </main>

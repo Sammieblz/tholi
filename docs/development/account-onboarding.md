@@ -71,3 +71,19 @@ homepage GSAP motion remains separate. No animation dependency was added.
 
 Validation evidence is recorded in [the feature validation record](testing/account-onboarding-validation.md).
 Native store installation and screen-reader checks remain pending until performed.
+
+## Product showcase
+
+The shared `IntroductionPreview` also appears on the initial extension welcome
+screen. It illustrates a natural-language request in Conversation, a grounded
+next step in Guide, and separate Local/account choices. The Sidebar preview and
+Floating widget preview buttons change presentation only. They never control a
+website, select an extension surface or establish task progress.
+
+Pointer chapter changes return to the introduction so the new scene can be seen.
+Keyboard changes focus the heading immediately with motion suppressed. Examples
+come from the public help guides, and no illustrated click claims arrival.
+Pressed preview choices use a gold underline and a native pressed state, with no
+filled selection pill. Existing fonts, tokens and Wayfinder artwork are reused.
+
+Fresh refinement evidence is in [the showcase validation record](testing/account-onboarding-showcase-validation.md).

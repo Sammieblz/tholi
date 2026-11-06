@@ -16,7 +16,8 @@
 .welcome-shell main {
   min-height: 60vh;
 }
-.welcome-shell h1 {
+.welcome-choice h1,
+.welcome-complete h1 {
   font-family: var(--web-font-display);
   font-size: clamp(40px, 6vw, 76px);
   font-weight: 500;
@@ -31,8 +32,8 @@
 }
 .welcome-choice {
   display: grid;
-  grid-template-columns: 1fr 0.8fr;
-  gap: 64px;
+  grid-template-columns: 1fr 1.1fr;
+  gap: clamp(32px, 5vw, 64px);
   align-items: center;
 }
 .welcome-choice > div:first-child {
@@ -49,19 +50,6 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-block: 28px 16px;
-}
-.welcome-mark {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  padding-block: 64px;
-  border-block: 1px solid var(--line);
-  color: var(--muted);
-}
-.welcome-mark .tholi-wayfinder {
-  width: 160px;
-  height: 160px;
 }
 .welcome-local {
   display: flex;
@@ -112,9 +100,6 @@
   .welcome-choice {
     grid-template-columns: 1fr;
     gap: 32px;
-  }
-  .welcome-mark {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
