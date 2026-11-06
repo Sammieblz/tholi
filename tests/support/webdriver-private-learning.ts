@@ -111,7 +111,7 @@ export async function verifyWebDriverPrivateLearning(
     });
     await seedNavigationServiceAccount(app, service.settings, target);
     await app.start();
-    const panel = () => current.driver.switchTo().window(current.panel);
+    const panel = () => current.focusPanel();
     const visible = async (selector: By) => {
       await panel();
       const element = await current.driver.wait(

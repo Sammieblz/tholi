@@ -12,6 +12,23 @@ export interface SeleniumBidi {
 export function seleniumBidi(driver: WebDriver) {
   return (driver as unknown as { getBidi(): Promise<SeleniumBidi> }).getBidi();
 }
+/** Preserve focus for BiDi reads; classic execution can intentionally differ from actual focus. */
+export async function focusWebDriverWindow(
+  driver: WebDriver,
+  handle: string,
+  execution: "bidi" | "classic",
+) {
+  let selected = false;
+  if (execution === "bidi") {
+    try {
+      selected = (await driver.getWindowHandle()) === handle;
+    } catch (error) {
+      if (!(error instanceof webdriverError.NoSuchWindowError)) throw error;
+    }
+  }
+  if (!selected) await driver.switchTo().window(handle);
+  await driver.switchTo().defaultContent();
+}
 /** WebDriver window bounds include chrome; fixtures specify the content viewport. */
 export async function setNativeViewport(
   driver: WebDriver,
@@ -153,7 +170,7 @@ export async function attachWebDriverExtension(
     return reply as T;
   }
   async function site<T>(fn: (...args: any[]) => T, ...args: unknown[]) {
-    await driver.switchTo().window(website);
+    await focusWebDriverWindow(driver, website, execution);
     return driver.executeScript<T>(fn, ...args);
   }
   async function waitFor<T>(
@@ -204,6 +221,9 @@ export async function attachWebDriverExtension(
       }>;
     }),
     extension,
+    async focusPanel() {
+      await focusWebDriverWindow(driver, panel, execution);
+    },
     async start() {
       await driver.switchTo().window(website);
       const result = await message({

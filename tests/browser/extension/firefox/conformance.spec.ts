@@ -396,6 +396,9 @@ test("Firefox uses native document identity, local planning and independently ve
       body: Buffer.from(JSON.stringify(surfaces)),
       contentType: "application/json",
     });
+    const currentPage = await app.message({ type: "GET_PAGE" });
+    expect(currentPage.error).toBeUndefined();
+    expect(currentPage.perception).toBeTruthy();
     const capture = await app.extension(async (tabId: number) => {
       const api = (globalThis as any).browser;
       const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
@@ -409,8 +412,19 @@ test("Firefox uses native document identity, local planning and independently ve
           { type: "PREPARE_CAPTURE", sessionId: session.sessionId, captureId },
           { frameId: 0 },
         );
-        if (prepared?.error || !prepared?.metadata)
-          throw Error("Current Firefox capture metadata unavailable");
+        if (prepared?.error || !prepared?.metadata) {
+          const reasons = [
+            "A current running task is required for capture.",
+            "Current page perception is unavailable.",
+            "The capture task changed.",
+            "Complete private capture evidence is unavailable.",
+          ];
+          throw Error(
+            "Current Firefox capture metadata unavailable (prepare:" +
+              reasons.indexOf(prepared?.error) +
+              ")",
+          );
+        }
         metadata = prepared.metadata;
         browserZoom = await api.tabs.getZoom(tabId);
         image = await api.tabs.captureVisibleTab(

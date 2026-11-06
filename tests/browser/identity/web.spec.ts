@@ -1796,6 +1796,8 @@ test("real account privately controls versioned website knowledge without dispat
       .click();
     expect((await refreshing).status()).toBe(200);
     await expect(collect).toBeEnabled();
+    // Separate rapid inspection and choice updates using the real gateway budget.
+    await waitForIdentityGatewayCapacity();
     stage = "enable private knowledge collection";
     const enablingCollection = siteResponse("PATCH");
     await collect.click();

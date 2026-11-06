@@ -235,6 +235,29 @@ discovery, malformed replies and cancellation/native-grant fencing after a
 cached read. Fresh configured-browser evidence must follow this production
 correction; the earlier six-case result is not relabeled as passing.
 
+The following configured cohort passed **7/8**, including Firefox saved-data
+editing, search and exports. Its report remains
+`output/qa/87-configured-web/tholi-smoke-mw4n12ym-f602e8de/validation.json`.
+Only Firefox's private-learning reuse phase failed. One bounded single-case
+diagnosis, run `fb61890c-3d9f-4150-a667-370e6886b95f`, confirmed the collection
+PATCH returned 200, followed by successful current site, policy and consent
+reads. The next capability GET returned 429, so reuse correctly never dispatched
+its PATCH. All 27 preflights returned 204. Evidence is
+`output/qa/87-configured-web/tholi-smoke-mw4nv15e-6894dd1b/validation.json`, with
+SHA-256 `b42ddf3ae941efd2b0cd0505c8afc9e8b94983d4b8bde3c355a2107439225902`.
+Both cohorts recorded zero model requests and removed their owned resources and
+private environments without changing default artifacts. The diagnostic probe
+and gateway logging override were removed.
+
+The fixture now separates acknowledged manual inspection from its distinct
+choice-update phase with the existing `waitForIdentityGatewayCapacity` helper.
+It derives 20 seconds from the actual 40-request burst and 120-request-per-minute
+policy, with a bounded 30-second maximum. This schedules rapid synthetic user
+intents before rejection; it adds no retry or arbitrary delay. Every fresh
+authorization read, exact PATCH 200 receipt and acknowledged checkbox assertion
+remains. No production cache or gateway limit changed. A fresh eight-case cohort
+must verify this fixture correction; the seven-case report remains feedback.
+
 ## Database feedback
 
 The default cloud-free stack passed **27 top-level checks and 112 PostgreSQL

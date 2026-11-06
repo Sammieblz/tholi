@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, sep } from "node:path";
-import type { WebDriver } from "selenium-webdriver";
+import { error as webdriverError, type WebDriver } from "selenium-webdriver";
+import { focusWebDriverWindow } from "../../support/webdriver-extension";
 import {
   installedBrowserBinary,
   nativeBrowserScale,
@@ -26,6 +27,32 @@ test("native backing-scale fixtures accept only the declared 1x and 2x modes", (
     expect(() => nativeBrowserScale({ THOLI_BROWSER_SCALE: value })).toThrow(
       "must be exactly 1 or 2",
     );
+});
+
+test("native BiDi reads preserve same-window focus and frame boundaries while classic execution forces activation", async () => {
+  let selected = "panel";
+  const window = vi.fn(async (handle: string) => {
+    selected = handle;
+  });
+  const defaultContent = vi.fn(async () => undefined);
+  const getWindowHandle = vi.fn(async () => selected);
+  const driver = {
+    getWindowHandle,
+    switchTo: () => ({ window, defaultContent }),
+  } as unknown as WebDriver;
+  await focusWebDriverWindow(driver, "panel", "bidi");
+  expect(window).not.toHaveBeenCalled();
+  expect(defaultContent).toHaveBeenCalledOnce();
+  await focusWebDriverWindow(driver, "website", "bidi");
+  expect(window).toHaveBeenLastCalledWith("website");
+  expect(defaultContent).toHaveBeenCalledTimes(2);
+  await focusWebDriverWindow(driver, "website", "classic");
+  expect(window).toHaveBeenCalledTimes(2);
+  expect(getWindowHandle).toHaveBeenCalledTimes(2);
+  getWindowHandle.mockRejectedValueOnce(new webdriverError.NoSuchWindowError());
+  await focusWebDriverWindow(driver, "panel", "bidi");
+  expect(window).toHaveBeenLastCalledWith("panel");
+  expect(defaultContent).toHaveBeenCalledTimes(4);
 });
 
 test("macOS discovers browser app bundles and honors explicit per-browser overrides", () => {
