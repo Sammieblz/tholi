@@ -58,6 +58,17 @@ export async function attachWebDriverExtension(
   execution: "bidi" | "classic" = "bidi",
 ) {
   const bidi = execution === "bidi" ? await seleniumBidi(driver) : undefined;
+  async function activateClassicWindow(handle: string) {
+    const targetId = handle.replace(/^CDwindow-/, "");
+    if (!/^[a-f0-9]{32}$/i.test(targetId))
+      throw Error("The native Chrome window identity is invalid.");
+    await (driver as chrome.Driver).sendDevToolsCommand(
+      "Target.activateTarget",
+      {
+        targetId,
+      },
+    );
+  }
   async function extension<T>(
     fn: (...args: any[]) => T,
     ...args: unknown[]
@@ -72,16 +83,10 @@ export async function attachWebDriverExtension(
       if (previous !== panel) {
         await driver.switchTo().window(panel);
         if (previous) {
-          const targetId = previous.replace(/^CDwindow-/, "");
-          if (!/^[a-f0-9]{32}$/i.test(targetId))
-            throw Error("The native Chrome window identity is invalid.");
           try {
             // Keep actual browser focus on the website or auth popup while
             // executing commands in the known synthetic sidebar tab.
-            await (driver as chrome.Driver).sendDevToolsCommand(
-              "Target.activateTarget",
-              { targetId },
-            );
+            await activateClassicWindow(previous);
           } catch (error) {
             const closed =
               error instanceof webdriverError.NoSuchWindowError ||
@@ -223,6 +228,7 @@ export async function attachWebDriverExtension(
     extension,
     async focusPanel() {
       await focusWebDriverWindow(driver, panel, execution);
+      if (execution === "classic") await activateClassicWindow(panel);
       await driver.wait(
         () =>
           driver.executeScript<boolean>(

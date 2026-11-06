@@ -119,6 +119,16 @@ unchanged. A permanent regression in the existing platform tooling owner covers
 an already-selected unfocused panel, a focused hidden document and successful
 focus acknowledgment.
 
+The subsequent source-bound run at
+`fe0c276961f91e2faeeb64be4708cf7469906014` passed Firefox's five native cases
+on its first completed macOS target. The stricter focus check also exposed a
+separate classic Chrome fixture assumption: background extension RPCs preserve
+the website as Chrome's active target even when WebDriver's selected context is
+the panel. Selecting that already-selected handle alone does not reactivate it.
+Explicit panel interaction now uses the existing validated CDP target-activation
+operation before awaiting focus. That operation is shared with the existing
+previous-target restoration owner; passive RPCs still preserve website focus.
+
 The entire temporary browser event probe and its logging have been removed.
 Earlier diagnostic failures remain evidence for their original cohorts. A new
 complete source-bound PR workflow must pass, including all four native macOS
