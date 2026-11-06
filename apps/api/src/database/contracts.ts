@@ -2,6 +2,10 @@ import type { SavedTask } from "../../../../packages/page-model";
 import type { DatabaseScope } from "./postgres";
 import type { ServiceRequestStatus } from "../../../../packages/navigation-core/contracts-service";
 import type { EffectiveProductPlan } from "../../../../packages/navigation-core/contracts-plans";
+import type {
+  ProviderId,
+  ProviderConnectionSelection,
+} from "../../../../packages/navigation-core/contracts-providers";
 export type {
   SavedDataArtifact,
   SavedDataRecord,
@@ -138,7 +142,7 @@ export interface CreditHistoryEntry {
 
 export interface InferencePolicy {
   version: string;
-  provider: "fake" | "vertex";
+  provider: "fake" | "vertex" | ProviderId;
   model: string;
   priceRevision: string;
   maxCredits: bigint;
@@ -154,17 +158,27 @@ export interface InferencePolicy {
   accountProviderUsdMicros: bigint;
   workspaceProviderUsdMicros: bigint;
   journeyProviderUsdMicros: bigint;
+  fundingSource?: "managed" | "customer";
+  requestsPerMinute?: number | null;
+  catalogRevision?: string | null;
+  routingPolicyVersion?: string | null;
+}
+
+/** Opaque credentials and exact retrieval context are pinned once per request. */
+export interface CustomerInferenceBinding extends ProviderConnectionSelection {
+  retrievalSnapshotDigest: string;
 }
 
 export interface InferenceReservation {
   id: string;
   requestId: string;
   claimToken: string;
-  creditReservationId: string;
+  creditReservationId: string | null;
   maxCredits: bigint;
   expiresAt: Date;
   policy: InferencePolicy;
   effectivePlan: EffectiveProductPlan | null;
+  binding?: CustomerInferenceBinding | null;
 }
 
 export interface FinishInferenceInput {
@@ -177,6 +191,11 @@ export interface FinishInferenceInput {
   providerUsdMicros?: bigint;
   chargedCredits?: bigint;
   providerRequestId?: string;
+  usageVersion?: 1 | 2;
+  customerUsdMicros?: bigint | null;
+  cacheReadInputUnits?: bigint | null;
+  cacheWriteInputUnits?: bigint | null;
+  reasoningOutputUnits?: bigint | null;
 }
 
 export interface InferenceUsage {
@@ -190,6 +209,12 @@ export interface InferenceUsage {
   chargedCredits: bigint | null;
   policyVersion: string | null;
   createdAt: Date;
+  fundingSource?: "managed" | "customer";
+  usageVersion?: 1 | 2;
+  customerUsdMicros?: bigint | null;
+  cacheReadInputUnits?: bigint | null;
+  cacheWriteInputUnits?: bigint | null;
+  reasoningOutputUnits?: bigint | null;
 }
 
 export interface RepositoryPage<T> {

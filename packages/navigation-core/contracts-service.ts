@@ -12,6 +12,14 @@ export const SERVICE_LIMITS = Object.freeze({
 } as const);
 export const SERVICE_TIMEOUT_HEADER = "x-tholi-timeout-ms";
 export const SERVICE_ACCOUNT_BINDING_HEADER = "x-tholi-account";
+/** Query strings remain strings in the strict HTTP boundary; Zod normalizes the view. */
+export const serviceSchemaVersionQuerySchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z
+    .enum(["1", "2"])
+    .transform((value) => (value === "1" ? (1 as const) : (2 as const))),
+]);
 
 const capabilityNameSchema = z
   .string()

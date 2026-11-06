@@ -84,6 +84,15 @@ Complex dashboards, unseen screens, inaccessible icon or canvas controls, closed
 
 The default local pipeline combines Compromise, lexical retrieval and MiniLM. Optional backend and browser-provided model integrations are separate, opt-in features. **PaddleOCR remains experimental and is excluded from normal builds.** Its [evaluation and fallback status](docs/releases/records/2026-10-maintenance.md) must not be confused with default-engine support.
 
+Feature preparation in [#87](https://github.com/Sammieblz/tholi/issues/87) adds
+optional customer-funded OpenAI, Anthropic and OpenRouter connections through the
+portable account service, plus separate private learning and reuse choices per
+website. Local remains the default, and signing in never uploads existing local
+memory. [Local setup](docs/development/local-stack.md#customer-providers-and-private-learning)
+keeps external models disabled for zero-spend development. The
+[feature validation record](docs/development/testing/macos-byok-learning-validation.md)
+separates native Mac evidence, local fixtures and pending production/release work.
+
 ## Build and contribute
 
 | Work                                | Command                                   | Output                                             |

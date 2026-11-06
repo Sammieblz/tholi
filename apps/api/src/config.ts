@@ -1,5 +1,6 @@
 import { BlockList, isIP } from "node:net";
 import { isAbsolute, resolve } from "node:path";
+import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import type { DatabaseOptions } from "./database/postgres";
 import type { IdentityOptions } from "./application/identity-contracts";
@@ -24,6 +25,10 @@ import {
   validateVertexModelOptions,
   type VertexModelOptions,
 } from "./adapters/vertex-navigation-model";
+import {
+  validateProviderSecretKeyring,
+  type ProviderSecretKeyring,
+} from "./adapters/provider-secrets";
 
 export interface ApiOptions {
   token: string;
@@ -42,6 +47,7 @@ export interface ServiceApiOptions {
   support?: SupportRuntimeOptions;
   navigation?: { provider: "fake" };
   plans?: { environment: "development" | "production" };
+  providers?: { keyring: ProviderSecretKeyring };
 }
 
 /** Replica-local delivery limits, separate from identity, account and credit authority. */
@@ -331,7 +337,20 @@ export function validateServiceOptions(
     throw new Error(
       "Identity requires explicit service database configuration.",
     );
+  if (
+    options.providers !== undefined &&
+    (!options.providers ||
+      typeof options.providers !== "object" ||
+      Array.isArray(options.providers) ||
+      Object.keys(options.providers).length !== 1 ||
+      !Object.hasOwn(options.providers, "keyring"))
+  )
+    throw new Error("Invalid provider connection configuration.");
   if (!options.identity) {
+    if (options.providers)
+      throw new Error(
+        "Provider connections require the composed identity profile.",
+      );
     if (plans)
       throw new Error("Product plans require the composed identity profile.");
     if (navigation)
@@ -343,6 +362,22 @@ export function validateServiceOptions(
     return { origins, transport, ...(observability ? { observability } : {}) };
   }
   const identity = validateIdentityOptions(options.identity);
+  const providers = options.providers
+    ? { keyring: validateProviderSecretKeyring(options.providers.keyring) }
+    : undefined;
+  if (providers) {
+    const unrelated = [
+      identity.flowEncryptionKey,
+      identity.clientSecret,
+      options.support?.fileLinkSecret,
+    ];
+    if (
+      Object.values(providers.keyring.keys).some((key) =>
+        unrelated.includes(key),
+      )
+    )
+      throw new Error("Provider encryption requires a dedicated keyring.");
+  }
   if (!origins.includes(identity.webOrigin))
     throw new Error(
       "The identity website must be a configured service origin.",
@@ -364,6 +399,7 @@ export function validateServiceOptions(
     database: { ...options.database! },
     ...(plans ? { plans } : {}),
     ...(navigation ? { navigation } : {}),
+    ...(providers ? { providers } : {}),
     ...(options.support
       ? {
           support: validateSupportRuntime(
@@ -993,7 +1029,7 @@ export function parseServiceConfig(env: Environment) {
   const model = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
   if (model !== "fake")
     throw new Error(
-      "The HTTP service remains cloud-free. Live HTTP adapters require production quota admission; use the separately approved model experiment.",
+      "Managed HTTP models remain disabled. Customer-funded providers require the separate BYOK profile; operator experiments retain their own approval gates.",
     );
   const navigation = environmentValue(
     env,
@@ -1020,6 +1056,32 @@ export function parseServiceConfig(env: Environment) {
       ? undefined
       : environmentValue(env, "THOLI_SERVICE_TRUSTED_PROXIES");
   const identity = parseIdentityConfig(env);
+  const byok = environmentValue(env, "THOLI_BYOK_ENABLED");
+  if (byok !== undefined && !["true", "false"].includes(byok))
+    throw new Error("Invalid provider connection availability configuration.");
+  let providers: ServiceApiOptions["providers"];
+  if (byok === "true") {
+    const path = requiredEnvironment(env, "THOLI_BYOK_KEYRING_FILE");
+    try {
+      if (
+        !isAbsolute(path) ||
+        !statSync(path).isFile() ||
+        statSync(path).size > 16384
+      )
+        throw new Error();
+      providers = {
+        keyring: validateProviderSecretKeyring(
+          JSON.parse(readFileSync(path, "utf8")),
+        ),
+      };
+    } catch {
+      throw new Error(
+        "The dedicated provider encryption keyring is unavailable or invalid.",
+      );
+    }
+  } else if (env.THOLI_BYOK_KEYRING_FILE !== undefined) {
+    throw new Error("Provider encryption requires explicit BYOK availability.");
+  }
   if (supportEnabled(env) && !identity)
     throw new Error("Support requires the composed identity profile.");
   return {
@@ -1068,6 +1130,7 @@ export function parseServiceConfig(env: Environment) {
       ...(navigation === "true"
         ? { navigation: { provider: "fake" as const } }
         : {}),
+      ...(providers ? { providers } : {}),
       ...(supportEnabled(env)
         ? {
             support: {

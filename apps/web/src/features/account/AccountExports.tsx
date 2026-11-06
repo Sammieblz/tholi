@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   accountExportInputSchema,
-  accountExportManifestSchema,
+  accountExportManifestFileSchema,
   accountExportPageSchema,
   accountExportStatusSchema,
-  type AccountExportManifest,
+  type AccountExportManifestFile,
   type AccountExportStatus,
 } from "../../../../../packages/navigation-core/contracts-account";
 import { SUPPORT_LIMITS } from "../../../../../packages/navigation-core/contracts-support";
@@ -30,10 +30,12 @@ const sections = {
   usage: "Usage activity",
   support: "Support requests",
   product_events: "Optional product measurements",
+  site_settings: "Private site learning choices",
+  provider_connections: "AI connection metadata",
 };
 
 /** Account exports remain discoverable after refresh and require explicit continuation. */
-export function AccountExports() {
+export function AccountExports({ schemaVersion }: { schemaVersion?: 2 }) {
   const account = useAccount();
   const operation = useAccountOperation(account);
   const [history, setHistory] = useState<AccountExportStatus[]>([]);
@@ -43,7 +45,7 @@ export function AccountExports() {
   const [selected, setSelected] = useState<AccountExportStatus>();
   const [manifest, setManifest] = useState<{
     fileId: string;
-    data: AccountExportManifest;
+    data: AccountExportManifestFile;
   }>();
   const operationKey = useRef<
     { continuation?: string; id: string } | undefined
@@ -82,9 +84,17 @@ export function AccountExports() {
           !operationKey.current
         )
           operationKey.current = { continuation, id: crypto.randomUUID() };
+        const previous =
+          continuation && selected
+            ? manifest?.fileId === selected.fileId
+              ? manifest
+              : await readManifest(selected.fileId, signal)
+            : undefined;
+        const view = previous?.data.schemaVersion ?? schemaVersion;
         const input = accountExportInputSchema.parse({
           idempotencyKey: operationKey.current.id,
           ...(continuation ? { continuation } : {}),
+          ...(view === 2 ? { schemaVersion: 2 } : {}),
         });
         return request(
           "/api/v1/account/exports",
@@ -125,23 +135,21 @@ export function AccountExports() {
         if (result.fileId !== selected?.fileId) setManifest(undefined);
       },
     );
+  const readManifest = async (fileId: string, signal: AbortSignal) => {
+    const metadata = await accountFileMetadata(account, fileId, signal);
+    const value = await readAccountFile(
+      account,
+      metadata,
+      accountExportManifestFileSchema,
+      SUPPORT_LIMITS.maxFileBytes,
+      signal,
+    );
+    if (value.accountId !== actor || value.generation !== selected?.generation)
+      throw new Error("The export belongs to another account view.");
+    return { fileId, data: value };
+  };
   const show = (fileId: string) =>
-    operation.run(async (signal) => {
-      const metadata = await accountFileMetadata(account, fileId, signal);
-      const value = await readAccountFile(
-        account,
-        metadata,
-        accountExportManifestSchema,
-        SUPPORT_LIMITS.maxFileBytes,
-        signal,
-      );
-      if (
-        value.accountId !== actor ||
-        value.generation !== selected?.generation
-      )
-        throw new Error("The export belongs to another account view.");
-      return { fileId, data: value };
-    }, setManifest);
+    operation.run((signal) => readManifest(fileId, signal), setManifest);
   const more = () =>
     operation.run(
       (signal) =>

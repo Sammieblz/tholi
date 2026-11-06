@@ -7,7 +7,7 @@ import { AuthorizationService } from "../application/authorization";
 import { createOidcProvider } from "./oidc";
 import { createServiceDatabase } from "./service-database";
 import { JobService } from "../application/jobs";
-import type { SupportRuntimeOptions } from "../config";
+import type { SupportRuntimeOptions, ServiceApiOptions } from "../config";
 import type { RuntimeResource } from "../capabilities";
 import { PostgresSupport } from "../database/support";
 import { SupportService } from "../application/support";
@@ -17,15 +17,16 @@ import { ProductAnalyticsService } from "../application/analytics";
 import type { Observability } from "../application/observability";
 import { NavigationTransportService } from "../application/navigation";
 import { createFakeNavigationModel } from "./fake-navigation-model";
-import {
-  CreditService,
-  createNavigationQuotaPolicy,
-} from "../application/quotas";
+import { CreditService } from "../application/quotas";
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 import { PlanService } from "../application/plans";
 import { SavedDataService } from "../application/saved-data";
 import { AccountService } from "../application/account";
 import { PostgresAccount } from "../database/account";
+import { PostgresProviderConnections } from "../database/provider-connections";
+import { ProviderConnectionService } from "../application/provider-connections";
+import { createProviderSecretCipher } from "./provider-secrets";
+import { createProviderInferencePolicy } from "../application/provider-inference";
 
 /** Composition only: HTTP replicas verify schema and never migrate or seed it. */
 export async function createIdentityRuntime(
@@ -35,6 +36,7 @@ export async function createIdentityRuntime(
   observer?: Observability,
   navigationEnabled = false,
   planEnvironment: "development" | "production" = "production",
+  providerOptions?: ServiceApiOptions["providers"],
 ) {
   const { pool, resource } = await createServiceDatabase(database, observer);
   const resources: RuntimeResource[] = [resource];
@@ -54,18 +56,6 @@ export async function createIdentityRuntime(
       fakeDevelopmentChargingPolicy,
     );
     const model = createFakeNavigationModel();
-    const navigation = navigationEnabled
-      ? new NavigationTransportService(
-          repositories,
-          model,
-          createNavigationQuotaPolicy(
-            repositories,
-            model,
-            fakeDevelopmentChargingPolicy,
-            planEnvironment,
-          ),
-        )
-      : undefined;
     let support: SupportService | undefined;
     let supportStore: PostgresSupport | undefined;
     if (supportOptions) {
@@ -93,6 +83,25 @@ export async function createIdentityRuntime(
       supportStore,
       planEnvironment,
     );
+    const providers = new ProviderConnectionService(
+      new PostgresProviderConnections(pool),
+      providerOptions
+        ? createProviderSecretCipher(providerOptions.keyring)
+        : undefined,
+    );
+    const navigation = navigationEnabled
+      ? new NavigationTransportService(
+          repositories,
+          model,
+          createProviderInferencePolicy(
+            repositories,
+            model,
+            providers,
+            savedData,
+            planEnvironment,
+          ),
+        )
+      : undefined;
     const account = new AccountService(
       new PostgresAccount(pool, repositories),
       {
@@ -111,6 +120,7 @@ export async function createIdentityRuntime(
       account,
       credits,
       navigation,
+      providers,
       repositories,
       resources,
       resource,

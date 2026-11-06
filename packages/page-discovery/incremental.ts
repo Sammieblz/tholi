@@ -257,6 +257,7 @@ export class IncrementalControlIndex {
             "aria-hidden",
             "aria-expanded",
             "aria-busy",
+            "open",
           ].includes(r.attributeName!)
         ) {
           this.mark(e as HTMLElement);

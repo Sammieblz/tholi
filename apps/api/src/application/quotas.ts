@@ -4,15 +4,19 @@ import {
   creditHistoryPageSchema,
   creditPageQuerySchema,
   creditUsagePageSchema,
+  creditUsagePageV2Schema,
+  creditUsageQuerySchema,
   fakeDevelopmentChargingPolicy,
   workspaceCreditsSchema,
   type ChargingPolicy,
+  type CustomerChargingPolicy,
 } from "../../../../packages/navigation-core/contracts-credits";
 import type { NavigationModel, ServiceRequestContext } from "../capabilities";
 import { effectiveProductPlanSchema } from "../../../../packages/navigation-core/contracts-plans";
 import type {
   CreditBalance,
   CreditHistoryEntry,
+  CustomerInferenceBinding,
   FinishInferenceInput,
   InferencePolicy,
   InferenceReservation,
@@ -32,6 +36,7 @@ import type { IdentitySession } from "./identity-contracts";
 import {
   ModelError,
   modelUsageSchema,
+  modelUsageTotals,
   type ModelUsage,
 } from "./model-contracts";
 import type {
@@ -57,13 +62,17 @@ export interface QuotaTransaction extends AuthorizationContextReader {
   listCreditHistory(
     query: PageQuery,
   ): Promise<RepositoryPage<CreditHistoryEntry>>;
-  listUsage(query: PageQuery): Promise<RepositoryPage<InferenceUsage>>;
+  listUsage(
+    query: PageQuery,
+    view?: 1 | 2,
+  ): Promise<RepositoryPage<InferenceUsage>>;
   getInferencePolicy(version?: string): Promise<InferencePolicy | undefined>;
   reserveInference(input: {
     requestId: string;
     journeyId: string;
     policyVersion: string;
     expiresAt: Date;
+    binding?: CustomerInferenceBinding;
   }): Promise<InferenceReservation>;
   markInferenceDispatched(input: {
     id: string;
@@ -121,7 +130,10 @@ export function createInferenceReconciliationHandler(
 
 function publishedPolicy(raw: ChargingPolicy): ChargingPolicy {
   const parsed = chargingPolicySchema.parse(raw);
-  if (!isDeepStrictEqual(parsed, fakeDevelopmentChargingPolicy))
+  if (
+    !("fundingSource" in parsed) &&
+    !isDeepStrictEqual(parsed, fakeDevelopmentChargingPolicy)
+  )
     throw new ModelError("CONFIGURATION");
   return Object.freeze(parsed);
 }
@@ -138,7 +150,19 @@ function matchesPolicy(stored: InferencePolicy, policy: ChargingPolicy) {
     stored.maxOutputUnits === policy.maxOutputTokens &&
     stored.maxImages === policy.maxImages &&
     stored.maxRetries === policy.maxRetries &&
-    stored.maxJourneyRequests === policy.maxDecisionsPerJourney
+    stored.maxJourneyRequests === policy.maxDecisionsPerJourney &&
+    ("fundingSource" in policy
+      ? stored.fundingSource === "customer" &&
+        stored.catalogRevision === policy.catalogRevision &&
+        stored.routingPolicyVersion === policy.routingPolicyVersion &&
+        stored.periodSeconds === policy.periodSeconds &&
+        stored.accountRequests === policy.requestsPerPeriod &&
+        stored.workspaceRequests === policy.requestsPerPeriod &&
+        stored.requestsPerMinute === policy.requestsPerMinute &&
+        stored.accountProviderUsdMicros === 0n &&
+        stored.workspaceProviderUsdMicros === 0n &&
+        stored.journeyProviderUsdMicros === 0n
+      : stored.fundingSource !== "customer")
   );
 }
 
@@ -146,10 +170,28 @@ function checkedUsage(raw: unknown, policy: ChargingPolicy) {
   const parsed = modelUsageSchema.safeParse(raw);
   return parsed.success &&
     parsed.data.provider === policy.provider &&
-    parsed.data.source === "fake" &&
+    parsed.data.source === ("fundingSource" in policy ? "measured" : "fake") &&
+    (!("fundingSource" in policy) || "version" in parsed.data) &&
     parsed.data.model === policy.model
     ? parsed.data
     : undefined;
+}
+
+export interface CustomerInferenceContext {
+  binding: CustomerInferenceBinding;
+  revalidateConnection(): Promise<void>;
+}
+
+function matchesCustomerBinding(
+  policy: CustomerChargingPolicy,
+  binding: CustomerInferenceBinding,
+) {
+  return (
+    policy.provider === binding.provider &&
+    policy.model === binding.model &&
+    policy.catalogRevision === binding.catalogRevision &&
+    policy.routingPolicyVersion === binding.routingPolicyVersion
+  );
 }
 
 /** One model invocation uses the shared transport's prepare/finish orchestration. */
@@ -158,13 +200,35 @@ export function createNavigationQuotaPolicy(
   model: NavigationModel,
   rawPolicy: ChargingPolicy = fakeDevelopmentChargingPolicy,
   environment: "development" | "production" = "production",
+  customer?: CustomerInferenceContext,
 ): NavigationInferencePolicy {
   const policy = publishedPolicy(rawPolicy);
+  const customerPolicy = "fundingSource" in policy ? policy : undefined;
+  if (
+    !!customerPolicy !== !!customer ||
+    (customerPolicy &&
+      !matchesCustomerBinding(customerPolicy, customer!.binding))
+  )
+    throw new ModelError("CONFIGURATION");
+  const binding = customer ? structuredClone(customer.binding) : undefined;
   return {
     async prepare(input, scope) {
-      if (input.profile !== "fake" || input.evaluation)
+      if (
+        input.profile !== (customer ? "customer-funded" : "fake") ||
+        input.evaluation
+      )
         throw new ModelError("CONFIGURATION");
+      if (binding && input.profile === "customer-funded") {
+        const { retrievalSnapshotDigest, ...connection } = binding;
+        if (
+          !isDeepStrictEqual(input.connection, connection) ||
+          (input.retrieval &&
+            input.retrieval.snapshotDigest !== retrievalSnapshotDigest)
+        )
+          throw new ModelError("CONFIGURATION");
+      }
       await scope.revalidate();
+      await customer?.revalidateConnection();
       const reservation = await withAuthorization(
         repositories,
         scope.principal,
@@ -188,15 +252,19 @@ export function createNavigationQuotaPolicy(
             journeyId: input.observation.stamp.journeyId,
             policyVersion: policy.version,
             expiresAt: new Date(scope.context.deadlineAt),
+            ...(binding ? { binding } : {}),
           });
           if (
             !matchesPolicy(held.policy, policy) ||
             held.requestId !== input.requestId ||
             held.maxCredits !== BigInt(policy.maxCredits) ||
-            held.expiresAt.getTime() !== scope.context.deadlineAt
+            held.expiresAt.getTime() !== scope.context.deadlineAt ||
+            (binding &&
+              (!isDeepStrictEqual(held.binding, binding) ||
+                held.creditReservationId !== null))
           )
             throw new ModelError("CONFIGURATION");
-          if (held.effectivePlan !== null) {
+          if (!customer && held.effectivePlan !== null) {
             if (environment !== "development")
               throw new AuthorizationError(
                 503,
@@ -227,21 +295,20 @@ export function createNavigationQuotaPolicy(
       let reportedUsage: ModelUsage | undefined;
       let inferenceError: ModelError | undefined;
       let completed: Promise<void> | undefined;
+      const effectivePlan = customer ? null : reservation.effectivePlan;
       const operation: NavigationInferenceOperation = {
         budget: {
           maxInputTokens: Math.min(
             policy.maxInputTokens,
-            reservation.effectivePlan?.caps?.maxInputTokens ??
-              policy.maxInputTokens,
+            effectivePlan?.caps?.maxInputTokens ?? policy.maxInputTokens,
           ),
           maxOutputTokens: Math.min(
             policy.maxOutputTokens,
-            reservation.effectivePlan?.caps?.maxOutputTokens ??
-              policy.maxOutputTokens,
+            effectivePlan?.caps?.maxOutputTokens ?? policy.maxOutputTokens,
           ),
           maxImages: Math.min(
             policy.maxImages,
-            reservation.effectivePlan?.caps?.maxImages ?? policy.maxImages,
+            effectivePlan?.caps?.maxImages ?? policy.maxImages,
           ),
         },
         model: {
@@ -250,6 +317,7 @@ export function createNavigationQuotaPolicy(
             attempted = true;
             context.signal.throwIfAborted();
             await scope.revalidate();
+            await customer?.revalidateConnection();
             await withAuthorization(
               repositories,
               scope.principal,
@@ -259,6 +327,7 @@ export function createNavigationQuotaPolicy(
               context,
             );
             await scope.revalidate();
+            await customer?.revalidateConnection();
             context.signal.throwIfAborted();
             invoked = true;
             try {
@@ -267,6 +336,29 @@ export function createNavigationQuotaPolicy(
               if (!reportedUsage) {
                 invalidUsage = true;
                 throw new ModelError("INVALID_USAGE", { outcome: "unknown" });
+              }
+              if (customer) {
+                await scope.revalidate();
+                await withAuthorization(
+                  repositories,
+                  scope.principal,
+                  scope.workspaceId,
+                  "inference.request",
+                  async (_repository, authorization) => {
+                    if (
+                      input.observation.images.length > 0 &&
+                      !evaluateAuthorization(authorization, "image.transmit")
+                        .allowed
+                    )
+                      throw new AuthorizationError(
+                        403,
+                        "FORBIDDEN",
+                        "Image transmission consent is required.",
+                      );
+                  },
+                  context,
+                );
+                await customer.revalidateConnection();
               }
               return result;
             } catch (error) {
@@ -319,13 +411,40 @@ export function createNavigationQuotaPolicy(
                 outcome,
                 ...(resolution !== "unknown"
                   ? {
-                      inputUnits: BigInt(usage?.promptTokens ?? 0),
+                      inputUnits: BigInt(
+                        usage ? modelUsageTotals(usage).inputTokens : 0,
+                      ),
                       outputUnits: BigInt(
-                        (usage?.outputTokens ?? 0) +
-                          (usage?.thoughtTokens ?? 0),
+                        usage ? modelUsageTotals(usage).outputTokens : 0,
                       ),
                       providerUsdMicros: 0n,
-                      chargedCredits: accepted ? reservation.maxCredits : 0n,
+                      chargedCredits:
+                        !customer && accepted ? reservation.maxCredits : 0n,
+                    }
+                  : {}),
+                ...(usage && "version" in usage
+                  ? {
+                      usageVersion: 2 as const,
+                      cacheReadInputUnits:
+                        usage.cacheReadInputTokens === null
+                          ? null
+                          : BigInt(usage.cacheReadInputTokens),
+                      cacheWriteInputUnits:
+                        usage.cacheWriteInputTokens === null
+                          ? null
+                          : BigInt(usage.cacheWriteInputTokens),
+                      reasoningOutputUnits:
+                        usage.reasoningOutputTokens === null
+                          ? null
+                          : BigInt(usage.reasoningOutputTokens),
+                    }
+                  : {}),
+                ...(customer
+                  ? {
+                      usageVersion: 2 as const,
+                      providerUsdMicros: 0n,
+                      chargedCredits: 0n,
+                      customerUsdMicros: resolution === "not-sent" ? 0n : null,
                     }
                   : {}),
               });
@@ -420,15 +539,22 @@ export class CreditService {
     rawQuery: unknown,
     context: ServiceRequestContext,
   ) {
-    const query = creditPageQuerySchema.parse(rawQuery);
+    const { schemaVersion = 1, ...query } =
+      creditUsageQuerySchema.parse(rawQuery);
     return withAuthorization(
       this.repositories,
       principal,
       workspaceId,
       "usage.read",
       async (repository) => {
-        const page = await repository.listUsage(query);
-        return creditUsagePageSchema.parse({
+        const page =
+          schemaVersion === 2
+            ? await repository.listUsage(query, 2)
+            : await repository.listUsage(query);
+        const schema =
+          schemaVersion === 2 ? creditUsagePageV2Schema : creditUsagePageSchema;
+        return schema.parse({
+          ...(schemaVersion === 2 ? { schemaVersion: 2 } : {}),
           items: page.items.map((entry) => ({
             id: entry.id,
             requestId: entry.requestId,
@@ -440,6 +566,20 @@ export class CreditService {
             chargedCredits: entry.chargedCredits?.toString() ?? null,
             policyVersion: entry.policyVersion,
             createdAt: entry.createdAt.toISOString(),
+            ...(schemaVersion === 2
+              ? {
+                  fundingSource: entry.fundingSource ?? "managed",
+                  usageVersion: entry.usageVersion ?? 1,
+                  customerUsdMicros:
+                    entry.customerUsdMicros?.toString() ?? null,
+                  cacheReadInputUnits:
+                    entry.cacheReadInputUnits?.toString() ?? null,
+                  cacheWriteInputUnits:
+                    entry.cacheWriteInputUnits?.toString() ?? null,
+                  reasoningOutputUnits:
+                    entry.reasoningOutputUnits?.toString() ?? null,
+                }
+              : {}),
           })),
           ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
           verification: {

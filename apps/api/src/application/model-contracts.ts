@@ -54,15 +54,17 @@ export function resolveModelBudget(
 }
 
 const tokens = z.number().int().nonnegative().safe();
-export const modelUsageSchema = z
+const modelId = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/);
+/** Version 1 keeps its historical output-versus-thought accounting unchanged. */
+export const legacyModelUsageSchema = z
   .object({
     provider: z.enum(["fake", "vertex"]),
     source: z.enum(["fake", "measured"]),
-    model: z
-      .string()
-      .min(1)
-      .max(200)
-      .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/),
+    model: modelId,
     promptTokens: tokens,
     outputTokens: tokens,
     thoughtTokens: tokens,
@@ -83,7 +85,67 @@ export const modelUsageSchema = z
         message: "Invalid measured model usage.",
       });
   });
+
+/** Output includes reasoning once. Null means that a provider did not report a breakdown. */
+export const modelUsageV2Schema = z
+  .object({
+    version: z.literal(2),
+    provider: z.enum(["fake", "vertex", "openai", "anthropic", "openrouter"]),
+    source: z.enum(["fake", "measured"]),
+    model: modelId,
+    inputTokens: tokens,
+    outputTokens: tokens,
+    cacheReadInputTokens: tokens.nullable(),
+    cacheWriteInputTokens: tokens.nullable(),
+    reasoningOutputTokens: tokens.nullable(),
+    totalTokens: tokens,
+  })
+  .strict()
+  .superRefine((usage, context) => {
+    if (
+      (usage.provider === "fake") !== (usage.source === "fake") ||
+      (usage.cacheReadInputTokens ?? 0) + (usage.cacheWriteInputTokens ?? 0) >
+        usage.inputTokens ||
+      (usage.reasoningOutputTokens ?? 0) > usage.outputTokens ||
+      usage.totalTokens !== usage.inputTokens + usage.outputTokens ||
+      (usage.source === "fake" && usage.totalTokens !== 0)
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Invalid measured model usage.",
+      });
+  });
+export const modelUsageSchema = z.union([
+  legacyModelUsageSchema,
+  modelUsageV2Schema,
+]);
 export type ModelUsage = z.infer<typeof modelUsageSchema>;
+export type ModelUsageV2 = z.infer<typeof modelUsageV2Schema>;
+
+/** One totals owner prevents double-counting reasoning across historical formats. */
+export function modelUsageTotals(usage: ModelUsage) {
+  return "version" in usage
+    ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens }
+    : {
+        inputTokens: usage.promptTokens,
+        outputTokens: usage.outputTokens + usage.thoughtTokens,
+      };
+}
+
+export function normalizeModelUsage(usage: ModelUsage): ModelUsageV2 {
+  if ("version" in usage) return modelUsageV2Schema.parse(usage);
+  return modelUsageV2Schema.parse({
+    version: 2,
+    provider: usage.provider,
+    source: usage.source,
+    model: usage.model,
+    ...modelUsageTotals(usage),
+    cacheReadInputTokens: usage.cachedTokens,
+    cacheWriteInputTokens: null,
+    reasoningOutputTokens: usage.thoughtTokens,
+    totalTokens: usage.totalTokens,
+  });
+}
 
 /** Provider output supplies a proposal, never browser identity or generations. */
 export const modelProposalSchema = navigationProposalSchema;

@@ -1,5 +1,6 @@
 .tholi-account-settings,
-.tholi-inference-settings {
+.tholi-inference-settings,
+.tholi-provider-selection {
   margin: 16px 0;
   padding: 16px 0;
   border: 0;
@@ -20,7 +21,8 @@
   font-weight: 600;
   margin-bottom: 8px;
 }
-.tholi-account-settings input:not([type="checkbox"]):not([type="radio"]) {
+.tholi-account-settings input:not([type="checkbox"]):not([type="radio"]),
+.tholi-account-settings select {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;

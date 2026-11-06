@@ -1,5 +1,16 @@
 import { api } from "../platform/api";
-type Reply = { id?: string; value?: unknown; error?: string; ok?: boolean };
+import {
+  localEngineFailure,
+  localEngineReplyFailure,
+  type LocalEngineDiagnostic,
+} from "../../../../packages/nlp/local-engine-error";
+type Reply = {
+  id?: string;
+  value?: unknown;
+  error?: string;
+  diagnostic?: LocalEngineDiagnostic;
+  ok?: boolean;
+};
 type Entry = {
   resolve: (reply: Reply) => void;
   timer: ReturnType<typeof setTimeout>;
@@ -11,7 +22,11 @@ export function createInferenceHost() {
     {};
   const planning = new Map<string, Entry>(),
     recognition = new Map<string, Entry>();
-  function cancel(kind: "nlp" | "ocr", error: string) {
+  function cancel(
+    kind: "nlp" | "ocr",
+    error: string,
+    diagnostic?: LocalEngineDiagnostic,
+  ) {
     clearTimeout(idle[kind]);
     const entries = kind === "nlp" ? planning : recognition;
     (kind === "nlp" ? nlp : ocr)?.terminate();
@@ -19,7 +34,7 @@ export function createInferenceHost() {
     else ocr = undefined;
     for (const [id, entry] of entries) {
       clearTimeout(entry.timer);
-      entry.resolve({ id, error });
+      entry.resolve({ id, error, ...(diagnostic ? { diagnostic } : {}) });
     }
     entries.clear();
   }
@@ -29,12 +44,30 @@ export function createInferenceHost() {
       api.runtime.getURL(kind === "nlp" ? "inference.js" : "ocr-worker.js"),
       { type: "module" },
     );
-    worker.onmessage = ({ data }: MessageEvent<Reply>) => {
+    const current = () => (kind === "nlp" ? nlp : ocr) === worker;
+    let ready = false;
+    worker.onmessage = ({ data }: MessageEvent<Reply & { type?: string }>) => {
+      if (!current()) return;
+      if (data?.type === "LOCAL_WORKER_READY") {
+        ready = true;
+        return;
+      }
       const entry = data?.id && entries.get(data.id);
       if (!entry || !data.id) return;
+      ready = true;
       clearTimeout(entry.timer);
       entries.delete(data.id);
-      entry.resolve(data);
+      entry.resolve(
+        data.error
+          ? {
+              id: data.id,
+              ...localEngineReplyFailure(
+                data,
+                kind === "nlp" ? "INFERENCE_FAILED" : "OCR_FAILED",
+              ),
+            }
+          : { id: data.id, value: data.value },
+      );
       if (!entries.size)
         idle[kind] = setTimeout(
           () => cancel(kind, "Idle worker released."),
@@ -43,15 +76,22 @@ export function createInferenceHost() {
     };
     worker.onerror = (event) => {
       event.preventDefault();
-      cancel(
-        kind,
-        kind === "nlp"
-          ? "Local inference failed. Please try again."
-          : "OCR worker failed",
+      if (!current()) return;
+      const failure = localEngineFailure(
+        undefined,
+        !ready
+          ? "WORKER_START_FAILED"
+          : kind === "nlp"
+            ? "INFERENCE_FAILED"
+            : "OCR_FAILED",
       );
+      cancel(kind, failure.error, failure.diagnostic);
     };
-    worker.onmessageerror = () =>
-      cancel(kind, "Local worker returned an invalid response.");
+    worker.onmessageerror = () => {
+      if (!current()) return;
+      const failure = localEngineFailure(undefined, "WORKER_RESPONSE_INVALID");
+      cancel(kind, failure.error, failure.diagnostic);
+    };
     return worker;
   }
   return {
@@ -67,25 +107,35 @@ export function createInferenceHost() {
       }
       const kind = message.type === "OCR_REQUEST" ? "ocr" : "nlp";
       clearTimeout(idle[kind]);
-      const worker =
-        kind === "nlp" ? (nlp ||= start(kind)) : (ocr ||= start(kind));
+      let worker: Worker;
+      const id = String(message.id);
+      try {
+        worker = kind === "nlp" ? (nlp ||= start(kind)) : (ocr ||= start(kind));
+      } catch {
+        return Promise.resolve({
+          id,
+          ...localEngineFailure(undefined, "WORKER_START_FAILED"),
+        });
+      }
       const entries = kind === "nlp" ? planning : recognition,
-        id = String(message.id);
+        timeout = kind === "nlp" ? "INFERENCE_TIMEOUT" : "OCR_TIMEOUT";
       return new Promise((resolve) => {
         entries.set(id, {
           resolve,
-          timer: setTimeout(
-            () =>
-              cancel(
-                kind,
-                kind === "nlp"
-                  ? "Local inference took too long. Please try again."
-                  : "OCR timed out",
-              ),
-            30000,
-          ),
+          timer: setTimeout(() => {
+            const failure = localEngineFailure(undefined, timeout);
+            cancel(kind, failure.error, failure.diagnostic);
+          }, 30000),
         });
-        worker.postMessage(message);
+        try {
+          worker.postMessage(message);
+        } catch {
+          const failure = localEngineFailure(
+            undefined,
+            "WORKER_REQUEST_FAILED",
+          );
+          cancel(kind, failure.error, failure.diagnostic);
+        }
       });
     },
     dispose() {

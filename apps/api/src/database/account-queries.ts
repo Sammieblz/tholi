@@ -6,17 +6,25 @@ import {
   accountExportInputSchema,
   accountExportStatusSchema,
   accountExportPartSchema,
+  accountExportPartV2Schema,
+  accountExportManifestV2Schema,
   accountExportManifestSchema,
   type AccountExportInput,
   type AccountExportStatus,
-  type AccountExportSection,
-  type AccountExportPart,
-  type AccountExportManifest,
+  type AccountExportSectionV2 as AccountExportSection,
+  type AccountExportPartV2 as AccountExportPart,
+  type AccountExportManifestV2 as AccountExportManifest,
   type AccountExportQuery,
   type AccountExportPage,
   accountDeletionResultSchema,
   type AccountDeletionInput,
 } from "../../../../packages/navigation-core/contracts-account";
+import {
+  providerConnectionMetadataColumns,
+  providerConnectionMetadataRow,
+  type ProviderConnectionMetadataRow,
+} from "./provider-connections";
+import { navigationKnowledgeSiteSettingsSchema } from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 import { SUPPORT_LIMITS } from "../../../../packages/navigation-core/contracts-support";
 import type { PostgresRepositories } from "./repositories";
@@ -41,9 +49,12 @@ const workspaceSections = [
   "support",
   "product_events",
 ] as const;
+const globalSectionsV2 = [...globalSections, "provider_connections"] as const;
+const workspaceSectionsV2 = [...workspaceSections, "site_settings"] as const;
 const stateSchema = z
   .object({
     version: z.literal(1),
+    savedDataSchemaVersion: z.literal(2).optional(),
     generation: z.string().uuid(),
     revision: z.number().int().positive(),
     stage: z.enum(["global", "workspace", "done"]),
@@ -55,10 +66,14 @@ const stateSchema = z
     startedAt: z.string().datetime(),
     sessionId: z.string().uuid(),
     latest: accountExportStatusSchema.nullable(),
-    omissions: accountExportManifestSchema.innerType().shape.omissions,
+    omissions: accountExportManifestV2Schema.innerType().shape.omissions,
   })
   .strict();
 type ExportState = z.infer<typeof stateSchema>;
+const globals = (state: ExportState) =>
+  state.savedDataSchemaVersion === 2 ? globalSectionsV2 : globalSections;
+const workspaces = (state: ExportState) =>
+  state.savedDataSchemaVersion === 2 ? workspaceSectionsV2 : workspaceSections;
 export interface AccountExportBudget {
   rows: number;
   bytes: number;
@@ -89,6 +104,7 @@ const cursor = (state: ExportState) =>
         JSON.stringify({
           generation: state.generation,
           revision: state.revision,
+          ...(state.savedDataSchemaVersion === 2 ? { schemaVersion: 2 } : {}),
         }),
       ).toString("base64url");
 
@@ -241,8 +257,8 @@ export class ScopedAccount {
   }> {
     const section =
       state.stage === "global"
-        ? globalSections[state.section]
-        : workspaceSections[state.section];
+        ? globals(state)[state.section]
+        : workspaces(state)[state.section];
     if (!section) throw unavailable();
     const scope = {
       accountId: this.scope.accountId,
@@ -306,6 +322,43 @@ export class ScopedAccount {
         next: items.length === size ? items.at(-1)!.workspaceId : null,
       };
     }
+    if (section === "provider_connections") {
+      const rows = (
+        await this.client.query<ProviderConnectionMetadataRow>(
+          `SELECT ${providerConnectionMetadataColumns} FROM tholi.provider_connections
+         WHERE account_id=$1 AND created_at<=$3 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT $4`,
+          [scope.accountId, after, state.cutoff, size],
+        )
+      ).rows;
+      return idPage(rows.map(providerConnectionMetadataRow));
+    }
+    if (section === "site_settings") {
+      const rows = (
+        await this.client.query<{
+          origin: string;
+          revision: string;
+          collect: boolean;
+          use: boolean;
+          updatedAt: Date;
+        }>(
+          `SELECT origin,revision::text,(collect AND last_activity_at>clock_timestamp()-interval '2160 hours') AS collect,
+          (use_knowledge AND last_activity_at>clock_timestamp()-interval '2160 hours') AS use,updated_at AS "updatedAt"
+         FROM tholi.navigation_knowledge_sites WHERE workspace_id=$1 AND account_id=$2
+         AND updated_at<=$3 AND ($4::text IS NULL OR origin>$4) ORDER BY origin LIMIT $5`,
+          [scope.workspaceId, scope.accountId, state.cutoff, after, size],
+        )
+      ).rows;
+      return {
+        section,
+        items: rows.map((row) =>
+          navigationKnowledgeSiteSettingsSchema.parse({
+            ...row,
+            updatedAt: row.updatedAt.toISOString(),
+          }),
+        ),
+        next: rows.length === size ? rows.at(-1)!.origin : null,
+      };
+    }
     const workspace = await owner.getWorkspace();
     if (
       ["credits", "credit_history"].includes(section) &&
@@ -330,8 +383,12 @@ export class ScopedAccount {
         const legacy = (
           await this.client.query<{ present: boolean }>(
             `SELECT EXISTS(SELECT FROM tholi.saved_artifacts
-          WHERE workspace_id=$1 AND owner_account_id=$2 AND format_version=1 AND deleted_at IS NULL) AS present`,
-            [scope.workspaceId, scope.accountId],
+          WHERE workspace_id=$1 AND owner_account_id=$2 AND (format_version=1 OR ($3::integer=1 AND format_version=3)) AND deleted_at IS NULL) AS present`,
+            [
+              scope.workspaceId,
+              scope.accountId,
+              state.savedDataSchemaVersion ?? 1,
+            ],
           )
         ).rows[0].present;
         if (legacy && state.omissions.length < 100)
@@ -344,14 +401,37 @@ export class ScopedAccount {
       const ids = (
         await this.client.query<{ id: string }>(
           `SELECT id FROM tholi.saved_artifacts WHERE workspace_id=$1 AND owner_account_id=$2
-        AND format_version=2 AND created_at<=$3 AND ($4::uuid IS NULL OR id>$4) ORDER BY id LIMIT $5`,
-          [scope.workspaceId, scope.accountId, state.cutoff, after, size],
+        AND format_version=ANY($6::integer[]) AND created_at<=$3 AND ($4::uuid IS NULL OR id>$4) ORDER BY id LIMIT $5`,
+          [
+            scope.workspaceId,
+            scope.accountId,
+            state.cutoff,
+            after,
+            size,
+            state.savedDataSchemaVersion === 2 ? [2, 3] : [2],
+          ],
         )
       ).rows;
       const items = [];
       for (const row of ids) {
-        const item = await owner.getSavedArtifact(row.id);
+        const item = await owner.getSavedArtifact(
+          row.id,
+          state.savedDataSchemaVersion ?? 1,
+        );
         if (item) items.push(item);
+        else if (
+          state.omissions.length < 100 &&
+          !state.omissions.some(
+            (omission) =>
+              omission.workspaceId === scope.workspaceId &&
+              omission.section === "saved_data",
+          )
+        )
+          state.omissions.push({
+            workspaceId: scope.workspaceId,
+            section: "saved_data",
+            reason: "changed-during-collection",
+          });
       }
       return {
         section,
@@ -390,16 +470,64 @@ export class ScopedAccount {
         next: null,
       };
     if (section === "credit_history" || section === "usage") {
+      if (
+        section === "usage" &&
+        state.savedDataSchemaVersion !== 2 &&
+        after === null &&
+        !state.omissions.some(
+          (item) =>
+            item.workspaceId === scope.workspaceId && item.section === "usage",
+        )
+      ) {
+        const omitted = (
+          await this.client.query<{ present: boolean }>(
+            `SELECT EXISTS(SELECT FROM tholi.usage_records u JOIN tholi.requests q
+              ON q.workspace_id=u.workspace_id AND q.id=u.request_id
+              WHERE u.workspace_id=$1 AND q.account_id=$2
+                AND u.funding_source='customer' AND u.created_at<=$3) AS present`,
+            [scope.workspaceId, scope.accountId, state.cutoff],
+          )
+        ).rows[0].present;
+        if (omitted && state.omissions.length < 100)
+          state.omissions.push({
+            workspaceId: scope.workspaceId,
+            section: "usage",
+            reason: "not-exportable",
+          });
+      }
       const page =
         section === "usage"
-          ? await owner.listUsage({ after: after ?? undefined, limit: size })
+          ? await owner.listUsage(
+              { after: after ?? undefined, limit: size },
+              state.savedDataSchemaVersion ?? 1,
+            )
           : await owner.listCreditHistory({
               after: after ?? undefined,
               limit: size,
             });
       const items = page.items
         .filter((item) => item.createdAt.getTime() <= Date.parse(state.cutoff))
-        .map(plain);
+        .map((item) => {
+          const value = plain(item) as Record<string, unknown>;
+          if (section === "usage") {
+            const keys = [
+              "fundingSource",
+              "usageVersion",
+              "customerUsdMicros",
+              "cacheReadInputUnits",
+              "cacheWriteInputUnits",
+              "reasoningOutputUnits",
+            ];
+            if (state.savedDataSchemaVersion !== 2)
+              for (const key of keys) delete value[key];
+            else {
+              value.fundingSource ??= "managed";
+              value.usageVersion ??= 1;
+              for (const key of keys.slice(2)) value[key] ??= null;
+            }
+          }
+          return value;
+        });
       return {
         section,
         items,
@@ -440,13 +568,13 @@ export class ScopedAccount {
   private async advanceSource(state: ExportState) {
     state.cursor = null;
     state.section++;
-    if (state.stage === "global" && state.section >= globalSections.length) {
+    if (state.stage === "global" && state.section >= globals(state).length) {
       state.stage = "workspace";
       state.section = 0;
     }
     if (
       state.stage === "workspace" &&
-      state.section >= workspaceSections.length
+      state.section >= workspaces(state).length
     ) {
       state.workspaceAfter = state.workspaceId;
       state.workspaceId = null;
@@ -461,13 +589,18 @@ export class ScopedAccount {
     signal?: AbortSignal,
   ): Promise<AccountExportStatus> {
     const input = accountExportInputSchema.parse(raw);
-    let selected: { generation: string; revision: number } | null = null;
+    let selected: {
+      generation: string;
+      revision: number;
+      schemaVersion?: 2;
+    } | null = null;
     if (input.continuation) {
       try {
         selected = z
           .object({
             generation: z.string().uuid(),
             revision: z.number().int().positive(),
+            schemaVersion: z.literal(2).optional(),
           })
           .strict()
           .parse(
@@ -482,7 +615,10 @@ export class ScopedAccount {
     const page = await this.owner.beginRequest({
       operation: selected ? "account.export.continue.v1" : "account.export.v1",
       idempotencyKey: input.idempotencyKey,
-      payloadHash: hash({ continuation: input.continuation ?? null }),
+      payloadHash: hash({
+        continuation: input.continuation ?? null,
+        ...(input.schemaVersion === 2 ? { schemaVersion: 2 } : {}),
+      }),
     });
     if (page.replayed) {
       const old = (
@@ -503,6 +639,9 @@ export class ScopedAccount {
       : {
           version: 1,
           generation: page.request.id,
+          ...(input.schemaVersion === 2
+            ? { savedDataSchemaVersion: 2 as const }
+            : {}),
           revision: 1,
           stage: "global",
           section: 0,
@@ -517,9 +656,45 @@ export class ScopedAccount {
         };
     if (
       selected &&
-      (selected.revision !== state.revision || state.stage === "done")
+      (selected.revision !== state.revision ||
+        state.stage === "done" ||
+        (selected.schemaVersion ?? 1) !== (state.savedDataSchemaVersion ?? 1) ||
+        (input.schemaVersion ?? 1) !== (state.savedDataSchemaVersion ?? 1))
     )
       throw unavailable();
+    if (state.savedDataSchemaVersion !== 2 && state.omissions.length < 98) {
+      const omitted = (
+        await this.client.query<{ providers: boolean; settings: boolean }>(
+          `SELECT EXISTS(SELECT FROM tholi.provider_connections WHERE account_id=$1) AS providers,
+          EXISTS(SELECT FROM tholi.navigation_knowledge_sites WHERE account_id=$1) AS settings`,
+          [this.scope.accountId],
+        )
+      ).rows[0];
+      if (
+        omitted.providers &&
+        !state.omissions.some(
+          (item) => item.workspaceId === null && item.section === "profile",
+        )
+      )
+        state.omissions.push({
+          workspaceId: null,
+          section: "profile",
+          reason: "not-exportable",
+        });
+      if (
+        omitted.settings &&
+        !state.omissions.some(
+          (item) =>
+            item.workspaceId === this.scope.workspaceId &&
+            item.section === "saved_data",
+        )
+      )
+        state.omissions.push({
+          workspaceId: this.scope.workspaceId,
+          section: "saved_data",
+          reason: "not-exportable",
+        });
+    }
     const parts: AccountExportManifest["parts"] = [],
       workspaceIds = new Set<string>();
     let bytes = 0,
@@ -561,7 +736,7 @@ export class ScopedAccount {
             if (state.omissions.length < 100)
               state.omissions.push({
                 workspaceId: state.workspaceId,
-                section: workspaceSections[state.section],
+                section: workspaces(state)[state.section],
                 reason: "workspace-access-revoked",
               });
             state.workspaceAfter = state.workspaceId;
@@ -584,8 +759,20 @@ export class ScopedAccount {
           for (const item of source.items) {
             let last = candidate.at(-1);
             const create = (items: unknown[]) =>
-              accountExportPartSchema.parse({
-                schemaVersion: 1,
+              (state.savedDataSchemaVersion === 2
+                ? accountExportPartV2Schema
+                : accountExportPartSchema
+              ).parse({
+                schemaVersion:
+                  state.savedDataSchemaVersion === 2 &&
+                  [
+                    "saved_data",
+                    "site_settings",
+                    "provider_connections",
+                    "usage",
+                  ].includes(source.section)
+                    ? 2
+                    : 1,
                 kind: "account-export-part",
                 generation: state.generation,
                 accountId: this.scope.accountId,
@@ -658,8 +845,12 @@ export class ScopedAccount {
     }
     state.revision++;
     const continuation = cursor(state);
-    const manifest = accountExportManifestSchema.parse({
-      schemaVersion: 1,
+    const manifest = (
+      state.savedDataSchemaVersion === 2
+        ? accountExportManifestV2Schema
+        : accountExportManifestSchema
+    ).parse({
+      schemaVersion: state.savedDataSchemaVersion ?? 1,
       kind: "account-export-manifest",
       generation: state.generation,
       accountId: this.scope.accountId,

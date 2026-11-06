@@ -5,6 +5,7 @@ import {
   savedDataDeleteInputSchema,
   savedDataExportInputSchema,
   savedDataImportHash,
+  savedDataImportItemSchema,
   savedDataImportInputSchema,
   savedDataImportResultSchema,
   savedDataListQuerySchema,
@@ -13,32 +14,69 @@ import {
   savedDataRecordSchema,
   savedDataScopeSchema,
   SAVED_DATA_LIMITS,
-  type SavedDataArtifact,
-  type SavedDataImportInput,
-  type SavedDataRecord,
+  savedDataArtifactV2Schema,
+  savedDataRecordV2Schema,
+  savedDataMutationV2Schema,
+  savedDataImportInputV2Schema,
+  savedDataImportResultV2Schema,
+  savedDataPageV2Schema,
+  savedDataChangesV2Schema,
+  savedDataImportHashV2,
+  type SavedDataView,
+  type SavedDataArtifactV2 as SavedDataArtifact,
+  type SavedDataImportInputV2 as SavedDataImportInput,
+  type SavedDataRecordV2 as SavedDataRecord,
   type SavedDataScope,
 } from "./contracts-saved-data";
+import {
+  navigationKnowledgeSiteSettingsSchema,
+  navigationKnowledgeSiteSettingsInputSchema,
+  navigationKnowledgeQuerySchema,
+  retrievedNavigationKnowledgeSchema,
+  type NavigationKnowledgeSiteSettingsInput,
+  type NavigationKnowledgeQuery,
+  navigationKnowledgeForgetSiteInputSchema,
+  navigationKnowledgeForgetSiteResultSchema,
+} from "./contracts-navigation-knowledge";
 import { privateFileRequestSchema } from "./contracts-support";
 import { serviceOrigin, ServiceClientError } from "./service-client";
+import { awaitAbortableOperation } from "./abort";
+import {
+  AUTHORIZATION_CONSENT_POLICIES,
+  policyCatalogSchema,
+  consentPageSchema,
+  consentSchema,
+  consentUpdateSchema,
+} from "./contracts-authorization";
 import {
   serviceCapabilitiesSchema,
   serviceSyncRevisionSchema,
 } from "./contracts-service";
 
-export type SavedDataConnection = SavedDataScope & { serviceOrigin: string };
+export type SavedDataConnection = SavedDataScope & {
+  serviceOrigin: string;
+  schemaVersion?: 2;
+};
 export const savedDataConnectionSchema = savedDataScopeSchema
-  .extend({ serviceOrigin: z.string().transform(serviceOrigin) })
+  .extend({
+    serviceOrigin: z.string().transform(serviceOrigin),
+    schemaVersion: z.literal(2).optional(),
+  })
   .strict();
 const localSelectionSchema = z
   .object({
     localKey: z.string().min(1).max(500),
     localRevision: z.string().min(1).max(128),
-    artifact: savedDataArtifactSchema,
+    artifact: savedDataArtifactV2Schema,
+    siteSettingsRevision: z
+      .string()
+      .regex(/^[1-9][0-9]*$/)
+      .optional(),
   })
   .strict();
 export type SavedDataLocalSelection = z.infer<typeof localSelectionSchema>;
 
-const operationSchema = z.discriminatedUnion("kind", [
+const operationV1Schema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("save"), body: savedDataMutationSchema }).strict(),
   z
     .object({
@@ -53,11 +91,24 @@ const operationSchema = z.discriminatedUnion("kind", [
 ]);
 const pendingOperationSchema = z
   .object({
-    operation: operationSchema,
+    operation: operationV1Schema,
     state: z.enum(["pending", "uncertain", "conflict"]),
   })
   .strict();
-type PendingOperation = z.infer<typeof pendingOperationSchema>;
+const operationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("save"), body: savedDataMutationV2Schema })
+    .strict(),
+  operationV1Schema.options[1],
+  z
+    .object({ kind: z.literal("import"), body: savedDataImportInputV2Schema })
+    .strict(),
+]);
+const pendingOperationV2Schema = pendingOperationSchema.extend({
+  operation: operationSchema,
+  schemaVersion: z.literal(2).optional(),
+});
+type PendingOperation = z.infer<typeof pendingOperationV2Schema>;
 
 /** Private client state contains only approved DTOs, never credentials or raw local source. */
 export const savedDataClientStateSchema = z
@@ -75,18 +126,32 @@ export const savedDataClientStateSchema = z
     after: serviceSyncRevisionSchema,
   })
   .strict();
-export type SavedDataClientState = z.infer<typeof savedDataClientStateSchema>;
-export const emptySavedDataClientState = (): SavedDataClientState => ({
-  version: 1,
-  records: [],
-  outbox: [],
-  mappings: [],
-  after: "0",
+export const savedDataClientStateV2Schema = savedDataClientStateSchema.extend({
+  version: z.literal(2),
+  records: z.array(savedDataRecordV2Schema).max(200),
+  outbox: z.array(pendingOperationV2Schema).max(20),
 });
+export const savedDataClientStateFileSchema = z.union([
+  savedDataClientStateSchema,
+  savedDataClientStateV2Schema,
+]);
+export type SavedDataClientState = z.infer<
+  typeof savedDataClientStateFileSchema
+>;
+export const emptySavedDataClientState = (
+  view: SavedDataView = 1,
+): SavedDataClientState =>
+  savedDataClientStateFileSchema.parse({
+    version: view,
+    records: [],
+    outbox: [],
+    mappings: [],
+    after: "0",
+  });
 export function savedDataConnectionKey(scope: SavedDataConnection) {
   const parsed = savedDataConnectionSchema.parse(scope);
   return JSON.stringify([
-    1,
+    parsed.schemaVersion ?? 1,
     parsed.serviceOrigin,
     parsed.accountId,
     parsed.workspaceId,
@@ -113,9 +178,14 @@ export interface SavedDataClientOptions {
     method: "GET" | "POST" | "PATCH" | "DELETE",
     body: unknown,
     signal: AbortSignal,
+    beforeSend?: () => Promise<void>,
   ): Promise<T>;
   store: SavedDataClientStore;
   localRevision?(key: string): Promise<string | undefined>;
+}
+export interface SavedDataExecution {
+  signal?: AbortSignal;
+  beforeSend?: () => Promise<void>;
 }
 export const savedDataClientErrorCodeSchema = z.enum([
   "ACCOUNT_CHANGED",
@@ -165,6 +235,8 @@ export class SavedDataClient {
   private generation = 0;
   private pending = new AbortController();
   private bound?: SavedDataConnection;
+  private boundGeneration = 0;
+  private readCompatibility?: { generation: number; connection: string };
   private preview?: ImportPreview;
   private clearing = Promise.resolve();
   private binding = Promise.resolve();
@@ -176,6 +248,7 @@ export class SavedDataClient {
     this.pending.abort();
     this.pending = new AbortController();
     this.preview = undefined;
+    this.readCompatibility = undefined;
     this.flushing = undefined;
     this.binding = Promise.resolve();
   }
@@ -216,8 +289,21 @@ export class SavedDataClient {
           this.bound &&
           savedDataConnectionKey(this.bound) !== savedDataConnectionKey(parsed)
         ) {
-          await this.reset();
-          throw this.changed();
+          const sameAccount =
+            this.bound.serviceOrigin === parsed.serviceOrigin &&
+            this.bound.accountId === parsed.accountId &&
+            this.bound.workspaceId === parsed.workspaceId;
+          if (sameAccount && this.boundGeneration !== this.generation) {
+            this.bound = parsed;
+          } else if (sameAccount) {
+            this.suspend();
+            this.bound = parsed;
+            this.boundGeneration = this.generation;
+            throw this.changed();
+          } else {
+            await this.reset();
+            throw this.changed();
+          }
         }
         const expected = this.generation;
         const current = () => {
@@ -225,6 +311,7 @@ export class SavedDataClient {
             throw this.changed();
         };
         this.bound = parsed;
+        this.boundGeneration = expected;
         current();
         lease = { scope: parsed, signal: this.pending.signal, current };
       });
@@ -238,6 +325,15 @@ export class SavedDataClient {
       "The account changed. Open cloud-saved data again.",
     );
   }
+  private state(value: unknown) {
+    return savedDataClientStateFileSchema.parse(value);
+  }
+  private view(lease: Lease): SavedDataView {
+    return lease.scope.schemaVersion ?? 1;
+  }
+  private recordSchema(view: SavedDataView): z.ZodType<SavedDataRecord> {
+    return view === 2 ? savedDataRecordV2Schema : savedDataRecordSchema;
+  }
   private path(lease: Lease, suffix: string): `/api/v1/${string}` {
     return `/api/v1/workspaces/${lease.scope.workspaceId}/${suffix}`;
   }
@@ -247,25 +343,83 @@ export class SavedDataClient {
     schema: z.ZodType<T>,
     method: "GET" | "POST" | "PATCH" | "DELETE" = "GET",
     body?: unknown,
+    view: SavedDataView = this.view(lease),
+    permissionReduction = false,
+    execution?: SavedDataExecution,
   ) {
-    lease.current();
-    const capability =
-      method === "PATCH" || (method === "POST" && suffix !== "artifacts/export")
+    const signal = execution?.signal
+      ? AbortSignal.any([lease.signal, execution.signal])
+      : lease.signal;
+    const current = () => {
+      lease.current();
+      signal.throwIfAborted();
+    };
+    const beforeSend = execution?.beforeSend
+      ? async () => {
+          current();
+          await execution.beforeSend!();
+          current();
+        }
+      : undefined;
+    const interrupted = () =>
+      lease.signal.aborted
+        ? this.changed()
+        : new DOMException("The cloud operation was cancelled.", "AbortError");
+    current();
+    const revocation =
+      permissionReduction ||
+      (suffix === "artifacts/site-settings" &&
+        method === "PATCH" &&
+        !!body &&
+        typeof body === "object" &&
+        "collect" in body &&
+        body.collect === false &&
+        "use" in body &&
+        body.use === false);
+    const capability = revocation
+      ? undefined
+      : method === "PATCH" ||
+          (method === "POST" && suffix !== "artifacts/export")
         ? "saved-data-write"
         : suffix === "artifacts/export"
           ? "saved-data-export"
           : undefined;
-    if (capability) {
-      const offered = await this.options.request(
-        "/api/v1/capabilities",
-        serviceCapabilitiesSchema,
-        "GET",
-        undefined,
-        lease.signal,
-      );
-      lease.current();
+    const epoch = {
+      generation: this.generation,
+      connection: savedDataConnectionKey(lease.scope),
+    };
+    const compatibleRead = () =>
+      this.readCompatibility?.generation === epoch.generation &&
+      this.readCompatibility.connection === epoch.connection;
+    if (capability || (view === 2 && (method !== "GET" || !compatibleRead()))) {
+      let offered: z.infer<typeof serviceCapabilitiesSchema>;
+      try {
+        offered = await awaitAbortableOperation(
+          () =>
+            this.options.request(
+              "/api/v1/capabilities",
+              serviceCapabilitiesSchema,
+              "GET",
+              undefined,
+              signal,
+              ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
+            ),
+          signal,
+          interrupted,
+        );
+        current();
+      } catch (error) {
+        if (compatibleRead()) this.readCompatibility = undefined;
+        throw error;
+      }
+      const namespaceCompatible =
+        offered.capabilities.includes("saved-data-schema-2") &&
+        offered.capabilities.includes("account-binding");
+      if (!namespaceCompatible && compatibleRead())
+        this.readCompatibility = undefined;
       if (
-        !offered.capabilities.includes(capability) ||
+        (capability && !offered.capabilities.includes(capability)) ||
+        (view === 2 && !namespaceCompatible) ||
         !offered.capabilities.includes("account-binding")
       )
         throw new ServiceClientError(
@@ -273,23 +427,52 @@ export class SavedDataClient {
           503,
           "This cloud data operation is unavailable on the connected service.",
         );
+      // This is only public protocol compatibility, never cached authorization.
+      // Every mutation discovers its current feature, and every actual request
+      // retains the existing account, host, consent and final send checks.
+      if (view === 2) this.readCompatibility = epoch;
     }
-    const result = await this.options.request(
-      this.path(lease, suffix),
-      schema,
-      method,
-      body,
-      lease.signal,
-    );
-    lease.current();
+    let result: T;
+    try {
+      result = await awaitAbortableOperation(
+        () =>
+          this.options.request(
+            this.path(
+              lease,
+              view === 2
+                ? `${suffix}${suffix.includes("?") ? "&" : "?"}schemaVersion=2`
+                : suffix,
+            ),
+            schema,
+            method,
+            body,
+            signal,
+            ...(beforeSend ? ([beforeSend] as const) : ([] as const)),
+          ),
+        signal,
+        interrupted,
+      );
+    } catch (error) {
+      if (
+        view === 2 &&
+        compatibleRead() &&
+        error instanceof ServiceClientError &&
+        ["INVALID_RESPONSE", "COMPATIBILITY_MISMATCH"].includes(error.code)
+      )
+        this.readCompatibility = undefined;
+      throw error;
+    }
+    current();
     return result;
   }
   private merge(state: SavedDataClientState, records: SavedDataRecord[]) {
-    const existing = new Map(
+    const existing = new Map<string, SavedDataRecord>(
       state.records.map((record) => [record.id, record]),
     );
     for (const raw of records) {
-      const record = savedDataRecordSchema.parse(raw),
+      const record = (
+          state.version === 2 ? savedDataRecordV2Schema : savedDataRecordSchema
+        ).parse(raw),
         previous = existing.get(record.id);
       if (previous && BigInt(previous.revision) > BigInt(record.revision))
         continue;
@@ -310,7 +493,7 @@ export class SavedDataClient {
         "CACHE_LIMIT",
         "Reconcile pending cloud changes before loading more records.",
       );
-    return savedDataClientStateSchema.parse({ ...state, records: retained });
+    return this.state({ ...state, records: retained });
   }
   private async cache(lease: Lease, records: SavedDataRecord[]) {
     return this.options.store.update(
@@ -323,7 +506,11 @@ export class SavedDataClient {
     const lease = await this.lease();
     return this.options.store.read(lease.scope, lease.current);
   }
-  async list(raw: unknown = {}, search = false) {
+  async list(
+    raw: unknown = {},
+    search = false,
+    execution?: SavedDataExecution,
+  ) {
     const lease = await this.lease(),
       query = savedDataListQuerySchema.parse(raw);
     const parameters = new URLSearchParams();
@@ -332,7 +519,12 @@ export class SavedDataClient {
     const page = await this.request(
       lease,
       `artifacts${search ? "/search" : ""}?${parameters}`,
-      savedDataPageSchema,
+      this.view(lease) === 2 ? savedDataPageV2Schema : savedDataPageSchema,
+      "GET",
+      undefined,
+      this.view(lease),
+      false,
+      execution,
     );
     const cached = await this.cache(lease, page.items);
     return {
@@ -350,7 +542,7 @@ export class SavedDataClient {
       record = await this.request(
         lease,
         `artifacts/${z.string().uuid().parse(id)}`,
-        savedDataRecordSchema,
+        this.recordSchema(this.view(lease)),
       );
     if (record.id !== id)
       throw new ServiceClientError(
@@ -382,7 +574,14 @@ export class SavedDataClient {
       const mapped = state.mappings.find(
         (entry) => entry.localKey === item.localKey,
       );
-      const id = mapped?.id ?? crypto.randomUUID();
+      const mappedRecord =
+        mapped && state.records.find((record) => record.id === mapped.id);
+      const id =
+        mapped &&
+        (!mappedRecord ||
+          mappedRecord.schemaVersion === item.artifact.schemaVersion)
+          ? mapped.id
+          : crypto.randomUUID();
       const current = state.records.find((record) => record.id === id);
       if (current?.deletedAt)
         throw new SavedDataClientError(
@@ -396,10 +595,21 @@ export class SavedDataClient {
       });
       return {
         expectedRevision: current?.revision ?? "0",
-        artifact: { ...item.artifact, id },
+        artifact:
+          this.view(lease) === 2
+            ? { ...item.artifact, id }
+            : savedDataArtifactSchema.parse({ ...item.artifact, id }),
+        ...(item.siteSettingsRevision
+          ? { siteSettingsRevision: item.siteSettingsRevision }
+          : {}),
       };
     });
-    const hash = await savedDataImportHash(artifactScope(lease.scope), items);
+    const hash = await (this.view(lease) === 2
+      ? savedDataImportHashV2(artifactScope(lease.scope), items)
+      : savedDataImportHash(
+          artifactScope(lease.scope),
+          z.array(savedDataImportItemSchema).parse(items),
+        ));
     lease.current();
     this.preview = {
       hash,
@@ -440,8 +650,12 @@ export class SavedDataClient {
         );
     }
     if (
-      (await savedDataImportHash(artifactScope(lease.scope), preview.items)) !==
-      hash
+      (await (this.view(lease) === 2
+        ? savedDataImportHashV2(artifactScope(lease.scope), preview.items)
+        : savedDataImportHash(
+            artifactScope(lease.scope),
+            z.array(savedDataImportItemSchema).parse(preview.items),
+          ))) !== hash
     )
       throw new SavedDataClientError(
         "PREVIEW_CHANGED",
@@ -454,7 +668,11 @@ export class SavedDataClient {
         "This preview was already used. Review the pending import instead.",
       );
     this.preview = undefined;
-    const body = savedDataImportInputSchema.parse({
+    const body = (
+      this.view(lease) === 2
+        ? savedDataImportInputV2Schema
+        : savedDataImportInputSchema
+    ).parse({
       idempotencyKey: crypto.randomUUID(),
       approved: true,
       previewHash: hash,
@@ -468,12 +686,16 @@ export class SavedDataClient {
         );
         for (const source of preview.sources)
           mappings.set(source.localKey, source.id);
-        return savedDataClientStateSchema.parse({
+        return this.state({
           ...state,
           mappings: [...mappings].map(([localKey, id]) => ({ localKey, id })),
           outbox: [
             ...state.outbox,
-            { operation: { kind: "import", body }, state: "pending" },
+            {
+              operation: { kind: "import", body },
+              state: "pending",
+              ...(this.view(lease) === 2 ? { schemaVersion: 2 } : {}),
+            },
           ],
         });
       },
@@ -482,16 +704,26 @@ export class SavedDataClient {
     await this.send(lease, { kind: "import", body });
     return body.idempotencyKey;
   }
-  async save(artifact: SavedDataArtifact, expectedRevision: string) {
+  async save(
+    artifact: SavedDataArtifact,
+    expectedRevision: string,
+    siteSettingsRevision?: string,
+    execution?: SavedDataExecution,
+  ) {
     const lease = await this.lease(),
-      body = savedDataMutationSchema.parse({
+      body = (
+        this.view(lease) === 2
+          ? savedDataMutationV2Schema
+          : savedDataMutationSchema
+      ).parse({
         idempotencyKey: crypto.randomUUID(),
         expectedRevision,
         approved: true,
         artifact,
+        ...(siteSettingsRevision ? { siteSettingsRevision } : {}),
       });
-    await this.enqueue(lease, { kind: "save", body });
-    await this.send(lease, { kind: "save", body });
+    await this.enqueue(lease, { kind: "save", body }, execution);
+    await this.send(lease, { kind: "save", body }, this.view(lease), execution);
     return body.idempotencyKey;
   }
   async remove(id: string, expectedRevision: string) {
@@ -506,18 +738,37 @@ export class SavedDataClient {
     await this.send(lease, operation);
     return body.idempotencyKey;
   }
-  private enqueue(lease: Lease, operation: PendingOperation["operation"]) {
+  private enqueue(
+    lease: Lease,
+    operation: PendingOperation["operation"],
+    execution?: SavedDataExecution,
+  ) {
     return this.options.store.update(
       lease.scope,
       (state) =>
-        savedDataClientStateSchema.parse({
+        this.state({
           ...state,
-          outbox: [...state.outbox, { operation, state: "pending" }],
+          outbox: [
+            ...state.outbox,
+            {
+              operation,
+              state: "pending",
+              ...(this.view(lease) === 2 ? { schemaVersion: 2 } : {}),
+            },
+          ],
         }),
-      lease.current,
+      () => {
+        lease.current();
+        execution?.signal?.throwIfAborted();
+      },
     );
   }
-  private async send(lease: Lease, operation: PendingOperation["operation"]) {
+  private async send(
+    lease: Lease,
+    operation: PendingOperation["operation"],
+    view: SavedDataView = this.view(lease),
+    execution?: SavedDataExecution,
+  ) {
     try {
       let records: SavedDataRecord[];
       if (operation.kind === "import")
@@ -525,9 +776,14 @@ export class SavedDataClient {
           await this.request(
             lease,
             "sync/import",
-            savedDataImportResultSchema,
+            view === 2
+              ? savedDataImportResultV2Schema
+              : savedDataImportResultSchema,
             "POST",
             operation.body,
+            view,
+            false,
+            execution,
           )
         ).items;
       else if (operation.kind === "delete")
@@ -535,9 +791,12 @@ export class SavedDataClient {
           await this.request(
             lease,
             `artifacts/${operation.id}`,
-            savedDataRecordSchema,
+            this.recordSchema(view),
             "DELETE",
             operation.body,
+            view,
+            false,
+            execution,
           ),
         ];
       else
@@ -547,9 +806,12 @@ export class SavedDataClient {
             operation.body.expectedRevision === "0"
               ? "artifacts"
               : `artifacts/${operation.body.artifact.id}`,
-            savedDataRecordSchema,
+            this.recordSchema(view),
             operation.body.expectedRevision === "0" ? "POST" : "PATCH",
             operation.body,
+            view,
+            false,
+            execution,
           ),
         ];
       const expected = savedDataOperationIds(operation);
@@ -587,13 +849,13 @@ export class SavedDataClient {
         lease.scope,
         (state) =>
           this.merge(
-            {
+            this.state({
               ...state,
               outbox: state.outbox.filter(
                 (entry) =>
                   operationId(entry.operation) !== operationId(operation),
               ),
-            },
+            }),
             records,
           ),
         lease.current,
@@ -605,29 +867,84 @@ export class SavedDataClient {
         [404, 409].includes(error.status);
       await this.options.store.update(
         lease.scope,
-        (state) => ({
-          ...state,
-          outbox: state.outbox.map((entry) =>
-            operationId(entry.operation) === operationId(operation)
-              ? { ...entry, state: conflict ? "conflict" : "uncertain" }
-              : entry,
-          ),
-        }),
+        (state) =>
+          this.state({
+            ...state,
+            outbox: state.outbox.map((entry) =>
+              operationId(entry.operation) === operationId(operation)
+                ? { ...entry, state: conflict ? "conflict" : "uncertain" }
+                : entry,
+            ),
+          }),
         lease.current,
       );
       throw error;
     }
   }
-  async reconcile() {
+  private async replay(
+    lease: Lease,
+    state: SavedDataClientState,
+    entry: PendingOperation,
+    execution?: SavedDataExecution,
+  ) {
+    if (entry.state === "conflict") return;
+    const deleted = state.records.some(
+      (record) =>
+        record.deletedAt &&
+        savedDataOperationIds(entry.operation).includes(record.id),
+    );
+    if (deleted) {
+      await this.options.store.update(
+        lease.scope,
+        (latest) =>
+          this.state({
+            ...latest,
+            outbox: latest.outbox.map((candidate) =>
+              operationId(candidate.operation) === operationId(entry.operation)
+                ? { ...candidate, state: "conflict" }
+                : candidate,
+            ),
+          }),
+        lease.current,
+      );
+      return;
+    }
+    await this.send(
+      lease,
+      entry.operation,
+      "schemaVersion" in entry ? (entry.schemaVersion ?? 1) : 1,
+      execution,
+    );
+  }
+  async reconcile(
+    selectedOperationId?: string,
+    execution?: SavedDataExecution,
+  ) {
+    execution?.signal?.throwIfAborted();
     if (this.flushing) return this.flushing;
     const work = (async () => {
       const lease = await this.lease();
+      if (selectedOperationId) {
+        const state = await this.options.store.read(lease.scope, lease.current);
+        const selected = state.outbox.find(
+          (entry) => operationId(entry.operation) === selectedOperationId,
+        );
+        if (selected) await this.replay(lease, state, selected, execution);
+        return;
+      }
       for (let page = 0; page < 10; page++) {
         const state = await this.options.store.read(lease.scope, lease.current);
         const changes = await this.request(
           lease,
           `sync/changes?after=${state.after}&limit=100`,
-          savedDataChangesSchema,
+          this.view(lease) === 2
+            ? savedDataChangesV2Schema
+            : savedDataChangesSchema,
+          "GET",
+          undefined,
+          this.view(lease),
+          false,
+          execution,
         );
         if (
           BigInt(changes.nextAfter) < BigInt(state.after) ||
@@ -654,31 +971,8 @@ export class SavedDataClient {
           continue;
         }
         const ready = await this.options.store.read(lease.scope, lease.current);
-        for (const entry of ready.outbox) {
-          if (entry.state === "conflict") continue;
-          const deleted = ready.records.some(
-            (record) =>
-              record.deletedAt &&
-              savedDataOperationIds(entry.operation).includes(record.id),
-          );
-          if (deleted) {
-            await this.options.store.update(
-              lease.scope,
-              (latest) => ({
-                ...latest,
-                outbox: latest.outbox.map((candidate) =>
-                  operationId(candidate.operation) ===
-                  operationId(entry.operation)
-                    ? { ...candidate, state: "conflict" }
-                    : candidate,
-                ),
-              }),
-              lease.current,
-            );
-            continue;
-          }
-          await this.send(lease, entry.operation);
-        }
+        for (const entry of ready.outbox)
+          await this.replay(lease, ready, entry, execution);
         return;
       }
     })();
@@ -693,13 +987,14 @@ export class SavedDataClient {
     const lease = await this.lease();
     await this.options.store.update(
       lease.scope,
-      (state) => ({
-        ...state,
-        outbox: state.outbox.filter(
-          (entry) =>
-            operationId(entry.operation) !== id || entry.state !== "conflict",
-        ),
-      }),
+      (state) =>
+        this.state({
+          ...state,
+          outbox: state.outbox.filter(
+            (entry) =>
+              operationId(entry.operation) !== id || entry.state !== "conflict",
+          ),
+        }),
       lease.current,
     );
   }
@@ -714,6 +1009,191 @@ export class SavedDataClient {
         idempotencyKey: crypto.randomUUID(),
         ids,
       }),
+    );
+  }
+  async siteSettings(origin: string, execution?: SavedDataExecution) {
+    const lease = await this.lease();
+    if (this.view(lease) !== 2)
+      throw new ServiceClientError(
+        "UNAVAILABLE",
+        503,
+        "Private memory requires saved-data schema version 2.",
+      );
+    return this.request(
+      lease,
+      `artifacts/site-settings?origin=${encodeURIComponent(origin)}`,
+      navigationKnowledgeSiteSettingsSchema,
+      "GET",
+      undefined,
+      2,
+      false,
+      execution,
+    );
+  }
+  async updateSiteSettings(
+    input: Omit<
+      NavigationKnowledgeSiteSettingsInput,
+      "idempotencyKey" | "approved"
+    >,
+  ) {
+    const lease = await this.lease();
+    if (this.view(lease) !== 2)
+      throw new ServiceClientError(
+        "UNAVAILABLE",
+        503,
+        "Private memory requires saved-data schema version 2.",
+      );
+    const current =
+      input.collect || input.use
+        ? await this.request(
+            lease,
+            `artifacts/site-settings?origin=${encodeURIComponent(input.origin)}`,
+            navigationKnowledgeSiteSettingsSchema,
+          )
+        : undefined;
+    if (current && current.revision !== input.expectedRevision)
+      throw new ServiceClientError(
+        "CONFLICT",
+        409,
+        "The site memory choice changed. Review it again.",
+      );
+    const enabling = !!(
+      (input.collect && !current?.collect) ||
+      (input.use && !current?.use)
+    );
+    if (enabling) {
+      const policies = await this.request(
+        lease,
+        "policies",
+        policyCatalogSchema,
+        "GET",
+        undefined,
+        1,
+      );
+      const consents = await this.request(
+        lease,
+        "consents",
+        consentPageSchema,
+        "GET",
+        undefined,
+        1,
+      );
+      const supported = AUTHORIZATION_CONSENT_POLICIES.find(
+        (policy) => policy.purpose === "cloud_saved_routes",
+      )!;
+      const policy = policies.consentPolicies.find(
+        (policy) => policy.purpose === supported.purpose,
+      );
+      if (
+        policies.workspaceId !== lease.scope.workspaceId ||
+        !policy ||
+        policy.policyVersion !== supported.policyVersion
+      )
+        throw new ServiceClientError(
+          "UNAVAILABLE",
+          503,
+          "The saved-data policy is unavailable or needs a new review.",
+        );
+      const prior = consents.items.find(
+        (consent) => consent.purpose === policy.purpose,
+      );
+      if (!prior?.granted || prior.policyVersion !== policy.policyVersion) {
+        if (!policies.allowedActions.includes("consents.write"))
+          throw new ServiceClientError(
+            "FORBIDDEN",
+            403,
+            "This account cannot grant saved-data permission.",
+          );
+        await this.request(
+          lease,
+          "consents",
+          consentSchema,
+          "POST",
+          consentUpdateSchema.parse({
+            purpose: policy.purpose,
+            policyVersion: policy.policyVersion,
+            granted: true,
+            expectedRevision: prior?.revision ?? "0",
+          }),
+          1,
+        );
+      }
+    }
+    return this.request(
+      lease,
+      "artifacts/site-settings",
+      navigationKnowledgeSiteSettingsSchema,
+      "PATCH",
+      navigationKnowledgeSiteSettingsInputSchema.parse({
+        ...input,
+        idempotencyKey: crypto.randomUUID(),
+        approved: true,
+      }),
+      2,
+      !enabling,
+    );
+  }
+  async forgetSite(
+    origin: string,
+    expectedRevision: string,
+    idempotencyKey: string = crypto.randomUUID(),
+  ) {
+    const lease = await this.lease();
+    if (this.view(lease) !== 2)
+      throw new ServiceClientError(
+        "UNAVAILABLE",
+        503,
+        "Private memory requires saved-data schema version 2.",
+      );
+    const result = await this.request(
+      lease,
+      "artifacts/site-settings",
+      navigationKnowledgeForgetSiteResultSchema,
+      "DELETE",
+      navigationKnowledgeForgetSiteInputSchema.parse({
+        origin,
+        expectedRevision,
+        idempotencyKey,
+        approved: true,
+      }),
+    );
+    const deleted = new Set(result.deletedIds);
+    await this.options.store.update(
+      lease.scope,
+      (state) =>
+        this.state({
+          ...state,
+          records: state.records.filter((record) => !deleted.has(record.id)),
+          outbox: state.outbox.map((entry) =>
+            savedDataOperationIds(entry.operation).some((id) => deleted.has(id))
+              ? { ...entry, state: "conflict" }
+              : entry,
+          ),
+        }),
+      lease.current,
+    );
+    return result;
+  }
+  async retrieveKnowledge(
+    query: NavigationKnowledgeQuery,
+    execution?: SavedDataExecution,
+  ) {
+    const lease = await this.lease();
+    if (this.view(lease) !== 2)
+      throw new ServiceClientError(
+        "UNAVAILABLE",
+        503,
+        "Private memory requires saved-data schema version 2.",
+      );
+    return this.request(
+      lease,
+      "artifacts/navigation-knowledge",
+      retrievedNavigationKnowledgeSchema,
+      "POST",
+      navigationKnowledgeQuerySchema.parse(query),
+      this.view(lease),
+      false,
+      execution,
     );
   }
   async routeIntent(id: string) {

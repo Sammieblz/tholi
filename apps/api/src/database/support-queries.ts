@@ -10,7 +10,10 @@ import { privateExportBytes } from "../application/private-files";
 import {
   savedDataExportInputSchema,
   savedDataExportSnapshotSchema,
+  savedDataExportSnapshotV2Schema,
+  savedDataRecordV2Schema,
 } from "../../../../packages/navigation-core/contracts-saved-data";
+import { navigationKnowledgeExpiresAt } from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import type {
   ApprovedMail,
   DiagnosticRecord,
@@ -54,9 +57,14 @@ export class ScopedSupport {
   async quota(operation: string) {
     const result = await this.client.query<{ hour: number; day: number }>(
       `SELECT count(*) FILTER(WHERE created_at>clock_timestamp()-interval '1 hour')::integer AS hour,
-        count(*)::integer AS day FROM tholi.requests WHERE workspace_id=$1 AND account_id=$2 AND operation=$3
+        count(*)::integer AS day FROM tholi.requests WHERE workspace_id=$1 AND account_id=$2 AND operation=ANY($3::text[])
         AND created_at>clock_timestamp()-interval '1 day'`,
-      [...this.parameters, operation],
+      [
+        ...this.parameters,
+        operation.startsWith("saved-data.export.v")
+          ? ["saved-data.export.v1", "saved-data.export.v2"]
+          : [operation],
+      ],
     );
     if (
       result.rows[0].hour > SUPPORT_LIMITS.hourlyRequests ||
@@ -223,6 +231,26 @@ export class ScopedSupport {
   ): Promise<DiagnosticRecord> {
     const encoded = privateExportBytes(snapshot, purpose),
       id = randomUUID();
+    const parsedSnapshot = JSON.parse(encoded.body.toString("utf8")) as {
+      items?: unknown[];
+    };
+    let knowledgeExpiresAt: number | undefined;
+    for (const item of parsedSnapshot.items ?? []) {
+      const record = savedDataRecordV2Schema.safeParse(item);
+      if (
+        record.success &&
+        record.data.schemaVersion === 2 &&
+        record.data.data
+      ) {
+        const expiry = navigationKnowledgeExpiresAt(record.data.data);
+        knowledgeExpiresAt = Math.min(knowledgeExpiresAt ?? expiry, expiry);
+      }
+    }
+    if (knowledgeExpiresAt !== undefined && knowledgeExpiresAt <= Date.now())
+      throw new RepositoryError(
+        "CONFLICT",
+        "The exported navigation evidence expired.",
+      );
     const generation =
       purpose === "account-export-part" || purpose === "account-export-manifest"
         ? (JSON.parse(encoded.body.toString("utf8")) as { generation: string })
@@ -230,7 +258,8 @@ export class ScopedSupport {
         : null;
     await this.client.query(
       `INSERT INTO tholi.private_files(workspace_id,account_id,id,request_id,object_key,content_type,bytes,checksum,snapshot,expires_at,purpose,account_export_generation)
-        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,clock_timestamp()+$9*interval '1 millisecond',$10,$11)`,
+        VALUES($1,$2,$3,$4,$5,'application/json',$6,decode($7,'hex'),$8::jsonb,
+          LEAST(clock_timestamp()+$9*interval '1 millisecond',$12::timestamptz),$10,$11)`,
       [
         ...this.parameters,
         id,
@@ -242,6 +271,9 @@ export class ScopedSupport {
         SUPPORT_LIMITS.fileRetentionMs,
         purpose,
         generation,
+        knowledgeExpiresAt === undefined
+          ? null
+          : new Date(knowledgeExpiresAt).toISOString(),
       ],
     );
     const queued = await this.owner.enqueueJob({
@@ -259,13 +291,14 @@ export class ScopedSupport {
     idempotencyKey: string;
     payloadHash: string;
     ids: string[];
+    schemaVersion?: 2;
   }): Promise<DiagnosticRecord> {
     const input = savedDataExportInputSchema.parse({
       idempotencyKey: raw.idempotencyKey,
       ids: raw.ids,
     });
     const { request, replayed } = await this.owner.beginRequest({
-      operation: "saved-data.export.v1",
+      operation: `saved-data.export.v${raw.schemaVersion ?? 1}`,
       idempotencyKey: input.idempotencyKey,
       payloadHash: raw.payloadHash,
     });
@@ -282,12 +315,19 @@ export class ScopedSupport {
     await this.quota("saved-data.export.v1");
     const items = [];
     for (const id of input.ids) {
-      const item = await this.owner.getSavedArtifact(id);
+      const item = await this.owner.getSavedArtifact(
+        id,
+        raw.schemaVersion ?? 1,
+      );
       if (!item || item.deletedAt !== null) throw unavailable();
       items.push(item);
     }
-    const snapshot = savedDataExportSnapshotSchema.parse({
-      schemaVersion: 1,
+    const snapshot = (
+      raw.schemaVersion === 2
+        ? savedDataExportSnapshotV2Schema
+        : savedDataExportSnapshotSchema
+    ).parse({
+      schemaVersion: raw.schemaVersion ?? 1,
       kind: "saved-data-export",
       createdAt: new Date().toISOString(),
       items,

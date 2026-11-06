@@ -356,6 +356,8 @@ export interface MemoryPage {
   controls: MemoryControl[];
   stateKey: string;
   language?: string;
+  /** Absent historical snapshots have no proof of a complete scan. */
+  complete?: boolean;
 }
 export interface MemoryTransition {
   failures?: number;

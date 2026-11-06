@@ -3,30 +3,36 @@ import firefox from "selenium-webdriver/firefox.js";
 import { By, until, type WebDriver } from "selenium-webdriver";
 import type { attachWebDriverExtension } from "./webdriver-extension";
 type App = Awaited<ReturnType<typeof attachWebDriverExtension>>;
+async function placeFirefoxToolbarButton(
+  driver: firefox.Driver,
+  widgetId: string,
+) {
+  await driver.executeScript((widgetId: string) => {
+    const scope = globalThis as any;
+    let CustomizableUI = scope.CustomizableUI;
+    if (!CustomizableUI) {
+      try {
+        CustomizableUI = scope.ChromeUtils.importESModule(
+          "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
+        ).CustomizableUI;
+      } catch {
+        CustomizableUI = scope.ChromeUtils.importESModule(
+          "resource:///modules/CustomizableUI.sys.mjs",
+        ).CustomizableUI;
+      }
+    }
+    CustomizableUI.addWidgetToArea(widgetId, "nav-bar");
+  }, widgetId);
+}
 /** Exercise the real Firefox toolbar gesture in a disposable test profile. */
 export async function activateFirefoxToolbar(driver: WebDriver) {
   const gecko = driver as firefox.Driver;
   await gecko.setContext(firefox.Context.CHROME);
   try {
-    await gecko.executeScript(() => {
-      const scope = globalThis as any;
-      let CustomizableUI = scope.CustomizableUI;
-      if (!CustomizableUI) {
-        try {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        } catch {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "resource:///modules/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        }
-      }
-      CustomizableUI.addWidgetToArea(
-        "tholi_ilunonsen_com-browser-action",
-        "nav-bar",
-      );
-    });
+    await placeFirefoxToolbarButton(
+      gecko,
+      "tholi_ilunonsen_com-browser-action",
+    );
     const toolbar = await gecko.findElement(
       By.id("tholi_ilunonsen_com-browser-action"),
     );
@@ -35,11 +41,26 @@ export async function activateFirefoxToolbar(driver: WebDriver) {
     await gecko.setContext(firefox.Context.CONTENT);
   }
 }
-/** Native surface contract shared by the four installed browser checks. */
-export async function verifyWebDriverSurfaces(
-  app: App,
-  target: "chromium" | "firefox",
-) {
+/** Toggle the native panel with Firefox's visible browser-chrome control. */
+export async function closeFirefoxSidebar(driver: WebDriver) {
+  const gecko = driver as firefox.Driver;
+  await gecko.setContext(firefox.Context.CHROME);
+  try {
+    // Revamp hides the legacy sidebar-close header. Its built-in toolbar button
+    // owns the native panel toggle; callers must verify the panel actually closed.
+    await placeFirefoxToolbarButton(gecko, "sidebar-button");
+    const close = await gecko.wait(
+      until.elementLocated(By.id("sidebar-button")),
+      5000,
+    );
+    await gecko.wait(until.elementIsVisible(close), 5000);
+    await gecko.actions().move({ origin: close }).click().perform();
+  } finally {
+    await gecko.setContext(firefox.Context.CONTENT);
+  }
+}
+/** Real widget controls keep the pinned website active during native input. */
+export function webDriverWidget(app: App) {
   const control = async (selector: By) =>
     app.driver
       .wait(
@@ -64,17 +85,6 @@ export async function verifyWebDriverSurfaces(
         if (!value) throw Error("Missing surface control");
         return value;
       });
-  await app.site(() => document.title);
-  await (await control(By.css("h1"))).click();
-  await app.goal("Show search");
-  const request = (await app.view()).request.id;
-  await app.driver.switchTo().window(app.panel);
-  await (await control(By.css('button[aria-label="Tholi settings"]'))).click();
-  await (
-    await control(
-      By.xpath('//button[normalize-space(.)="Use floating widget"]'),
-    )
-  ).click();
   const shell = async () => {
     await app.driver.switchTo().window(app.website);
     await app.driver.switchTo().defaultContent();
@@ -84,21 +94,91 @@ export async function verifyWebDriverSurfaces(
     );
     return host.getShadowRoot();
   };
-  const widget = async () => {
+  const enter = async () => {
     const root = await shell();
     const frame = await root.findElement(By.css("iframe"));
     await app.driver.switchTo().frame(frame);
     await app.driver.wait(until.elementLocated(By.css(".tholi-app")), 10000);
   };
-  await widget();
-  // Wait for the actual widget layout, not only React's initial root mount.
-  await (await control(By.css('button[aria-label="Widget menu"]'))).click();
-  await (
-    await control(By.xpath('//button[normalize-space(.)="Conversation"]'))
-  ).click();
-  const composer = await control(
-    By.css('textarea[aria-label="Navigation goal"]'),
-  );
+  const openDraft = async () => {
+    await app.driver.switchTo().window(app.panel);
+    await (
+      await control(By.css('button[aria-label="Tholi settings"]'))
+    ).click();
+    await (
+      await control(
+        By.xpath('//button[normalize-space(.)="Use floating widget"]'),
+      )
+    ).click();
+    await enter();
+    // Wait for the actual widget layout, not only React's initial root mount.
+    await (await control(By.css('button[aria-label="Widget menu"]'))).click();
+    await (
+      await control(By.xpath('//button[normalize-space(.)="Conversation"]'))
+    ).click();
+    return control(By.css('textarea[aria-label="Navigation goal"]'));
+  };
+  const dock = async (target: "chromium" | "firefox") => {
+    await enter();
+    await (await control(By.css('button[aria-label="Widget menu"]'))).click();
+    await (
+      await control(By.xpath('//button[normalize-space(.)="Dock to sidebar"]'))
+    ).click();
+    await app.driver.switchTo().defaultContent();
+    if (target === "firefox") {
+      // Gecko forbids sidebarAction in a web-embedded extension iframe. The failed
+      // explicit Dock keeps the widget usable until a real toolbar user gesture.
+      expect(
+        await app.site(() => !!document.getElementById("tholi-widget")),
+      ).toBe(true);
+      await activateFirefoxToolbar(app.driver);
+    }
+    try {
+      await app.waitFor(
+        () => app.site(() => !!document.getElementById("tholi-widget")),
+        (value) => !value,
+        "Widget removed only after successful native sidebar handoff",
+      );
+    } catch (error) {
+      const state = await app.message({ type: "UI_GET" });
+      const native = await app.extension(() =>
+        (globalThis as any).browser?.sidebarAction?.isOpen({}),
+      );
+      throw Error(
+        "Native handoff: " +
+          JSON.stringify({ presentation: state.presentation, native }),
+        { cause: error },
+      );
+    }
+    const open = await app.extension(async (target: string) => {
+      const api = (globalThis as any).browser || (globalThis as any).chrome;
+      if (target === "firefox") return api.sidebarAction.isOpen({});
+      return (
+        (await api.runtime.getContexts({ contextTypes: ["SIDE_PANEL"] }))
+          .length > 0
+      );
+    }, target);
+    expect(open, "The actual native sidebar is open").toBe(true);
+  };
+  return { control, shell, enter, openDraft, dock };
+}
+/** Native surface contract shared by the four installed browser checks. */
+export async function verifyWebDriverSurfaces(
+  app: App,
+  target: "chromium" | "firefox",
+) {
+  const {
+    control,
+    shell,
+    enter: widget,
+    openDraft,
+    dock,
+  } = webDriverWidget(app);
+  await app.site(() => document.title);
+  await (await control(By.css("h1"))).click();
+  await app.goal("Show search");
+  const request = (await app.view()).request.id;
+  const composer = await openDraft();
   await composer.clear();
   await composer.sendKeys("Retained follow-up draft");
   await app.waitFor(
@@ -156,46 +236,8 @@ export async function verifyWebDriverSurfaces(
       ).getAttribute("value"),
     )
     .toBe("Retained follow-up draft");
-  await (await control(By.css('button[aria-label="Widget menu"]'))).click();
-  await (
-    await control(By.xpath('//button[normalize-space(.)="Dock to sidebar"]'))
-  ).click();
-  await app.driver.switchTo().defaultContent();
-  if (target === "firefox") {
-    // Gecko forbids sidebarAction in a web-embedded extension iframe. The failed
-    // explicit Dock keeps the widget usable until a real toolbar user gesture.
-    expect(
-      await app.site(() => !!document.getElementById("tholi-widget")),
-    ).toBe(true);
-    await activateFirefoxToolbar(app.driver);
-  }
-  try {
-    await app.waitFor(
-      () => app.site(() => !!document.getElementById("tholi-widget")),
-      (value) => !value,
-      "Widget removed only after successful native sidebar handoff",
-    );
-  } catch (error) {
-    const state = await app.message({ type: "UI_GET" });
-    const native = await app.extension(() =>
-      (globalThis as any).browser?.sidebarAction?.isOpen({}),
-    );
-    throw Error(
-      "Native handoff: " +
-        JSON.stringify({ presentation: state.presentation, native }),
-      { cause: error },
-    );
-  }
+  await dock(target);
   expect((await app.view()).request.id).toBe(request);
-  const open = await app.extension(async (target: string) => {
-    const api = (globalThis as any).browser || (globalThis as any).chrome;
-    if (target === "firefox") return api.sidebarAction.isOpen({});
-    return (
-      (await api.runtime.getContexts({ contextTypes: ["SIDE_PANEL"] })).length >
-      0
-    );
-  }, target);
-  expect(open, "The actual native sidebar is open").toBe(true);
   return {
     nativeSidebar: true,
     minimizedArrival: true,

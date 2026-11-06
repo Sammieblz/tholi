@@ -9,7 +9,11 @@ import {
 } from "../../../packages/navigation-core/contracts-navigation";
 import { parseModelExperimentConfig, type Environment } from "./config";
 import { createNavigationModelService } from "./application/navigation";
-import { ModelError, type ModelUsage } from "./application/model-contracts";
+import {
+  ModelError,
+  modelUsageTotals,
+  type ModelUsage,
+} from "./application/model-contracts";
 import { createFakeNavigationModel } from "./adapters/fake-navigation-model";
 import {
   createVertexNavigationModel,
@@ -308,8 +312,8 @@ export async function runModelExperiment(
       try {
         report.estimatedCostUsdMicros = estimateModelCostUsdMicros(
           config.options.location,
-          report.usage.promptTokens,
-          report.usage.outputTokens + report.usage.thoughtTokens,
+          modelUsageTotals(report.usage).inputTokens,
+          modelUsageTotals(report.usage).outputTokens,
         );
       } catch {
         report.errorCode = "INVALID_USAGE";

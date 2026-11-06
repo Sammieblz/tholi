@@ -12,6 +12,41 @@ export interface SeleniumBidi {
 export function seleniumBidi(driver: WebDriver) {
   return (driver as unknown as { getBidi(): Promise<SeleniumBidi> }).getBidi();
 }
+/** Preserve focus for BiDi reads; classic execution can intentionally differ from actual focus. */
+export async function focusWebDriverWindow(
+  driver: WebDriver,
+  handle: string,
+  execution: "bidi" | "classic",
+) {
+  let selected = false;
+  if (execution === "bidi") {
+    try {
+      selected = (await driver.getWindowHandle()) === handle;
+    } catch (error) {
+      if (!(error instanceof webdriverError.NoSuchWindowError)) throw error;
+    }
+  }
+  if (!selected) await driver.switchTo().window(handle);
+  await driver.switchTo().defaultContent();
+}
+/** WebDriver window bounds include chrome; fixtures specify the content viewport. */
+export async function setNativeViewport(
+  driver: WebDriver,
+  viewport: { width: number; height: number },
+) {
+  await driver.manage().window().setRect(viewport);
+  const inset = await driver.executeScript<{ x: number; y: number }>(() => ({
+    x: outerWidth - innerWidth,
+    y: outerHeight - innerHeight,
+  }));
+  await driver
+    .manage()
+    .window()
+    .setRect({
+      width: viewport.width + inset.x,
+      height: viewport.height + inset.y,
+    });
+}
 export async function attachWebDriverExtension(
   driver: WebDriver,
   website: string,
@@ -135,7 +170,7 @@ export async function attachWebDriverExtension(
     return reply as T;
   }
   async function site<T>(fn: (...args: any[]) => T, ...args: unknown[]) {
-    await driver.switchTo().window(website);
+    await focusWebDriverWindow(driver, website, execution);
     return driver.executeScript<T>(fn, ...args);
   }
   async function waitFor<T>(
@@ -158,6 +193,15 @@ export async function attachWebDriverExtension(
         return result.value;
       });
   }
+  const capabilities = await driver.getCapabilities();
+  const driverVersion =
+    capabilities.get("moz:geckodriverVersion") ??
+    (
+      capabilities.get("chrome") as { chromedriverVersion?: string } | undefined
+    )?.chromedriverVersion?.split(" ")[0] ??
+    (
+      capabilities.get("msedge") as { msedgedriverVersion?: string } | undefined
+    )?.msedgedriverVersion?.split(" ")[0];
   return {
     driver,
     website,
@@ -166,8 +210,20 @@ export async function attachWebDriverExtension(
     message,
     site,
     waitFor,
-    version: (await driver.getCapabilities()).get("browserVersion") as string,
+    version: capabilities.get("browserVersion") as string,
+    driverVersion: driverVersion as string | undefined,
+    platform: capabilities.get("platformName") as string,
+    runtimePlatform: await extension(() => {
+      const api = (globalThis as any).browser || (globalThis as any).chrome;
+      return api.runtime.getPlatformInfo() as Promise<{
+        os: string;
+        arch: string;
+      }>;
+    }),
     extension,
+    async focusPanel() {
+      await focusWebDriverWindow(driver, panel, execution);
+    },
     async start() {
       await driver.switchTo().window(website);
       const result = await message({

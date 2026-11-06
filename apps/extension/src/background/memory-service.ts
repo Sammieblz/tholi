@@ -17,6 +17,7 @@ import {
   memorySummary,
 } from "../../../../packages/site-memory/index";
 import { mirrorRoute } from "../platform/backend-client";
+import { learnPrivateNavigation } from "../platform/saved-data";
 
 interface Context {
   knownSites: Map<string, SiteMemory | undefined>;
@@ -122,6 +123,11 @@ export function createMemoryService(context: Context) {
           }
         }
         cacheMemory(page.origin, site, tasks.slice(0, 100));
+        void learnPrivateNavigation(site).catch(() => {
+          if (context.session === pinned && context.session.view)
+            context.session.view.memoryError =
+              "Private learning could not update. Local site memory is saved. Review cloud data and permissions.";
+        });
         if (
           context.session !== pinned ||
           !context.session.view ||

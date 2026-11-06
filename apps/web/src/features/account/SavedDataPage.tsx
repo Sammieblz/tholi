@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Archive, ChatBubble, Map, Palette, Search } from "iconoir-react";
 import {
-  savedDataArtifactSchema,
+  savedDataArtifactV2Schema as savedDataArtifactSchema,
   SAVED_DATA_LIMITS,
-  type SavedDataArtifact,
-  type SavedDataRecord,
+  type SavedDataArtifactV2 as SavedDataArtifact,
+  type SavedDataRecordV2 as SavedDataRecord,
 } from "../../../../../packages/navigation-core/contracts-saved-data";
 import {
   emptySavedDataClientState,
@@ -15,6 +15,7 @@ import { AccountConfirmation } from "./AccountConfirmation";
 import { AccountFileDelivery } from "./AccountFileDelivery";
 import { accountError } from "./account-error";
 import { useAccount } from "./session";
+import { SiteLearningControls } from "./SiteLearningControls";
 import "./saved-data.css";
 
 const kinds = {
@@ -102,7 +103,23 @@ export function SavedDataPage() {
     if (detectCapabilities) setWriteAvailability("checking");
     return perform(
       async () => {
-        const [page, capabilities] = await Promise.allSettled([
+        const capabilities = await Promise.resolve()
+          .then(async () => {
+            if (!detectCapabilities) return undefined;
+            const offered = await account.request(
+              "/api/v1/capabilities",
+              serviceCapabilitiesSchema,
+            );
+            account.setSavedDataView(
+              offered.capabilities.includes("saved-data-schema-2") ? 2 : 1,
+            );
+            return offered;
+          })
+          .then(
+            (value) => ({ status: "fulfilled" as const, value }),
+            (reason: unknown) => ({ status: "rejected" as const, reason }),
+          );
+        const [page] = await Promise.allSettled([
           client.list(
             {
               limit: SAVED_DATA_LIMITS.importItems,
@@ -114,9 +131,6 @@ export function SavedDataPage() {
             },
             !!nextFilters.query,
           ),
-          detectCapabilities
-            ? account.request("/api/v1/capabilities", serviceCapabilitiesSchema)
-            : Promise.resolve(undefined),
         ]);
         return { page, capabilities };
       },
@@ -525,6 +539,12 @@ export function SavedDataPage() {
           ) : (
             <>
               <SavedContent record={detail} />
+              {detail.schemaVersion === 2 && (
+                <SiteLearningControls
+                  origin={detail.data.origin}
+                  onForgot={closeDetail}
+                />
+              )}
               {writeAvailability === "unavailable" && (
                 <p>
                   Editing is unavailable on this service. You can still review
@@ -545,7 +565,18 @@ export function SavedDataPage() {
                 onSave={(artifact) =>
                   void perform(
                     async () => {
-                      await client.save(artifact, detail.revision);
+                      if (artifact.schemaVersion === 2) {
+                        const settings = await client.siteSettings(
+                          artifact.data.origin,
+                        );
+                        await client.save(
+                          artifact,
+                          detail.revision,
+                          settings.revision === "0"
+                            ? undefined
+                            : settings.revision,
+                        );
+                      } else await client.save(artifact, detail.revision);
                       return client.read(detail.id);
                     },
                     (record) => {
@@ -614,6 +645,30 @@ function SavedContent({ record }: { record: SavedDataRecord }) {
     return (
       <div className="saved-data-content">
         <p>{record.data.origin}</p>
+        {record.schemaVersion === 2 && (
+          <>
+            <p>
+              Private navigation history: {record.data.states.length} observed
+              layouts and {record.data.edges.length} verified transitions. These
+              are untrusted historical hints and do not establish current
+              website access or task completion.
+            </p>
+            <ol>
+              {record.data.edges.map((edge, index) => (
+                <li key={index}>
+                  {record.data!.controls.find(
+                    (control) => control.key === edge.control,
+                  )?.label ?? "Observed control"}
+                  : {edge.operation}. Observed{" "}
+                  <time dateTime={edge.observedAt}>
+                    {new Date(edge.observedAt).toLocaleString()}
+                  </time>
+                  . Successes {edge.successes}, failures {edge.failures}.
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
         <ul>
           {record.data.controls.map((control, index) => (
             <li key={index}>

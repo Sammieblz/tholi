@@ -53,3 +53,29 @@ perform final actions. Pause, turn the setting off, or minimize Tholi to suppres
 assistance and take over.
 
 For colors and motion, see [Appearance](appearance.md).
+
+## Choose an optional AI connection
+
+Local guidance remains available without a key or Tholi account. If your configured
+Tholi service offers AI connections, you can choose your own provider for connected
+guidance. Availability depends on your installed version and service setup.
+
+1. Sign in to that service's website and open **AI connections** in your account.
+2. Choose the approved model, enter your provider API key and select **Save connection**.
+3. In the extension's account settings, select **Refresh AI connections**, choose
+   **Provider and model**, then select **Use selected provider**.
+4. Review the page-context permission before continuing. **Allow temporary masked
+   images** is a separate choice.
+
+Saving or refreshing a connection does not contact the model. **Saved, unverified**
+means that the key has been stored, not that the provider accepted it. Guidance can
+still be wrong or unavailable. Your provider account pays its own charges; Tholi's
+managed-model credits are not used, and service usage limits still apply.
+
+If you replace a key, refresh and select its current connection again. If a save
+response is lost, select **Refresh connections** on the website before entering the
+key again. To return to local guidance, select **Local** in **Processing choice**.
+An independently configured private backend has its own settings.
+
+See [Privacy and permissions](security.md#optional-ai-providers) before enabling
+connected guidance or saving private cloud knowledge.

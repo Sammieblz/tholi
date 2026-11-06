@@ -24,14 +24,20 @@ import type {
 import {
   accountExportManifestSchema,
   accountExportPartSchema,
+  accountExportPartV2Schema,
+  accountExportManifestFileSchema,
   type AccountExportInput,
 } from "../../../packages/navigation-core/contracts-account";
 import {
   beginJourney,
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
-import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
+import {
+  savedDataArtifactFixture,
+  savedNavigationKnowledgeFixture,
+} from "../../support/saved-data-fixture";
 import { inferenceFixture } from "./inference-fixture";
+import { providerConnectionFixture } from "./provider-fixture";
 
 /** Actual SQL roles and existing ports, without another queue or provider harness. */
 export async function runAccountChecks(
@@ -340,6 +346,87 @@ export async function runAccountChecks(
           ),
         { code: "CONFLICT" },
       );
+    },
+  );
+
+  await record(
+    "versioned account exports include private graphs, site choices and credential metadata without encrypted keys",
+    async () => {
+      const account = await fixture();
+      const artifact = await savedNavigationKnowledgeFixture();
+      const choice = await saved.updateSiteSettings(
+        account,
+        account.workspaceId,
+        {
+          origin: artifact.data.origin,
+          expectedRevision: "0",
+          idempotencyKey: randomUUID(),
+          approved: true,
+          collect: true,
+          use: true,
+        },
+        context(),
+      );
+      await saved.create(
+        account,
+        account.workspaceId,
+        {
+          idempotencyKey: randomUUID(),
+          expectedRevision: "0",
+          approved: true,
+          artifact,
+          siteSettingsRevision: choice.revision,
+        },
+        context(),
+        2,
+      );
+      await providerConnectionFixture(runtime, account.accountId);
+      const result = await service.requestExport(
+        account,
+        { idempotencyKey: randomUUID(), schemaVersion: 2 },
+        context(),
+      );
+      assert.equal(result.preparation, "complete");
+      const rows = (
+        await migration.query(
+          "SELECT purpose,snapshot FROM tholi.private_files WHERE account_export_generation=$1",
+          [result.generation],
+        )
+      ).rows;
+      const sections = new Set<string>();
+      for (const row of rows) {
+        if (row.purpose === "account-export-part") {
+          const part = accountExportPartV2Schema.parse(row.snapshot);
+          sections.add(part.section);
+          if (part.section === "saved_data")
+            assert.equal(part.items[0].schemaVersion, 2);
+        } else
+          assert.equal(
+            accountExportManifestFileSchema.parse(row.snapshot).schemaVersion,
+            2,
+          );
+        assert.equal(
+          /sealed_key|ciphertext|synthetic-provider-fixture-key|apiKey/.test(
+            JSON.stringify(row.snapshot),
+          ),
+          false,
+        );
+      }
+      assert.ok(sections.has("site_settings"));
+      assert.ok(sections.has("provider_connections"));
+      const legacy = await service.requestExport(
+        account,
+        { idempotencyKey: randomUUID() },
+        context(),
+      );
+      assert.equal(legacy.preparation, "partial");
+      const manifest = (
+        await migration.query(
+          "SELECT snapshot FROM tholi.private_files WHERE id=$1",
+          [legacy.fileId],
+        )
+      ).rows[0].snapshot;
+      assert.equal(accountExportManifestSchema.parse(manifest).complete, false);
     },
   );
 

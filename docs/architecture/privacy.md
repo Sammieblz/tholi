@@ -34,6 +34,102 @@ Firefox declares no required data transmission. Connecting the optional backend 
 
 Diagnostics are local, bounded and redacted. Do not capture authenticated screenshots or traces by default. Diagnostic exports omit labels, goals, paths, raw DOM and field values. See [security](security.md), [API setup](../guides/backend.md) and [native verification](../guides/getting-started.md).
 
+## Account provider credentials and inference
+
+The optional authenticated service keeps customer-provider credentials separate
+from the legacy private API and from managed Vertex experiments. The default
+Compose deployment has no provider keys or provider egress. The
+[explicit BYOK deployment profile](../development/local-stack.md#customer-providers-and-private-learning)
+requires a dedicated operator keyring and an independently enabled customer-inference
+control; neither setting enables managed Gemini or bypasses authorization.
+
+One connection per account/provider stores an AES-256-GCM envelope in PostgreSQL.
+Authenticated associated data binds its account, connection, provider, connection
+revision and operator key version. The dedicated versioned keyring is outside the
+database, client assets and worker credentials; identity-flow and private-file-link
+secrets cannot be reused. This protects a database-only copy, not a compromised API
+process or an operator with both database and keyring access. Provider keys are
+decrypted transiently for an authorized outbound request. They never appear in
+metadata/list/account-export responses, the extension, audit details or payload logs.
+
+Saving or replacing a credential makes no provider request. Verification metadata
+is set only after a successful validated guidance request and is bound to the
+current connection revision. Rotation and removal invalidate retained selections.
+Removal clears the ciphertext but does not revoke the credential at its provider.
+Suspension disables connections; account deletion clears their keys before deferred
+cleanup. Account export includes only safe connection metadata. Removing a key does
+not erase information already sent to a provider or independently retained backups.
+
+Explicit connected guidance sends bounded sanitized observation/task context to the
+configured Tholi service and selected provider. A separately authorized masked image
+may accompany it. OpenAI and Anthropic are direct recipients. OpenRouter is an
+additional recipient and routes the curated model only to Anthropic; fallback is
+disabled, parameter support is required and its routing request denies data
+collection. These are request restrictions, not independently verified retention,
+residency or zero-data-retention guarantees. OpenAI Responses uses `store:false`,
+which does not itself remove provider abuse-monitoring retention. Review the
+provider/account policy before sending data:
+[OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data),
+[Anthropic data privacy](https://privacy.claude.com/), and
+[OpenRouter routing/data controls](https://openrouter.ai/docs/guides/routing/provider-selection).
+
+The API resolves the exact current account, workspace, consent, connection revision,
+provider/model policy and retrieval snapshot before outbound requests and before
+releasing a proposal. Images retain their separate permission and masking guards.
+Provider responses remain untrusted proposals; the browser alone owns journey state,
+control rebinding, consequential-action review and independent outcome verification.
+
+Customer-funded requests share existing admission and usage records, with zero
+managed-model credit reservation. They still consume bounded request, concurrency,
+token, image, byte and deadline budgets. Usage version 2 counts total input and total
+output, including reasoning once; missing breakdowns remain unknown. Historical
+usage and pricing records keep their original semantics. A missing or unusable usage
+report fences further automatic dispatch rather than fabricating zero cost. No
+automatic provider fallback or generation retry occurs. A provider may already have
+processed a request when cancellation or a transport error reaches Tholi.
+
+## Private cloud knowledge
+
+Collection and reuse both default off for each account, workspace and exact website
+origin. Signing in, adding a provider key or granting image access does not enable
+learning and does not upload existing local memory. Enabling collection records the
+reviewed saved-data purpose and a revision-checked site choice. Collection captures
+only future approved structure and independently verified transitions. Reuse is a
+separate site choice and grants no current website-action authority.
+
+The existing saved-data owner stores a versioned graph in the same PostgreSQL/RLS
+boundary: at most eight states, 48 sanitized controls, 16 verified edges and 16 KiB.
+Its identifiers derive from approved structure. Raw page paths/query strings,
+destinations, field values, selectors, native document/control IDs, geometry, images,
+OCR text and credentials are excluded. Interface labels can still contain sensitive
+information that sanitization misses. This is private account/workspace learning;
+there is no community publication, cross-account retrieval, shared-model training or
+automatic provider embedding request.
+
+Retrieval checks current account/membership, saved-data consent and site reuse,
+selects no more than five bounded route facts within 6 KiB, and remains inside the
+model's total input budget. Provider-visible facts include approved interface text
+and outcome counts, not artifact IDs, revisions or database credentials. Server-only
+source revisions and a snapshot digest bind the request. Deletion, changed site
+choices, revoked consent or changed source revisions invalidate that snapshot before
+dispatch and response release. Historical hints must rebind to current eligible
+controls; prior successful edges cannot establish present arrival.
+
+Graphs expire 90 days after their oldest retained observation, bounded by service
+receipt time. Metadata edits cannot renew the evidence. Expired graphs are excluded
+from live reads, sync and retrieval, and the existing maintenance tick tombstones
+them with new sync revisions. Related export expiry cannot outlive its graph;
+existing private-file cleanup removes expired copies. Physical pruning may lag when
+maintenance is stopped, and operator backups have independent retention.
+
+Disabling collection stops future writes; disabling reuse stops cloud hints. The
+**Forget cloud knowledge** operation first disables both choices and deletes the
+site's graph records in bounded batches. Further batches require explicit
+continuation; an unknown response is not deletion confirmation. Local memory, saved
+routes and conversation excerpts have their own controls. Inactive site settings
+are eligible for removal after 90 days without live graphs; monotonic workspace
+revisions prevent old approvals from silently re-enabling learning.
+
 ## Tholi presentation data
 
 Presentation preferences and widget bounds are stored locally. Composer drafts and at most 80 conversation messages use trusted extension-session storage and are not synchronized to the website or cloud. The widget uses a session/document-bound command allowlist and does not receive backend credentials. Guidance surfaces are excluded from discovery and hidden for OCR capture.

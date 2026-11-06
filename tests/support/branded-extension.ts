@@ -3,9 +3,17 @@ import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import edge from "selenium-webdriver/edge.js";
 import { existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import { attachWebDriverExtension, seleniumBidi } from "./webdriver-extension";
+import {
+  installedBrowserBinary,
+  nativeBrowserScale,
+  resolveBrowserTools,
+} from "./browser-tools";
+import {
+  attachWebDriverExtension,
+  seleniumBidi,
+  setNativeViewport,
+} from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
@@ -16,20 +24,34 @@ export async function openBrandedExtension(
   name: "chrome" | "edge" | "brave",
   url: string,
   fixturePermissions: string[] = [],
+  fixture: { nativeLifecycle?: boolean } = {},
 ) {
   assertFixtureUrl(url);
   const options = name === "edge" ? new edge.Options() : new chrome.Options();
-  const nativeIdentity =
-    name === "chrome" && process.env.THOLI_BROWSER_GROUP === "identity";
+  const nativeLifecycle =
+    name === "chrome" &&
+    (fixture.nativeLifecycle || process.env.THOLI_BROWSER_GROUP === "identity");
   options.addArguments(
     "--headless=new",
     "--enable-unsafe-extension-debugging",
     "--remote-debugging-pipe",
   );
+  const scale = nativeBrowserScale();
+  if (scale !== undefined)
+    options.addArguments(`--force-device-scale-factor=${scale}`);
   options.set("webSocketUrl", true);
   const builder = new Builder().forBrowser(
     name === "edge" ? "MicrosoftEdge" : "chrome",
   );
+  if (name === "chrome") {
+    const paths = resolveBrowserTools({
+      browser: "chrome",
+      binary: installedBrowserBinary("chrome"),
+      skipDriverInPath: true,
+    });
+    (options as chrome.Options).setChromeBinaryPath(paths.browserPath);
+    builder.setChromeService(new chrome.ServiceBuilder(paths.driverPath));
+  }
   if (name === "brave") {
     const binary =
       process.env.THOLI_BRAVE_BINARY ||
@@ -45,30 +67,19 @@ export async function openBrandedExtension(
     (options as chrome.Options).setChromeBinaryPath(binary);
     // Hosted runners put Chrome's driver on PATH. Resolve Brave's own engine
     // instead, which can be a different Chromium major from installed Chrome.
-    const paths = JSON.parse(
-      execFileSync(
-        resolve(
-          "node_modules/selenium-webdriver/bin/windows/selenium-manager.exe",
-        ),
-        [
-          "--browser",
-          "chrome",
-          "--browser-path",
-          binary,
-          "--skip-driver-in-path",
-          "--output",
-          "json",
-          "--avoid-stats",
-        ],
-        { encoding: "utf8" },
-      ),
-    ).result;
-    builder.setChromeService(new chrome.ServiceBuilder(paths.driver_path));
+    const paths = resolveBrowserTools({
+      browser: "chrome",
+      binary,
+      skipDriverInPath: true,
+    });
+    builder.setChromeService(new chrome.ServiceBuilder(paths.driverPath));
   }
   if (name === "edge") builder.setEdgeOptions(options as edge.Options);
   else builder.setChromeOptions(options as chrome.Options);
   const driver = await builder.build();
   try {
+    if (scale !== undefined)
+      await setNativeViewport(driver, { width: 1280, height: 900 });
     await driver.manage().setTimeouts({ script: 35000, pageLoad: 30000 });
     const installed = await (
       driver as typeof driver & {
@@ -84,7 +95,7 @@ export async function openBrandedExtension(
       until.elementLocated(By.css(".tholi-app")),
       10000,
     );
-    if (nativeIdentity)
+    if (nativeLifecycle)
       await driver.wait(until.elementIsVisible(application), 10_000);
     const tabId = await driver.executeAsyncScript<number>(function (
       url: string,
@@ -98,7 +109,7 @@ export async function openBrandedExtension(
         );
     }, url);
     if (tabId < 0) throw Error("Branded fixture tab missing");
-    if (nativeIdentity) {
+    if (nativeLifecycle) {
       // The mapper can pause the browser-owned auth popup and restarted worker.
       // Keep the real browser flow and use classic execution after installation.
       // https://github.com/GoogleChromeLabs/chromium-bidi/blob/main/src/bidiMapper/BidiServer.ts
@@ -126,7 +137,7 @@ export async function openBrandedExtension(
       url,
       await fixtureOnlySeleniumNetwork(driver, [website, panel]),
       undefined,
-      nativeIdentity ? "classic" : "bidi",
+      nativeLifecycle ? "classic" : "bidi",
     );
   } catch (error) {
     await driver.quit().catch(() => {});

@@ -48,6 +48,8 @@ import type {
   MaskedNavigationCapture,
 } from "./vision-service";
 import { trustedUi } from "./ui-transport";
+import { retrievePrivateNavigationKnowledge } from "../platform/saved-data";
+import { reuseNavigationKnowledge } from "../../../../packages/goal-planner/knowledge-reuse";
 
 interface Context {
   goalGeneration: number;
@@ -152,7 +154,9 @@ export function createJourneyService(context: Context) {
     const source =
       profile === "operator-evaluation"
         ? "operator evaluation"
-        : "connected development service";
+        : profile === "customer-funded"
+          ? "selected AI provider"
+          : "connected development service";
     if (
       context.session !== candidate ||
       context.goalGeneration !== goalGeneration ||
@@ -375,7 +379,8 @@ export function createJourneyService(context: Context) {
             evaluation = await reserveServiceEvaluation(observation);
             ensureOwner();
           }
-          transportRequestId = crypto.randomUUID();
+          const serviceRequestId = crypto.randomUUID();
+          transportRequestId = serviceRequestId;
           await state("pending", `Requesting a proposal from the ${source}.`);
           const validation = {
             currentStamp: stamp,
@@ -403,27 +408,90 @@ export function createJourneyService(context: Context) {
             if (captureGuard) await captureGuard();
             ensureOwner();
           };
-          const response = await backendNavigation(
-            {
-              requestId: transportRequestId,
-              ...(evaluation?.generation !== undefined
-                ? {
-                    profile: "operator-evaluation" as const,
-                    evaluation: {
-                      planSha256: evaluation.planSha256,
-                      trialId: evaluation.trialId,
-                      generation: evaluation.generation,
-                    },
-                  }
-                : { profile: "fake" as const }),
-              observation,
-              validation,
-              policy: { timeoutMs: Math.max(1, deadlineAt - Date.now()) },
-            },
-            current,
-            beforeSend,
-            capture ? AbortSignal.any([signal, capture.signal]) : signal,
-          );
+          const requestSignal = capture
+            ? AbortSignal.any([signal, capture.signal])
+            : signal;
+          const knowledge =
+            profile !== "operator-evaluation" && candidate.origin
+              ? await retrievePrivateNavigationKnowledge(
+                  observation,
+                  candidate.origin,
+                  requestSignal,
+                  beforeSend,
+                )
+              : undefined;
+          ensureOwner();
+          const reused =
+            knowledge && candidate.origin
+              ? await reuseNavigationKnowledge(
+                  observation,
+                  candidate.origin,
+                  knowledge,
+                )
+              : undefined;
+          if (reused) {
+            transportRequestId = undefined;
+            await state(
+              "pending",
+              "Binding an approved private saved route to this page. No model request was made.",
+            );
+          }
+          // Reused history goes through the same fresh-control join and native
+          // application path. It never dispatches inference or proves arrival.
+          const response = reused
+            ? {
+                decision: {
+                  protocol: observation.protocol,
+                  version: observation.version,
+                  stamp: observation.stamp,
+                  native: observation.native,
+                  decision: reused,
+                },
+              }
+            : await backendNavigation(
+                {
+                  requestId: serviceRequestId,
+                  ...(evaluation?.generation !== undefined
+                    ? {
+                        profile: "operator-evaluation" as const,
+                        evaluation: {
+                          planSha256: evaluation.planSha256,
+                          trialId: evaluation.trialId,
+                          generation: evaluation.generation,
+                        },
+                      }
+                    : profile === "customer-funded" && selected.data.connection
+                      ? {
+                          profile: "customer-funded" as const,
+                          connection: selected.data.connection,
+                          ...(knowledge && candidate.origin
+                            ? {
+                                retrieval: {
+                                  origin: candidate.origin,
+                                  snapshotDigest: knowledge.snapshotDigest,
+                                },
+                              }
+                            : {}),
+                        }
+                      : {
+                          profile: "fake" as const,
+                          ...(knowledge && candidate.origin
+                            ? {
+                                retrieval: {
+                                  origin: candidate.origin,
+                                  snapshotDigest: knowledge.snapshotDigest,
+                                },
+                              }
+                            : {}),
+                        }),
+                  observation,
+                  validation,
+                  policy: { timeoutMs: Math.max(1, deadlineAt - Date.now()) },
+                },
+                current,
+                beforeSend,
+                requestSignal,
+              );
           ensureOwner();
           if (!response.decision)
             throw new ServiceClientError(
@@ -439,6 +507,22 @@ export function createJourneyService(context: Context) {
           if (!joined.accepted)
             throw new Error("The proposal is stale or unsupported.");
           const decision = joined.decision.decision;
+          if (reused && candidate.origin) {
+            const currentKnowledge = await retrievePrivateNavigationKnowledge(
+              observation,
+              candidate.origin,
+              requestSignal,
+              beforeSend,
+            );
+            ensureOwner();
+            if (
+              !currentKnowledge ||
+              currentKnowledge.snapshotDigest !== knowledge!.snapshotDigest
+            )
+              throw new Error(
+                "Private route permission or evidence changed before binding.",
+              );
+          }
           if (
             decision.kind === "request-observation" &&
             !(
@@ -526,7 +610,9 @@ export function createJourneyService(context: Context) {
                   ? "observation"
                   : decision.kind,
               decision.kind === "guide"
-                ? `The ${source} proposal is bound to a current website control.`
+                ? reused
+                  ? "A private saved route is bound to a current website control. No model request was made."
+                  : `The ${source} proposal is bound to a current website control.`
                 : decision.kind === "clarify"
                   ? decision.question
                   : decision.kind === "request-observation"

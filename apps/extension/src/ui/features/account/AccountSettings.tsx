@@ -11,10 +11,17 @@ import {
 import { identitySessionsSchema } from "../../../../../../packages/navigation-core/contracts-identity";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { z } from "zod";
+import {
+  providerConnectionsSchema,
+  providerConnectionSelection,
+  type ProviderConnection,
+  type ProviderConnectionSelection,
+} from "../../../../../../packages/navigation-core/contracts-providers";
 import "./account-settings.css";
+import { PrivateLearningSettings } from "./PrivateLearningSettings";
 type ProcessingChoice = Pick<
   ServiceInferenceStatus,
-  "profile" | "enabled" | "images" | "evaluation"
+  "profile" | "enabled" | "images" | "evaluation" | "connection"
 >;
 const localChoice: ProcessingChoice = {
   profile: "fake",
@@ -38,6 +45,8 @@ export function AccountSettings() {
     z.infer<typeof identitySessionsSchema>["items"]
   >([]);
   const [notice, setNotice] = useState("");
+  const [providers, setProviders] = useState<ProviderConnection[]>([]);
+  const [providerId, setProviderId] = useState("");
   const operationVersion = useRef(0);
   const processingName = useId();
   const isCurrent = (expected: number) => operationVersion.current === expected;
@@ -72,6 +81,10 @@ export function AccountSettings() {
     if (!result.account) setSessions([]);
     if (choices) confirmInference(choices);
   };
+  useEffect(() => {
+    setProviders([]);
+    setProviderId("");
+  }, [status.account?.id, status.account?.workspaceId]);
   useEffect(() => {
     const expected = ++operationVersion.current;
     void load(expected)
@@ -181,9 +194,17 @@ export function AccountSettings() {
     }, "Signed in to Tholi. Local guidance remains available.");
   };
   const saveInference = (
-    choices: { enabled: boolean; images: boolean },
+    choices: {
+      enabled: boolean;
+      images: boolean;
+      profile?: "fake" | "customer-funded";
+      connection?: ProviderConnectionSelection;
+    },
     reducing = false,
   ) => {
+    const next = choices.enabled
+      ? { ...choices, profile: choices.profile ?? ("fake" as const) }
+      : { profile: "fake" as const, enabled: false, images: false };
     // Native website/data permission must remain inside this original gesture.
     let access: Promise<boolean> | undefined;
     try {
@@ -199,7 +220,7 @@ export function AccountSettings() {
       );
       return;
     }
-    setInference({ profile: "fake", ...choices });
+    setInference(next);
     void act(
       async (expected) => {
         let configurationStarted = false;
@@ -217,8 +238,7 @@ export function AccountSettings() {
           const result = serviceInferenceStatusSchema.parse(
             await rpc({
               type: "AUTH_INFERENCE_CONFIGURE",
-              profile: "fake",
-              ...choices,
+              ...next,
             }),
           );
           if (!isCurrent(expected)) return;
@@ -273,7 +293,9 @@ export function AccountSettings() {
         }
       },
       choices.enabled
-        ? "Connected development service selected. Processing consent is saved; the service can propose next controls for your current task."
+        ? next.profile === "customer-funded"
+          ? "Your provider connection is selected. Explicit guidance requests may incur charges on your provider account."
+          : "Connected development service selected. Processing consent is saved; the service can propose next controls for your current task."
         : "Local selected. Browser transmission is off and service consent withdrawal is confirmed.",
       true,
     );
@@ -282,8 +304,9 @@ export function AccountSettings() {
     <fieldset className="tholi-account-settings">
       <legend>Processing and account</legend>
       <p>
-        Local guidance needs no account or credits. Hosted cloud plans, credit
-        balances and the cloud saved-data workspace are not available yet.
+        Local guidance needs no account or credits. Customer-funded guidance
+        requires sign-in and your own provider connection. Managed Gemini and
+        paid plans remain disabled.
       </p>
       <fieldset
         className="tholi-inference-settings"
@@ -310,8 +333,8 @@ export function AccountSettings() {
         </label>
         <p id="tholi-local-processing-help">
           Selecting Local stops context and image transmission to the connected
-          development service, including a pending enable request. Private
-          backend processing has its own settings and consent.
+          service and selected AI provider, including a pending enable request.
+          Private backend processing has its own settings and consent.
         </p>
         <label className="tholi-inference-choice">
           <input
@@ -334,6 +357,82 @@ export function AccountSettings() {
           model, not a hosted cloud plan. Your local collection is not uploaded.
           Private backend and sign-in access remain separate choices.
         </p>
+        <fieldset
+          className="tholi-provider-selection"
+          disabled={busy || !status.account}
+        >
+          <legend>Your AI provider</legend>
+          <p>
+            Manage encrypted keys in the website account workspace. This
+            extension receives connection metadata only. Refreshing connections
+            makes no model request.
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              void act(
+                async (expected) => {
+                  const listed = providerConnectionsSchema.parse(
+                    await rpc({ type: "AUTH_PROVIDER_CONNECTIONS" }),
+                  );
+                  if (isCurrent(expected))
+                    setProviders(
+                      listed.items.filter((item) => item.status === "active"),
+                    );
+                },
+                "Provider connections refreshed. No model request was made.",
+                true,
+              )
+            }
+          >
+            Refresh AI connections
+          </button>
+          <label htmlFor="tholi-provider-choice">Provider and model</label>
+          <select
+            id="tholi-provider-choice"
+            value={providerId}
+            onChange={(event) => setProviderId(event.target.value)}
+          >
+            <option value="">Choose a saved connection</option>
+            {providers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.provider}: {item.model}
+              </option>
+            ))}
+          </select>
+          {inference.profile === "customer-funded" && inference.connection && (
+            <p>
+              Current choice: {inference.connection.provider},{" "}
+              {inference.connection.model}. Changing or rotating a key requires
+              selecting its current connection again.
+            </p>
+          )}
+          <p id="tholi-provider-disclosure">
+            Your provider account pays for requests. Managed Tholi credits are
+            not used. OpenRouter requests are processed by OpenRouter and its
+            approved Anthropic upstream, without fallback routing. Tholi does
+            not promise verified zero retention.
+          </p>
+          <button
+            type="button"
+            disabled={!providers.some((item) => item.id === providerId)}
+            aria-describedby="tholi-provider-disclosure"
+            onClick={() => {
+              const connection = providers.find(
+                (item) => item.id === providerId,
+              );
+              if (connection)
+                saveInference({
+                  profile: "customer-funded",
+                  connection: providerConnectionSelection(connection),
+                  enabled: true,
+                  images: inference.images,
+                });
+            }}
+          >
+            Use selected provider
+          </button>
+        </fieldset>
         {inference.evaluation && (
           <>
             <label className="tholi-inference-choice">
@@ -375,6 +474,12 @@ export function AccountSettings() {
                 {
                   enabled: inference.profile !== "operator-evaluation",
                   images,
+                  ...(inference.profile === "customer-funded"
+                    ? {
+                        profile: "customer-funded",
+                        connection: inference.connection,
+                      }
+                    : {}),
                 },
                 !images,
               );
@@ -390,6 +495,12 @@ export function AccountSettings() {
           the trial and selects Local.
         </p>
       </fieldset>
+      {status.account && status.origin && (
+        <PrivateLearningSettings
+          account={status.account}
+          serviceOrigin={status.origin}
+        />
+      )}
       <label htmlFor="tholi-service-origin">Account service origin</label>
       <input
         id="tholi-service-origin"

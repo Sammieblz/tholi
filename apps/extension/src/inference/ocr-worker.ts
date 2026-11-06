@@ -10,6 +10,10 @@ import {
 } from "../../../../packages/vision/processing";
 import { OcrEngine } from "../../../../packages/vision/engine";
 import { OcrQueue } from "../../../../packages/vision/queue";
+import {
+  localEngineFailure,
+  LocalEngineError,
+} from "../../../../packages/nlp/local-engine-error";
 const engine = new OcrEngine({
   langPath: new URL("./ocr", import.meta.url).href,
   corePath: new URL("./ocr", import.meta.url).href,
@@ -25,9 +29,7 @@ async function recognition(
   signal: AbortSignal,
 ) {
   if (message.engine === "paddle" && !__PADDLE_BUNDLED__)
-    throw new Error(
-      "PaddleOCR is not included in this build; use the experimental Paddle build to evaluate it",
-    );
+    throw new LocalEngineError("ENGINE_NOT_BUNDLED");
   if (
     __PADDLE_BUNDLED__ &&
     (message.engine === "paddle" ||
@@ -73,7 +75,10 @@ self.onmessage = (event) => {
     .submit(message)
     .then((value) => self.postMessage({ id: message.id, value }))
     .catch((error) =>
-      self.postMessage({ id: message.id, error: error.message }),
+      self.postMessage({
+        id: message.id,
+        ...localEngineFailure(error, "OCR_FAILED"),
+      }),
     )
     .finally(() => {
       idle = setTimeout(() => {
@@ -82,3 +87,4 @@ self.onmessage = (event) => {
       }, 60000);
     });
 };
+self.postMessage({ type: "LOCAL_WORKER_READY" });

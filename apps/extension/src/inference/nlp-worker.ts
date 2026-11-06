@@ -6,6 +6,7 @@ import { planInputSchema } from "../../../../packages/navigation-core/contracts"
 import { NavigationCore } from "../../../../packages/navigation-core/index";
 import { MiniLM, SemanticIndex } from "../../../../packages/nlp/index";
 import { IndexedDBDerivedStore } from "../../../../packages/site-memory/derived";
+import { localEngineFailure } from "../../../../packages/nlp/local-engine-error";
 const root = new URL("./models/", import.meta.url).href;
 const wasm = new URL("./runtime/", import.meta.url).href;
 const core = new NavigationCore(
@@ -33,6 +34,11 @@ self.onmessage = ({ data: message }) => {
     )
     .then(
       (value) => self.postMessage({ id: message.id, value }),
-      (error) => self.postMessage({ id: message.id, error: error.message }),
+      (error) =>
+        self.postMessage({
+          id: message.id,
+          ...localEngineFailure(error, "INFERENCE_FAILED"),
+        }),
     );
 };
+self.postMessage({ type: "LOCAL_WORKER_READY" });

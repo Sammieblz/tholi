@@ -27,6 +27,7 @@ import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
   NAVIGATION_EVALUATION_CAPABILITY,
+  NAVIGATION_BYOK_CAPABILITY,
   nativeReferenceKey,
   type NavigationObservation,
   type NavigationTransportInput,
@@ -44,20 +45,23 @@ import {
 } from "../../../../packages/navigation-core/contracts-evaluation";
 import {
   serviceInferenceChoicesSchema,
+  serviceInferenceChoiceBaseSchema,
+  refineServiceInferenceChoices,
   type ServiceInferenceStatus,
 } from "./service-auth-contract";
+import {
+  providerConnectionsSchema,
+  providerConnectionSelection,
+} from "../../../../packages/navigation-core/contracts-providers";
 import type { SavedDataConnection } from "../../../../packages/navigation-core/saved-data-client";
 
-const inferenceSettingsSchema = z
-  .object({
+const inferenceSettingsSchema = serviceInferenceChoiceBaseSchema
+  .extend({
     accountId: z.string().uuid(),
     workspaceId: z.string().uuid(),
-    profile: z.literal("fake"),
-    enabled: z.boolean(),
-    images: z.boolean(),
   })
   .strict()
-  .refine((value) => !value.images || value.enabled);
+  .superRefine(refineServiceInferenceChoices);
 
 const settingsSchema = z
   .object({
@@ -84,6 +88,7 @@ const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("AUTH_SESSIONS") }).strict(),
   z.object({ type: z.literal("AUTH_REVOKE"), id: z.string().uuid() }).strict(),
   z.object({ type: z.literal("AUTH_INFERENCE_STATUS") }).strict(),
+  z.object({ type: z.literal("AUTH_PROVIDER_CONNECTIONS") }).strict(),
   z
     .object({
       type: z.literal("AUTH_EVALUATION_ACTIVATE"),
@@ -91,12 +96,9 @@ const commandSchema = z.discriminatedUnion("type", [
       trialId: z.string().uuid(),
     })
     .strict(),
-  z
-    .object({
+  serviceInferenceChoiceBaseSchema
+    .extend({
       type: z.literal("AUTH_INFERENCE_CONFIGURE"),
-      profile: z.literal("fake"),
-      enabled: z.boolean(),
-      images: z.boolean(),
     })
     .strict(),
 ]);
@@ -475,7 +477,10 @@ function inferenceChoices(saved: Settings | undefined) {
   const tokens = saved?.tokens;
   const choice = saved?.inference;
   return {
-    profile: "fake" as const,
+    profile: choice?.profile ?? "fake",
+    ...(choice?.profile === "customer-funded"
+      ? { connection: choice.connection }
+      : {}),
     enabled: !!(
       tokens &&
       choice?.accountId === tokens.account.id &&
@@ -618,7 +623,7 @@ export function serviceEvaluationHasGeneration() {
 
 export function serviceInferenceCurrent(request: NavigationTransportInput) {
   const active = currentEvaluation();
-  if (request.profile === "fake") {
+  if (request.profile !== "operator-evaluation") {
     if (!active) return;
   } else if (
     active &&
@@ -663,6 +668,21 @@ export async function serviceInferenceAccess(
         images: active.trial.arm === "multimodal",
       }
     : inferenceChoices(saved);
+  if (
+    request &&
+    request.profile !== "operator-evaluation" &&
+    (request.profile !== choices.profile ||
+      (request.profile === "customer-funded" &&
+        JSON.stringify(request.connection) !==
+          JSON.stringify(
+            "connection" in choices ? choices.connection : undefined,
+          )))
+  )
+    throw new ServiceClientError(
+      "FORBIDDEN",
+      0,
+      "The selected provider connection changed.",
+    );
   if (
     inferenceSuppressed ||
     configuringInference !== undefined ||
@@ -720,6 +740,49 @@ function requireFakeInferenceProfile(
       "UNAVAILABLE",
       0,
       "This service does not offer the development fake inference profile.",
+    );
+}
+function requireCustomerInferenceProfile(
+  capabilities: z.infer<typeof serviceCapabilitiesSchema>,
+) {
+  if (
+    !capabilities.availability.decisions ||
+    !capabilities.capabilities.includes(NAVIGATION_TRANSPORT_CAPABILITY) ||
+    !capabilities.capabilities.includes(NAVIGATION_BYOK_CAPABILITY)
+  )
+    throw new ServiceClientError(
+      "UNAVAILABLE",
+      0,
+      "Customer-funded guidance is not enabled on this service.",
+    );
+}
+export async function serviceProviderConnections(signal?: AbortSignal) {
+  return serviceAuthorizedRequest(
+    "/api/v1/account/provider-connections",
+    providerConnectionsSchema,
+    "GET",
+    undefined,
+    { signal },
+  );
+}
+async function requireCurrentProviderSelection(
+  choice: z.infer<typeof serviceInferenceChoicesSchema>,
+  signal: AbortSignal,
+) {
+  if (choice.profile !== "customer-funded") return;
+  const listed = await serviceProviderConnections(signal);
+  if (
+    !listed.items.some(
+      (item) =>
+        item.status === "active" &&
+        JSON.stringify(providerConnectionSelection(item)) ===
+          JSON.stringify(choice.connection),
+    )
+  )
+    throw new ServiceClientError(
+      "CONFLICT",
+      409,
+      "The provider connection changed. Refresh connections before continuing.",
     );
 }
 
@@ -787,6 +850,9 @@ export async function serviceInferencePreflight(
         "The operator evaluation ended.",
       );
     requireEvaluationCapability(capabilities, active);
+  } else if (binding.profile === "customer-funded") {
+    requireCustomerInferenceProfile(capabilities);
+    await requireCurrentProviderSelection(binding, signal);
   } else requireFakeInferenceProfile(capabilities);
   const { policies, consents } = await readInferenceConsents(
     binding,
@@ -1062,7 +1128,10 @@ async function configureInference(
           { signal, beforeSend: guarded },
         );
         check();
-        requireFakeInferenceProfile(capabilities);
+        if (choices.profile === "customer-funded") {
+          requireCustomerInferenceProfile(capabilities);
+          await requireCurrentProviderSelection(choices, signal);
+        } else requireFakeInferenceProfile(capabilities);
       }
       const path = (suffix: "policies" | "consents") =>
         `/api/v1/workspaces/${account.workspaceId}/${suffix}` as const;
@@ -1266,11 +1335,14 @@ export async function serviceAuthCommand(raw: unknown): Promise<unknown> {
         return status();
       case "AUTH_INFERENCE_STATUS":
         return inferenceStatus();
+      case "AUTH_PROVIDER_CONNECTIONS":
+        return serviceProviderConnections();
       case "AUTH_INFERENCE_CONFIGURE":
         return configureInference({
           profile: command.profile,
           enabled: command.enabled,
           images: command.images,
+          ...(command.connection ? { connection: command.connection } : {}),
         });
       case "AUTH_EVALUATION_ACTIVATE":
         return activateEvaluation(command.planJson, command.trialId);

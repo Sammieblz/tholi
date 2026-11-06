@@ -130,6 +130,7 @@ it("shows exact authoritative balances and storage without fetching them again, 
   request.mockResolvedValueOnce({ items: [], nextCursor: undefined });
   await click("Next credit history");
   expect(request.mock.calls[1][0]).toContain("after=history-next");
+  request.mockResolvedValueOnce({ capabilities: [] });
   request.mockResolvedValueOnce({
     items: [
       {
@@ -158,8 +159,10 @@ it("shows exact authoritative balances and storage without fetching them again, 
     [...cells].filter((cell) => cell.textContent === "Not confirmed"),
   ).toHaveLength(4);
   expect(container.textContent).not.toContain("$0.000000");
-  expect(container.textContent).toContain("not a charge to your account");
-  expect(request).toHaveBeenCalledTimes(3);
+  expect(container.textContent).toContain(
+    "Tholi's provider liability is separate",
+  );
+  expect(request).toHaveBeenCalledTimes(4);
   summary = {
     ...summary,
     entitlements: undefined,
@@ -172,7 +175,7 @@ it("shows exact authoritative balances and storage without fetching them again, 
   expect(container.textContent).not.toContain(
     "No product cloud plan is enrolled",
   );
-  expect(request).toHaveBeenCalledTimes(3);
+  expect(request).toHaveBeenCalledTimes(4);
 });
 
 it("has no paid checkout or inactive action buttons and enables Free only with the catalog's actual development availability", async () => {

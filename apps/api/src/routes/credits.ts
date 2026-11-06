@@ -4,6 +4,8 @@ import {
   creditHistoryPageSchema,
   creditPageQuerySchema,
   creditUsagePageSchema,
+  creditUsagePageV2Schema,
+  creditUsageQuerySchema,
   workspaceCreditsSchema,
 } from "../../../../packages/navigation-core/contracts-credits";
 import type { IdentityService } from "../application/identity";
@@ -24,13 +26,19 @@ export async function registerCreditsApi(
   const early = safe(async (request) => {
     sessions.set(request, (await authenticate(request)).session);
   });
-  const schema = (operationId: string, response: z.ZodTypeAny, paged = false) =>
+  const schema = (
+    operationId: string,
+    response: z.ZodTypeAny,
+    paged: boolean | z.ZodTypeAny = false,
+  ) =>
     identityRouteOptions(operationId, {
       protected: true,
       tags: ["credits", "usage"],
       params: workspaceParams,
       response,
-      ...(paged ? { query: creditPageQuerySchema } : {}),
+      ...(paged
+        ? { query: paged === true ? creditPageQuerySchema : paged }
+        : {}),
     });
   app.get(
     "/api/v1/workspaces/:workspaceId/credits",
@@ -65,7 +73,11 @@ export async function registerCreditsApi(
     "/api/v1/workspaces/:workspaceId/usage",
     {
       onRequest: early,
-      ...schema("listWorkspaceUsage", creditUsagePageSchema, true),
+      ...schema(
+        "listWorkspaceUsage",
+        z.union([creditUsagePageSchema, creditUsagePageV2Schema]),
+        creditUsageQuerySchema,
+      ),
     },
     safe(async (request, _reply, context) =>
       credits.usage(

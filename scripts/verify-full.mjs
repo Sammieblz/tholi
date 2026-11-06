@@ -2,9 +2,14 @@ import { verifyBuildManifest } from "./build-manifest.mjs";
 import { createHash } from "node:crypto";
 import { artifactFiles } from "./artifact-files.mjs";
 import { readdir, readFile } from "node:fs/promises";
-import { requireFullEvidence, digest } from "./evidence.mjs";
+import {
+  requireFullEvidence,
+  requireBrandedNativeSurfaces,
+  digest,
+} from "./evidence.mjs";
 import assert from "node:assert/strict";
 import { syncVersion } from "./version.mjs";
+import { platformEvidence } from "./verify-platform.mjs";
 export async function verifyFull() {
   await syncVersion("--check");
   await verifyBuildManifest();
@@ -45,6 +50,11 @@ export async function verifyFull() {
       "Evidence must match both target builds",
     );
   targetMatch(acceptance);
+  await platformEvidence(buildTargets, {
+    full: true,
+    artifactFiles: files,
+    identity,
+  });
   const reports = [
     "output/qa/unit.json",
     "output/qa/ui-build.json",
@@ -141,12 +151,7 @@ export async function verifyFull() {
     ),
     "Firefox native surfaces are required",
   );
-  assert(
-    branded.cases?.every(
-      (item) => item.surfaces?.nativeSidebar && item.surfaces?.minimizedArrival,
-    ),
-    "Branded native surfaces are required",
-  );
+  requireBrandedNativeSurfaces(branded.cases);
   const firefoxAcceptance = await read(
     "output/acceptance/results-firefox.json",
   );

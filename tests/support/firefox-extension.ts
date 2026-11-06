@@ -3,7 +3,11 @@ import {
   registerFirefoxDriver,
   closeFirefoxDriver,
 } from "./native-browser-lifecycle";
-import { attachWebDriverExtension, seleniumBidi } from "./webdriver-extension";
+import {
+  attachWebDriverExtension,
+  seleniumBidi,
+  setNativeViewport,
+} from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
@@ -11,31 +15,14 @@ import {
 import { permissionVariant } from "./permission-variant";
 import { Builder, By, until, type WebDriver } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
-import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import {
+  installedBrowserBinary,
+  nativeBrowserScale,
+  resolveBrowserTools,
+} from "./browser-tools";
 export function firefoxBinary() {
-  if (process.env.THOLI_FIREFOX_BINARY) return process.env.THOLI_FIREFOX_BINARY;
-  if (process.platform === "win32")
-    for (const root of ["HKCU", "HKLM"]) {
-      try {
-        const result = execFileSync(
-          "reg.exe",
-          [
-            "query",
-            root +
-              "\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe",
-            "/ve",
-          ],
-          { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-        );
-        const path = result.match(/REG_SZ\s+(.+)/)?.[1].trim();
-        if (path && existsSync(path)) return path;
-      } catch {
-        /* Selenium Manager remains the explicit fallback. */
-      }
-    }
+  return installedBrowserBinary("firefox");
 }
 export async function openFirefoxExtension(
   url = "http://127.0.0.1:5173/",
@@ -58,53 +45,31 @@ export async function openFirefoxExtension(
       .setPreference("browser.aboutwelcome.enabled", false)
       .setPreference("browser.startup.homepage_override.mstone", "ignore");
   options.set("webSocketUrl", true);
+  const scale = nativeBrowserScale();
+  if (scale !== undefined)
+    options.setPreference("layout.css.devPixelsPerPx", String(scale));
   const binary = firefoxBinary();
-  const manager = resolve(
-    "node_modules/selenium-webdriver/bin/windows/selenium-manager.exe",
-  );
-  const paths = JSON.parse(
-    execFileSync(
-      manager,
-      [
-        "--browser",
-        "firefox",
-        "--driver-version",
-        browserTools.geckodriverVersion,
-        "--output",
-        "json",
-        "--avoid-stats",
-        ...(binary ? ["--browser-path", binary] : []),
-      ],
-      { encoding: "utf8" },
-    ),
-  ).result;
-  options.setBinary(binary || paths.browser_path);
+  const paths = resolveBrowserTools({
+    browser: "firefox",
+    binary,
+    driver: process.env.THOLI_GECKODRIVER,
+    driverVersion: browserTools.geckodriverVersion,
+  });
+  options.setBinary(paths.browserPath);
   // Chrome context is used only to load an extension-owned test tab. It does
   // not change the add-on's permissions, content-script world, or manifest.
   const driver = (await new Builder()
     .forBrowser("firefox")
     .setFirefoxOptions(options)
     .setFirefoxService(
-      new firefox.ServiceBuilder(
-        process.env.THOLI_GECKODRIVER || paths.driver_path,
-      ).addArguments("--allow-system-access"),
+      new firefox.ServiceBuilder(paths.driverPath).addArguments(
+        "--allow-system-access",
+      ),
     )
     .build()) as firefox.Driver;
   await registerFirefoxDriver(driver);
   try {
-    await driver.manage().window().setRect(viewport);
-    // WebDriver rect is the outer window; acceptance contracts specify CSS viewport pixels.
-    const inset = await driver.executeScript<{ x: number; y: number }>(() => ({
-      x: outerWidth - innerWidth,
-      y: outerHeight - innerHeight,
-    }));
-    await driver
-      .manage()
-      .window()
-      .setRect({
-        width: viewport.width + inset.x,
-        height: viewport.height + inset.y,
-      });
+    await setNativeViewport(driver, viewport);
     await driver.manage().setTimeouts({ script: 35000, pageLoad: 30000 });
     // BiDi installs the local unpacked directory. The deprecated classic API
     // ZIPs/base64-encodes every model asset in memory before sending it again.

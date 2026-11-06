@@ -18,6 +18,7 @@ import type { CreditService } from "./application/quotas";
 import type { PlanService } from "./application/plans";
 import type { SavedDataService } from "./application/saved-data";
 import type { AccountService } from "./application/account";
+import type { ProviderConnectionService } from "./application/provider-connections";
 import { createObservability } from "./adapters/observability";
 import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../../packages/navigation-core/contracts-service";
 
@@ -36,6 +37,7 @@ export interface ServiceApiServices {
   plans?: PlanService;
   savedData?: SavedDataService;
   account?: AccountService;
+  providers?: ProviderConnectionService;
 }
 
 /** Compatible facade for the existing single-owner API. */
@@ -103,6 +105,7 @@ async function createServiceRuntime(
   let plans = injected.plans;
   let savedData = injected.savedData;
   let account = injected.account;
+  let providers = injected.providers;
   const ownedResources = [...resources];
   if (
     (authorization ||
@@ -113,7 +116,8 @@ async function createServiceRuntime(
       credits ||
       plans ||
       savedData ||
-      account) &&
+      account ||
+      providers) &&
     !identity
   )
     throw new Error("Authorization requires the composed identity service.");
@@ -155,6 +159,7 @@ async function createServiceRuntime(
       observer,
       !!options.navigation,
       options.plans?.environment,
+      options.providers,
     ).catch(async (error) => {
       await observer.close();
       throw error;
@@ -169,6 +174,7 @@ async function createServiceRuntime(
     plans = runtime.plans;
     savedData = runtime.savedData;
     account = runtime.account;
+    providers = runtime.providers;
     ownedResources.push(...runtime.resources);
   }
   // Accept late completions during drain, then flush after application resources close.
@@ -220,7 +226,7 @@ async function createServiceRuntime(
               ? [
                   "GET",
                   "POST",
-                  ...(authorization || savedData ? ["PATCH"] : []),
+                  ...(authorization || savedData || providers ? ["PATCH"] : []),
                   "DELETE",
                 ]
               : ["GET", "POST"],
@@ -261,10 +267,18 @@ async function createServiceRuntime(
         savedDataExportsEnabled: savedData?.exportsAvailable,
         accountExportsEnabled: account?.exportsAvailable,
         accountDeletionEnabled: account?.deletionAvailable,
+        providerConnectionsEnabled: !!providers,
+        providerConnectionsWriteEnabled: providers?.storageAvailable,
+        customerNavigationEnabled: !!navigation?.customerFunded,
       });
       if (identity) {
         const { registerIdentityApi } = await import("./routes/identity");
         await registerIdentityApi(app, identity);
+        if (providers) {
+          const { registerProviderConnectionsApi } =
+            await import("./routes/provider-connections");
+          await registerProviderConnectionsApi(app, identity, providers);
+        }
         if (account) {
           const { registerAccountApi } = await import("./routes/account");
           await registerAccountApi(app, identity, account);

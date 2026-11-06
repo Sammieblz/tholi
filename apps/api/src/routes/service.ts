@@ -27,6 +27,7 @@ import {
   NAVIGATION_TRANSPORT_CAPABILITY,
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_EVALUATION_CAPABILITY,
+  NAVIGATION_BYOK_CAPABILITY,
 } from "../../../../packages/navigation-core/contracts-navigation";
 import type { OperatorEvaluationMetadata } from "../../../../packages/navigation-core/contracts-evaluation";
 import { ApiError, duringServiceRequest } from "../http";
@@ -49,6 +50,9 @@ interface ServiceFeatures {
   savedDataExportsEnabled?: boolean;
   accountExportsEnabled?: boolean;
   accountDeletionEnabled?: boolean;
+  providerConnectionsEnabled?: boolean;
+  providerConnectionsWriteEnabled?: boolean;
+  customerNavigationEnabled?: boolean;
 }
 
 function serviceCapabilities(features: ServiceFeatures) {
@@ -67,6 +71,9 @@ function serviceCapabilities(features: ServiceFeatures) {
     savedDataExportsEnabled = false,
     accountExportsEnabled = false,
     accountDeletionEnabled = false,
+    providerConnectionsEnabled = false,
+    providerConnectionsWriteEnabled = false,
+    customerNavigationEnabled = false,
   } = features;
   return serviceCapabilitiesSchema.parse({
     protocol: SERVICE_PROTOCOL,
@@ -86,13 +93,20 @@ function serviceCapabilities(features: ServiceFeatures) {
       ...(jobsEnabled ? ["durable-jobs"] : []),
       ...(supportEnabled ? ["support-requests", "private-files"] : []),
       ...(analyticsEnabled ? ["product-analytics"] : []),
-      ...(creditsEnabled ? ["credit-accounting"] : []),
+      ...(creditsEnabled ? ["credit-accounting", "usage-schema-2"] : []),
       ...(plansEnabled ? ["product-plans"] : []),
-      ...(savedDataEnabled ? ["saved-data"] : []),
+      ...(savedDataEnabled ? ["saved-data", "saved-data-schema-2"] : []),
       ...(savedDataWritesEnabled ? ["saved-data-write"] : []),
       ...(savedDataExportsEnabled ? ["saved-data-export"] : []),
-      ...(accountExportsEnabled ? ["account-export"] : []),
+      ...(accountExportsEnabled
+        ? ["account-export", "account-export-schema-2"]
+        : []),
       ...(accountDeletionEnabled ? ["account-deletion"] : []),
+      ...(providerConnectionsEnabled ? ["provider-connections"] : []),
+      ...(providerConnectionsWriteEnabled
+        ? ["provider-connections-write"]
+        : []),
+      ...(customerNavigationEnabled ? [NAVIGATION_BYOK_CAPABILITY] : []),
       ...(navigationEnabled
         ? [
             NAVIGATION_TRANSPORT_CAPABILITY,

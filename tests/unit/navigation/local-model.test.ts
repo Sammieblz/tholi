@@ -281,6 +281,9 @@ it("recovers a local inference host after cancellation and ignores replies from 
     expect(workers[0].terminate).toHaveBeenCalledOnce();
     const fresh = host.request({ type: "PLAN_NLP", id: "fresh" });
     workers[0].onmessage({ data: { id: "old", value: "stale" } });
+    workers[0].onerror({ preventDefault: vi.fn() });
+    workers[0].onmessageerror();
+    expect(workers[1].terminate).not.toHaveBeenCalled();
     workers[1].onmessage({ data: { id: "fresh", value: "current" } });
     expect(await fresh).toEqual({ id: "fresh", value: "current" });
     const failed = host.request({ type: "PLAN_NLP", id: "failed" });
@@ -291,5 +294,122 @@ it("recovers a local inference host after cancellation and ignores replies from 
     expect((await recovered).value).toBe("recovered");
   } finally {
     host.dispose();
+  }
+});
+
+it("reports closed startup, request, reply and timeout failures while retaining explicit recovery", async () => {
+  vi.useFakeTimers();
+  const workers: any[] = [];
+  let failStart = true,
+    failPost = true;
+  vi.stubGlobal("chrome", {
+    runtime: { getURL: (path: string) => "chrome-extension://test/" + path },
+  });
+  vi.stubGlobal(
+    "Worker",
+    class {
+      onmessage: any;
+      onerror: any;
+      onmessageerror: any;
+      terminate = vi.fn();
+      constructor() {
+        if (failStart) {
+          failStart = false;
+          throw new Error("PRIVATE_WORKER_URL_SENTINEL");
+        }
+        workers.push(this);
+      }
+      postMessage() {
+        if (failPost) {
+          failPost = false;
+          throw new DOMException("PRIVATE_REQUEST_SENTINEL", "DataCloneError");
+        }
+      }
+    },
+  );
+  const { createInferenceHost } =
+    await import("../../../apps/extension/src/inference/worker-host");
+  const host = createInferenceHost();
+  try {
+    const startup = await host.request({ type: "PLAN_NLP", id: "startup" });
+    expect(startup.diagnostic).toEqual({
+      code: "WORKER_START_FAILED",
+      stage: "worker",
+    });
+    expect(JSON.stringify(startup)).not.toContain(
+      "PRIVATE_WORKER_URL_SENTINEL",
+    );
+    const sending = await host.request({ type: "PLAN_NLP", id: "sending" });
+    expect(sending.diagnostic?.code).toBe("WORKER_REQUEST_FAILED");
+    expect(JSON.stringify(sending)).not.toContain("PRIVATE_REQUEST_SENTINEL");
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+    const invalid = host.request({ type: "PLAN_NLP", id: "invalid" });
+    workers[1].onmessage({
+      data: {
+        id: "invalid",
+        error: "PRIVATE_REPLY_SENTINEL",
+        diagnostic: { code: "MODEL_ASSET_FAILED", stage: "assets" },
+      },
+    });
+    const reply = await invalid;
+    expect(reply.diagnostic?.code).toBe("INFERENCE_FAILED");
+    expect(JSON.stringify(reply)).not.toContain("PRIVATE_REPLY_SENTINEL");
+    const timeout = host.request({ type: "PLAN_NLP", id: "timeout" });
+    await vi.advanceTimersByTimeAsync(30000);
+    expect((await timeout).diagnostic).toEqual({
+      code: "INFERENCE_TIMEOUT",
+      stage: "timeout",
+    });
+    expect(workers[1].terminate).toHaveBeenCalledOnce();
+    const recovered = host.request({ type: "PLAN_NLP", id: "recovered" });
+    workers[2].onmessage({ data: { id: "recovered", value: "current" } });
+    expect(await recovered).toEqual({ id: "recovered", value: "current" });
+  } finally {
+    host.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  }
+});
+
+it("keeps host attachment errors content-free while preserving cancellation", async () => {
+  const getContexts = vi.fn(async () => [{}]),
+    closeDocument = vi.fn(async () => {}),
+    sendMessage = vi.fn(async () => {
+      throw new Error("PRIVATE_HOST_TRANSPORT_SENTINEL");
+    });
+  vi.stubGlobal("chrome", {
+    runtime: {
+      getURL: () => "chrome-extension://test/",
+      ContextType: { OFFSCREEN_DOCUMENT: "OFFSCREEN_DOCUMENT" },
+      getContexts,
+      sendMessage,
+    },
+    offscreen: {
+      createDocument: vi.fn(async () => {}),
+      closeDocument,
+      Reason: { WORKERS: "WORKERS" },
+    },
+  });
+  const { requestInferenceHost, disposeInferenceHost } =
+    await import("../../../apps/extension/src/platform/inference-host");
+  try {
+    const failure = await requestInferenceHost({
+      type: "PLAN_NLP",
+      id: "host-error",
+    }).catch((error) => error);
+    expect(failure.code).toBe("HOST_UNAVAILABLE");
+    expect(failure.message).not.toContain("PRIVATE_HOST_TRANSPORT_SENTINEL");
+    const canceled = new AbortController();
+    canceled.abort();
+    await expect(
+      requestInferenceHost(
+        { type: "PLAN_NLP", id: "canceled" },
+        canceled.signal,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(sendMessage).toHaveBeenCalledOnce();
+  } finally {
+    await disposeInferenceHost();
   }
 });

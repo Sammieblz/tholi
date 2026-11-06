@@ -1,0 +1,94 @@
+.tholi-private-learning {
+  min-width: 0;
+  padding-block: 16px;
+  border-block: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.tholi-private-learning fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.tholi-private-learning legend {
+  padding: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.tholi-private-learning-origin {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.tholi-private-learning .tholi-private-learning-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-block: 8px;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.tholi-private-learning-choice input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--jade);
+}
+.tholi-private-learning fieldset:disabled label {
+  cursor: default;
+}
+.tholi-private-learning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 16px 0;
+}
+.tholi-private-learning-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.tholi-private-learning-error {
+  color: var(--danger);
+}
+.tholi-private-learning-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: color-mix(in srgb, var(--ink) 65%, transparent);
+}
+.tholi-private-learning-dialog {
+  position: fixed;
+  z-index: 121;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.tholi-private-learning-dialog h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+.tholi-private-learning :focus-visible,
+.tholi-private-learning-dialog :focus-visible {
+  outline: 3px solid var(--jade);
+  outline-offset: 3px;
+}

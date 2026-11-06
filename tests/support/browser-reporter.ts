@@ -9,6 +9,9 @@ import type {
 import { relative } from "node:path";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { release } from "node:os";
+import nativePlatforms from "../../config/testing/native-platforms.json" with { type: "json" };
 import { artifactFiles } from "../../scripts/artifact-files.mjs";
 import { buildProvenance } from "./build-provenance";
 import {
@@ -49,6 +52,14 @@ async function websiteProvenance() {
   };
 }
 export default class BrowserReporter implements Reporter {
+  private platform?: {
+    variant: string;
+    platform: string;
+    arch: string;
+    osVersion: string;
+    kernel: string;
+    translated: boolean;
+  };
   private start?: Awaited<ReturnType<typeof buildProvenance>>;
   private website?: Awaited<ReturnType<typeof websiteProvenance>>;
   private firefoxBuild?: Awaited<ReturnType<typeof buildProvenance>>;
@@ -93,6 +104,51 @@ export default class BrowserReporter implements Reporter {
       );
       this.expected.set(group, [...(this.expected.get(group) || []), test.id]);
     }
+    if (this.expected.has("platform")) {
+      const variant =
+        process.env.THOLI_PLATFORM_VARIANT ||
+        `${process.platform}-${process.arch}`;
+      const expected = nativePlatforms.find(
+        (target) => target.runner === variant,
+      );
+      if (!expected && variant !== `${process.platform}-${process.arch}`)
+        throw Error("Unknown native platform evidence target.");
+      let osVersion = release(),
+        translated = false;
+      if (process.platform === "darwin") {
+        osVersion = execFileSync("/usr/bin/sw_vers", ["-productVersion"], {
+          encoding: "utf8",
+        }).trim();
+        try {
+          translated =
+            execFileSync(
+              "/usr/sbin/sysctl",
+              ["-in", "sysctl.proc_translated"],
+              { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+            ).trim() === "1";
+        } catch {
+          /* The translation flag does not exist on Intel hosts. */
+        }
+      }
+      if (
+        expected &&
+        (expected.platform !== process.platform ||
+          expected.arch !== process.arch ||
+          Number(osVersion.split(".")[0]) !== expected.major ||
+          translated)
+      )
+        throw Error(
+          "The native host differs from its declared OS/architecture target.",
+        );
+      this.platform = {
+        variant,
+        platform: process.platform,
+        arch: process.arch,
+        osVersion,
+        kernel: release(),
+        translated,
+      };
+    }
     if (this.expected.has("ui")) this.website = await websiteProvenance();
     if (this.expected.has("acceptance-firefox")) {
       this.firefoxAccuracy = new AccuracyReporter("firefox");
@@ -129,6 +185,7 @@ export default class BrowserReporter implements Reporter {
       ["perception-comparison", "comparison"],
       ["motion-benchmark", "motion"],
       ["native-surfaces", "surfaces"],
+      ["private-learning-native", "privateLearning"],
       ["paired-performance", "pairedPerformance"],
       ["pixel-privacy", "pixelPrivacy"],
       ["route-motion-timing", "routeMotion"],
@@ -180,8 +237,12 @@ export default class BrowserReporter implements Reporter {
           JSON.stringify(this.website) ===
             JSON.stringify(await websiteProvenance()));
       passed &&= groupPassed;
-      if (!output[group]) throw Error("Unknown evidence scope: " + group);
-      await writeEvidence(output[group], {
+      const destination =
+        group === "platform"
+          ? `output/qa/platform/${this.platform!.variant}.json`
+          : output[group];
+      if (!destination) throw Error("Unknown evidence scope: " + group);
+      await writeEvidence(destination, {
         ...(group === "firefox" ? this.firefoxBuild : this.start),
         browsers: this.browsers.get(group) || [],
         scope: group,
@@ -192,6 +253,13 @@ export default class BrowserReporter implements Reporter {
         expected: expected.length,
         configuredCount: expected.length,
         cases,
+        ...(group === "platform"
+          ? {
+              host: this.platform,
+              nativePermissionPrompts: "pending user-assisted check",
+              storeInstallation: "pending user-assisted check",
+            }
+          : {}),
         ...(group === "perception-comparison"
           ? await comparisonEvidence(cases, {
               mode: process.env.THOLI_EVALUATION_MODE,

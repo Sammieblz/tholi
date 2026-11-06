@@ -14,6 +14,7 @@ import type { RepositoryScope } from "../../../apps/api/src/database/contracts";
 import {
   savedDataImportHash,
   savedDataExportSnapshotSchema,
+  savedDataExportFileSchema,
   type SavedDataArtifact,
   type SavedDataExportResult,
   type SavedDataImportInput,
@@ -23,7 +24,10 @@ import {
   beginJourney,
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
-import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
+import {
+  savedDataArtifactFixture,
+  savedNavigationKnowledgeFixture,
+} from "../../support/saved-data-fixture";
 import { planFixture } from "./plan-fixture";
 
 /** The same isolated PostgreSQL runner exercises public DTOs and existing private exports. */
@@ -129,6 +133,452 @@ export async function runSavedDataChecks(
     );
 
   try {
+    await record(
+      "private graph view keeps v1 strict, locks site choices and invalidates retrieval after pause or deletion",
+      async () => {
+        await plans.selectFree({ maxSavedArtifacts: 20 });
+        const scope = await fixture(),
+          foreign = await fixture();
+        const artifact = await savedNavigationKnowledgeFixture();
+        assert.equal(
+          (
+            await service.siteSettings(
+              scope,
+              scope.workspaceId,
+              artifact.data.origin,
+              context(),
+            )
+          ).collect,
+          false,
+        );
+        await assert.rejects(
+          () =>
+            service.create(
+              scope,
+              scope.workspaceId,
+              { ...mutation(), artifact, siteSettingsRevision: "1" },
+              context(),
+              2,
+            ),
+          { code: "CONFLICT" },
+        );
+        const setting = await service.updateSiteSettings(
+          scope,
+          scope.workspaceId,
+          {
+            origin: artifact.data.origin,
+            expectedRevision: "0",
+            idempotencyKey: randomUUID(),
+            approved: true,
+            collect: true,
+            use: true,
+          },
+          context(),
+        );
+        const created = await service.create(
+          scope,
+          scope.workspaceId,
+          { ...mutation(), artifact, siteSettingsRevision: setting.revision },
+          context(),
+          2,
+        );
+        assert.equal(created.schemaVersion, 2);
+        assert.equal((await list(scope)).items.length, 0);
+        await assert.rejects(() => get(scope, artifact.id), {
+          code: "NOT_FOUND",
+        });
+        assert.equal(
+          (await service.list(scope, scope.workspaceId, {}, context(), 2))
+            .items[0].schemaVersion,
+          2,
+        );
+        const query = {
+          origin: artifact.data.origin,
+          query: "Find Help",
+          controls: [{ role: "button", label: "Settings", kind: "control" }],
+        };
+        const knowledge = await service.retrieveKnowledge(
+          scope,
+          scope.workspaceId,
+          query,
+          context(),
+        );
+        assert.equal(knowledge.context?.facts[0].steps[0].label, "Settings");
+        assert.equal(knowledge.siteSettings?.revision, setting.revision);
+        assert.equal(
+          (
+            await service.retrieveKnowledge(
+              foreign,
+              foreign.workspaceId,
+              query,
+              context(),
+            )
+          ).context,
+          null,
+        );
+        await service.revalidateKnowledge(
+          scope,
+          scope.workspaceId,
+          knowledge,
+          context(),
+        );
+        const paused = await service.updateSiteSettings(
+          scope,
+          scope.workspaceId,
+          {
+            origin: artifact.data.origin,
+            expectedRevision: setting.revision,
+            idempotencyKey: randomUUID(),
+            approved: true,
+            collect: false,
+            use: false,
+          },
+          context(),
+        );
+        await assert.rejects(
+          () =>
+            service.revalidateKnowledge(
+              scope,
+              scope.workspaceId,
+              knowledge,
+              context(),
+            ),
+          { code: "CONFLICT" },
+        );
+        await assert.rejects(
+          () =>
+            service.update(
+              scope,
+              scope.workspaceId,
+              artifact.id,
+              {
+                ...mutation(),
+                artifact,
+                expectedRevision: created.revision,
+                siteSettingsRevision: setting.revision,
+              },
+              context(),
+              2,
+            ),
+          { code: "CONFLICT" },
+        );
+        const resumed = await service.updateSiteSettings(
+          scope,
+          scope.workspaceId,
+          {
+            origin: artifact.data.origin,
+            expectedRevision: paused.revision,
+            idempotencyKey: randomUUID(),
+            approved: true,
+            collect: true,
+            use: true,
+          },
+          context(),
+        );
+        assert.notEqual(resumed.revision, setting.revision);
+        const exported = await service.export(
+          scope,
+          scope.workspaceId,
+          { idempotencyKey: randomUUID(), ids: [artifact.id] },
+          context(),
+          2,
+        );
+        const snapshot = (
+          await migration.query(
+            "SELECT snapshot FROM tholi.private_files WHERE id=$1",
+            [exported.fileId],
+          )
+        ).rows[0].snapshot;
+        assert.equal(
+          savedDataExportFileSchema.parse(snapshot).items[0].schemaVersion,
+          2,
+        );
+        const deleted = await service.delete(
+          scope,
+          scope.workspaceId,
+          artifact.id,
+          {
+            idempotencyKey: randomUUID(),
+            expectedRevision: created.revision,
+            approved: true,
+          },
+          context(),
+          2,
+        );
+        assert.equal(deleted.data, null);
+        assert.deepEqual(deleted.metadata, {
+          label: "Deleted item",
+          folder: null,
+          tags: [],
+        });
+        assert.equal(
+          (
+            await service.siteSettings(
+              scope,
+              scope.workspaceId,
+              artifact.data.origin,
+              context(),
+            )
+          ).collect,
+          false,
+        );
+        const changes = await service.changes(
+          scope,
+          scope.workspaceId,
+          {},
+          context(),
+          2,
+        );
+        assert.equal(changes.items[0].deletedAt !== null, true);
+        assert.equal(
+          (await service.changes(scope, scope.workspaceId, {}, context())).items
+            .length,
+          0,
+        );
+        const disabled = await service.siteSettings(
+          scope,
+          scope.workspaceId,
+          artifact.data.origin,
+          context(),
+        );
+        const enabled = await service.updateSiteSettings(
+          scope,
+          scope.workspaceId,
+          {
+            origin: artifact.data.origin,
+            expectedRevision: disabled.revision,
+            idempotencyKey: randomUUID(),
+            approved: true,
+            collect: true,
+            use: true,
+          },
+          context(),
+        );
+        for (let copy = 0; copy < 2; copy++)
+          await service.create(
+            scope,
+            scope.workspaceId,
+            {
+              ...mutation(),
+              artifact: await savedNavigationKnowledgeFixture(),
+              siteSettingsRevision: enabled.revision,
+            },
+            context(),
+            2,
+          );
+        const forget = {
+          origin: artifact.data.origin,
+          expectedRevision: enabled.revision,
+          idempotencyKey: randomUUID(),
+          approved: true,
+        };
+        const forgotten = await service.forgetSite(
+          scope,
+          scope.workspaceId,
+          forget,
+          context(),
+        );
+        assert.equal(forgotten.deletedIds.length, 2);
+        assert.equal(forgotten.hasMore, false);
+        assert.equal(forgotten.siteSettings.collect, false);
+        assert.deepEqual(
+          await service.forgetSite(scope, scope.workspaceId, forget, context()),
+          forgotten,
+        );
+        const empty = {
+          ...forget,
+          expectedRevision: forgotten.siteSettings.revision,
+          idempotencyKey: randomUUID(),
+        };
+        assert.deepEqual(
+          (await service.forgetSite(scope, scope.workspaceId, empty, context()))
+            .deletedIds,
+          [],
+        );
+        assert.deepEqual(
+          (await service.forgetSite(scope, scope.workspaceId, empty, context()))
+            .deletedIds,
+          [],
+        );
+      },
+    );
+    if (worker)
+      await record(
+        "worker maintenance expires graph evidence and private snapshots without resetting stale site approval revisions",
+        async () => {
+          await plans.selectFree({ maxSavedArtifacts: 20 });
+          const scope = await fixture(),
+            observedAt = Date.now() - 90 * 86400000 + 60000;
+          const artifact = await savedNavigationKnowledgeFixture(
+            undefined,
+            new Date(observedAt).toISOString(),
+          );
+          const setting = await service.updateSiteSettings(
+            scope,
+            scope.workspaceId,
+            {
+              origin: artifact.data.origin,
+              expectedRevision: "0",
+              idempotencyKey: randomUUID(),
+              approved: true,
+              collect: true,
+              use: true,
+            },
+            context(),
+          );
+          const created = await service.create(
+            scope,
+            scope.workspaceId,
+            {
+              ...mutation(),
+              artifact,
+              siteSettingsRevision: setting.revision,
+            },
+            context(),
+            2,
+          );
+          const exported = await service.export(
+            scope,
+            scope.workspaceId,
+            { idempotencyKey: randomUUID(), ids: [artifact.id] },
+            context(),
+            2,
+          );
+          const file = (
+            await migration.query(
+              'SELECT expires_at AS "expiresAt" FROM tholi.private_files WHERE id=$1',
+              [exported.fileId],
+            )
+          ).rows[0];
+          assert.ok(file.expiresAt.getTime() <= observedAt + 90 * 86400000);
+          const old = new Date(Date.now() - 91 * 86400000).toISOString();
+          const expired = {
+            ...artifact.data,
+            states: artifact.data.states.map((state) => ({
+              ...state,
+              observedAt: old,
+            })),
+            edges: artifact.data.edges.map((edge) => ({
+              ...edge,
+              observedAt: old,
+            })),
+          };
+          await withTransaction(
+            migration,
+            (client) =>
+              client.query(
+                "UPDATE tholi.saved_artifacts SET content=$2::jsonb,updated_at=clock_timestamp() WHERE id=$1",
+                [artifact.id, JSON.stringify(expired)],
+              ),
+            scope,
+          );
+          await migration.query(
+            "UPDATE tholi.navigation_knowledge_sites SET last_activity_at=clock_timestamp()-interval '2184 hours' WHERE account_id=$1",
+            [scope.accountId],
+          );
+          await migration.query(
+            "UPDATE tholi.private_files SET expires_at=clock_timestamp()-interval '1 second' WHERE id=$1",
+            [exported.fileId],
+          );
+          assert.equal(
+            (
+              await service.siteSettings(
+                scope,
+                scope.workspaceId,
+                artifact.data.origin,
+                context(),
+              )
+            ).collect,
+            false,
+          );
+          await assert.rejects(
+            () =>
+              service.get(scope, scope.workspaceId, artifact.id, context(), 2),
+            { code: "NOT_FOUND" },
+          );
+          assert.equal(
+            (await service.list(scope, scope.workspaceId, {}, context(), 2))
+              .items.length,
+            0,
+          );
+          await assert.rejects(
+            () => runtime.query("SELECT * FROM tholi.prune_observability(100)"),
+            { code: "42501" },
+          );
+          await new PostgresJobs(worker).pruneObservability(100);
+          const tombstone = (
+            await migration.query(
+              "SELECT content,metadata,deleted_at FROM tholi.saved_artifacts WHERE id=$1",
+              [artifact.id],
+            )
+          ).rows[0];
+          assert.equal(tombstone.content, null);
+          assert.ok(tombstone.deleted_at);
+          assert.deepEqual(tombstone.metadata, {
+            label: "Deleted item",
+            folder: null,
+            tags: [],
+          });
+          const privateFile = (
+            await migration.query(
+              "SELECT snapshot,status FROM tholi.private_files WHERE id=$1",
+              [exported.fileId],
+            )
+          ).rows[0];
+          assert.equal(privateFile.snapshot, null);
+          assert.equal(privateFile.status, "deleting");
+          assert.ok(
+            (
+              await migration.query(
+                "SELECT id FROM tholi.jobs WHERE request_id=$1 AND kind='file.expire'",
+                [exported.requestId],
+              )
+            ).rowCount,
+          );
+          const cleared = await service.siteSettings(
+            scope,
+            scope.workspaceId,
+            artifact.data.origin,
+            context(),
+          );
+          assert.equal(cleared.revision, "0");
+          const renewed = await service.updateSiteSettings(
+            scope,
+            scope.workspaceId,
+            {
+              origin: artifact.data.origin,
+              expectedRevision: "0",
+              idempotencyKey: randomUUID(),
+              approved: true,
+              collect: true,
+              use: true,
+            },
+            context(),
+          );
+          assert.ok(BigInt(renewed.revision) > BigInt(setting.revision));
+          const freshArtifact = await savedNavigationKnowledgeFixture();
+          await assert.rejects(
+            () =>
+              service.create(
+                scope,
+                scope.workspaceId,
+                {
+                  ...mutation(),
+                  artifact: freshArtifact,
+                  siteSettingsRevision: setting.revision,
+                },
+                context(),
+                2,
+              ),
+            { code: "CONFLICT" },
+          );
+          assert.equal(
+            (await service.changes(scope, scope.workspaceId, {}, context(), 2))
+              .items[0].revision,
+            (BigInt(created.revision) + 1n).toString(),
+          );
+        },
+      );
     await record(
       "approved four-kind saved data uses one revision owner and keeps legacy routes private until explicit conversion",
       async () => {

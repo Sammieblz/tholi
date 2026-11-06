@@ -2,6 +2,8 @@ import { z } from "zod";
 import { controlId, controlSchema, progressSchema } from "../page-model";
 import { sanitizeGoal, sanitizeText } from "../privacy-redaction";
 import { inspectPngData } from "../vision/png";
+import { providerConnectionSelectionSchema } from "./contracts-providers";
+import { navigationKnowledgeOriginSchema } from "./contracts-navigation-knowledge";
 import {
   operatorEvaluationArmSchema,
   operatorEvaluationBindingSchema,
@@ -665,6 +667,7 @@ export type NavigationDecision = z.infer<typeof navigationDecisionSchema>;
 export const navigationProcessingProfileSchema = z.enum([
   "fake",
   "operator-evaluation",
+  "customer-funded",
 ]);
 export const navigationEvaluationContextSchema = operatorEvaluationBindingSchema
   .extend({
@@ -850,6 +853,7 @@ export const NAVIGATION_TRANSPORT_CAPABILITY = "navigation-decisions";
 export const NAVIGATION_FAKE_CAPABILITY = "fake-navigation-model";
 export const NAVIGATION_EVALUATION_CAPABILITY =
   "operator-navigation-evaluation";
+export const NAVIGATION_BYOK_CAPABILITY = "customer-funded-navigation";
 export const NAVIGATION_TRANSPORT_OPERATION = "navigation-decisions.v1";
 export const NAVIGATION_TRANSPORT_LIMITS = Object.freeze({
   maxBodyBytes: NAVIGATION_LIMITS.maxEnvelopeBytes,
@@ -865,6 +869,14 @@ const navigationTransportInputBaseSchema = z
     policy: serviceRequestPolicySchema.default({}),
     profile: navigationProcessingProfileSchema,
     evaluation: operatorEvaluationBindingSchema.optional(),
+    connection: providerConnectionSelectionSchema.optional(),
+    retrieval: z
+      .object({
+        origin: navigationKnowledgeOriginSchema,
+        snapshotDigest: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 // Keep defaults outside the conditional branches: AJV cannot apply a default
@@ -877,12 +889,22 @@ export const navigationTransportInputSchema =
         .object({
           profile: z.literal("fake"),
           evaluation: z.never().optional(),
+          connection: z.never().optional(),
         })
         .passthrough(),
       z
         .object({
           profile: z.literal("operator-evaluation"),
           evaluation: operatorEvaluationBindingSchema,
+          connection: z.never().optional(),
+          retrieval: z.never().optional(),
+        })
+        .passthrough(),
+      z
+        .object({
+          profile: z.literal("customer-funded"),
+          connection: providerConnectionSelectionSchema,
+          evaluation: z.never().optional(),
         })
         .passthrough(),
     ]),

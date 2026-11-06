@@ -3,7 +3,11 @@ import backendDataPermissions from "../../../../config/backend-data-permissions.
 import firefox from "selenium-webdriver/firefox.js";
 import { test, expect } from "../../../support/browser-test";
 import { openFirefoxExtension } from "../../../support/firefox-extension";
-import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
+import {
+  closeFirefoxSidebar,
+  verifyWebDriverSurfaces,
+  webDriverWidget,
+} from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
 import type { CaptureMetadata } from "../../../../packages/vision/contracts";
 import { createHash } from "node:crypto";
@@ -11,7 +15,9 @@ import { Key } from "selenium-webdriver";
 import {
   navigationServiceFixture,
   navigationServicePageHtml,
+  seedNavigationServiceAccount,
 } from "../../../support/navigation-service-fixture";
+import { verifyWebDriverPrivateLearning } from "../../../support/webdriver-private-learning";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -69,6 +75,7 @@ async function firefoxServiceFixture(
         JSON.stringify({
           browser: "firefox",
           version: app.version,
+          driverVersion: app.driverVersion,
           runtimeManifestHash: createHash("sha256")
             .update(JSON.stringify(grants.manifest))
             .digest("hex"),
@@ -83,26 +90,7 @@ async function firefoxServiceFixture(
     });
     // Firefox's existing private-settings owner uses extension-origin IndexedDB.
     // Synthetic credentials never enter website storage or a content script.
-    await app.extension(async (settings: unknown) => {
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("tholi-private-settings", 1);
-        request.onupgradeneeded = () =>
-          request.result.createObjectStore("settings");
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const transaction = database.transaction("settings", "readwrite");
-          transaction.objectStore("settings").put(settings, "service-auth");
-          transaction.oncomplete = () => resolve();
-          transaction.onabort = transaction.onerror = () =>
-            reject(transaction.error);
-        });
-      } finally {
-        database.close();
-      }
-    }, service.settings);
+    await seedNavigationServiceAccount(app, service.settings, "firefox");
     const started = await app.start();
     return { app, service, started, close };
   } catch (error) {
@@ -110,6 +98,10 @@ async function firefoxServiceFixture(
     throw error;
   }
 }
+
+test("Firefox customer-funded guidance and private learning keep native authority", async ({}, info) => {
+  await verifyWebDriverPrivateLearning("firefox", info);
+});
 
 test("Firefox binds an authenticated service proposal to its native document without inventing arrival", async ({}, info) => {
   const fixture = await firefoxServiceFixture(info);
@@ -303,7 +295,10 @@ test("Firefox uses native document identity, local planning and independently ve
         JSON.stringify({
           name: "firefox",
           version: app.version,
+          driverVersion: app.driverVersion,
           target: "firefox",
+          platform: app.platform,
+          runtimePlatform: app.runtimePlatform,
         }),
       ),
       contentType: "application/json",
@@ -401,6 +396,9 @@ test("Firefox uses native document identity, local planning and independently ve
       body: Buffer.from(JSON.stringify(surfaces)),
       contentType: "application/json",
     });
+    const currentPage = await app.message({ type: "GET_PAGE" });
+    expect(currentPage.error).toBeUndefined();
+    expect(currentPage.perception).toBeTruthy();
     const capture = await app.extension(async (tabId: number) => {
       const api = (globalThis as any).browser;
       const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
@@ -414,8 +412,19 @@ test("Firefox uses native document identity, local planning and independently ve
           { type: "PREPARE_CAPTURE", sessionId: session.sessionId, captureId },
           { frameId: 0 },
         );
-        if (prepared?.error || !prepared?.metadata)
-          throw Error("Current Firefox capture metadata unavailable");
+        if (prepared?.error || !prepared?.metadata) {
+          const reasons = [
+            "A current running task is required for capture.",
+            "Current page perception is unavailable.",
+            "The capture task changed.",
+            "Complete private capture evidence is unavailable.",
+          ];
+          throw Error(
+            "Current Firefox capture metadata unavailable (prepare:" +
+              reasons.indexOf(prepared?.error) +
+              ")",
+          );
+        }
         metadata = prepared.metadata;
         browserZoom = await api.tabs.getZoom(tabId);
         image = await api.tabs.captureVisibleTab(
@@ -532,16 +541,37 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     "/private-controls": '<input aria-label="Private embedded field">',
   });
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
+  let failure: unknown;
   try {
     app = await openFirefoxExtension(fixture.url);
     await app.start();
     await app.goal("Show search");
     const before = await app.message({ type: "GET_SESSION" });
     await app.message({ type: "PAUSE" });
-    await app.message({
-      type: "UI_SAVE",
-      draft: "Retained after event-page suspension",
-    });
+    // Native typing belongs in the widget on the pinned website. The synthetic
+    // panel tab correctly becomes another tab when it receives focus.
+    const widget = webDriverWidget(app);
+    const closeWidget = async () => {
+      await widget.dock("firefox");
+      await closeFirefoxSidebar(app!.driver);
+      expect(
+        await app!.extension(() =>
+          (globalThis as any).browser.sidebarAction.isOpen({}),
+        ),
+      ).toBe(false);
+    };
+    const draft = await widget.openDraft();
+    await draft.clear();
+    await draft.sendKeys("Retained after event-page suspension");
+    expect(await draft.getAttribute("value")).toBe(
+      "Retained after event-page suspension",
+    );
+    await app.waitFor(
+      () => app!.message({ type: "UI_GET" }),
+      (value) => value.draft === "Retained after event-page suspension",
+      "The typed draft is acknowledged before event-page suspension",
+    );
+    await closeWidget();
     const settings = {
       url: "http://127.0.0.1:8787",
       token: "SYNTHETIC_PRIVATE_TOKEN_FOR_ISOLATION",
@@ -603,7 +633,11 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     expect(isolation.content.denied.error).toMatch(/panel/i);
     expect(isolation.content.sessionKeys).toEqual([]);
     expect(isolation.content.databases).not.toContain("tholi-private-settings");
+    // The synthetic panel is a tab; site memory follows the active website.
+    await app.site(() => document.title);
     const knowledgeBefore = await app.message({ type: "GET_MEMORY" });
+    expect(knowledgeBefore.error).toBeUndefined();
+    expect(knowledgeBefore.memory).toBeDefined();
     expect(knowledgeBefore.memory.pages.length).toBeGreaterThan(0);
     await app.driver.switchTo().window(app.panel);
     const panelUrl = await app.driver.getCurrentUrl();
@@ -645,6 +679,23 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     expect((await current.message({ type: "UI_GET" })).draft).toBe(
       "Retained after event-page suspension",
     );
+    // Later tasks use the background fixture; clear the proven retained draft
+    // through its UI owner so they do not mix with unrelated draft suggestions.
+    const restoredDraft = await widget.openDraft();
+    await restoredDraft.sendKeys(
+      Key.chord(
+        current.runtimePlatform.os === "mac" ? Key.COMMAND : Key.CONTROL,
+        "a",
+      ),
+      Key.BACK_SPACE,
+    );
+    expect(await restoredDraft.getAttribute("value")).toBe("");
+    await current.waitFor(
+      () => current.message({ type: "UI_GET" }),
+      (value) => value.draft === "",
+      "Clearing the retained draft is acknowledged before resuming",
+    );
+    await closeWidget();
     expect(await current.message({ type: "GET_BACKEND" })).toEqual(settings);
     await app.driver.switchTo().window(app.website);
     expect(
@@ -729,8 +780,19 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       ),
       contentType: "application/json",
     });
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
-    await app?.close();
-    await fixture.close();
+    try {
+      await app?.close();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        failure === undefined ? [cleanupError] : [failure, cleanupError],
+        "Firefox restart verification and cleanup failures",
+      );
+    } finally {
+      await fixture.close();
+    }
   }
 });

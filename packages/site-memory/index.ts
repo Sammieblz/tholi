@@ -82,6 +82,7 @@ export function mergeObservation(
     version: (old?.version || 0) + Number(changed),
     lastSeen: now,
     controls: controls.slice(0, 800),
+    complete: !page.partial,
   });
   // Keep bounded state snapshots as well as the latest view of each page.
   // Menus and SPA screens share a pathname but form different graph vertices.

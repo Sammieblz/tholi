@@ -6,8 +6,11 @@ The same migrations and repositories run locally, on a VM or against hosted
 PostgreSQL. They never read, migrate or upload the private SQLite knowledge.
 The optional [identity profile](service-identity.md) uses these repositories for
 account authentication and session security. Opt-in fake navigation and
-[credit/usage reads](service-credits.md) share these repositories. Cloud-saved-data
-and billing HTTP endpoints remain later milestones.
+[credit/usage reads](service-credits.md) share these repositories, alongside
+[saved data](service-saved-data.md) and the account workspace. Paid billing remains
+a later milestone. Migrations 012 through 014 add encrypted provider connections,
+customer-funded accounting and explicitly negotiated private graphs without
+rewriting historical migrations or the legacy private profile.
 
 ## Local setup
 
