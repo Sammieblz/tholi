@@ -101,7 +101,26 @@ the five-case cohort. The temporary loader probe was removed. Automatic
 approval review blocked an additional clean local Firefox cohort before
 execution with only "blocked by policy"; it was not retried.
 
-The Intel settings failure is being investigated with bounded, content-free
-test diagnostics. Native input, readiness outcomes and timeouts remain
-unchanged. Final implementation must remove temporary probes and record a new
-source-bound passing cohort before this PR is marked ready.
+## Verified Intel focus correction
+
+The temporary diagnostic at source
+`cdd0698df61fd4cd6a07a1a393a7251c3bdc74fa` identified the cause on
+[Intel macOS 15](https://github.com/Sammieblz/tholi/actions/runs/42261865559/job/128044610401).
+The trigger was closed and the native Enter action executed, but keydown and
+keyup both arrived while the panel document lacked focus. Actual focus arrived
+after the key events, and no click occurred. This disproved the initial stale
+expanded-state and late composer-focus hypotheses for the observed failure.
+
+The explicit WebDriver `focusPanel()` interaction owner now waits for the actual
+document to be both visible and focused before returning. Merely selecting its
+window handle is insufficient. Passive BiDi reads retain their existing focus
+semantics. The native input remains one Enter; readiness and case timeouts are
+unchanged. A permanent regression in the existing platform tooling owner covers
+an already-selected unfocused panel, a focused hidden document and successful
+focus acknowledgment.
+
+The entire temporary browser event probe and its logging have been removed.
+Earlier diagnostic failures remain evidence for their original cohorts. A new
+complete source-bound PR workflow must pass, including all four native macOS
+targets, before this change is marked ready. Final PR checks and its validation
+summary record that result without combining prior attempts.

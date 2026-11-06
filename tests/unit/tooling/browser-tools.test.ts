@@ -4,7 +4,10 @@ import { statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, sep } from "node:path";
 import { error as webdriverError, type WebDriver } from "selenium-webdriver";
-import { focusWebDriverWindow } from "../../support/webdriver-extension";
+import {
+  attachWebDriverExtension,
+  focusWebDriverWindow,
+} from "../../support/webdriver-extension";
 import {
   installedBrowserBinary,
   nativeBrowserScale,
@@ -53,6 +56,89 @@ test("native BiDi reads preserve same-window focus and frame boundaries while cl
   await focusWebDriverWindow(driver, "panel", "bidi");
   expect(window).toHaveBeenLastCalledWith("panel");
   expect(defaultContent).toHaveBeenCalledTimes(4);
+});
+
+test("explicit panel interaction waits for visible document focus even when its native window is already selected", async () => {
+  let focused = false,
+    visibilityState = "visible",
+    completed = false,
+    read!: () => Promise<boolean>,
+    finish!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const window = vi.fn(async () => undefined),
+    defaultContent = vi.fn(async () => undefined),
+    wait = vi.fn(
+      async (
+        condition: () => Promise<boolean>,
+        _timeout: number,
+        _label: string,
+      ) => {
+        read = condition;
+        await pending;
+      },
+    ),
+    executeScript = vi.fn(async (script: () => boolean) => script());
+  const driver = {
+    getWindowHandle: async () => "panel",
+    switchTo: () => ({ window, defaultContent }),
+    getCapabilities: async () =>
+      new Map([
+        ["browserVersion", "154.0"],
+        ["moz:geckodriverVersion", "0.37.1"],
+        ["platformName", "mac"],
+      ]),
+    getBidi: async () => ({
+      send: async () => ({
+        result: {
+          type: "success",
+          result: {
+            value: JSON.stringify({ value: { os: "mac", arch: "x86-64" } }),
+          },
+        },
+      }),
+    }),
+    executeScript,
+    wait,
+  } as unknown as WebDriver;
+  const app = await attachWebDriverExtension(
+    driver,
+    "website",
+    "panel",
+    1,
+    "https://example.test",
+    async () => {},
+  );
+  vi.stubGlobal("document", {
+    hasFocus: () => focused,
+    get visibilityState() {
+      return visibilityState;
+    },
+  });
+  try {
+    const interaction = app.focusPanel().then(() => {
+      completed = true;
+    });
+    await vi.waitFor(() => expect(wait).toHaveBeenCalledOnce());
+    expect(window).not.toHaveBeenCalled();
+    expect(defaultContent).toHaveBeenCalledOnce();
+    expect(await read()).toBe(false);
+    expect(completed).toBe(false);
+    focused = true;
+    visibilityState = "hidden";
+    expect(await read()).toBe(false);
+    expect(completed).toBe(false);
+    visibilityState = "visible";
+    expect(await read()).toBe(true);
+    finish();
+    await interaction;
+    expect(completed).toBe(true);
+    expect(wait.mock.calls[0][1]).toBe(10000);
+  } finally {
+    finish();
+    vi.unstubAllGlobals();
+  }
 });
 
 test("macOS discovers browser app bundles and honors explicit per-browser overrides", () => {

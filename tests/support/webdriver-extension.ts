@@ -223,6 +223,14 @@ export async function attachWebDriverExtension(
     extension,
     async focusPanel() {
       await focusWebDriverWindow(driver, panel, execution);
+      await driver.wait(
+        () =>
+          driver.executeScript<boolean>(
+            () => document.hasFocus() && document.visibilityState === "visible",
+          ),
+        10000,
+        "The extension panel has native document focus before interaction",
+      );
     },
     async start() {
       await driver.switchTo().window(website);
