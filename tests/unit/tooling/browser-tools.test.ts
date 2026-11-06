@@ -58,9 +58,10 @@ test("native BiDi reads preserve same-window focus and frame boundaries while cl
   expect(defaultContent).toHaveBeenCalledTimes(4);
 });
 
-test.each(["bidi", "classic"] as const)(
-  "%s explicit panel interaction waits for visible document focus even when its native window is already selected",
-  async (execution) => {
+test.each(["firefox", "chrome"] as const)(
+  "%s explicit panel interaction preserves its native focus contract",
+  async (browserName) => {
+    const execution = browserName === "firefox" ? "bidi" : "classic";
     const panel = "CDwindow-" + "a".repeat(32),
       website = "CDwindow-" + "b".repeat(32);
     let focused = false,
@@ -93,6 +94,7 @@ test.each(["bidi", "classic"] as const)(
       switchTo: () => ({ window, defaultContent }),
       getCapabilities: async () =>
         new Map([
+          ["browserName", browserName],
           ["browserVersion", "154.0"],
           ["moz:geckodriverVersion", "0.37.1"],
           ["platformName", "mac"],
@@ -142,17 +144,22 @@ test.each(["bidi", "classic"] as const)(
       const interaction = app.focusPanel().then(() => {
         completed = true;
       });
-      await vi.waitFor(() => expect(wait).toHaveBeenCalledOnce());
-      if (execution === "classic") {
+      if (browserName === "chrome") {
+        await interaction;
         expect(window).toHaveBeenCalledExactlyOnceWith(panel);
-        expect(activate).toHaveBeenLastCalledWith("Target.activateTarget", {
-          targetId: "a".repeat(32),
-        });
-        expect(activate).toHaveBeenCalledTimes(2);
-      } else {
-        expect(window).not.toHaveBeenCalled();
-        expect(activate).not.toHaveBeenCalled();
+        expect(activate).toHaveBeenCalledExactlyOnceWith(
+          "Target.activateTarget",
+          { targetId: "b".repeat(32) },
+        );
+        expect(defaultContent).toHaveBeenCalledOnce();
+        expect(wait).not.toHaveBeenCalled();
+        expect(executeScript).not.toHaveBeenCalled();
+        expect(completed).toBe(true);
+        return;
       }
+      await vi.waitFor(() => expect(wait).toHaveBeenCalledOnce());
+      expect(window).not.toHaveBeenCalled();
+      expect(activate).not.toHaveBeenCalled();
       expect(defaultContent).toHaveBeenCalledOnce();
       expect(await read()).toBe(false);
       expect(completed).toBe(false);

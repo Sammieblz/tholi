@@ -111,23 +111,28 @@ keyup both arrived while the panel document lacked focus. Actual focus arrived
 after the key events, and no click occurred. This disproved the initial stale
 expanded-state and late composer-focus hypotheses for the observed failure.
 
-The explicit WebDriver `focusPanel()` interaction owner now waits for the actual
-document to be both visible and focused before returning. Merely selecting its
-window handle is insufficient. Passive BiDi reads retain their existing focus
+For Firefox, the explicit WebDriver `focusPanel()` interaction owner now waits
+for the actual document to be both visible and focused before returning.
+Merely selecting its window handle is insufficient. The native `browserName`
+capability selects this behavior. Passive BiDi reads retain their existing focus
 semantics. The native input remains one Enter; readiness and case timeouts are
 unchanged. A permanent regression in the existing platform tooling owner covers
-an already-selected unfocused panel, a focused hidden document and successful
-focus acknowledgment.
+an already-selected unfocused Firefox panel, a focused hidden document and
+successful focus acknowledgment.
 
 The subsequent source-bound run at
 `fe0c276961f91e2faeeb64be4708cf7469906014` passed Firefox's five native cases
 on its first completed macOS target. The stricter focus check also exposed a
-separate classic Chrome fixture assumption: background extension RPCs preserve
-the website as Chrome's active target even when WebDriver's selected context is
-the panel. Selecting that already-selected handle alone does not reactivate it.
-Explicit panel interaction now uses the existing validated CDP target-activation
-operation before awaiting focus. That operation is shared with the existing
-previous-target restoration owner; passive RPCs still preserve website focus.
+nonportable predicate introduced for classic Chrome. Background extension RPCs
+preserve the website as Chrome's active target even when WebDriver's selected
+context is the panel. An attempted explicit CDP activation at source
+`b5f6a3ca7d56ee50b0faa2c2bf929032c10e29c1` still did not satisfy the new
+focus predicate in the headless harness. That check failed before keyboard
+input, while the original Chrome keyboard and navigation outcomes had passed.
+The final correction confines the demonstrated focus wait to Firefox and
+restores classic Chrome's original behavior exactly. A separate tooling case
+preserves that Chrome contract. All original native input and outcome checks
+remain in place.
 
 The entire temporary browser event probe and its logging have been removed.
 Earlier diagnostic failures remain evidence for their original cohorts. A new
