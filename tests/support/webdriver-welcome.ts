@@ -45,19 +45,33 @@ export async function verifyFreshWelcomeSetup(app: App) {
   expect(await welcomeTabCount(app)).toBe(1);
   const welcome = await openWelcomeSetup(app);
   expect(welcome).toBeTruthy();
-  await app.driver
-    .findElement(
-      By.xpath('//button[normalize-space(.)="Floating widget preview"]'),
-    )
-    .click();
+  const recording = await app.driver.wait(async () => {
+    const videos = await app.driver.findElements(
+      By.css(".welcome-choice video"),
+    );
+    return videos[0] || false;
+  }, 15000);
+  if (!recording) throw Error("The packaged welcome recording is unavailable.");
+  expect(await recording.getAttribute("src")).toMatch(
+    /\/media\/onboarding\/guidance.webm$/,
+  );
   expect(
-    await app.driver
-      .findElement(By.css(".welcome-choice .tholi-scene-browser"))
-      .getAttribute("data-surface"),
-  ).toBe("widget");
-  await app.driver
-    .findElement(By.xpath('//button[normalize-space(.)="Sidebar preview"]'))
-    .click();
+    await app.driver.executeScript(
+      "return arguments[0].controls && arguments[0].paused && !arguments[0].loop",
+      recording,
+    ),
+  ).toBe(true);
+  // Decode the privately packaged video in both native browser targets.
+  await app.driver.executeScript("return arguments[0].play()", recording);
+  await app.driver.wait(
+    async () =>
+      await app.driver.executeScript(
+        "return arguments[0].videoWidth === 1040 && arguments[0].videoHeight === 800",
+        recording,
+      ),
+    15000,
+  );
+  await app.driver.executeScript("arguments[0].pause()", recording);
   const signup = await app.driver.wait(async () => {
     const signup = await app.driver.findElement(
       By.xpath('//button[normalize-space(.)="Sign up"]'),

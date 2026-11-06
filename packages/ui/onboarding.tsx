@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  Pause,
-  ShieldCheck,
-  Computer,
-  UserCircle,
-  ChatBubble,
-} from "iconoir-react";
-import { Wayfinder } from "./WayfinderMark";
-import { useVisibleMotion } from "./motion/useVisibleMotion";
+import { RecordedVideo, type RecordingSource } from "./RecordedVideo";
 import "./styles/onboarding.css";
 
 export const introductionChapters = [
@@ -85,7 +77,7 @@ export function Introduction({
         ))}
       </ol>
       <div className="tholi-introduction-layout">
-        <IntroductionPreview key={step} step={step} />
+        <IntroductionRecording key={step} step={step} />
         <div className="tholi-introduction-copy">
           <p className="tholi-introduction-eyebrow">
             A LITTLE DIRECTION GOES A LONG WAY
@@ -140,170 +132,86 @@ export function Introduction({
   );
 }
 
-/** An explanatory preview only. These scenes never control a website or extension. */
-export function IntroductionPreview({ step }: { step: number }) {
-  const { ref, visible } = useVisibleMotion<HTMLElement>();
-  const [surface, setSurface] = useState<"sidebar" | "widget">("sidebar");
-  const layout = step === 2 ? surface : "sidebar";
-  return (
-    <figure
-      ref={ref}
-      className="tholi-introduction-scene"
-      data-playing={visible}
-    >
-      <div className="tholi-introduction-art" aria-hidden="true">
-        {step < 3 ? (
-          <div className="tholi-scene-browser" data-surface={layout}>
-            <div className="tholi-scene-toolbar">
-              <span className="tholi-scene-window-dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span>Example workspace</span>
-              <ShieldCheck />
-            </div>
-            <div className="tholi-scene-browser-body">
-              <div className="tholi-scene-page">
-                <div className="tholi-scene-workspace-header">
-                  <span className="tholi-scene-workspace-mark">
-                    <Computer />
-                  </span>
-                  <strong>Your workspace</strong>
-                </div>
-                <div className="tholi-scene-workspace-layout">
-                  <div className="tholi-scene-menu">
-                    <span>Overview</span>
-                    <span>Projects</span>
-                    <span className={step === 2 ? "tholi-scene-highlight" : ""}>
-                      <UserCircle /> Account settings
-                    </span>
-                  </div>
-                  <div className="tholi-scene-workspace-content">
-                    <span>RECENT ACTIVITY</span>
-                    <strong>A place for your next idea.</strong>
-                    <div className="tholi-scene-document">
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                    <div className="tholi-scene-document">
-                      <i />
-                      <i />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <GuidePreview step={step} />
-            </div>
-          </div>
-        ) : (
-          <div className="tholi-scene-choice">
-            <div className="tholi-scene-choice-heading">
-              <Wayfinder state="idle" animate={false} />
-              <span>A little direction. On your terms.</span>
-            </div>
-            <div className="tholi-scene-choice-area">
-              <Computer />
-              <strong>On your device</strong>
-              <span>Start guiding without an account.</span>
-              <div className="tholi-scene-private-record">
-                <span>Saved routes</span>
-                <small>Kept in this browser</small>
-              </div>
-            </div>
-            <div className="tholi-scene-choice-area">
-              <UserCircle />
-              <strong>Your account</strong>
-              <span>Explore available connected features.</span>
-              <div className="tholi-scene-private-record">
-                <span>Sharing and processing</span>
-                <small>Separate choices</small>
-              </div>
-            </div>
-            <p>
-              <ShieldCheck /> Nothing uploads automatically.
-            </p>
-          </div>
-        )}
-      </div>
-      {step === 2 && (
-        <div
-          className="tholi-scene-surface-choice"
-          role="group"
-          aria-label="Preview guidance layout"
-        >
-          <span>Keep your guide where it suits you</span>
-          <div>
-            <button
-              type="button"
-              aria-pressed={surface === "sidebar"}
-              onClick={() => setSurface("sidebar")}
-            >
-              Sidebar preview
-            </button>
-            <button
-              type="button"
-              aria-pressed={surface === "widget"}
-              onClick={() => setSurface("widget")}
-            >
-              Floating widget preview
-            </button>
-          </div>
-        </div>
-      )}
-      <figcaption aria-live="polite">
-        Illustration ·{" "}
-        {step === 1
-          ? "Tell Tholi the destination. Start with one focused request."
-          : step === 2
-            ? `${surface === "sidebar" ? "Sidebar" : "Floating widget"} guidance points to Account settings. You make the click.`
-            : "Local and account features stay separate. Your choice comes first."}
-      </figcaption>
-    </figure>
-  );
+interface IntroductionClip extends RecordingSource {
+  id: string;
+  label: string;
+  description: string;
+  transcript: string;
 }
 
-function GuidePreview({ step }: { step: number }) {
+/** Genuine, local recordings. Playback never controls an installed extension. */
+export function IntroductionRecording({ step }: { step: number }) {
+  const [clips, setClips] = useState<IntroductionClip[]>();
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/media/onboarding/manifest.json", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw Error("Recording unavailable");
+        const manifest = await response.json();
+        const ids = ["destination", "guidance", "local"];
+        if (
+          manifest.schemaVersion !== 1 ||
+          !Array.isArray(manifest.clips) ||
+          manifest.clips.length !== ids.length ||
+          manifest.clips.some(
+            (clip: IntroductionClip, index: number) =>
+              clip.id !== ids[index] ||
+              ![clip.src, clip.poster, clip.captions, clip.transcript].every(
+                (path) =>
+                  typeof path === "string" &&
+                  /^\/media\/onboarding\/[a-z-]+\.(?:webm|webp|vtt|txt)$/.test(
+                    path,
+                  ),
+              ) ||
+              clip.width !== 1040 ||
+              clip.height !== 800 ||
+              typeof clip.label !== "string" ||
+              typeof clip.description !== "string",
+          )
+        )
+          throw Error("Recording incomplete");
+        setClips(manifest.clips);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => controller.abort();
+  }, []);
+  const clip = clips?.[Math.min(2, Math.max(0, step - 1))];
   return (
-    <div className="tholi-scene-guide">
-      <div className="tholi-scene-guide-brand">
-        <Wayfinder
-          state={step === 1 ? "planning" : "guiding"}
-          animate={false}
-        />
-        <strong>Tholi</strong>
-      </div>
-      <div className="tholi-scene-guide-tabs">
-        <span data-selected={step === 2}>Guide</span>
-        <span data-selected={step === 1}>
-          <ChatBubble /> Conversation
-        </span>
-      </div>
-      {step === 1 ? (
-        <div className="tholi-scene-conversation">
-          <p>Where would you like to go?</p>
-          <div className="tholi-scene-request">Find my account settings.</div>
-          <span className="tholi-scene-guide-start">Guide me</span>
-        </div>
+    <div className="tholi-introduction-scene">
+      <p className="tholi-recording-kicker">
+        SEE THOLI IN ACTION <span>Recorded from the real extension</span>
+      </p>
+      {clip ? (
+        <RecordedVideo
+          key={clip.id}
+          variant={clip}
+          label={clip.label}
+          autoPlay={false}
+          loop={false}
+          controls
+        >
+          <strong>{clip.label}</strong>
+          <p>{clip.description}</p>
+          <div>
+            <a href={clip.transcript}>Read the transcript</a>
+          </div>
+        </RecordedVideo>
       ) : (
-        <div className="tholi-scene-instruction">
-          <span className="tholi-scene-step-label">YOUR NEXT STEP</span>
+        <div className="video-unavailable" role="status">
           <p>
-            Open the highlighted <strong>Account settings</strong> control in
-            the left menu.
+            {failed
+              ? "The recording could not be loaded. You can continue the introduction without it."
+              : "Loading the real extension recording..."}
           </p>
-          <span className="tholi-scene-destination">
-            Destination: Account settings
-          </span>
         </div>
       )}
-      <div className="tholi-scene-guide-controls">
-        <span>
-          <Pause /> Pause
-        </span>
-        <span>Stop</span>
-      </div>
+      <p className="tholi-recording-note">
+        Play to watch, or open fullscreen for a closer look. No sound. Playback
+        does not control your extension.
+      </p>
     </div>
   );
 }

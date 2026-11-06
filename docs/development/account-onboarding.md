@@ -28,7 +28,7 @@ Setup progress is device-local and independent of account logout or deletion.
 
 ## Ownership and configuration
 
-`packages/ui/onboarding.tsx` owns the shared explanation and illustrations only.
+`packages/ui/onboarding.tsx` owns the shared explanation and recording selection only.
 Hosts supply progress and actions. The existing AccountProvider and service-auth
 owners retain website sessions and privileged native credentials respectively.
 Marketing pages mount no account/session provider.
@@ -61,29 +61,58 @@ separate from this local theme preparation.
 
 Applied the repository's ui-ux-pro-max, animate and fixing-accessibility skills:
 skippable progress, native controls, descriptive labels, visible focus, 44px targets,
-existing brand typography and tokens, and meaningful state feedback. Graphics are
-explicit illustrations. A highlighted control or animation does not prove arrival.
+existing brand typography and tokens, and meaningful state feedback. The current introduction uses real extension footage. A highlight alone does not
+prove arrival; the capture requires independent DOM and worker outcome checks.
 
-Illustration entrances use transform/opacity, a 220ms entry and a bounded 2.4s
-explanation. They do not loop or auto-advance. Hidden surfaces stop motion;
-reduced-motion and keyboard navigation show immediate static states. Existing
+Chapter entrances use transform/opacity for 220ms, without delaying controls.
+Recordings start paused, play once on request and stop when hidden or offscreen.
+Reduced-motion and data-saving preferences suppress automatic playback. Native
+video controls provide seeking, captions and fullscreen; descriptive transcripts
+remain available. The introduction never advances automatically. Existing
 homepage GSAP motion remains separate. No animation dependency was added.
 
-Validation evidence is recorded in [the feature validation record](testing/account-onboarding-validation.md).
+Foundation evidence is recorded in [the feature validation record](testing/account-onboarding-validation.md).
 Native store installation and screen-reader checks remain pending until performed.
 
 ## Product showcase
 
-The shared `IntroductionPreview` also appears on the initial extension welcome
-screen. It illustrates a natural-language request in Conversation, a grounded
-next step in Guide, and separate Local/account choices. The Sidebar preview and
-Floating widget preview buttons change presentation only. They never control a
-website, select an extension surface or establish task progress.
+`IntroductionRecording` appears in each shared signup chapter and on the initial
+extension welcome screen. Three actual recordings demonstrate entering a request,
+Guide/Conversation, Pause/Resume, a verified preference change and finishing setup
+with Use Tholi locally. Playback cannot control a website or extension. It never
+changes the viewer's preferences, setup progress or account choice.
 
-Pointer chapter changes return to the introduction so the new scene can be seen.
-Keyboard changes focus the heading immediately with motion suppressed. Examples
-come from the public help guides, and no illustrated click claims arrival.
-Pressed preview choices use a gold underline and a native pressed state, with no
-filled selection pill. Existing fonts, tokens and Wayfinder artwork are reused.
+The existing `RecordedVideo` owner is shared with the homepage, preserving that
+recording's deliberate pause, theme change and visibility behavior. Onboarding
+uses native controls with no autoplay or looping. Posters reserve the video's
+aspect ratio, and media failure never blocks Next, Back, sign-in or Local choices.
+The former simulated interface, scene selectors and illustration keyframes have
+been removed.
 
-Fresh refinement evidence is in [the showcase validation record](testing/account-onboarding-showcase-validation.md).
+Pointer chapter changes return to the introduction so the recording can be seen.
+Keyboard changes focus the heading immediately with entrance motion suppressed.
+The existing typography, tokens, store links and account boundaries are preserved.
+
+### Capture and provenance
+
+Run `npm run build` then `npm run capture:video -- --workflow=onboarding` against a
+frozen build. The existing capture owner bundles the existing browser harness for
+standalone Node use and opens a disposable Chromium profile. It serves a local
+Fieldnotes fixture, blocks external HTTP and uses the bundled local engine. It
+warms local discovery before filming and records actual interface timing at
+1040 x 800 and 30 fps; the operator changes the
+real radio control. DOM selection and text size plus worker/journey verification
+are required before completion footage is accepted. A rejected take is not
+published. The last clip shows the real packaged welcome page selecting Local;
+transmission status must remain disabled.
+
+New media lives in `apps/public/media/onboarding/`, with captions, transcripts,
+posters, artifact hashes and capture provenance. Both browser targets copy this
+folder into their private packaged welcome assets; it is not web-accessible.
+The old 0.10.1 Wikipedia recordings and their evidence remain unchanged. Fresh
+recordings identify their actual extension build, rather than certifying every
+site, operating system or browser permission flow.
+
+Fresh recording/player evidence is in [the recording validation record](testing/account-onboarding-recording-validation.md).
+The [earlier illustrated showcase evidence](testing/account-onboarding-showcase-validation.md)
+remains historical and does not certify the replacement media.

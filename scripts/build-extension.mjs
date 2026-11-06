@@ -143,6 +143,10 @@ async function buildExtension(target) {
   await copyFile("apps/extension/widget.html", out + "/widget.html");
   await copyFile("apps/extension/welcome.html", out + "/welcome.html");
   await buildBrand(out);
+  // Packaged welcome footage is private to extension pages, never WAR.
+  await cp("apps/public/media/onboarding", out + "/media/onboarding", {
+    recursive: true,
+  });
   await thirdParty(out);
 
   await build({

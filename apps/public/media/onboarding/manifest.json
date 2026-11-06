@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "extensionVersion": "0.11.0",
+  "provenance": "/media/onboarding/provenance.json",
+  "clips": [
+    {
+      "id": "destination",
+      "label": "Start with your destination",
+      "description": "Actual Tholi extension on a local reading demo. No account or external AI service is used.",
+      "width": 1040,
+      "height": 800,
+      "fps": 30,
+      "durationSeconds": 6.229,
+      "src": "/media/onboarding/destination.webm",
+      "poster": "/media/onboarding/destination.webp",
+      "captions": "/media/onboarding/destination.vtt",
+      "transcript": "/media/onboarding/destination.txt"
+    },
+    {
+      "id": "guidance",
+      "label": "Follow the highlight at your pace",
+      "description": "Actual Pause, Resume and verified arrival animations. The operator clicks the website control; Tholi independently checks the result.",
+      "width": 1040,
+      "height": 800,
+      "fps": 30,
+      "durationSeconds": 10.824,
+      "src": "/media/onboarding/guidance.webm",
+      "poster": "/media/onboarding/guidance.webp",
+      "captions": "/media/onboarding/guidance.vtt",
+      "transcript": "/media/onboarding/guidance.txt"
+    },
+    {
+      "id": "local",
+      "label": "Local guidance, on your terms",
+      "description": "Actual extension welcome screen. Choose Use Tholi locally to finish setup without an account. Signing in and sharing data remain separate choices.",
+      "width": 1040,
+      "height": 800,
+      "fps": 30,
+      "durationSeconds": 4.739,
+      "src": "/media/onboarding/local.webm",
+      "poster": "/media/onboarding/local.webp",
+      "captions": "/media/onboarding/local.vtt",
+      "transcript": "/media/onboarding/local.txt"
+    }
+  ]
+}

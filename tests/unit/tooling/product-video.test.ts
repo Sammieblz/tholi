@@ -7,6 +7,64 @@ const hash = (value: Uint8Array | string) =>
   createHash("sha256").update(value).digest("hex");
 
 describe("genuine product recording", () => {
+  it("keeps onboarding footage private, bounded and tied to genuine local verification", async () => {
+    const directory = "apps/public/media/onboarding";
+    const manifest = JSON.parse(
+      await readFile(`${directory}/manifest.json`, "utf8"),
+    );
+    const provenance = JSON.parse(
+      await readFile(`${directory}/provenance.json`, "utf8"),
+    );
+    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.extensionVersion).toBe(provenance.extensionVersion);
+    expect(provenance.extensionBuildSha256).toBe(
+      hash(JSON.stringify(provenance.artifactFiles)),
+    );
+    expect(Object.keys(provenance.artifactFiles).length).toBeGreaterThan(100);
+    expect(provenance.fixtureSha256).toBe(
+      hash(await readFile("scripts/fixtures/onboarding.html")),
+    );
+    expect(provenance.externalRequests).toEqual([]);
+    expect(provenance.evidence).toMatchObject({
+      planStatus: "completed",
+      journeyStatus: "completed",
+    });
+    expect(provenance.evidence.verifiedSteps).toBeGreaterThan(0);
+    expect(manifest.clips.map((clip: { id: string }) => clip.id)).toEqual([
+      "destination",
+      "guidance",
+      "local",
+    ]);
+    for (const clip of manifest.clips) {
+      const source = provenance.clips.find(
+        (item: { id: string }) => item.id === clip.id,
+      );
+      expect(source.frameValidation.sourceViewports).toEqual(["1040x800"]);
+      expect(source.frameValidation.uniformGrayFraction).toBeLessThanOrEqual(
+        0.15,
+      );
+      // Static setup holds legitimately produce fewer compositor updates than
+      // the moving guidance footage; the encoder still writes 30 fps.
+      expect(source.frameValidation.frameCount).toBeGreaterThan(1);
+      expect(clip).toMatchObject({ width: 1040, height: 800, fps: 30 });
+      expect(clip.durationSeconds).toBeGreaterThan(3);
+      expect(clip.durationSeconds).toBeLessThan(30);
+      for (const kind of ["src", "poster", "captions", "transcript"]) {
+        const asset = source.assets[kind];
+        const bytes = await readFile(`${directory}/${asset.file}`);
+        expect(clip[kind]).toBe(`/media/onboarding/${asset.file}`);
+        expect(bytes.length).toBe(asset.bytes);
+        expect(hash(bytes)).toBe(asset.sha256);
+        if (kind === "src") {
+          expect(bytes.length).toBeLessThanOrEqual(5 * 1024 * 1024);
+          expect(bytes.subarray(0, 4).toString("hex")).toBe("1a45dfa3");
+          expect(bytes.includes(Buffer.from("V_VP9"))).toBe(true);
+        }
+        if (kind === "captions") expect(bytes.toString()).toMatch(/^WEBVTT\n/);
+      }
+    }
+  });
+
   it("keeps both published takes tied to verified outcomes and exact media bytes", async () => {
     const manifest = JSON.parse(
       await readFile(`${directory}/manifest.json`, "utf8"),

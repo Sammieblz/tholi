@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Fieldnotes | Controlled recording demo</title>
+  <style>
+    :root {
+      font:
+        16px/1.6 Georgia,
+        serif;
+      color: #283c35;
+      background: #f8f6ef;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+    }
+    header {
+      padding: 28px 40px;
+      border-bottom: 1px solid #d5dbd1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header strong {
+      font-size: 26px;
+      letter-spacing: -0.04em;
+    }
+    header span,
+    aside,
+    .eyebrow {
+      font-family: system-ui, sans-serif;
+    }
+    header span {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: #596c61;
+    }
+    main {
+      padding: 36px 40px;
+      display: grid;
+      grid-template-columns: 190px 1fr;
+      gap: 36px;
+    }
+    aside {
+      border-top: 2px solid #a37630;
+      padding-top: 16px;
+    }
+    aside h2 {
+      margin: 0 0 20px;
+      font-size: 15px;
+    }
+    fieldset {
+      border: 0;
+      margin: 0;
+      padding: 0;
+    }
+    legend {
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    input {
+      accent-color: #20634d;
+      width: 18px;
+      height: 18px;
+    }
+    input:focus-visible {
+      outline: 2px solid #20634d;
+      outline-offset: 4px;
+    }
+    article {
+      max-width: 620px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #596c61;
+    }
+    h1 {
+      max-width: 12ch;
+      font-size: 48px;
+      line-height: 1.1;
+      font-weight: 400;
+      letter-spacing: -0.035em;
+      margin: 18px 0 26px;
+    }
+    article p {
+      max-width: 30ch;
+      margin-bottom: 24px;
+    }
+    article hr {
+      border: 0;
+      border-top: 1px solid #d5dbd1;
+      margin: 30px 0;
+    }
+  </style>
+  <header>
+    <strong>Fieldnotes</strong><span>CONTROLLED DEMO · NO PERSONAL DATA</span>
+  </header>
+  <main>
+    <aside>
+      <h2>Appearance</h2>
+      <fieldset>
+        <legend>Text size</legend>
+        <label
+          ><input
+            type="radio"
+            name="size"
+            value="standard"
+            checked
+          />Standard</label
+        >
+        <label><input type="radio" name="size" value="large" />Large</label>
+      </fieldset>
+    </aside>
+    <article>
+      <span class="eyebrow">A LITTLE ROOM TO READ</span>
+      <h1>Make yourself at home.</h1>
+      <p>
+        A quiet corner for your next idea. Settle in, change the text size and
+        find a view that feels comfortable.
+      </p>
+      <hr />
+      <p>
+        This is a local demonstration page. Tholi is the real installed
+        extension, guiding a real preference change.
+      </p>
+    </article>
+  </main>
+  <script>
+    document.querySelectorAll('input[name="size"]').forEach((input) =>
+      input.addEventListener("change", () => {
+        document.querySelector("article").style.fontSize =
+          input.value === "large" ? "20px" : "16px";
+      }),
+    );
+  </script>
+</html>

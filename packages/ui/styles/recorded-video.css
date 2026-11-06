@@ -10,6 +10,9 @@
   background: #101713;
   aspect-ratio: 3 / 2;
 }
+.product-video[data-native-controls="true"] .video-frame {
+  border-radius: 14px;
+}
 .video-frame video {
   width: 100%;
   height: 100%;

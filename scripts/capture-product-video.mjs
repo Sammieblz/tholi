@@ -5,19 +5,35 @@ import { expect } from "@playwright/test";
 import { mkdir, readFile, writeFile, copyFile, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
-import { openNavigatorExtension } from "../tests/support/navigator-extension.ts";
+import { build } from "esbuild";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 import { artifactFiles } from "./artifact-files.mjs";
 
 const output = "apps/public/media/video";
 const raw = "output/qa/product-video";
+// The shared browser harness uses extensionless TypeScript imports under the
+// Playwright runner. Bundle that same owner for this standalone Node command.
+const harness = `${raw}/capture-harness.mjs`;
+await build({
+  entryPoints: ["tests/support/navigator-extension.ts"],
+  outfile: harness,
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  packages: "external",
+});
+const { openNavigatorExtension } = await import(
+  pathToFileURL(resolve(harness)).href
+);
 const size = { width: 1440, height: 960 };
 const fps = 30;
 const maxBytes = 5 * 1024 * 1024;
 const requested =
   process.argv.find((arg) => arg.startsWith("--workflow="))?.split("=")[1] ||
   "auto";
-if (!["auto", "github", "wikipedia"].includes(requested))
-  throw Error("Use --workflow=auto, github or wikipedia");
+if (!["auto", "github", "wikipedia", "onboarding"].includes(requested))
+  throw Error("Use --workflow=auto, github, wikipedia or onboarding");
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const beforeFiles = await artifactFiles("dist/extension");
 const extensionVersion = JSON.parse(
@@ -44,7 +60,7 @@ const stamp = (seconds) => {
   const ms = Math.max(0, Math.round(seconds * 1000));
   return `00:${String(Math.floor(ms / 60000)).padStart(2, "0")}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}.${String(ms % 1000).padStart(3, "0")}`;
 };
-async function widenWindow(app) {
+async function widenWindow(app, size = { width: 1440, height: 960 }) {
   const cdp = await app.context.newCDPSession(app.page);
   try {
     const { windowId } = await cdp.send("Browser.getWindowForTarget");
@@ -73,7 +89,7 @@ async function widenWindow(app) {
     await cdp.detach();
   }
 }
-async function checkFrame(data) {
+async function checkFrame(data, size = { width: 1440, height: 960 }) {
   const { data: pixels, info } = await sharp(data)
     .removeAlpha()
     .raw()
@@ -188,8 +204,7 @@ async function capture(workflow, theme) {
   const app = await openNavigatorExtension(
     size,
     workflow === "github" ? ["https://github.com/*"] : [],
-    false,
-    { nativeViewport: true },
+    { nativeViewport: true, standalone: true },
   );
   const events = [];
   const path = `${raw}/${workflow}-${theme}.webm`;
@@ -475,94 +490,475 @@ async function capture(workflow, theme) {
   }
 }
 
-const attempts = [];
-let selected = requested === "wikipedia" ? "wikipedia" : "github";
-let light;
-try {
-  light = await capture(selected, "light");
-} catch (error) {
-  attempts.push({
-    ...error.captureFailure,
-    message: error.message,
-    accepted: false,
-  });
-  if (requested !== "auto") throw error;
-  console.log(
-    "GitHub take was not eligible. Recording the explicitly labeled Wikipedia workflow.",
+if (requested === "onboarding") {
+  await captureOnboarding();
+  process.exitCode = 0;
+} else {
+  const attempts = [];
+  let selected = requested === "wikipedia" ? "wikipedia" : "github";
+  let light;
+  try {
+    light = await capture(selected, "light");
+  } catch (error) {
+    attempts.push({
+      ...error.captureFailure,
+      message: error.message,
+      accepted: false,
+    });
+    if (requested !== "auto") throw error;
+    console.log(
+      "GitHub take was not eligible. Recording the explicitly labeled Wikipedia workflow.",
+    );
+    selected = "wikipedia";
+    light = await capture(selected, "light");
+  }
+  const dark = await capture(selected, "dark");
+  if (
+    JSON.stringify(beforeFiles) !==
+    JSON.stringify(await artifactFiles("dist/extension"))
+  )
+    throw Error(
+      "Extension bytes changed during recording; rerun on a frozen build",
+    );
+  const definition = workflows[selected];
+  for (const variant of [light, dark])
+    for (const asset of Object.values(variant.assets))
+      await copyFile(`${raw}/${asset.file}`, `${output}/${asset.file}`);
+  const transcriptFile = `tholi-${selected}-transcript.txt`;
+  const transcript =
+    `${definition.label}\n\nPublic source: ${definition.source}\nRequest: ${definition.request}\n\nThis is the actual built extension in a disposable Chromium profile. The operator performs website interactions. No generated cursor, recreated controls or invented arrival state is present.\n\n` +
+    light.events.map((event) => `${stamp(event.at)} ${event.text}`).join("\n") +
+    "\n\nThe light and dark recordings follow the same real workflow. Playback is muted, with descriptive captions. Browser permission UI, signed-in dashboards and unrelated tasks are not validated by this demonstration.\n";
+  await writeFile(`${output}/${transcriptFile}`, transcript);
+  const provenance = {
+    capturedAt: new Date().toISOString(),
+    extensionVersion,
+    extensionBuildSha256: sha(JSON.stringify(beforeFiles)),
+    artifactFiles: beforeFiles,
+    workflow: selected,
+    ...definition,
+    attempts,
+    capture:
+      "Playwright page.screencast, VP9 WebM, 1440 × 960 CSS pixels at 30 fps. Actual extension widget and live public website. Site theme changed using its genuine appearance controls. Disposable Chromium profile; no personal account, synthetic cursor, altered site UI or fabricated worker outcome.",
+    permissionNote:
+      "Wikipedia uses the shipped host permission. A GitHub attempt uses a disposable manifest-only host pregrant, equivalent to authorized discovery, and does not validate native Chrome permission activation.",
+    skillsApplied: [
+      "animate: motion used for product explanation, with actual interface timing preserved",
+      "emil-design-eng: inspect real interactions instead of a marketing imitation",
+      "animation-performance: no synthesized per-frame React animation or animated screenshot",
+    ],
+    variants: { light, dark },
+    transcript: { file: transcriptFile, sha256: sha(Buffer.from(transcript)) },
+  };
+  await writeFile(
+    `${output}/provenance.json`,
+    JSON.stringify(provenance, null, 2) + "\n",
   );
-  selected = "wikipedia";
-  light = await capture(selected, "light");
-}
-const dark = await capture(selected, "dark");
-if (
-  JSON.stringify(beforeFiles) !==
-  JSON.stringify(await artifactFiles("dist/extension"))
-)
-  throw Error(
-    "Extension bytes changed during recording; rerun on a frozen build",
-  );
-const definition = workflows[selected];
-for (const variant of [light, dark])
-  for (const asset of Object.values(variant.assets))
-    await copyFile(`${raw}/${asset.file}`, `${output}/${asset.file}`);
-const transcriptFile = `tholi-${selected}-transcript.txt`;
-const transcript =
-  `${definition.label}\n\nPublic source: ${definition.source}\nRequest: ${definition.request}\n\nThis is the actual built extension in a disposable Chromium profile. The operator performs website interactions. No generated cursor, recreated controls or invented arrival state is present.\n\n` +
-  light.events.map((event) => `${stamp(event.at)} ${event.text}`).join("\n") +
-  "\n\nThe light and dark recordings follow the same real workflow. Playback is muted, with descriptive captions. Browser permission UI, signed-in dashboards and unrelated tasks are not validated by this demonstration.\n";
-await writeFile(`${output}/${transcriptFile}`, transcript);
-const provenance = {
-  capturedAt: new Date().toISOString(),
-  extensionVersion,
-  extensionBuildSha256: sha(JSON.stringify(beforeFiles)),
-  artifactFiles: beforeFiles,
-  workflow: selected,
-  ...definition,
-  attempts,
-  capture:
-    "Playwright page.screencast, VP9 WebM, 1440 × 960 CSS pixels at 30 fps. Actual extension widget and live public website. Site theme changed using its genuine appearance controls. Disposable Chromium profile; no personal account, synthetic cursor, altered site UI or fabricated worker outcome.",
-  permissionNote:
-    "Wikipedia uses the shipped host permission. A GitHub attempt uses a disposable manifest-only host pregrant, equivalent to authorized discovery, and does not validate native Chrome permission activation.",
-  skillsApplied: [
-    "animate: motion used for product explanation, with actual interface timing preserved",
-    "emil-design-eng: inspect real interactions instead of a marketing imitation",
-    "animation-performance: no synthesized per-frame React animation or animated screenshot",
-  ],
-  variants: { light, dark },
-  transcript: { file: transcriptFile, sha256: sha(Buffer.from(transcript)) },
-};
-await writeFile(
-  `${output}/provenance.json`,
-  JSON.stringify(provenance, null, 2) + "\n",
-);
-await writeFile(
-  `${output}/manifest.json`,
-  JSON.stringify(
-    {
-      schemaVersion: 1,
-      workflow: selected,
-      label: definition.label,
-      title: definition.label,
-      source: definition.source,
-      request: definition.request,
-      extensionVersion,
-      transcript: `/media/video/${transcriptFile}`,
-      provenance: "/media/video/provenance.json",
-      variants: Object.fromEntries(
-        Object.entries({ light, dark }).map(([theme, variant]) => [
-          theme,
-          Object.fromEntries(
-            Object.entries(variant).filter(
-              ([key]) => !["evidence", "events", "assets"].includes(key),
+  await writeFile(
+    `${output}/manifest.json`,
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        workflow: selected,
+        label: definition.label,
+        title: definition.label,
+        source: definition.source,
+        request: definition.request,
+        extensionVersion,
+        transcript: `/media/video/${transcriptFile}`,
+        provenance: "/media/video/provenance.json",
+        variants: Object.fromEntries(
+          Object.entries({ light, dark }).map(([theme, variant]) => [
+            theme,
+            Object.fromEntries(
+              Object.entries(variant).filter(
+                ([key]) => !["evidence", "events", "assets"].includes(key),
+              ),
             ),
+          ]),
+        ),
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(
+    "Published two real, outcome-verified recording variants and their provenance.",
+  );
+}
+
+/** Separate current-build assets; historical public-page recordings stay intact. */
+async function captureOnboarding() {
+  const { createServer } = await import("node:http");
+  const fixture = await readFile("scripts/fixtures/onboarding.html", "utf8");
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(fixture);
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const size = { width: 1040, height: 800 };
+  const directory = "apps/public/media/onboarding";
+  const staging = `${raw}/onboarding`;
+  await mkdir(staging, { recursive: true });
+  const app = await openNavigatorExtension(size, [], {
+    nativeViewport: true,
+    standalone: true,
+  }).catch(async (error) => {
+    await new Promise((resolve) => server.close(resolve));
+    throw error;
+  });
+  const clips = [];
+  const providerRequests = [];
+  await app.context.route(/^https?:\/\//, async (route) => {
+    if (new URL(route.request().url()).origin === new URL(origin).origin)
+      return route.continue();
+    providerRequests.push(new URL(route.request().url()).origin);
+    await route.abort();
+  });
+  async function record(id, label, description, action, page = app.page) {
+    await page.bringToFront();
+    await widenWindow({ ...app, page }, size);
+    await page.evaluate(() => document.fonts.ready);
+    const path = `${staging}/${id}.webm`;
+    let latestFrame,
+      posterFrame,
+      frameCount = 0;
+    const sourceViewports = new Set();
+    const events = [];
+    const start = Date.now();
+    const event = (text) =>
+      events.push({ at: (Date.now() - start) / 1000, text });
+    await page.screencast.start({
+      path,
+      size,
+      fps,
+      quality: 85,
+      onFrame: ({ data, viewportWidth, viewportHeight }) => {
+        latestFrame = data;
+        frameCount++;
+        sourceViewports.add(`${viewportWidth}x${viewportHeight}`);
+      },
+    });
+    try {
+      await action(event, () => {
+        posterFrame = latestFrame;
+      });
+      await wait(900);
+      const frameValidation = await checkFrame(latestFrame, size);
+      await sharp(posterFrame ?? latestFrame)
+        .webp({ quality: 90 })
+        .toFile(`${staging}/${id}.webp`);
+      const durationSeconds = (Date.now() - start) / 1000;
+      await page.screencast.stop();
+      const captions =
+        "WEBVTT\n\n" +
+        events
+          .map(
+            (event, index) =>
+              `${index + 1}\n${stamp(event.at)} --> ${stamp(events[index + 1]?.at ?? durationSeconds)}\n${event.text}\n`,
+          )
+          .join("\n");
+      await writeFile(`${staging}/${id}.vtt`, captions);
+      const transcript =
+        `${label}\n\n${description}\n\n` +
+        events.map((event) => `${stamp(event.at)} ${event.text}`).join("\n") +
+        "\n";
+      await writeFile(`${staging}/${id}.txt`, transcript);
+      const assets = {};
+      for (const [kind, extension] of Object.entries({
+        src: "webm",
+        poster: "webp",
+        captions: "vtt",
+        transcript: "txt",
+      })) {
+        const file = `${id}.${extension}`;
+        const bytes = await readFile(`${staging}/${file}`);
+        assets[kind] = { file, bytes: bytes.length, sha256: sha(bytes) };
+      }
+      if (
+        assets.src.bytes > maxBytes ||
+        sourceViewports.size !== 1 ||
+        !sourceViewports.has("1040x800")
+      )
+        throw Error("Onboarding recording exceeds its byte or viewport budget");
+      clips.push({
+        id,
+        label,
+        description,
+        width: size.width,
+        height: size.height,
+        fps,
+        durationSeconds,
+        ...Object.fromEntries(
+          Object.entries(assets).map(([kind, asset]) => [
+            kind,
+            `/media/onboarding/${asset.file}`,
+          ]),
+        ),
+        assets,
+        events,
+        frameValidation: {
+          ...frameValidation,
+          frameCount,
+          sourceViewports: [...sourceViewports],
+        },
+      });
+      console.log(
+        `Recorded ${id}: ${durationSeconds.toFixed(1)}s, ${assets.src.bytes} bytes`,
+      );
+    } finally {
+      await page.screencast.stop().catch(() => {});
+    }
+  }
+  try {
+    await app.page.emulateMedia({
+      colorScheme: "light",
+      reducedMotion: "no-preference",
+    });
+    await app.page.goto(origin);
+    await app.start();
+    await submit(app, "Make the text larger");
+    const warm = await waitForBinding(app);
+    if (!/^(?:text(?: size)?:\s*)?large$/i.test(warm.control?.label || ""))
+      throw Error(`Demo discovery did not bind Large: ${warm.control?.label}`);
+    await app.panel.evaluate(() =>
+      chrome.runtime.sendMessage({ type: "UI_RESET_SESSION" }),
+    );
+    await app.start();
+    await app.panel.evaluate(async () => {
+      await chrome.storage.local.set({
+        tholiWidgetBounds: { width: 420, height: 580, x: 590, y: 190 },
+      });
+      await chrome.runtime.sendMessage({
+        type: "UI_SAVE",
+        preferences: { mode: "guide", surface: "widget", advanced: false },
+        draft: "",
+      });
+    });
+    await expect
+      .poll(() =>
+        app.page
+          .frames()
+          .find((frame) => frame.url().includes("/widget.html?grant="))
+          ?.url(),
+      )
+      .toBeTruthy();
+    const widget = app.page
+      .frames()
+      .find((frame) => frame.url().includes("/widget.html?grant="));
+    await expect(widget.getByLabel("Navigation goal")).toBeVisible();
+    await widget.evaluate(() => document.fonts.ready);
+    await record(
+      "destination",
+      "Start with your destination",
+      "Actual Tholi extension on a local reading demo. No account or external AI service is used.",
+      async (event) => {
+        event(
+          "The actual floating widget is open on a controlled demo website.",
+        );
+        await wait(700);
+        await widget
+          .getByLabel("Navigation goal")
+          .pressSequentially("Make the text larger", { delay: 95 });
+        event(
+          "Enter Make the text larger in the Navigation goal field, then choose Guide me.",
+        );
+        await wait(500);
+        await widget
+          .getByRole("button", { name: "Guide me", exact: true })
+          .click();
+        await waitForBinding(app);
+        await expect(
+          widget.locator('.tholi-app[data-phase="guiding"]'),
+        ).toBeVisible();
+        event(
+          "The bundled local engine finds the live control. Tholi shows guidance and highlights it on the website.",
+        );
+        await wait(1800);
+      },
+    );
+    let final;
+    await record(
+      "guidance",
+      "Follow the highlight at your pace",
+      "Actual Pause, Resume and verified arrival animations. The operator clicks the website control; Tholi independently checks the result.",
+      async (event) => {
+        event(
+          "Tholi points to Large text. The guiding Wayfinder and page highlight are actual extension animations.",
+        );
+        await wait(900);
+        await widget
+          .getByRole("button", { name: "Widget menu", exact: true })
+          .click();
+        await widget
+          .getByRole("button", { name: "Conversation", exact: true })
+          .click();
+        await widget.getByLabel("Navigation goal").fill("");
+        await widget
+          .getByLabel("Navigation goal")
+          .pressSequentially("Why this step?", { delay: 65 });
+        await widget.getByRole("button", { name: "Send", exact: true }).click();
+        await expect(
+          widget.getByLabel("Conversation", { exact: true }),
+        ).toContainText((await app.view()).goalPlan.reason);
+        event(
+          "Conversation explains the current step using the same local journey. No cloud model is called.",
+        );
+        await wait(1600);
+        await widget
+          .getByRole("button", { name: "Widget menu", exact: true })
+          .click();
+        await widget
+          .getByRole("button", { name: "Guide", exact: true })
+          .click();
+        await widget
+          .getByRole("button", { name: "Pause navigation", exact: true })
+          .click();
+        await expect
+          .poll(async () => (await app.view())?.status)
+          .toBe("paused");
+        event(
+          "Choose Pause to pause guidance. The task stays available to resume.",
+        );
+        await wait(1200);
+        await widget
+          .getByRole("button", { name: "Resume navigation", exact: true })
+          .click();
+        await waitForBinding(app);
+        event(
+          "Choose Resume. The live control is checked again before guidance continues.",
+        );
+        await wait(1200);
+        await app.page
+          .getByRole("radio", { name: "Large", exact: true })
+          .check();
+        await expect(
+          app.page.getByRole("radio", { name: "Large", exact: true }),
+        ).toBeChecked();
+        await expect(app.page.locator("article")).toHaveCSS(
+          "font-size",
+          "20px",
+        );
+        await expect
+          .poll(async () => (await app.view())?.goalPlan?.status, {
+            timeout: 20000,
+          })
+          .toBe("completed");
+        final = await app.view();
+        if (final.journey?.status !== "completed" || final.verifiedSteps < 1)
+          throw Error("The demo outcome was not independently verified");
+        await expect(
+          widget.locator(
+            '.tholi-current .tholi-wayfinder[data-state="arrived"]',
           ),
-        ]),
-      ),
-    },
-    null,
-    2,
-  ) + "\n",
-);
-console.log(
-  "Published two real, outcome-verified recording variants and their provenance.",
-);
+        ).toBeVisible();
+        event(
+          "Large text is selected and the article text is larger. Tholi verifies the result and its Wayfinder changes into the completion mark.",
+        );
+        await wait(2400);
+      },
+    );
+    // Show the real no-account path, rather than a diagram of device/cloud areas.
+    const welcome =
+      app.context
+        .pages()
+        .find((page) => page.url().endsWith("/welcome.html")) ??
+      (await app.context.newPage());
+    if (!welcome.url().endsWith("/welcome.html"))
+      await welcome.goto(
+        app.panel.url().replace("sidepanel.html", "welcome.html"),
+      );
+    await welcome.emulateMedia({
+      colorScheme: "light",
+      reducedMotion: "no-preference",
+    });
+    await expect(
+      welcome.getByRole("button", { name: "Use Tholi locally", exact: true }),
+    ).toBeEnabled();
+    await record(
+      "local",
+      "Local guidance, on your terms",
+      "Actual extension welcome screen. Choose Use Tholi locally to finish setup without an account. Signing in and sharing data remain separate choices.",
+      async (event, poster) => {
+        event(
+          "The actual welcome page offers Sign up, Sign in and Use Tholi locally. No account is required for local guidance.",
+        );
+        await wait(1300);
+        poster();
+        await welcome
+          .getByRole("button", { name: "Use Tholi locally", exact: true })
+          .click();
+        await expect(welcome.locator(".welcome-complete")).toBeVisible();
+        const status = await app.panel.evaluate(() =>
+          chrome.runtime.sendMessage({ type: "AUTH_INFERENCE_STATUS" }),
+        );
+        if (status.enabled !== false || status.images !== false)
+          throw Error("Local processing was not confirmed");
+        event(
+          "Local setup is complete. Tholi explains how to open guidance on a website. Context and image transmission remain disabled.",
+        );
+        await wait(2400);
+      },
+      welcome,
+    );
+    if (providerRequests.length)
+      throw Error("Capture attempted an external HTTP request");
+    if (
+      JSON.stringify(beforeFiles) !==
+      JSON.stringify(await artifactFiles("dist/extension"))
+    )
+      throw Error("Extension build changed during capture");
+    const provenance = {
+      capturedAt: new Date().toISOString(),
+      extensionVersion,
+      extensionBuildSha256: sha(JSON.stringify(beforeFiles)),
+      artifactFiles: beforeFiles,
+      browser: app.context.browser()?.version(),
+      platform: process.platform,
+      architecture: process.arch,
+      capture:
+        "Unaltered Playwright VP9 screencasts of the actual built Chromium extension, 1040 x 800 at 30 fps. Local Fieldnotes controlled demo. Real UI timing, no synthesized cursor, UI replacements or fabricated outcome. Model and OCR assets remain bundled. No external HTTP or model calls.",
+      fixtureSha256: sha(fixture),
+      externalRequests: providerRequests,
+      evidence: {
+        planStatus: final.goalPlan.status,
+        journeyStatus: final.journey.status,
+        verifiedSteps: final.verifiedSteps,
+      },
+      clips,
+    };
+    await mkdir(directory, { recursive: true });
+    for (const clip of clips)
+      for (const asset of Object.values(clip.assets))
+        await copyFile(
+          `${staging}/${asset.file}`,
+          `${directory}/${asset.file}`,
+        );
+    await writeFile(
+      `${directory}/provenance.json`,
+      JSON.stringify(provenance, null, 2) + "\n",
+    );
+    await writeFile(
+      `${directory}/manifest.json`,
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          extensionVersion,
+          provenance: "/media/onboarding/provenance.json",
+          clips: clips.map(
+            ({ assets, events, frameValidation, ...clip }) => clip,
+          ),
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  } finally {
+    try {
+      await app.close();
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+}

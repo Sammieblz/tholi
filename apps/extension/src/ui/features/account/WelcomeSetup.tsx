@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Introduction,
-  IntroductionPreview,
+  IntroductionRecording,
 } from "../../../../../../packages/ui/onboarding";
 import { Wayfinder } from "../../../../../../packages/ui/WayfinderMark";
 import { useInputModality } from "../../../../../../packages/ui/motion/useInputModality";
@@ -287,7 +287,7 @@ export function WelcomeSetup() {
                 enable cloud processing.
               </p>
             </div>
-            <IntroductionPreview step={2} />
+            <IntroductionRecording step={2} />
           </section>
         )}
       </main>
