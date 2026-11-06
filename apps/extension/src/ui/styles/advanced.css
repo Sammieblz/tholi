@@ -1,4 +1,12 @@
 /* Extension-only detail tools. Shared layout, palettes, and motion remain in packages/ui. */
+.tholi-website-access {
+  padding-block: 10px;
+}
+.tholi-website-access h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
 .goal-plan {
   margin: 8px 0;
 }

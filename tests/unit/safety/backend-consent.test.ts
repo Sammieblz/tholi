@@ -9,12 +9,17 @@ import {
   backendNlp,
   backendOcr,
   deleteBackendMemory,
+  mirrorRoute,
   setBackendSettings,
 } from "../../../apps/extension/src/platform/backend-client";
 import { fixture } from "../../integration/nlp/fixtures";
 import type { RecognitionInput } from "../../../packages/vision/contracts";
 import { mergeObservation } from "../../../packages/site-memory";
 import { siteKnowledgeSchema } from "../../../packages/navigation-core/contracts";
+import {
+  beginJourney,
+  saveTask,
+} from "../../../packages/goal-planner/task-journey";
 
 const settings = {
   enabled: true,
@@ -66,6 +71,44 @@ test("Firefox requests backend host and declared optional data consent in the us
   });
   await expect(pending).resolves.toBe(true);
 });
+
+test.each(["chromium", "firefox"])(
+  "%s website grants never enable private backend processing or mirroring",
+  async (target) => {
+    vi.stubGlobal("browser", {
+      runtime: {
+        getURL: () =>
+          `${target === "firefox" ? "moz" : "chrome"}-extension://consent-test/`,
+      },
+      permissions: { contains, request },
+    });
+    contains.mockResolvedValue(true);
+    privateSettings.getPrivateSetting.mockResolvedValue({
+      ...settings,
+      enabled: false,
+    });
+    await expect(hasBackendAccess(settings.url)).resolves.toBe(true);
+    const plan = input(),
+      memory = mergeObservation(undefined, plan.observation);
+    await expect(backendNlp(plan, false, memory)).resolves.toBeUndefined();
+    await expect(backendNlp(plan, true, memory)).resolves.toBeUndefined();
+    await expect(
+      backendOcr(
+        { image: "private-image-must-not-be-sent" } as RecognitionInput,
+        undefined,
+        captureGuard,
+      ),
+    ).resolves.toBeUndefined();
+    await mirrorRoute(
+      saveTask(beginJourney("Find Help", plan.observation.origin)),
+    );
+    await deleteBackendMemory(plan.observation.origin);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(captureGuard).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(privateSettings.setPrivateSetting).not.toHaveBeenCalled();
+  },
+);
 
 test("local graph completeness evidence never changes the legacy private-backend knowledge wire", async () => {
   contains.mockResolvedValue(true);

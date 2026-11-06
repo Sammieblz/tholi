@@ -2,7 +2,10 @@ import { embeddedControlsHtml } from "../../../fixtures/multi-app/frame-html";
 import backendDataPermissions from "../../../../config/backend-data-permissions.json" with { type: "json" };
 import firefox from "selenium-webdriver/firefox.js";
 import { test, expect } from "../../../support/browser-test";
-import { openFirefoxExtension } from "../../../support/firefox-extension";
+import {
+  grantFirefoxFixturePermissions,
+  openFirefoxExtension,
+} from "../../../support/firefox-extension";
 import {
   closeFirefoxSidebar,
   verifyWebDriverSurfaces,
@@ -710,13 +713,73 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       .documentId;
     expect(
       await current.extension(() =>
-        (globalThis as any).browser.permissions.remove({
-          origins: ["http://localhost/*"],
+        (globalThis as any).browser.permissions.contains({
+          origins: [
+            "http://second-site.example/*",
+            "https://second-site.example/*",
+          ],
         }),
       ),
     ).toBe(true);
+    const frameUrl = new URL("/frame-host", fixture.url).href;
+    const blockedOrigin = new URL(fixture.url);
+    blockedOrigin.hostname = "localhost";
     await current.message({ type: "PAUSE" });
-    await current.visit(new URL("/frame-host", fixture.url).href);
+    await current.visit(frameUrl);
+    await current.waitFor(
+      () => current.view(),
+      (view) => view.status === "paused",
+      "Explicit Pause survives the authorized cross-host frame page",
+    );
+    expect((await current.message({ type: "RESUME" })).error).toBeUndefined();
+    await current.waitFor(
+      () => current.view(),
+      (view) =>
+        ["Embedded search", "Private embedded field"].every((label) =>
+          view.controls?.some(
+            (control: any) =>
+              control.label === label && control.reference?.frameId > 0,
+          ),
+        ),
+      "Broad install access observes both owned cross-host frame documents",
+    );
+    const permitted = await current.message({ type: "GET_SESSION" });
+    expect(permitted.documentId).not.toBe(previousDocument);
+    expect(permitted.view.frameAccess || []).not.toContain(
+      blockedOrigin.origin,
+    );
+    await current.message({ type: "PAUSE" });
+    expect(
+      await current.extension(() =>
+        (globalThis as any).browser.permissions.remove({
+          origins: ["http://*/*"],
+        }),
+      ),
+    ).toBe(true);
+    // Keep this frame regression's real missing-host boundary after broad
+    // install access: the owned root remains allowed, localhost stays revoked.
+    expect(
+      await grantFirefoxFixturePermissions(current.driver, {
+        origins: ["http://127.0.0.1/*"],
+      }),
+    ).toBe(true);
+    expect(
+      await current.extension(async () => {
+        const api = (globalThis as any).browser;
+        return {
+          root: await api.permissions.contains({
+            origins: ["http://127.0.0.1/*"],
+          }),
+          embedded: await api.permissions.contains({
+            origins: ["http://localhost/*"],
+          }),
+          broad: await api.permissions.contains({
+            origins: ["http://*/*"],
+          }),
+        };
+      }),
+    ).toEqual({ root: true, embedded: false, broad: false });
+    await current.visit(frameUrl);
     await current.waitFor(
       () => current.view(),
       (view) => view.status === "paused",
@@ -734,9 +797,7 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       "Firefox exposes only a freshly authorized frame document",
     );
     const framed = await current.message({ type: "GET_SESSION" });
-    expect(framed.documentId).not.toBe(previousDocument);
-    const blockedOrigin = new URL(fixture.url);
-    blockedOrigin.hostname = "localhost";
+    expect(framed.documentId).not.toBe(permitted.documentId);
     expect(framed.view.frameAccess).toContain(blockedOrigin.origin);
     expect(JSON.stringify(framed.view.controls)).not.toContain(
       "Private embedded field",

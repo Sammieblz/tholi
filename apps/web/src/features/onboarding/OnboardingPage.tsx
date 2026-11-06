@@ -75,8 +75,11 @@ export function OnboardingPage() {
             <div className="web-note">
               <ShieldCheck aria-hidden="true" />
               <p>
-                You approve your browser’s website access when required. Tholi
-                does not enter passwords or perform website actions for you.
+                Installation requests HTTP and HTTPS website access. Your
+                browser can restrict or revoke it. If access is unavailable,
+                choose Enable website access in the installed extension and
+                review the browser's request. This practice cannot grant it. You
+                still enter passwords and review consequential actions.
               </p>
             </div>
             <button className="primary" onClick={() => setStep(1)}>

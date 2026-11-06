@@ -7,7 +7,8 @@ supported, even when installation and permissions are correct.
 
 1. Open your browser's **Extensions** menu and check that Tholi is enabled.
 2. Visit an ordinary website and select the Tholi toolbar icon.
-3. Review the website-access request if one appears.
+3. If access is unavailable, choose **Enable website access** in Tholi and
+   review the browser's request for HTTP and HTTPS websites.
 4. Refresh the website tab after an extension update.
 
 Browser settings pages and other restricted pages cannot be guided. If you
@@ -16,8 +17,10 @@ See [Getting started](getting-started.md) for installation help.
 
 ## There is no highlight or the next step looks wrong
 
-Check whether Tholi is paused, waiting for an answer or asking for website
-access. Answer the question or review the access request before resuming.
+Check whether Tholi is paused, waiting for an answer or missing website access.
+Answer the question or use **Enable website access** before resuming. Starting
+guidance alone does not open a permission request. If you restricted Tholi to
+particular sites, review those settings in your browser.
 
 Let a changing page finish loading. Read the instruction and open any menu it
 mentions. If the highlight points to the wrong control, do not click it just
@@ -31,8 +34,9 @@ be unable to confirm the result.
 ## Guidance stops after sign-in or a page change
 
 Enter credentials directly on the website. Return to the intended page and
-review any **Continue task here** or website-access request. If the task paused
-after unrelated browsing, use **Resume** when ready.
+choose **Continue task here** when offered. If your browser restricted website
+access, use **Enable website access** or review its extension settings. If the
+task paused after unrelated browsing, use **Resume** when ready.
 
 Do not share passwords or verification codes with support. For task continuity,
 see [Pausing and resuming](sessions.md).

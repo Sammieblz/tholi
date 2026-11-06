@@ -29,12 +29,8 @@ test.beforeAll(async ({}, testInfo) => {
   const manifest = JSON.parse(
     await readFile(join(extension, "manifest.json"), "utf8"),
   );
-  expect(manifest.host_permissions).toEqual([
-    "http://127.0.0.1/*",
-    "http://localhost/*",
-    "https://en.wikipedia.org/*",
-  ]);
-  // Tab metadata is needed to offer navigation before a new site's host grant.
+  expect(manifest.host_permissions).toEqual(["http://*/*", "https://*/*"]);
+  // Tab metadata still identifies the active website when browser access is withheld.
   expect(manifest.permissions).toContain("tabs");
   expect(manifest.permissions).not.toContain("history");
   context = await chromium.launchPersistentContext(profilePath, {
@@ -277,19 +273,40 @@ test("delayed same-URL render waits, and full page navigation stops", async () =
   await status("STOPPED");
 });
 
-test("production localhost access is available without a toolbar grant", async () => {
+test("production website access covers other HTTP and HTTPS hosts without a toolbar grant", async () => {
   const granted = await worker.evaluate(
     async () =>
       await chrome.permissions.contains({
-        origins: ["http://127.0.0.1/*", "http://localhost/*"],
+        // Native permission inspection adds no network request to these sites.
+        origins: [
+          "http://127.0.0.1/*",
+          "http://localhost/*",
+          "http://second-site.example/*",
+          "https://second-site.example/*",
+        ],
       }),
   );
   expect(granted).toBe(true);
   await reset();
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
+  await start();
+  await status("GUIDING");
+  const firstSession = await panel.evaluate(async () =>
+    chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(firstSession.documentId).toBeTruthy();
+  expect(firstSession.origin).toBe("http://127.0.0.1:5173");
+  await panel.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await page.goto("http://localhost:5173");
   await start();
   await status("GUIDING");
+  const nextSession = await panel.evaluate(async () =>
+    chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(nextSession.origin).toBe("http://localhost:5173");
+  expect(nextSession.documentId).toBeTruthy();
+  expect(nextSession.documentId).not.toBe(firstSession.documentId);
   await expect(panel.locator(".error")).toHaveCount(0);
   await panel.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);

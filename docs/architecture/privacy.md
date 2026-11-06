@@ -1,5 +1,15 @@
 # Local observation and memory
 
+## Website access
+
+Both browser manifests request `http://*/*` and `https://*/*` as required hosts.
+This is broad access to ordinary websites, without a Wikipedia/localhost
+exception or optional-host list. Browsers still control restrictions and
+revocation. Normal guidance checks the current grant without opening a request.
+The explicit **Enable website access** action requests both schemes in one user
+gesture when access needs recovery. Permission alone starts no page discovery
+and enables no cloud processing, image upload or private website learning.
+
 ## Observation
 
 Discovery begins when you submit a destination with Guide me or explicitly start page exploration. Opening the panel alone does not start discovery. Active sessions follow recognized task transitions; unrelated navigation pauses the objective. Pause/Stop remove live discovery and visual-invalidation observers, pending work and guidance. Resume obtains a fresh observation.
@@ -30,7 +40,7 @@ MiniLM and default Tesseract assets are packaged locally. Experimental Paddle as
 
 The optional single-owner API receives knowledge/context only when explicitly connected. Temporary masked OCR images go there only when backend OCR is enabled. Its final send guard runs after backend capability, permission and protected-setting waits, rechecking the capture proof and current native scope. SQLite follows the same reusable/private persistence policy. It does not persist OCR payloads or private session context. Backend failure reuses the same prepared, masked OCR input for local recognition instead of preparing or forwarding the raw capture again. The optional navigation color producer enables no provider endpoint or automatic upload. A failed mirror deletion is reported for retry after reconnecting.
 
-Firefox declares no required data transmission. Connecting the optional backend requests its host access and optional authentication, browsing-activity, website-activity and website-content consent. These cover the API bearer token, website origins/routes, navigation context, bounded observations and optional masked OCR images sent to that chosen server. Every backend request checks the current grant; declining or revoking it blocks transmission and leaves local processing available. Mirror deletion failures still require reconnecting and retrying; revocation does not erase an existing server copy.
+Firefox declares no required data transmission. Connecting the optional backend requires current browser access to its configured origin and optional authentication, browsing-activity, website-activity and website-content consent. These data choices cover the API bearer token, website origins/routes, navigation context, bounded observations and optional masked OCR images sent to that chosen server. Broad website permission does not grant this data-transmission consent. Every backend request checks the current grant; declining or revoking the required access or consent blocks transmission. Local processing remains available where browser website access permits it. Mirror deletion failures still require reconnecting and retrying; revocation does not erase an existing server copy.
 
 Diagnostics are local, bounded and redacted. Do not capture authenticated screenshots or traces by default. Diagnostic exports omit labels, goals, paths, raw DOM and field values. See [security](security.md), [API setup](../guides/backend.md) and [native verification](../guides/getting-started.md).
 

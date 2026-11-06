@@ -5,6 +5,10 @@ import {
 } from "../platform/private-settings";
 import { api, type Tabs } from "../platform/api";
 import {
+  hostPermissionPattern,
+  websiteHostPermissions,
+} from "../platform/host-permissions";
+import {
   cancelServiceInference,
   serviceAuthCommand,
 } from "../platform/service-auth";
@@ -766,17 +770,16 @@ export function registerMessages(context: Context) {
           const siteAccessRequired =
             available &&
             !(await api.permissions.contains({
-              origins: [
-                new URL(tab!.url!).protocol +
-                  "//" +
-                  new URL(tab!.url!).hostname +
-                  "/*",
-              ],
+              origins: [hostPermissionPattern(origin!)],
             }));
+          const allWebsiteAccess = await api.permissions.contains({
+            origins: [...websiteHostPermissions],
+          });
           return {
             tabId: tab?.id,
             origin: available ? origin : undefined,
             siteAccessRequired,
+            allWebsiteAccess,
             canContinueTask: !!(
               continuation &&
               context.session &&

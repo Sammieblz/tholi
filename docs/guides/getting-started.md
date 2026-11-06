@@ -12,8 +12,9 @@ you enable that connection.
 
 1. Open your browser's **Extensions** menu, find Tholi and pin it to the toolbar
    for easy access.
-2. Visit the website you want help with and select the Tholi toolbar icon. Grant
-   access to that website when asked. Restricted browser pages cannot be guided.
+2. Visit the website you want help with and select the Tholi toolbar icon. If
+   access is unavailable, choose **Enable website access** and review the browser's
+   request for HTTP and HTTPS websites. Restricted browser pages cannot be guided.
 3. Enter a destination and choose **Guide me**. Follow the instruction and page
    highlight. You make the clicks and handle website sign-in and consequential
    actions. A click alone does not establish arrival.
@@ -41,7 +42,7 @@ The website's `/download?browser=firefox#installation-firefox` link opens the de
 
 ## Using your guide
 
-On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. Approve only the site you intend to navigate. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
+On an ordinary HTTP/HTTPS website, click the toolbar icon, enter a destination and select **Guide me**. The manifest requests website access broadly; the browser can restrict or revoke it. The backend is optional. Under **Tholi settings**, enable **Advanced controls** to access **Explore page controls**, diagnostics, and backend options. Authored Northstar tasks retain their separate Start button.
 
 Switch between Guide and Conversation during the same task. Try Pause, Resume, Stop, and “Why this step?” in Conversation. Use **Tholi settings → Use floating widget** to check dragging, resizing, **Widget menu** position/size controls, keyboard controls, **Expand widget**, and **Dock to sidebar**. Confirm the destination survives each view/surface change and a website reload. Compact and minimal widgets prioritize one readable message and the composer, with Pause/Resume/Stop in Widget menu. Check four idle reminders, their cancellation, reduced motion, and absence of arrival feedback until the requested result is verified.
 
@@ -55,18 +56,33 @@ During a deliberate drag, approach within 24 pixels of the right viewport edge a
 
 DOM discovery and screenshot access are separate. A saved site grant can permit scanning while the browser still requires renewed toolbar activation for viewport capture. If Tholi requests activation, click its toolbar icon on the intended active tab; the destination should remain retained.
 
-Expected document/authentication handoffs resume when access is available. A new origin may require **Continue task here** and its specific host grant. Declining access retains the objective for retry. Unrelated navigation pauses the journey; resuming requires a fresh observation. Restricted browser pages cannot be scanned.
+The required hosts are `http://*/*` and `https://*/*`, without a separate
+Wikipedia or localhost exception. Installation requests ordinary website access;
+normal Start, Resume and page exploration only check the current browser grant.
+They do not open permission requests automatically. **Enable website access**
+is the explicit recovery action for older installations or restricted/revoked
+access. Its single user gesture requests both schemes, not only the current
+origin. The browser still owns site restrictions and the final permission result.
 
-While **Explore page controls** is active, an ungranted embedded origin exposes an **Allow ORIGIN** action even before a destination is entered. This page-access notice is separate from task-owned instructions. The action requests only that origin; declining leaves its controls unscanned. Paused, stopped and completed sessions do not revive old permission prompts.
+Expected document/authentication handoffs resume when access is available. A new
+document or tab may require **Continue task here**; this does not grant access or
+prove sign-in succeeded. Declining recovery retains the objective for retry.
+Unrelated navigation pauses the journey; resuming requires a fresh observation.
+Restricted browser pages and frames without current access cannot be scanned.
+Website access does not authorize cloud processing, image upload or private
+learning, each of which keeps its separate controls.
 
 ## Pending native checks
 
 Record browser name/version, manifest version, build provenance, date and result. Automated extension-page tests do not establish native permission dialogs, native sidebar behavior or actual screen-reader speech.
 
+Use the [website access setup record](../development/testing/website-access-setup-validation.md)
+for fresh checks of the broad-access manifest and recovery flow.
+
 | Check                                                                           | Status  |
 | ------------------------------------------------------------------------------- | ------- |
 | Toolbar opening, reload and tab refresh                                         | Pending |
-| Per-site grant, denial, retry and restricted-page explanation                   | Pending |
+| Broad website access, browser restrictions, revocation and explicit recovery    | Pending |
 | Screenshot activation and recovery after origin changes                         | Pending |
 | Keyboard goal submission, Pause/Resume/Stop, expandable details and focus       | Pending |
 | Screen reader: meaningful status changes without repeated polling announcements | Pending |

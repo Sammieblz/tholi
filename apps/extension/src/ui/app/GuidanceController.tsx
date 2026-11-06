@@ -1,4 +1,3 @@
-import { requestOriginAccess } from "../../platform/site-access";
 import { openNativeSidebar } from "../../platform/sidebar";
 import { browserTarget } from "../../platform/api";
 import { api } from "../../platform/api";
@@ -6,6 +5,7 @@ import { JourneyDetails } from "../features/journey/JourneyDetails";
 import { AdvancedTools } from "../features/advanced/AdvancedTools";
 import { WorkflowPanel } from "../features/journey/WorkflowPanel";
 import { AccountSettings } from "../features/account/AccountSettings";
+import { WebsiteAccess } from "../components/WebsiteAccess";
 import {
   currentAttentionWorkflow,
   workflowRequiresAttention,
@@ -48,10 +48,21 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
     explainCurrentStep,
     newDestination,
     resetCurrentSession,
+    enableWebsiteAccess,
   } = controller;
   const attentionWorkflow = currentAttentionWorkflow(displayedView, busy, goal);
   const noticeView = currentTaskNotices(displayedView, presentation);
   const frameAccess = currentFrameAccess(displayedView);
+  const showWebsiteSetup =
+    context?.allWebsiteAccess === false || !!context?.siteAccessRequired;
+  const websiteAccess = (
+    <WebsiteAccess
+      granted={context?.siteAccessRequired ? false : context?.allWebsiteAccess}
+      busy={busy}
+      widget={widget}
+      onEnable={() => void enableWebsiteAccess()}
+    />
+  );
   return (
     <GuidanceApp
       presentation={presentation}
@@ -94,6 +105,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
         !!(
           error ||
           otherTab ||
+          context?.siteAccessRequired ||
           noticeView?.continuationOrigin ||
           frameAccess.length ||
           noticeView?.clarification ||
@@ -103,7 +115,14 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       }
       notice={notice}
       widget={widget}
-      account={widget ? undefined : <AccountSettings />}
+      account={
+        widget ? undefined : (
+          <>
+            {!showWebsiteSetup && websiteAccess}
+            <AccountSettings />
+          </>
+        )
+      }
       onMinimize={() =>
         void api.runtime.sendMessage({ type: "UI_MINIMIZE" }).then((r) => {
           if (r.error) setError(r.error);
@@ -141,6 +160,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       }
       primary={
         <>
+          {showWebsiteSetup && websiteAccess}
           {context && !context.routes.length && <h2>Open a website</h2>}
           {otherTab && (
             <p className="tab-warning">
@@ -216,30 +236,10 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
               >
                 <h2>Embedded application access</h2>
                 <p>
-                  Allow access to an embedded website to guide its controls.
+                  Your browser has restricted access to some embedded controls.
+                  Other page controls remain available. Review website access in
+                  Tholi or in your browser's extension settings.
                 </p>
-                {frameAccess.map((origin) => (
-                  <button
-                    key={origin}
-                    disabled={busy || otherTab}
-                    onClick={async () => {
-                      try {
-                        if (!(await requestOriginAccess(origin)))
-                          setError(
-                            "Access was not granted. Other page controls remain available.",
-                          );
-                      } catch (error) {
-                        setError(
-                          error instanceof Error
-                            ? error.message
-                            : "Website access is unavailable.",
-                        );
-                      }
-                    }}
-                  >
-                    Allow {origin}
-                  </button>
-                ))}
               </section>
             )}
           {!otherTab &&

@@ -6,14 +6,22 @@ something.
 
 ## Allow website access
 
-1. Open the website where you want help and select the Tholi toolbar icon.
-2. Review the browser's website-access request and allow only the website you
-   intend to use.
-3. If a task reaches another website, review any new request before continuing.
+Tholi requests access to ordinary HTTP and HTTPS websites during installation.
+This covers websites generally, rather than requesting a new grant for each
+destination. Your browser can still restrict or revoke that access.
 
-Installation does not grant access to every website. Declining access leaves
-that website unavailable for guidance. You can review or revoke access in the
-browser's extension settings. Restricted browser pages cannot be guided.
+1. Open the website where you want help and select the Tholi toolbar icon.
+2. If access is unavailable, choose **Enable website access** in Tholi.
+3. Review the browser's request for HTTP and HTTPS website access and confirm
+   only if you want to enable it. This action requests both types of website.
+
+Starting or resuming guidance checks the browser's current access; it does not
+open a permission request automatically. Declining recovery leaves affected
+websites unavailable for guidance. Review site restrictions in the browser's
+extension settings. Restricted browser pages cannot be guided.
+
+Website access does not enable cloud AI, upload local memory or turn on private
+website learning. Those choices remain separate.
 
 ## What Tholi uses
 

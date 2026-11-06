@@ -15,10 +15,14 @@ Chrome 140 or newer, or Firefox 153 or newer.
 4. Open your browser's **Extensions** menu and find Tholi. Pin it to the toolbar
    if you want to keep it within reach.
 
+Tholi requests access to ordinary HTTP and HTTPS websites. Your browser's
+extension settings let you restrict or revoke it.
+
 ## Start your first task
 
 1. Visit the website where you need help.
-2. Select the Tholi toolbar icon. Allow access to that website if asked.
+2. Select the Tholi toolbar icon. If access is unavailable, choose **Enable
+   website access** in Tholi and review the browser's request.
 3. Enter a destination, such as "Find the language settings," then choose
    **Guide me**.
 4. Read the instruction and use the highlighted control on the website.

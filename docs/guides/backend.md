@@ -28,7 +28,10 @@ directory private to your user; the API does not configure Windows ACLs.
 In the sidebar, open **Settings**, enable **Advanced controls**, then open
 **Local site memory and AI** and **Optional private backend**.
 Enter the API address and generated token, enable the connection and Save.
-Grant the browser's requested API-host access. The token uses protected Chromium
+The browser must currently allow access to the configured API origin. If access
+is unavailable, **Enable website access** requests HTTP and HTTPS website access;
+the connection and Firefox data-transmission consent remain separate choices.
+The token uses protected Chromium
 local storage or Firefox extension-origin IndexedDB, never content-script storage. The extension's origin must exactly match the
 API allowlist. An unavailable backend uses the bundled local model.
 
