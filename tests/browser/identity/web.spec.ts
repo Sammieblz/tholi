@@ -1527,9 +1527,27 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           await page.goto(environment.webOrigin + "/account/security");
           const offered = await deletionCapabilities;
           expect(offered.status()).toBe(200);
-          expect(
-            serviceCapabilitiesSchema.parse(await offered.json()).capabilities,
-          ).toContain("account-deletion");
+          stage = "read account deletion capability response body";
+          const capabilityBody = await offered
+            .json()
+            .catch((error: unknown) => {
+              throw Error(
+                error instanceof SyntaxError
+                  ? "DASHBOARD_CAPABILITIES_JSON_INVALID"
+                  : error instanceof Error &&
+                      error.message.includes(
+                        "No resource with given identifier found",
+                      )
+                    ? "DASHBOARD_CAPABILITIES_BODY_UNAVAILABLE"
+                    : "DASHBOARD_CAPABILITIES_BODY_READ_FAILED",
+              );
+            });
+          stage = "validate account deletion capability response schema";
+          const capabilityRecord =
+            serviceCapabilitiesSchema.parse(capabilityBody);
+          stage = "verify account deletion capability availability";
+          expect(capabilityRecord.capabilities).toContain("account-deletion");
+          stage = "accepted account deletion and immediate session revocation";
           await page.setViewportSize({ width: 320, height: 900 });
           await page.emulateMedia({ reducedMotion: "reduce" });
           const deleteAccount = page.getByRole("button", {

@@ -124,32 +124,38 @@ export async function verifyWebDriverPrivateLearning(
     const named = (name: string) =>
       visible(By.xpath(`//button[normalize-space(.)="${name}"]`));
     const openSettings = async (phase: string) => {
-      await panel();
-      const popovers = await current.driver.findElements(
-        By.css(".tholi-settings-popup"),
+      const trigger = await visible(
+        By.css('button[aria-label="Tholi settings"]'),
       );
-      if (!popovers.length || !(await popovers[0].isDisplayed()))
-        await (
-          await visible(By.css('button[aria-label="Tholi settings"]'))
-        ).sendKeys(Key.ENTER);
+      // Base UI retains its popup during exit motion. Its trigger's expanded
+      // state distinguishes an open popup from the still-mounted closing DOM.
+      const expanded = await trigger.getDomAttribute("aria-expanded");
+      if (expanded === "false") await trigger.sendKeys(Key.ENTER);
+      else if (expanded !== "true")
+        throw Error("The native settings trigger has no expanded state.");
       let readiness = "not-observed";
       try {
         await current.waitFor(
           async () =>
             (readiness = await current.extension(() => {
+              const popup = document.querySelector<HTMLElement>(
+                ".tholi-settings-popup",
+              );
+              const popupVisible =
+                popup &&
+                popup.getClientRects().length > 0 &&
+                getComputedStyle(popup).visibility !== "hidden";
+              if (
+                document
+                  .querySelector('button[aria-label="Tholi settings"]')
+                  ?.getAttribute("aria-expanded") !== "true"
+              )
+                return popupVisible ? "settings-closing" : "settings-closed";
+              if (!popupVisible) return "settings-closed";
               const field = document.querySelector<HTMLFieldSetElement>(
                 ".tholi-private-learning fieldset",
               );
               if (field && !field.disabled) return "ready";
-              const popup = document.querySelector<HTMLElement>(
-                ".tholi-settings-popup",
-              );
-              if (
-                !popup ||
-                !popup.getClientRects().length ||
-                getComputedStyle(popup).visibility === "hidden"
-              )
-                return "settings-closed";
               const account = document.querySelector(".tholi-account-settings");
               if (!account) return "account-unmounted";
               const accountError = document.getElementById(
