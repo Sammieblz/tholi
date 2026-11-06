@@ -144,7 +144,7 @@ export async function backendNlp(
       return undefined;
   }
   if (memory && memory.origin === input.observation.origin)
-    await call(settings, "knowledge", structuralKnowledge(memory), version);
+    await call(settings, "knowledge", legacyKnowledge(memory), version);
   await call(
     settings,
     "observations",
@@ -162,6 +162,19 @@ export async function backendNlp(
     : value.status === "pending-indexing"
       ? undefined
       : resultSchema.parse(value);
+}
+/** Local completeness evidence is private metadata, absent from the frozen legacy wire. */
+function legacyKnowledge(memory: SiteMemory): SiteMemory {
+  const site = structuralKnowledge(memory);
+  const page = ({
+    complete: _complete,
+    ...value
+  }: SiteMemory["pages"][number]) => value;
+  return {
+    ...site,
+    pages: site.pages.map(page),
+    states: site.states?.map(page),
+  };
 }
 export async function mirrorRoute(task: SavedTask) {
   const settings = await backendSettings();

@@ -8,7 +8,9 @@ first-run mode selection remains in #61.
 
 ## Approved fields
 
-Every artifact has a stable cloud UUID, wire schema version 1 and bounded metadata:
+Every artifact has a stable cloud UUID and bounded metadata. The default wire
+view remains schema version 1; the private graph extension requires the negotiated
+version-2 view described below. Metadata includes
 a label of at most 120 characters, an optional folder of at most 80 characters,
 and at most ten distinct tags of 40 characters each. Metadata is included in the
 actual PostgreSQL storage-byte allowance.
@@ -139,8 +141,8 @@ Already downloaded local copies are under the user's control.
 
 Migration 010 adds an internal storage format to the same artifact table. Existing
 format-1 SavedTask rows keep their IDs and trusted internal adapters. The public
-API, cache and export expose only explicitly approved format-2 rows, whose wire
-schema version is independently 1. There is no automatic migration of local or
+version-1 API, cache and export expose only explicitly approved format-2 rows, whose
+default wire schema version is independently 1. There is no automatic migration of local or
 legacy data. An explicit reviewed conversion may reuse a UUID only at its exact
 current revision.
 
@@ -152,3 +154,54 @@ change an active journey or establish arrival. Website practice stays isolated.
 See [the validation record](testing/saved-data-validation.md) for results and
 remaining checks. Provider calls, paid infrastructure, publication, deployment,
 version changes and desktop implementation are outside this issue.
+
+## Version-2 private navigation knowledge
+
+[#87](https://github.com/Sammieblz/tholi/issues/87) adds internal format 3 through
+migration 014, retaining the same four artifact kinds. Only `site_knowledge`
+admits graph schema version 2. A new graph receives a new UUID; importing a static
+snapshot cannot turn it into verified evidence. Existing migrations and legacy
+UUIDs retain their meaning.
+
+Clients require `saved-data-schema-2` and explicitly send `schemaVersion=2` on
+artifact, sync and selected-export requests. Version-2 lists carry the view
+version; cursors bind the view as well as scope and filters. Local cache and sync
+epochs separate the two views. A deliberate same-account view promotion preserves
+pending version-1 mutation receipts, while an unannounced connection change fails
+closed. The default view never returns graph DTOs. Account exports and usage have
+their own explicit version-2 negotiation and file validators.
+
+Collection and reuse are separate, default-off choices for the actor, workspace
+and exact website origin. `GET`, `PATCH` and `DELETE` at
+`/api/v1/workspaces/:workspaceId/artifacts/site-settings?schemaVersion=2` read,
+change and forget a site's cloud knowledge. Writes bind expected revisions and
+idempotency keys. Enabling also requires current `cloud_saved_routes` consent;
+reductions and deletion do not request a new grant. The extension keeps an
+account-scoped protected mirror of explicitly reviewed choices, avoiding automatic
+site-origin queries before review. The server remains authoritative at dispatch.
+
+Graphs contain at most eight structural states, 48 safe interface controls and
+16 independently verified ordinary transitions, with a 16 KiB limit including
+metadata. The projection excludes native IDs, raw paths/query strings, goals,
+values, selectors, images and geometry. It omits ambiguous labels and incomplete
+observations. Only verified transitions observed after approval are uploaded;
+final consequential and unknown-effect operations do not become shortcut edges.
+
+`POST /api/v1/workspaces/:workspaceId/artifacts/navigation-knowledge?schemaVersion=2`
+performs authorization, consent, origin, schema, deletion and freshness filtering
+before the existing BM25 owner ranks candidates. It returns at most five facts
+within 6 KiB and the remaining perception-context budget, plus server-only source
+revisions and a snapshot digest. Fresh controls always take priority. A compatible
+route is joined against fresh native observation without model dispatch; a changed
+or ambiguous structure cannot reuse it. A proposal or click never proves arrival.
+
+Evidence expires after at most 90 days, bounded by its oldest retained observation
+and service receipt. Shortcut evidence must be from the preceding 30 days.
+Metadata updates cannot renew history. Expired reads fail closed; existing bounded
+maintenance tombstones graphs, clears expired SQL export snapshots and schedules
+private-file cleanup. Stopped maintenance and operator backups can delay physical
+removal. Forgetting pauses both choices and deletes bounded graph batches, leaving
+local memory and the other artifact kinds intact.
+
+See [privacy boundaries](../architecture/privacy.md#private-cloud-knowledge) and
+the [fresh feature validation record](testing/macos-byok-learning-validation.md).

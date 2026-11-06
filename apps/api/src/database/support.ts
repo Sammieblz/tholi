@@ -110,7 +110,12 @@ export class PostgresSupport implements SupportStore {
 
   requestSavedExport(
     scope: RepositoryScope,
-    raw: { idempotencyKey: string; payloadHash: string; ids: string[] },
+    raw: {
+      idempotencyKey: string;
+      payloadHash: string;
+      ids: string[];
+      schemaVersion?: 2;
+    },
     signal?: AbortSignal,
   ) {
     const input = structuredClone(raw);

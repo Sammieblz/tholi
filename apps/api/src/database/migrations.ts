@@ -11,6 +11,9 @@ import { inferenceAccounting } from "./migrations/008-inference-accounting";
 import { productPlans } from "./migrations/009-product-plans";
 import { savedData } from "./migrations/010-saved-data";
 import { accountLifecycle } from "./migrations/011-account-lifecycle";
+import { providerConnections } from "./migrations/012-provider-connections";
+import { customerInference } from "./migrations/013-customer-inference";
+import { navigationKnowledge } from "./migrations/014-navigation-knowledge";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -45,6 +48,9 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(9, "product-plans", productPlans),
   migration(10, "saved-data", savedData),
   migration(11, "account-lifecycle", accountLifecycle),
+  migration(12, "provider-connections", providerConnections),
+  migration(13, "customer-inference", customerInference),
+  migration(14, "navigation-knowledge", navigationKnowledge),
 ]);
 
 export interface MigrationOptions {
@@ -162,6 +168,8 @@ async function validateWorkerRole(client: PoolClient, role: string) {
     SELECT FROM pg_roles r WHERE pg_has_role($1::name,r.oid,'SET')
       AND CASE WHEN to_regclass('tholi.sessions') IS NULL THEN false ELSE
         has_table_privilege(r.oid,'tholi.sessions','SELECT')
+        OR CASE WHEN to_regclass('tholi.provider_connections') IS NULL THEN false ELSE
+          has_table_privilege(r.oid,'tholi.provider_connections','SELECT,INSERT,UPDATE') END
         OR CASE WHEN to_regclass('tholi.credit_grants') IS NULL THEN false ELSE
           (has_table_privilege(r.oid,'tholi.credit_grants','INSERT')
             OR has_table_privilege(r.oid,'tholi.plan_versions','INSERT')
@@ -199,6 +207,8 @@ const mutableTables = [
   "saved_artifacts",
   "jobs",
   "outbox",
+  "provider_connections",
+  "navigation_knowledge_sites",
 ] as const;
 
 const appendOnlyTables = [
@@ -408,6 +418,29 @@ async function grantRuntime(client: PoolClient, role: string) {
       `GRANT SELECT ON tholi.free_program_enrollments,tholi.free_program_grants TO ${identifier}`,
     );
   }
+  if (existing.has("provider_connections")) {
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.valid_sealed_provider_key(jsonb),
+      tholi.provider_connection_current(uuid,bigint,bytea),
+      tholi.mark_provider_connection_verified(uuid,bigint,bytea) TO ${identifier}`);
+  }
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.reserve_inference(uuid,uuid,text,timestamptz,jsonb)') AS present",
+      )
+    ).rows[0]?.present
+  ) {
+    await client.query(`GRANT EXECUTE ON FUNCTION
+      tholi.reserve_inference(uuid,uuid,text,timestamptz,jsonb),
+      tholi.record_inference_outcome(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text,jsonb),
+      tholi.finish_inference(uuid,uuid,text,text,bigint,bigint,bigint,bigint,text,jsonb),
+      tholi.valid_inference_usage_details(jsonb,bigint,bigint,text)
+      TO ${identifier}`);
+  }
+  if (existing.has("navigation_knowledge_sites"))
+    await client.query(`GRANT EXECUTE ON FUNCTION tholi.valid_navigation_knowledge(jsonb),
+      tholi.valid_public_saved_data(integer,text,jsonb,jsonb),
+      tholi.navigation_knowledge_expiry(jsonb,timestamptz) TO ${identifier}`);
   if (
     (
       await client.query(

@@ -24,11 +24,13 @@ export async function openBrandedExtension(
   name: "chrome" | "edge" | "brave",
   url: string,
   fixturePermissions: string[] = [],
+  fixture: { nativeLifecycle?: boolean } = {},
 ) {
   assertFixtureUrl(url);
   const options = name === "edge" ? new edge.Options() : new chrome.Options();
-  const nativeIdentity =
-    name === "chrome" && process.env.THOLI_BROWSER_GROUP === "identity";
+  const nativeLifecycle =
+    name === "chrome" &&
+    (fixture.nativeLifecycle || process.env.THOLI_BROWSER_GROUP === "identity");
   options.addArguments(
     "--headless=new",
     "--enable-unsafe-extension-debugging",
@@ -93,7 +95,7 @@ export async function openBrandedExtension(
       until.elementLocated(By.css(".tholi-app")),
       10000,
     );
-    if (nativeIdentity)
+    if (nativeLifecycle)
       await driver.wait(until.elementIsVisible(application), 10_000);
     const tabId = await driver.executeAsyncScript<number>(function (
       url: string,
@@ -107,7 +109,7 @@ export async function openBrandedExtension(
         );
     }, url);
     if (tabId < 0) throw Error("Branded fixture tab missing");
-    if (nativeIdentity) {
+    if (nativeLifecycle) {
       // The mapper can pause the browser-owned auth popup and restarted worker.
       // Keep the real browser flow and use classic execution after installation.
       // https://github.com/GoogleChromeLabs/chromium-bidi/blob/main/src/bidiMapper/BidiServer.ts
@@ -135,7 +137,7 @@ export async function openBrandedExtension(
       url,
       await fixtureOnlySeleniumNetwork(driver, [website, panel]),
       undefined,
-      nativeIdentity ? "classic" : "bidi",
+      nativeLifecycle ? "classic" : "bidi",
     );
   } catch (error) {
     await driver.quit().catch(() => {});

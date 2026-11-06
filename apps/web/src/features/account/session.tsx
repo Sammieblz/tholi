@@ -57,6 +57,7 @@ type AccountContextValue = {
   error: string;
   session?: IdentityAccountResponse;
   savedData: SavedDataClient;
+  setSavedDataView(version: 1 | 2): void;
   authorizationUrl: (
     action: "signin" | "signup" | "recover" | "verify",
   ) => string | undefined;
@@ -87,6 +88,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const generation = useRef(0);
   const pending = useRef(new AbortController());
   const savedData = useRef<SavedDataClient | undefined>(undefined);
+  const savedDataView = useRef<1 | 2>(1);
   const accountChanging = useRef(false);
   const requestRef = useRef<AccountContextValue["request"] | undefined>(
     undefined,
@@ -121,6 +123,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     pending.current.abort();
     pending.current = new AbortController();
     sessionRef.current = undefined;
+    savedDataView.current = 1;
     setSession(undefined);
     setLoading(false);
   }, []);
@@ -150,7 +153,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             /^\/api\/v1\/workspaces\/[^/]+\/(artifacts(?:\/|\?|$)|sync\/)/.test(
               path,
             ) ||
-            /^\/api\/v1\/account\/(profile(?:\?|$)|exports(?:\/|\?|$)|deletion(?:\?|$))/.test(
+            /^\/api\/v1\/account\/(profile(?:\?|$)|exports(?:\/|\?|$)|deletion(?:\?|$)|provider-connections(?:\/|\?|$))/.test(
               path,
             ),
           signal: signal
@@ -208,6 +211,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     [request, assertCurrentView],
   );
   requestRef.current = clientRequest;
+  const setSavedDataView = useCallback(
+    (version: 1 | 2) => {
+      assertCurrentView();
+      if (savedDataView.current !== version) {
+        savedData.current?.suspend();
+        savedDataView.current = version;
+      }
+    },
+    [assertCurrentView],
+  );
   if (!savedData.current)
     savedData.current = new SavedDataClient({
       store: new IndexedDBCloudDataStore(),
@@ -218,6 +231,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
               serviceOrigin: serviceApiOrigin,
               accountId: current.account.id,
               workspaceId: current.account.workspaceId,
+              ...(savedDataView.current === 2
+                ? { schemaVersion: 2 as const }
+                : {}),
             }
           : undefined;
       },
@@ -307,6 +323,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     error,
     session,
     savedData: savedData.current,
+    setSavedDataView,
     reload,
     request: clientRequest,
     authorizationUrl: (action) => {

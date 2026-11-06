@@ -30,8 +30,8 @@ function cohort() {
       runId: "one-run",
       buildDigest: builds.chromium,
     },
-    expected: 7,
-    configuredCount: 7,
+    expected: 9,
+    configuredCount: 9,
     projects: ["platform-chrome", "platform-firefox", "platform-vision"],
     browsers: [
       {
@@ -55,11 +55,11 @@ function cohort() {
         },
       },
     ],
-    cases: Array.from({ length: 7 }, (_, index) => ({
+    cases: Array.from({ length: 9 }, (_, index) => ({
       id: `case-${index}`,
       status: "passed",
       pixelPrivacy:
-        index >= 5
+        index === 5 || index === 6
           ? {
               target: index === 5 ? "chromium" : "firefox",
               requestedBackingScale: 2,
@@ -70,6 +70,36 @@ function cohort() {
               })),
             }
           : undefined,
+      privateLearning:
+        index < 7
+          ? undefined
+          : {
+              target: index === 7 ? "chromium" : "firefox",
+              known: {
+                completedTasksByDom: 1,
+                decisions: 0,
+                liveProviderCalls: 0,
+                liveProviderTokens: 0,
+              },
+              changedStructure: {
+                fakeDecisions: 1,
+                liveProviderCalls: 0,
+                liveProviderTokens: 0,
+              },
+              localStoppedNewRequests: true,
+              layouts: ["light", "dark"].flatMap((theme) =>
+                [375, 640, 960, 1280].map((viewport) => ({
+                  theme,
+                  viewport,
+                  overflow: false,
+                  focused: true,
+                  reduced: true,
+                  outline: "solid",
+                  outlineWidth: 3,
+                  targets: [44],
+                })),
+              ),
+            },
     })),
   }));
 }
@@ -78,7 +108,7 @@ it("requires one complete same-build native Mac cohort across both architectures
   expect(validatePlatformReports(cohort(), builds, fullOptions)).toMatchObject({
     passed: true,
     targets: 4,
-    casesPerTarget: 7,
+    casesPerTarget: 9,
   });
   expect(() => validatePlatformReports(cohort().slice(1), builds)).toThrow(
     /Every native/,
@@ -86,6 +116,38 @@ it("requires one complete same-build native Mac cohort across both architectures
   const duplicate = cohort();
   duplicate[1] = duplicate[0];
   expect(() => validatePlatformReports(duplicate, builds)).toThrow(/unique/);
+});
+
+it("requires both browsers' independent zero-call reuse, stale fallback and accessible layouts", () => {
+  for (const change of [
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[7].privateLearning = undefined;
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[7].privateLearning!.known.completedTasksByDom = 0;
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[7].privateLearning!.known.decisions = 1;
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[8].privateLearning!.changedStructure.fakeDecisions = 0;
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[8].privateLearning!.localStoppedNewRequests = false;
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[8].privateLearning!.layouts[0].targets = [32];
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.cases[8].privateLearning!.layouts.pop();
+    },
+  ]) {
+    const reports = cohort();
+    change(reports[0]);
+    expect(() => validatePlatformReports(reports, builds, fullOptions)).toThrow(
+      "private learning",
+    );
+  }
 });
 
 it("rejects claimed Mac coverage from a different host, translated architecture or stale extension", () => {

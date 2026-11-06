@@ -1,6 +1,8 @@
 import { api, browserTarget, chromiumApi } from "./api";
 let database: Promise<IDBDatabase> | undefined;
 let protectedLocal: Promise<void> | undefined;
+type PrivateSettingKey =
+  "backend" | "vision" | "service-auth" | "privateSiteLearning";
 export function protectLocalSettings() {
   if (browserTarget() === "firefox") return Promise.resolve();
   return (protectedLocal ||= (async () => {
@@ -25,7 +27,7 @@ function db() {
   }));
 }
 export async function getPrivateSetting<T>(
-  key: "backend" | "vision" | "service-auth",
+  key: PrivateSettingKey,
 ): Promise<T | undefined> {
   if (browserTarget() === "chromium") {
     await protectLocalSettings();
@@ -40,7 +42,7 @@ export async function getPrivateSetting<T>(
   });
 }
 export async function setPrivateSetting(
-  key: "backend" | "vision" | "service-auth",
+  key: PrivateSettingKey,
   value: unknown,
 ) {
   if (browserTarget() === "chromium") {

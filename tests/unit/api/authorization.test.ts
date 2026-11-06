@@ -36,10 +36,21 @@ import {
 } from "../../../apps/api/src/server";
 import type { NavigationModel } from "../../../apps/api/src/capabilities";
 import {
+  providerConnectionSelection,
+  providerConnectionSchema,
+  providerConnectionsSchema,
+  PROVIDER_CATALOG_REVISION,
+  getProviderDefinition,
+} from "../../../packages/navigation-core/contracts-providers";
+import { ProviderConnectionService } from "../../../apps/api/src/application/provider-connections";
+import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
+import { providerConnectionStoreFixture } from "../../support/provider-connection-store";
+import {
   NavigationTransportService,
   type NavigationRequestTransaction,
   type NavigationEvaluationPolicy,
   type NavigationEvaluationOperation,
+  type NavigationInferencePolicy,
 } from "../../../apps/api/src/application/navigation";
 import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-navigation-model";
 import { ModelError } from "../../../apps/api/src/application/model-contracts";
@@ -76,6 +87,7 @@ import {
 import {
   creditHistoryPageSchema,
   creditUsagePageSchema,
+  creditUsagePageV2Schema,
   fakeDevelopmentChargingPolicy,
   workspaceCreditsSchema,
 } from "../../../packages/navigation-core/contracts-credits";
@@ -158,6 +170,7 @@ async function fixture(
   plansEnvironment?: "development" | "production",
   savedDataEnvironment?: "development" | "production",
   accountEnabled = false,
+  providerConnectionsEnabled: false | "write" | "read" = false,
 ) {
   const options = parseServiceConfig({
     NODE_ENV: "production",
@@ -525,6 +538,13 @@ async function fixture(
     },
   };
   const identity = new IdentityService(options.identity!, store, provider);
+  const providerConnections = providerConnectionsEnabled
+    ? providerConnectionStoreFixture(account.id)
+    : undefined;
+  const providerService =
+    providerConnectionsEnabled === "read" && providerConnections
+      ? new ProviderConnectionService(providerConnections.store)
+      : providerConnections?.service;
   const csrf = identity.account(webSession).csrfToken!;
   webSession.csrfHash = identityHash(csrf);
   const authorization = new AuthorizationService(repositories);
@@ -650,6 +670,7 @@ async function fixture(
     [],
     {
       identity,
+      ...(providerService ? { providers: providerService } : {}),
       authorization,
       jobs,
       ...(analyticsEnabled
@@ -712,6 +733,7 @@ async function fixture(
     navigationRequests,
     job,
     session,
+    providerConnections,
     supportStore,
     supportRecord,
     file,
@@ -782,6 +804,264 @@ function delayedNavigation() {
   };
   return { model, entered, release };
 }
+
+describe("account provider-connection HTTP boundary", () => {
+  const base = "/api/v1/account/provider-connections";
+  const input = (apiKey = "synthetic-http-provider-key") => ({
+    provider: "openai",
+    model: getProviderDefinition("openai").model,
+    catalogRevision: PROVIDER_CATALOG_REVISION,
+    apiKey,
+  });
+  const setup = (mode: "write" | "read" = "write") =>
+    fixture(
+      false,
+      false,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      false,
+      mode,
+    );
+
+  it("checks current account proof and cookie CSRF before parsing credential bodies, independently of workspace consent or credits", async () => {
+    const f = await setup(),
+      create = vi.spyOn(f.providerConnections!.store, "create");
+    const malformed = (headers: Record<string, string> = {}) =>
+      f.app.inject({
+        method: "POST",
+        url: base,
+        headers: { "content-type": "application/json", ...headers },
+        payload: "{",
+      });
+    safeError(await malformed(), 401, "UNAUTHENTICATED");
+    safeError(await malformed(bearer), 401, "UNAUTHENTICATED");
+    safeError(
+      await malformed({
+        ...bearer,
+        [SERVICE_ACCOUNT_BINDING_HEADER]: randomUUID(),
+      }),
+      401,
+      "UNAUTHENTICATED",
+    );
+    const cookieHeaders = {
+      cookie: f.cookie,
+      origin: webOrigin,
+      [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+    };
+    safeError(await malformed(cookieHeaders), 403, "FORBIDDEN");
+    safeError(
+      await malformed({
+        ...cookieHeaders,
+        origin: "https://help.tholi.io",
+        "x-tholi-csrf": f.csrf,
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(create).not.toHaveBeenCalled();
+    f.membership.status = "revoked";
+    const response = await f.app.inject({
+      method: "POST",
+      url: base,
+      headers: { ...bearer, [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id },
+      payload: input(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers[SERVICE_ACCOUNT_BINDING_HEADER]).toBe(f.account.id);
+    const metadata = providerConnectionSchema.parse(response.json());
+    expect(metadata).toMatchObject({
+      status: "active",
+      revision: "1",
+      verifiedAt: null,
+    });
+    for (const secret of [
+      "synthetic-http-provider-key",
+      "sealedKey",
+      "ciphertext",
+      "accountId",
+    ])
+      expect(response.body).not.toContain(secret);
+    expect(create).toHaveBeenCalledOnce();
+    expect(f.repositories.transaction).not.toHaveBeenCalled();
+    const listed = await f.app.inject({ url: base, headers: cookieHeaders });
+    expect(listed.statusCode).toBe(200);
+    expect(providerConnectionsSchema.parse(listed.json()).items).toEqual([
+      metadata,
+    ]);
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base,
+        headers: { ...bearer, [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id },
+        payload: { ...input(), accountId: randomUUID() },
+      }),
+      400,
+      "INVALID_REQUEST",
+    );
+  });
+
+  it("returns only owned metadata across create, revision-checked key rotation, removal and reconnect without any model endpoint", async () => {
+    const f = await setup(),
+      headers = { ...bearer, [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id };
+    const response = await f.app.inject({
+      method: "POST",
+      url: base,
+      headers,
+      payload: input(),
+    });
+    expect(response.statusCode).toBe(200);
+    const created = providerConnectionSchema.parse(response.json()),
+      target = `${base}/${created.id}`;
+    expect(
+      f.providerConnections!.records.get(created.id)?.sealedKey,
+    ).not.toBeNull();
+    const foreign = await f.providerConnections!.service.create(
+      { accountId: randomUUID() },
+      input("synthetic-foreign-http-key"),
+      {
+        requestId: randomUUID(),
+        deadlineAt: Date.now() + 5000,
+        signal: new AbortController().signal,
+      },
+    );
+    const cookieHeaders = {
+      cookie: f.cookie,
+      origin: webOrigin,
+      "x-tholi-csrf": f.csrf,
+      [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+    };
+    safeError(
+      await f.app.inject({
+        method: "DELETE",
+        url: `${base}/${foreign.id}`,
+        headers: cookieHeaders,
+        payload: { expectedRevision: foreign.revision },
+      }),
+      409,
+      "CONFLICT",
+    );
+    expect(
+      f.providerConnections!.records.get(foreign.id)?.sealedKey,
+    ).not.toBeNull();
+    const replacement = {
+      expectedRevision: "1",
+      model: created.model,
+      catalogRevision: created.catalogRevision,
+      apiKey: "synthetic-rotated-http-key",
+    };
+    const updated = await f.app.inject({
+      method: "PATCH",
+      url: target,
+      headers: cookieHeaders,
+      payload: replacement,
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(providerConnectionSchema.parse(updated.json())).toMatchObject({
+      id: created.id,
+      revision: "2",
+      verifiedAt: null,
+    });
+    safeError(
+      await f.app.inject({
+        method: "PATCH",
+        url: target,
+        headers: cookieHeaders,
+        payload: replacement,
+      }),
+      409,
+      "CONFLICT",
+    );
+    const listed = providerConnectionsSchema.parse(
+      (await f.app.inject({ url: base, headers })).json(),
+    );
+    expect(listed.items).toHaveLength(1);
+    expect(listed.items[0].id).toBe(created.id);
+    const removed = await f.app.inject({
+      method: "DELETE",
+      url: target,
+      headers: cookieHeaders,
+      payload: { expectedRevision: "2" },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(providerConnectionSchema.parse(removed.json())).toMatchObject({
+      id: created.id,
+      status: "removed",
+      revision: "3",
+      verifiedAt: null,
+    });
+    expect(
+      f.providerConnections!.records.get(created.id)?.sealedKey,
+    ).toBeNull();
+    const reconnect = await f.app.inject({
+      method: "PATCH",
+      url: target,
+      headers: cookieHeaders,
+      payload: { ...replacement, expectedRevision: "3" },
+    });
+    expect(reconnect.statusCode).toBe(200);
+    expect(providerConnectionSchema.parse(reconnect.json())).toMatchObject({
+      id: created.id,
+      status: "active",
+      revision: "4",
+      verifiedAt: null,
+    });
+    for (const body of [
+      response.body,
+      updated.body,
+      removed.body,
+      reconnect.body,
+      JSON.stringify(listed),
+    ])
+      expect(body).not.toMatch(/synthetic-.*key|ciphertext|sealedKey/);
+    expect(f.app.hasRoute({ method: "POST", url: `${target}/verify` })).toBe(
+      false,
+    );
+    expect(f.app.hasRoute({ method: "POST", url: `${target}/test` })).toBe(
+      false,
+    );
+  });
+
+  it("keeps provider metadata and deletion available when key storage is disabled without advertising writable credentials", async () => {
+    const f = await setup("read"),
+      connection = await f.providerConnections!.create();
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json().capabilities;
+    expect(capabilities).toContain("provider-connections");
+    expect(capabilities).not.toContain("provider-connections-write");
+    const headers = {
+      ...bearer,
+      [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+    };
+    expect((await f.app.inject({ url: base, headers })).statusCode).toBe(200);
+    safeError(
+      await f.app.inject({
+        method: "POST",
+        url: base,
+        headers,
+        payload: input(),
+      }),
+      503,
+      "UNAVAILABLE",
+    );
+    const removed = await f.app.inject({
+      method: "DELETE",
+      url: `${base}/${connection.id}`,
+      headers,
+      payload: { expectedRevision: connection.revision },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(providerConnectionSchema.parse(removed.json()).status).toBe(
+      "removed",
+    );
+    expect(
+      f.providerConnections!.records.get(connection.id)?.sealedKey,
+    ).toBeNull();
+  });
+});
 
 describe("opt-in authenticated navigation transport", () => {
   const operatorMetadata = () => ({
@@ -1162,7 +1442,9 @@ describe("opt-in authenticated navigation transport", () => {
     const profiles = documentedBody.allOf.find(
       (part: any) => part.anyOf,
     )?.anyOf;
-    expect(profiles).toHaveLength(2);
+    expect(
+      profiles.map((profile: any) => profile.properties.profile.enum[0]),
+    ).toEqual(["fake", "operator-evaluation", "customer-funded"]);
     expect(
       common.properties.observation.properties.frames.items.properties.viewport
         .properties.width,
@@ -1376,6 +1658,77 @@ describe("opt-in authenticated navigation transport", () => {
         ).json(),
       ),
     ).toEqual({ requestId: input.requestId, status: "completed" });
+  });
+
+  it("customer profile replay returns retained metadata without reloading a removed provider or redispatching its model", async () => {
+    const f = await fixture(false, false);
+    grantNavigation(f);
+    const model = createFakeNavigationModel(),
+      infer = vi.spyOn(model, "infer"),
+      release = vi.fn(async () => {});
+    const prepare = vi.fn(async () => ({
+      model,
+      budget: {},
+      finish: vi.fn(async () => {}),
+      revalidate: release,
+    }));
+    const policy: NavigationInferencePolicy = { customerFunded: true, prepare };
+    const service = new NavigationTransportService(
+      f.repositories,
+      model,
+      policy,
+    );
+    const original = navigationInput();
+    const input = {
+      ...original,
+      profile: "customer-funded",
+      connection: providerConnectionSelection(
+        providerConnectionMetadataFixture(),
+      ),
+      retrieval: {
+        origin: "https://example.test",
+        snapshotDigest: "b".repeat(64),
+      },
+    };
+    const context = () => ({
+      requestId: randomUUID(),
+      deadlineAt: Date.now() + 5000,
+      signal: new AbortController().signal,
+    });
+    const first = await service.request(
+      f.session,
+      f.workspace.id,
+      input,
+      context(),
+      async () => {},
+    );
+    expect(first.status).toBe("completed");
+    expect(infer).toHaveBeenCalledOnce();
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(release).toHaveBeenCalledOnce();
+    prepare.mockRejectedValue(new ModelError("STALE_CONTEXT"));
+    release.mockRejectedValue(new ModelError("STALE_CONTEXT"));
+    const replay = await service.request(
+      f.session,
+      f.workspace.id,
+      input,
+      context(),
+      async () => {},
+    );
+    expect(replay).toEqual({
+      requestId: input.requestId,
+      status: "completed",
+      replayed: true,
+    });
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(infer).toHaveBeenCalledOnce();
+    expect(release).toHaveBeenCalledOnce();
+    expect(f.navigationRequests.get(input.requestId)).not.toHaveProperty(
+      "decision",
+    );
+    expect(f.navigationRequests.get(input.requestId)).not.toHaveProperty(
+      "observation",
+    );
   });
 
   it("keeps the original active request through a duplicate and acknowledges cancellation after consent withdrawal", async () => {
@@ -2123,7 +2476,7 @@ describe("saved-data HTTP boundary", () => {
     );
     expect(f.store.listSessions).not.toHaveBeenCalled();
   });
-  it("registers the ten real library operations, admits all four typed artifacts and binds PATCH identities", async () => {
+  it("registers the fourteen real library operations, admits all four typed artifacts and binds PATCH identities", async () => {
     const f = await fixture(
       true,
       false,
@@ -2204,6 +2557,10 @@ describe("saved-data HTTP boundary", () => {
         "getSavedArtifactChanges",
         "importSavedArtifacts",
         "getSavedDataStorageUsage",
+        "getNavigationKnowledgeSiteSettings",
+        "updateNavigationKnowledgeSiteSettings",
+        "retrieveNavigationKnowledge",
+        "forgetNavigationKnowledgeSite",
       ].sort(),
     );
     const storage = await f.app.inject({
@@ -2662,6 +3019,43 @@ describe("product plans", () => {
 });
 
 describe("credit accounting reads", () => {
+  it("negotiates the versioned usage view explicitly while retaining the default strict response", async () => {
+    const f = await fixture(false, false, undefined, undefined, true);
+    const path = `/api/v1/workspaces/${f.workspace.id}/usage`;
+    const extended = await f.app.inject({
+      url: path + "?schemaVersion=2",
+      headers: bearer,
+    });
+    expect(extended.statusCode).toBe(200);
+    expect(creditUsagePageV2Schema.parse(extended.json())).toMatchObject({
+      schemaVersion: 2,
+      items: [
+        {
+          provider: "fake",
+          fundingSource: "managed",
+          usageVersion: 1,
+          customerUsdMicros: null,
+          reasoningOutputUnits: null,
+        },
+      ],
+    });
+    expect(f.scoped.listUsage).toHaveBeenLastCalledWith({ limit: 50 }, 2);
+    const legacy = await f.app.inject({ url: path, headers: bearer });
+    expect(legacy.statusCode).toBe(200);
+    expect(creditUsagePageSchema.safeParse(legacy.json()).success).toBe(true);
+    expect(legacy.json()).not.toHaveProperty("schemaVersion");
+    expect(legacy.json().items[0]).not.toHaveProperty("fundingSource");
+    safeError(
+      await f.app.inject({ url: path + "?schemaVersion=3", headers: bearer }),
+      400,
+      "INVALID_REQUEST",
+    );
+    safeError(
+      await f.app.inject({ url: path + "?schemaVersion=2" }),
+      401,
+      "UNAUTHENTICATED",
+    );
+  });
   it("keeps exhausted balances and history readable without inference consent and preserves exact quantities", async () => {
     const f = await fixture(false, false, undefined, undefined, true);
     const base = `/api/v1/workspaces/${f.workspace.id}`;

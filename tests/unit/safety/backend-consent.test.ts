@@ -13,6 +13,8 @@ import {
 } from "../../../apps/extension/src/platform/backend-client";
 import { fixture } from "../../integration/nlp/fixtures";
 import type { RecognitionInput } from "../../../packages/vision/contracts";
+import { mergeObservation } from "../../../packages/site-memory";
+import { siteKnowledgeSchema } from "../../../packages/navigation-core/contracts";
 
 const settings = {
   enabled: true,
@@ -63,6 +65,29 @@ test("Firefox requests backend host and declared optional data consent in the us
     data_collection: backendDataPermissions,
   });
   await expect(pending).resolves.toBe(true);
+});
+
+test("local graph completeness evidence never changes the legacy private-backend knowledge wire", async () => {
+  contains.mockResolvedValue(true);
+  fetch.mockImplementation(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/health")
+        ? { protocols: [2], capabilities: ["settings-navigation"] }
+        : { suggestions: [] },
+  }));
+  const request = input(),
+    memory = mergeObservation(undefined, request.observation);
+  expect(memory.pages[0].complete).toBe(true);
+  await expect(backendNlp(request, true, memory)).resolves.toEqual([]);
+  const sent = JSON.parse(
+    fetch.mock.calls.find(([url]) => String(url).endsWith("/knowledge"))![1]
+      .body,
+  );
+  expect(siteKnowledgeSchema.safeParse(sent).success).toBe(true);
+  expect(sent.pages[0]).not.toHaveProperty("complete");
+  expect(sent.states[0]).not.toHaveProperty("complete");
+  expect(memory.pages[0].complete).toBe(true);
 });
 
 test("denied or revoked Firefox consent prevents planning, OCR and mirror deletion requests", async () => {

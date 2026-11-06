@@ -62,5 +62,9 @@ export function useAccountOperation(account: ReturnType<typeof useAccount>) {
     error: visible.error,
     notice: visible.notice,
     run,
+    resetFeedback() {
+      if (!lifetime.current.running && lifetime.current.scope === scope)
+        setState({ scope, busy: false, error: "", notice: "" });
+    },
   };
 }

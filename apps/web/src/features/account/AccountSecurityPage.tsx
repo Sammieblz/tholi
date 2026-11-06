@@ -318,7 +318,15 @@ export function AccountSecurityPage({
       )}
       {visibleAvailability.status === "ready" &&
         (visibleAvailability.capabilities.includes("account-export") ? (
-          <AccountExports />
+          <AccountExports
+            schemaVersion={
+              visibleAvailability.capabilities.includes(
+                "account-export-schema-2",
+              )
+                ? 2
+                : undefined
+            }
+          />
         ) : (
           <p>
             Account export is not available from this service. You can still use

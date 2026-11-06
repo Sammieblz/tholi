@@ -19,6 +19,8 @@ import { runQuotaChecks } from "./quotas-checks";
 import { runPlanChecks } from "./plans-checks";
 import { runSavedDataChecks } from "./saved-data-checks";
 import { runAccountChecks } from "./account-checks";
+import { runProviderConnectionChecks } from "./provider-connection-checks";
+import { runCustomerInferenceChecks } from "./customer-inference-checks";
 import {
   beginJourney,
   saveTask,
@@ -1625,6 +1627,8 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     );
 
     await runQuotaChecks(runtime, migration, record, worker);
+    await runProviderConnectionChecks(runtime, migration, record, worker);
+    await runCustomerInferenceChecks(runtime, migration, record, worker);
     await runPlanChecks(runtime, migration, record, worker);
     await runSavedDataChecks(runtime, migration, record, worker);
     await runAccountChecks(runtime, migration, record, worker);

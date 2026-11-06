@@ -164,23 +164,123 @@ still optional: it accepts OTLP HTTP and writes local debug output; send synthet
 data only. Its production observability adapter belongs to the telemetry ticket.
 Read generated storage credentials from `.env`; do not copy them into client bundles.
 
-The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. Ordinary
-HTTP/Compose remains cloud-free, without a cloud navigation endpoint. Configured identity adds
+The service configuration defaults to `THOLI_MODEL_PROVIDER=fake`. Default
+HTTP/Compose remains cloud-free. Configured identity adds
 accounts, session security, tenant policy, durable jobs and configured support,
-without cloud navigation. The typed deterministic fake and Vertex/Gemini adapter
+without enabling a hosted model. The typed deterministic fake and Vertex/Gemini adapter
 are available through the separate [operator model experiment](service-models.md).
 The legacy private API keeps
 its existing local NLP/OCR behavior independently.
 
-`infra/local/compose.gemini.yaml` is a separate explicit opt-in configuration. It
+`infra/local/compose.gemini.yaml` is a separate operator experiment configuration. It
 requires spend-limit and opt-in settings. Ordinary service startup **rejects live
 inference**, even when those settings are supplied; the experiment does not enable
-Compose or browser transmission. That transport and purpose-specific consent
-belong to [#40](https://github.com/Sammieblz/tholi/issues/40). Do not enable network
-egress or add provider credentials to the default profile. An operator experiment
+Compose or browser transmission. The separate customer-provider profile below
+does not enable managed Gemini. Do not add provider credentials or general internet
+egress to the default profile. An operator experiment
 requires separate exact-data and bounded-spending approval, ADC and a durable
 single-use approval store. Its reservation is separate from the production
 quota/credit ledger in [#44](https://github.com/Sammieblz/tholi/issues/44).
+
+## Customer providers and private learning
+
+The default stack and deterministic tests require no provider credentials and
+make no paid model calls. `infra/local/compose.byok.yaml` is an explicit, separate
+profile for signed-in users who choose to fund requests through their own provider.
+It does not enable managed Gemini, paid plans, an automatic connection test or
+community learning. Keep it disabled for development that must spend zero dollars.
+
+The operator supplies a dedicated JSON encryption keyring outside the repository,
+website assets, extension assets and container image. It is not a provider API key:
+
+```json
+{
+  "version": 1,
+  "activeVersion": "development-v1",
+  "keys": {
+    "development-v1": "REPLACE_WITH_A_CANONICAL_BASE64URL_32_BYTE_RANDOM_KEY"
+  }
+}
+```
+
+Generate a random 32-byte key without printing it. Protect the file with private
+permissions or Windows ACLs, allow the API's non-root user to read it, and retain
+an encrypted backup with the database backup. Never reuse an identity-flow,
+file-link, database or provider secret. Losing the keyring makes its ciphertext
+unreadable. To rotate the operator key, add a new version and change
+`activeVersion`; retain older versions until their stored credentials have been
+replaced or removed and any retained-backup recovery requirements are resolved.
+Selecting a new active version does not re-encrypt old rows.
+
+Create an ignored `.env.byok` containing only the absolute keyring path:
+
+```dotenv
+THOLI_BYOK_KEYRING_HOST_FILE=/absolute/private/path/tholi-provider-keyring.json
+```
+
+Review and start the overlay explicitly from the repository root:
+
+```sh
+docker compose --env-file .env --env-file .env.byok -f compose.yaml -f infra/local/compose.byok.yaml --profile byok config --quiet
+docker compose --env-file .env --env-file .env.byok -f compose.yaml -f infra/local/compose.byok.yaml --profile byok up --build --detach --wait
+```
+
+Use those same files/profile for subsequent Compose operations on this deployment.
+The `local:*` convenience commands select the default stack; they do not implicitly
+select the BYOK overlay. The overlay sets `THOLI_BYOK_ENABLED=true`, mounts the
+keyring read-only at `THOLI_BYOK_KEYRING_FILE`, enables the existing navigation
+transport and uses Node's environment-proxy support. No keyring enters the worker.
+
+The API stays on internal networks. A separate CONNECT tunnel permits only TLS
+port 443 on `api.openai.com`, `api.anthropic.com` and `openrouter.ai`, derived from
+the adapter's fixed endpoint catalog. It rejects private/reserved DNS results,
+other destinations and other ports. The tunnel cannot decrypt provider TLS and
+does not log request content. Local SQL, OIDC, mail and object-storage traffic
+bypass it. This is an egress boundary, not a general outbound proxy or an API
+gateway that owns application authorization.
+
+Migrations leave `tholi.inference_control.customer_enabled=false` independently
+of the managed-model switch. The keyring and overlay alone do not enable inference.
+An operator must separately authorize customer-funded dispatch before changing
+that SQL control through the migration role. Runtime and worker roles cannot enable
+it. Leave it false for zero-spend verification; injected responses and loopback HTTP
+fixtures cover the adapter protocols without provider accounts. No configuration
+or smoke test here authorizes a live request.
+
+When the service is deliberately made available, users manage one connection per
+provider at `/account/providers`. Saving, refreshing or replacing a key makes no
+model call. The first catalog admits OpenAI Responses `gpt-5.6-terra`, Anthropic
+Messages `claude-sonnet-5-5`, and OpenRouter Chat Completions
+`anthropic/claude-sonnet-5.5`. The OpenRouter profile permits Anthropic only, denies
+data collection in its routing request, requires supported parameters and disables
+fallback. These filters do not establish verified zero retention or a processing
+country. Provider terms and account settings still apply.
+
+The extension receives metadata, never the provider key. Users explicitly select
+the current connection in **Your AI provider**, allow page-context processing, and
+separately choose masked images. Replacing or removing a key invalidates old
+selections. A lost save response requires a metadata refresh, not automatic secret
+resubmission. Removal clears Tholi's stored ciphertext; revocation at the provider
+is a separate action.
+
+Customer requests use the existing admission and usage ledger with a zero managed
+credit hold. They still have account/workspace, daily, minute, concurrency, journey,
+token, image, byte and deadline limits. The initial development policy allows six
+generations per 24-hour period, two per minute, one foreground request and two per
+journey, with at most 32,768 input and 2,048 total output tokens. These are
+configurable development policies, not a commercial plan or price promise. Unknown
+usage fences further automatic dispatch; reconnecting does not clear that fence.
+
+Private cloud learning is independent of provider selection. Collection and reuse
+both start off for each account/workspace/website. An explicit opt-in permits only
+future sanitized interface structure and independently verified transitions;
+existing local knowledge is never uploaded automatically. Retrieval supplies
+bounded historical hints that must bind to current controls. Disabling reuse or
+changing the saved evidence invalidates an in-flight snapshot. See the
+[privacy boundary](../architecture/privacy.md#private-cloud-knowledge) and
+[consumer controls](../help/security.md#private-website-learning).
+
+## Operator comparison database access
 
 For the separately admitted [#43 comparison](testing/perception-comparison.md),
 `infra/local/compose.evaluation.yaml` adds a fixed-destination SQL proxy for

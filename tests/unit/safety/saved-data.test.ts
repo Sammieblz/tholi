@@ -4,7 +4,8 @@ import {
   beginJourney,
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
-import type { SiteMemory } from "../../../packages/page-model";
+import type { PageSnapshot, SiteMemory } from "../../../packages/page-model";
+import { mergeObservation } from "../../../packages/site-memory";
 import {
   projectSavedConversation,
   projectSavedDataArtifact,
@@ -19,8 +20,326 @@ import {
   savedDataRecordSchema,
 } from "../../../packages/navigation-core/contracts-saved-data";
 import { sanitizeSavedText } from "../../../packages/privacy-redaction";
+import {
+  projectNavigationKnowledge,
+  navigationKnowledgeQueryFromObservation,
+} from "../../../packages/navigation-core/navigation-knowledge-projection";
+import { navigationModelObservation } from "../../support/navigation-model-fixture";
+import {
+  navigationKnowledgeControlKey,
+  navigationKnowledgeStateKey,
+} from "../../../packages/navigation-core/contracts-navigation-knowledge";
 
 describe("explicit saved-data privacy boundary", () => {
+  it("retrieval queries keep only sanitized public structure and never reuse native identity or private URL paths", () => {
+    const observation = navigationModelObservation();
+    observation.omissions.controls = 0;
+    observation.context.goal = "Find alice@example.test settings";
+    const query = navigationKnowledgeQueryFromObservation(
+      observation,
+      "https://example.test",
+    );
+    expect(query.controls).toEqual([
+      { role: "button", label: "Settings", kind: "control" },
+    ]);
+    expect(query.query).not.toContain("alice@example.test");
+    expect(JSON.stringify(query)).not.toMatch(
+      /native:root-document|controlId|documentId|windowId|tabId|frameId|stamp|signature|viewport/,
+    );
+    for (const origin of [
+      "https://example.test/private-path",
+      "https://example.test?private=value",
+      "https://example.test#private",
+      "file:///private",
+    ])
+      expect(() =>
+        navigationKnowledgeQueryFromObservation(observation, origin),
+      ).toThrow();
+    expect(observation.native.documentId).toBe("native:root-document");
+  });
+  it("learns only verified ordinary transitions and regenerates cloud keys without private paths or native identities", async () => {
+    const now = Date.now();
+    const page = (
+      key: string,
+      label: string,
+      kind: "expand" | "navigation",
+    ) => ({
+      key,
+      stateKey: key,
+      path: "/PRIVATE_PATH",
+      templateKey: "NATIVE_TEMPLATE",
+      fingerprint: "NATIVE_FINGERPRINT",
+      version: 1,
+      lastSeen: now,
+      complete: true,
+      controls: [
+        {
+          signature: `NATIVE_${key}`,
+          role: kind === "navigation" ? "link" : "button",
+          label,
+          kind,
+          risk: "ordinary" as const,
+          visible: true,
+          enabled: true,
+          active: true,
+          lastSeen: now,
+          context: "PRIVATE_INPUT",
+          group: "PRIVATE_GROUP",
+          description: "PRIVATE_DESCRIPTION",
+          options: [{ label: "PRIVATE_VALUE", selected: true, enabled: true }],
+        },
+      ],
+    });
+    const a = page("NATIVE_FROM", "Settings", "expand"),
+      b = page("NATIVE_TO", "Help", "navigation");
+    const source: SiteMemory = {
+      schemaVersion: 1,
+      origin: "https://example.test",
+      version: 1,
+      lastSeen: now,
+      templates: [],
+      pages: [a, b],
+      states: [a, b],
+      transitions: [
+        {
+          from: a.stateKey,
+          to: b.stateKey,
+          signature: a.controls[0].signature,
+          label: "Settings",
+          evidence: "observed",
+          active: true,
+          lastVerified: now,
+          requiresFreshBinding: true,
+          action: { kind: "control", signature: a.controls[0].signature },
+        },
+        {
+          from: b.stateKey,
+          to: a.stateKey,
+          signature: b.controls[0].signature,
+          label: "Help",
+          evidence: "inferred",
+          active: true,
+          lastVerified: now,
+        },
+      ],
+    };
+    const graph = await projectNavigationKnowledge(source, now);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.controls.map((control) => control.label).sort()).toEqual([
+      "Help",
+      "Settings",
+    ]);
+    expect(JSON.stringify(graph)).not.toMatch(
+      /PRIVATE_|NATIVE_|signature|path|description|options|reference/,
+    );
+    expect(source.pages[0].path).toBe("/PRIVATE_PATH");
+    expect(
+      (await projectNavigationKnowledge(source, now, now + 1)).edges,
+    ).toHaveLength(0);
+    expect(
+      (
+        await projectNavigationKnowledge(
+          {
+            ...source,
+            pages: source.pages.map((page) => ({ ...page, complete: false })),
+            states: [],
+          },
+          now,
+        )
+      ).edges,
+    ).toHaveLength(0);
+  });
+  it("keeps complete hidden-menu states distinct and learns their edge only from independently supplied transition evidence", async () => {
+    const now = Date.now();
+    const before: PageSnapshot = {
+      origin: "https://example.test",
+      path: "/",
+      pageKey: "local-page",
+      stateKey: "local-page:closed",
+      templateKey: "local-template",
+      fingerprint: "closed-menu",
+      revision: 1,
+      language: "en",
+      layout: "wide",
+      partial: false,
+      controls: [
+        {
+          id: "w0000000000000001-1",
+          signature: "local-settings",
+          role: "button",
+          label: "Settings",
+          context: "",
+          group: "",
+          kind: "expand",
+          risk: "ordinary",
+          visible: true,
+          enabled: true,
+          inViewport: true,
+          revealIds: ["w0000000000000001-2"],
+          expanded: false,
+        },
+        {
+          id: "w0000000000000001-2",
+          signature: "local-help",
+          role: "link",
+          label: "Help",
+          context: "",
+          group: "",
+          kind: "navigation",
+          risk: "ordinary",
+          visible: false,
+          enabled: true,
+          inViewport: false,
+          revealIds: [],
+        },
+      ],
+    };
+    const after: PageSnapshot = {
+      ...before,
+      stateKey: "local-page:open",
+      fingerprint: "open-menu",
+      revision: 2,
+      controls: before.controls.map((control, index) => ({
+        ...control,
+        visible: true,
+        inViewport: true,
+        ...(index === 0 ? { expanded: true } : {}),
+      })),
+    };
+    const initial = mergeObservation(undefined, before, undefined, now - 1),
+      observedOnly = mergeObservation(initial, after, undefined, now),
+      verified = mergeObservation(
+        initial,
+        after,
+        {
+          from: before.stateKey,
+          to: after.stateKey,
+          signature: before.controls[0].signature,
+          label: "Settings",
+        },
+        now,
+      );
+    expect((await projectNavigationKnowledge(observedOnly, now)).edges).toEqual(
+      [],
+    );
+    const graph = await projectNavigationKnowledge(verified, now);
+    expect(graph.states).toHaveLength(2);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0].operation).toBe("reveal");
+    const queryFor = (page: PageSnapshot) => {
+      const observation = navigationModelObservation();
+      observation.context.goal = "Find Help";
+      observation.omissions = {
+        frames: 0,
+        regions: 0,
+        controls: 0,
+        reasons: [],
+      };
+      observation.controls = page.controls.map((control) => ({
+        reference: { ...observation.native, controlId: control.id },
+        role: control.role as "button" | "link",
+        label: control.label,
+        kind: control.kind,
+        risk: control.risk,
+        eligible: control.visible && control.enabled && !control.occluded,
+        visible: control.visible,
+        enabled: control.enabled,
+        occluded: control.occluded ?? false,
+        inViewport: control.inViewport,
+        revealIds: control.revealIds,
+      }));
+      return navigationKnowledgeQueryFromObservation(observation, page.origin);
+    };
+    const stateFor = async (page: PageSnapshot) =>
+      navigationKnowledgeStateKey(
+        await Promise.all(
+          queryFor(page).controls.map(navigationKnowledgeControlKey),
+        ),
+      );
+    expect(queryFor(before).controls.map((control) => control.label)).toEqual([
+      "Settings",
+    ]);
+    expect(queryFor(after).controls.map((control) => control.label)).toEqual([
+      "Settings",
+      "Help",
+    ]);
+    expect(graph.edges[0]).toMatchObject({
+      from: await stateFor(before),
+      to: await stateFor(after),
+    });
+    const ambiguous = {
+      ...after,
+      controls: [
+        ...after.controls,
+        {
+          ...after.controls[1],
+          id: "w0000000000000001-3",
+          signature: "other-local-help",
+          label: "help",
+        },
+      ],
+    };
+    expect(
+      queryFor(ambiguous).controls.map((control) => control.label),
+    ).toEqual(["Settings"]);
+    const ambiguousGraph = await projectNavigationKnowledge(
+      mergeObservation(
+        initial,
+        ambiguous,
+        {
+          from: before.stateKey,
+          to: after.stateKey,
+          signature: before.controls[0].signature,
+          label: "Settings",
+        },
+        now,
+      ),
+      now,
+    );
+    expect(ambiguousGraph.controls.map((control) => control.label)).toEqual([
+      "Settings",
+    ]);
+    expect(ambiguousGraph.edges).toEqual([]);
+    for (const unavailable of [{ enabled: false }, { occluded: true }]) {
+      const changed = {
+        ...before,
+        controls: before.controls.map((control) => ({
+          ...control,
+          ...unavailable,
+        })),
+      };
+      expect(queryFor(changed).controls).toEqual([]);
+      const unavailableMemory = mergeObservation(
+        undefined,
+        changed,
+        undefined,
+        now,
+      );
+      expect(
+        (await projectNavigationKnowledge(unavailableMemory, now)).states,
+      ).toEqual([]);
+    }
+    const offscreen = {
+      ...before,
+      controls: before.controls.map((control) => ({
+        ...control,
+        inViewport: false,
+      })),
+    };
+    expect(await stateFor(offscreen)).toBe(await stateFor(before));
+    const partial = mergeObservation(
+      initial,
+      { ...after, partial: true },
+      {
+        from: before.stateKey,
+        to: after.stateKey,
+        signature: before.controls[0].signature,
+        label: "Settings",
+      },
+      now,
+    );
+    expect((await projectNavigationKnowledge(partial, now)).edges).toEqual([]);
+  });
   it("keeps a usable public destination while removing local identities, form values and actionable history", () => {
     const task = saveTask(beginJourney("Open Help", "https://example.test"));
     task.objective.value = "FORM_SECRET";

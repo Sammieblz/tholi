@@ -33,6 +33,7 @@ const client = {
   discardConflict: vi.fn(),
 };
 const request = vi.fn();
+const setSavedDataView = vi.fn();
 const session = (id: number) => ({
   account: {
     id: `00000000-0000-4000-8000-${String(id).padStart(12, "0")}`,
@@ -77,6 +78,7 @@ beforeEach(() => {
     session: session(1),
     savedData: client,
     request,
+    setSavedDataView,
   };
   container = document.createElement("div");
   document.body.append(container);
@@ -381,6 +383,7 @@ it("a late account-A detail cannot render or touch the current account-B cache",
     session: session(10),
     savedData: client,
     request,
+    setSavedDataView,
   };
   request.mockResolvedValueOnce({
     capabilities: ["saved-data", "saved-data-export", "account-binding"],

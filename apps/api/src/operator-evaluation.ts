@@ -14,6 +14,7 @@ import {
   ModelError,
   modelErrorCodeSchema,
   modelUsageSchema,
+  modelUsageTotals,
   type ModelOutcome,
   type ModelUsage,
 } from "./application/model-contracts";
@@ -205,15 +206,16 @@ function auditRecords(records: EvaluationRecord[]) {
           !usage ||
           usage.provider !== header.provider ||
           usage.model !== header.model ||
-          (header.provider === "vertex" && usage.promptTokens === 0) ||
+          (header.provider === "vertex" &&
+            modelUsageTotals(usage).inputTokens === 0) ||
           !claim.authorized ||
           event.costUsdMicros !==
             (header.provider === "fake"
               ? 0
               : estimateModelCostUsdMicros(
                   "global",
-                  usage.promptTokens,
-                  usage.outputTokens + usage.thoughtTokens,
+                  modelUsageTotals(usage).inputTokens,
+                  modelUsageTotals(usage).outputTokens,
                 ))
         )
           throw new ModelError("CONFIGURATION");
@@ -635,7 +637,8 @@ export async function openOperatorEvaluation(options: {
             !state.authorized ||
             parsed.data.provider !== plan.provider ||
             parsed.data.model !== plan.model.id ||
-            (plan.provider === "vertex" && parsed.data.promptTokens === 0)
+            (plan.provider === "vertex" &&
+              modelUsageTotals(parsed.data).inputTokens === 0)
           ) {
             outcome = "unknown";
             reason = "invalid-usage";
@@ -646,14 +649,14 @@ export async function openOperatorEvaluation(options: {
                 ? 0
                 : estimateModelCostUsdMicros(
                     "global",
-                    usage.promptTokens,
-                    usage.outputTokens + usage.thoughtTokens,
+                    modelUsageTotals(usage).inputTokens,
+                    modelUsageTotals(usage).outputTokens,
                   );
             if (
               costUsdMicros > reservation ||
-              usage.promptTokens > plan.budget.maxInputTokens ||
-              usage.outputTokens + usage.thoughtTokens >
-                plan.budget.maxOutputTokens
+              modelUsageTotals(usage).inputTokens >
+                plan.budget.maxInputTokens ||
+              modelUsageTotals(usage).outputTokens > plan.budget.maxOutputTokens
             )
               reason = "over-reservation";
           }

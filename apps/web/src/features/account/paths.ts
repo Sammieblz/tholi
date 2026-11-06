@@ -22,6 +22,13 @@ export const ACCOUNT_SECTIONS = [
       "Review your available credits, usage, current limits and storage allowance.",
   },
   {
+    path: "/account/providers",
+    label: "AI connections",
+    title: "AI connections",
+    description:
+      "Manage your private AI provider connections for customer-funded guidance.",
+  },
+  {
     path: "/account/security",
     label: "Security",
     title: "Account and security",

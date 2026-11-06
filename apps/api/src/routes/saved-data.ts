@@ -2,22 +2,36 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import {
   SAVED_DATA_LIMITS,
-  savedDataChangesSchema,
-  savedDataCreateSchema,
   savedDataDeleteInputSchema,
   savedDataExportInputSchema,
   savedDataExportResultSchema,
-  savedDataImportInputSchema,
-  savedDataImportResultSchema,
-  savedDataListQuerySchema,
-  savedDataPageSchema,
-  savedDataRecordSchema,
-  savedDataUpdateSchema,
   savedDataStorageUsageSchema,
 } from "../../../../packages/navigation-core/contracts-saved-data";
+import {
+  savedDataViewSchema,
+  savedDataViewQuerySchema,
+  savedDataNegotiatedListQuerySchema,
+  savedDataRecordV2Schema,
+  savedDataCreateV2Schema,
+  savedDataUpdateV2Schema,
+  savedDataPageV2Schema,
+  savedDataChangesV2Schema,
+  savedDataImportInputV2Schema,
+  savedDataImportResultV2Schema,
+} from "../../../../packages/navigation-core/contracts-saved-data";
+import {
+  navigationKnowledgeOriginSchema,
+  navigationKnowledgeQuerySchema,
+  navigationKnowledgeSiteSettingsSchema,
+  navigationKnowledgeSiteSettingsInputSchema,
+  retrievedNavigationKnowledgeSchema,
+  navigationKnowledgeForgetSiteInputSchema,
+  navigationKnowledgeForgetSiteResultSchema,
+} from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import { serviceSyncQuerySchema } from "../../../../packages/navigation-core/contracts-service";
 import type { IdentityService } from "../application/identity";
 import type { SavedDataService } from "../application/saved-data";
+import { AuthorizationError } from "../application/authorization";
 import { createIdentityAccess, identityRouteOptions } from "./identity-access";
 
 const workspaceParams = z.object({ workspaceId: z.string().uuid() }).strict();
@@ -48,11 +62,31 @@ export async function registerSavedDataApi(
       params: input.artifact ? artifactParams : workspaceParams,
       response,
       ...(input.body ? { body: input.body } : {}),
-      ...(input.query ? { query: input.query } : {}),
+      query: input.query ?? savedDataViewQuerySchema,
     });
   const workspace = (request: FastifyRequest) =>
     workspaceParams.parse(request.params).workspaceId;
   const artifacts = "/api/v1/workspaces/:workspaceId/artifacts";
+  const view = (request: FastifyRequest) =>
+    savedDataViewSchema.parse(
+      (request.query as { schemaVersion?: unknown } | undefined)
+        ?.schemaVersion ?? 1,
+    );
+  const query = (request: FastifyRequest) => {
+    const { schemaVersion: _view, ...value } = request.query as Record<
+      string,
+      unknown
+    >;
+    return value;
+  };
+  const requireV2 = (request: FastifyRequest) => {
+    if (view(request) !== 2)
+      throw new AuthorizationError(
+        400,
+        "INVALID_REQUEST",
+        "This operation requires saved-data schema version 2.",
+      );
+  };
 
   app.get(
     `${artifacts}/usage`,
@@ -69,16 +103,17 @@ export async function registerSavedDataApi(
     artifacts,
     {
       onRequest: protect(),
-      ...options("listSavedArtifacts", savedDataPageSchema, {
-        query: savedDataListQuerySchema,
+      ...options("listSavedArtifacts", savedDataPageV2Schema, {
+        query: savedDataNegotiatedListQuerySchema,
       }),
     },
     safe((request, _reply, context) =>
       savedData.list(
         protectedSession(request),
         workspace(request),
-        request.query,
+        query(request),
         context,
+        view(request),
       ),
     ),
   );
@@ -88,8 +123,8 @@ export async function registerSavedDataApi(
     {
       onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.itemBytes + 2048,
-      ...options("createSavedArtifact", savedDataRecordSchema, {
-        body: savedDataCreateSchema,
+      ...options("createSavedArtifact", savedDataRecordV2Schema, {
+        body: savedDataCreateV2Schema,
       }),
     },
     safe((request, _reply, context) =>
@@ -98,6 +133,7 @@ export async function registerSavedDataApi(
         workspace(request),
         request.body,
         context,
+        view(request),
       ),
     ),
   );
@@ -106,16 +142,17 @@ export async function registerSavedDataApi(
     `${artifacts}/search`,
     {
       onRequest: protect(),
-      ...options("searchSavedArtifacts", savedDataPageSchema, {
-        query: savedDataListQuerySchema,
+      ...options("searchSavedArtifacts", savedDataPageV2Schema, {
+        query: savedDataNegotiatedListQuerySchema,
       }),
     },
     safe((request, _reply, context) =>
       savedData.list(
         protectedSession(request),
         workspace(request),
-        request.query,
+        query(request),
         context,
+        view(request),
       ),
     ),
   );
@@ -135,15 +172,110 @@ export async function registerSavedDataApi(
         workspace(request),
         request.body,
         context,
+        view(request),
       ),
     ),
+  );
+
+  app.get(
+    `${artifacts}/site-settings`,
+    {
+      onRequest: protect(),
+      ...options(
+        "getNavigationKnowledgeSiteSettings",
+        navigationKnowledgeSiteSettingsSchema,
+        {
+          query: savedDataViewQuerySchema.extend({
+            origin: navigationKnowledgeOriginSchema,
+          }),
+        },
+      ),
+    },
+    safe((request, _reply, context) => {
+      requireV2(request);
+      return savedData.siteSettings(
+        protectedSession(request),
+        workspace(request),
+        navigationKnowledgeOriginSchema.parse(
+          (request.query as { origin: unknown }).origin,
+        ),
+        context,
+      );
+    }),
+  );
+  app.patch(
+    `${artifacts}/site-settings`,
+    {
+      onRequest: protect(true),
+      bodyLimit: 2048,
+      ...options(
+        "updateNavigationKnowledgeSiteSettings",
+        navigationKnowledgeSiteSettingsSchema,
+        {
+          body: navigationKnowledgeSiteSettingsInputSchema,
+        },
+      ),
+    },
+    safe((request, _reply, context) => {
+      requireV2(request);
+      return savedData.updateSiteSettings(
+        protectedSession(request),
+        workspace(request),
+        request.body,
+        context,
+      );
+    }),
+  );
+  app.delete(
+    `${artifacts}/site-settings`,
+    {
+      onRequest: protect(true),
+      bodyLimit: 2048,
+      ...options(
+        "forgetNavigationKnowledgeSite",
+        navigationKnowledgeForgetSiteResultSchema,
+        { body: navigationKnowledgeForgetSiteInputSchema },
+      ),
+    },
+    safe((request, _reply, context) => {
+      requireV2(request);
+      return savedData.forgetSite(
+        protectedSession(request),
+        workspace(request),
+        request.body,
+        context,
+      );
+    }),
+  );
+  app.post(
+    `${artifacts}/navigation-knowledge`,
+    {
+      onRequest: protect(true),
+      bodyLimit: 12288,
+      ...options(
+        "retrieveNavigationKnowledge",
+        retrievedNavigationKnowledgeSchema,
+        { body: navigationKnowledgeQuerySchema },
+      ),
+    },
+    safe((request, _reply, context) => {
+      requireV2(request);
+      return savedData.retrieveKnowledge(
+        protectedSession(request),
+        workspace(request),
+        request.body,
+        context,
+      );
+    }),
   );
 
   app.get(
     `${artifacts}/:artifactId`,
     {
       onRequest: protect(),
-      ...options("getSavedArtifact", savedDataRecordSchema, { artifact: true }),
+      ...options("getSavedArtifact", savedDataRecordV2Schema, {
+        artifact: true,
+      }),
     },
     safe((request, _reply, context) => {
       const params = artifactParams.parse(request.params);
@@ -152,6 +284,7 @@ export async function registerSavedDataApi(
         params.workspaceId,
         params.artifactId,
         context,
+        view(request),
       );
     }),
   );
@@ -161,9 +294,9 @@ export async function registerSavedDataApi(
     {
       onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.itemBytes + 2048,
-      ...options("updateSavedArtifact", savedDataRecordSchema, {
+      ...options("updateSavedArtifact", savedDataRecordV2Schema, {
         artifact: true,
-        body: savedDataUpdateSchema,
+        body: savedDataUpdateV2Schema,
       }),
     },
     safe((request, _reply, context) => {
@@ -174,6 +307,7 @@ export async function registerSavedDataApi(
         params.artifactId,
         request.body,
         context,
+        view(request),
       );
     }),
   );
@@ -183,7 +317,7 @@ export async function registerSavedDataApi(
     {
       onRequest: protect(true),
       bodyLimit: 1024,
-      ...options("deleteSavedArtifact", savedDataRecordSchema, {
+      ...options("deleteSavedArtifact", savedDataRecordV2Schema, {
         artifact: true,
         body: savedDataDeleteInputSchema,
       }),
@@ -196,6 +330,7 @@ export async function registerSavedDataApi(
         params.artifactId,
         request.body,
         context,
+        view(request),
       );
     }),
   );
@@ -204,16 +339,19 @@ export async function registerSavedDataApi(
     "/api/v1/workspaces/:workspaceId/sync/changes",
     {
       onRequest: protect(),
-      ...options("getSavedArtifactChanges", savedDataChangesSchema, {
-        query: serviceSyncQuerySchema,
+      ...options("getSavedArtifactChanges", savedDataChangesV2Schema, {
+        query: serviceSyncQuerySchema.extend({
+          schemaVersion: savedDataViewSchema.optional(),
+        }),
       }),
     },
     safe((request, _reply, context) =>
       savedData.changes(
         protectedSession(request),
         workspace(request),
-        request.query,
+        query(request),
         context,
+        view(request),
       ),
     ),
   );
@@ -223,8 +361,8 @@ export async function registerSavedDataApi(
     {
       onRequest: protect(true),
       bodyLimit: SAVED_DATA_LIMITS.importBytes,
-      ...options("importSavedArtifacts", savedDataImportResultSchema, {
-        body: savedDataImportInputSchema,
+      ...options("importSavedArtifacts", savedDataImportResultV2Schema, {
+        body: savedDataImportInputV2Schema,
       }),
     },
     safe((request, _reply, context) =>
@@ -233,6 +371,7 @@ export async function registerSavedDataApi(
         workspace(request),
         request.body,
         context,
+        view(request),
       ),
     ),
   );

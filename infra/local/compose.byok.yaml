@@ -1,0 +1,49 @@
+# Explicit opt-in. The API stays on internal networks; only this destination-
+# restricted tunnel reaches the internet. It cannot decrypt provider HTTPS.
+services:
+  api:
+    networks: [application, database, provider-client]
+    environment:
+      THOLI_BYOK_ENABLED: "true"
+      THOLI_BYOK_KEYRING_FILE: /run/secrets/tholi-provider-keyring.json
+      THOLI_NAVIGATION_TRANSPORT_ENABLED: "true"
+      NODE_USE_ENV_PROXY: "1"
+      HTTPS_PROXY: http://provider-egress:8080
+      NO_PROXY: localhost,127.0.0.1,oidc,postgres,storage,telemetry,mail,api
+    volumes:
+      - ${THOLI_BYOK_KEYRING_HOST_FILE:?Choose a dedicated private keyring file}:/run/secrets/tholi-provider-keyring.json:ro
+    depends_on:
+      provider-egress: { condition: service_healthy }
+  provider-egress:
+    profiles: [byok]
+    image: ${COMPOSE_PROJECT_NAME:-tholi-local}-api:dev
+    user: "1000:1000"
+    command: [node, apps/api/dist/provider-egress.js]
+    networks: [provider-client, provider-egress]
+    environment:
+      NODE_OPTIONS: --max-old-space-size=32
+    logging: { driver: none }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    pids_limit: 16
+    mem_limit: 64m
+    cpus: 0.25
+    stop_grace_period: 10s
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          --input-type=module,
+          -e,
+          "const r=await fetch('http://127.0.0.1:8080/health',{signal:AbortSignal.timeout(2000)});process.exit(r.ok?0:1)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+networks:
+  provider-client:
+    internal: true
+  provider-egress:

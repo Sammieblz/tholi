@@ -67,13 +67,62 @@ export function validatePlatformReports(reports, buildTargets, options = {}) {
           "platform-firefox",
           "platform-vision",
         ]) ||
-      report.expected < 7 ||
+      report.expected < 9 ||
       report.expected !== report.configuredCount ||
       report.cases?.length !== report.expected ||
       new Set(report.cases.map((item) => item.id)).size !== report.expected ||
       report.cases.some((item) => item.status !== "passed")
     )
       throw Error("Complete native browser and capture cases are required.");
+    const privateLearning = report.cases.flatMap((item) =>
+      item.privateLearning ? [item.privateLearning] : [],
+    );
+    if (
+      privateLearning.length !== 2 ||
+      JSON.stringify(privateLearning.map((item) => item.target).sort()) !==
+        JSON.stringify(["chromium", "firefox"]) ||
+      privateLearning.some(
+        (item) =>
+          item.known?.completedTasksByDom !== 1 ||
+          item.known.decisions !== 0 ||
+          item.known.liveProviderCalls !== 0 ||
+          item.known.liveProviderTokens !== 0 ||
+          item.changedStructure?.fakeDecisions !== 1 ||
+          item.changedStructure.liveProviderCalls !== 0 ||
+          item.changedStructure.liveProviderTokens !== 0 ||
+          item.localStoppedNewRequests !== true ||
+          !Array.isArray(item.layouts) ||
+          item.layouts.length !== 8 ||
+          ["light", "dark"].some((theme) => {
+            const layouts = item.layouts.filter(
+              (layout) => layout.theme === theme,
+            );
+            return (
+              layouts.length !== 4 ||
+              new Set(layouts.map((layout) => layout.viewport)).size !== 4
+            );
+          }) ||
+          item.layouts.some(
+            (layout) =>
+              !Number.isFinite(layout.viewport) ||
+              layout.viewport <= 0 ||
+              layout.overflow ||
+              !layout.focused ||
+              !layout.reduced ||
+              layout.outline === "none" ||
+              !Number.isFinite(layout.outlineWidth) ||
+              layout.outlineWidth < 2 ||
+              !Array.isArray(layout.targets) ||
+              !layout.targets.length ||
+              layout.targets.some(
+                (height) => !Number.isFinite(height) || height < 44,
+              ),
+          ),
+      )
+    )
+      throw Error(
+        "Both native browsers must verify private learning, zero-call reuse and current UI behavior.",
+      );
     if (
       !report.browsers?.some((browser) => browser.target === "chromium") ||
       !report.browsers.some((browser) => browser.target === "firefox")

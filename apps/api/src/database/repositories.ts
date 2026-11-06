@@ -7,7 +7,6 @@ import {
 } from "../../../../packages/page-model";
 import { parameterizedTask } from "../../../../packages/navigation-core/privacy";
 import {
-  savedDataRecordSchema,
   savedDataMutationSchema,
   savedDataDeleteInputSchema,
   savedDataImportInputSchema,
@@ -15,15 +14,32 @@ import {
   savedDataExportInputSchema,
   savedDataImportHash,
   savedDataStorageUsageSchema,
-  type SavedDataRecord,
-  type SavedDataMutation,
+  savedDataRecordV2Schema,
+  savedDataMutationV2Schema,
+  savedDataImportInputV2Schema,
+  savedDataImportHashV2,
+  type SavedDataView,
+  type SavedDataRecordV2,
+  type SavedDataMutationV2,
+  type SavedDataImportInputV2,
+  type SavedDataImportResultV2,
+  type SavedDataPageV2,
+  type SavedDataChangesV2,
   type SavedDataDeleteInput,
-  type SavedDataImportInput,
-  type SavedDataImportResult,
   type SavedDataListQuery,
-  type SavedDataPage,
-  type SavedDataChanges,
 } from "../../../../packages/navigation-core/contracts-saved-data";
+import {
+  NAVIGATION_KNOWLEDGE_LIMITS,
+  navigationKnowledgeOriginSchema,
+  navigationKnowledgeSiteSettingsSchema,
+  navigationKnowledgeSiteSettingsInputSchema,
+  assertNavigationKnowledgeKeys,
+  type NavigationKnowledgeSiteSettings,
+  type NavigationKnowledgeSiteSettingsInput,
+  navigationKnowledgeForgetSiteInputSchema,
+  navigationKnowledgeForgetSiteResultSchema,
+  type NavigationKnowledgeForgetSiteInput,
+} from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import {
   productCatalogSchema,
   effectiveProductPlanSchema,
@@ -48,6 +64,7 @@ import { pruneExpiredIdentityBrokers } from "./identity-retention";
 import { ScopedSupport } from "./support-queries";
 import { ScopedAccount } from "./account-queries";
 import type { JobLease, JobTransaction } from "../application/job-contracts";
+import { providerConnectionSelectionSchema } from "../../../../packages/navigation-core/contracts-providers";
 import {
   jobResultSchema,
   type JobResult,
@@ -62,6 +79,7 @@ import {
   type CreditReservation,
   type CreditSettlement,
   type CreditHistoryEntry,
+  type CustomerInferenceBinding,
   type FinishInferenceInput,
   type InferencePolicy,
   type InferenceReservation,
@@ -86,7 +104,7 @@ type ArtifactRow = Int8Row<SavedArtifact, "revision" | "syncRevision">;
 type StoredArtifactRow = Omit<ArtifactRow, "kind" | "content"> & {
   kind: string;
   content: unknown;
-  formatVersion: 1 | 2;
+  formatVersion: 1 | 2 | 3;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -173,10 +191,10 @@ function artifact(row: ArtifactRow): SavedArtifact {
   };
 }
 
-function savedDataRecord(row: StoredArtifactRow): SavedDataRecord {
-  return savedDataRecordSchema.parse({
+function savedDataRecord(row: StoredArtifactRow): SavedDataRecordV2 {
+  return savedDataRecordV2Schema.parse({
     id: row.id,
-    schemaVersion: 1,
+    schemaVersion: row.formatVersion === 3 ? 2 : 1,
     kind: row.kind,
     data: row.content,
     metadata: row.metadata,
@@ -212,13 +230,27 @@ export function accountingError(error: unknown): never {
   throw error;
 }
 
-function historyCursor(value?: string): [string | null, string | null] {
+function historyCursor(
+  value?: string,
+  usageView?: 1 | 2,
+): [string | null, string | null] {
   if (!value) return [null, null];
   try {
     if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) throw Error();
-    const parsed: unknown = JSON.parse(
+    let parsed: unknown = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
     );
+    if (usageView !== undefined) {
+      if (
+        Array.isArray(parsed) &&
+        parsed.length === 4 &&
+        parsed[0] === "usage" &&
+        parsed[1] === usageView
+      )
+        parsed = parsed.slice(2);
+      else if (usageView !== 1 || !Array.isArray(parsed) || parsed.length !== 2)
+        throw Error();
+    }
     if (
       !Array.isArray(parsed) ||
       parsed.length !== 2 ||
@@ -238,6 +270,7 @@ function repositoryPage<T extends { id: string; createdAt: Date }>(
   rows: T[],
   size: number,
   cursorTime?: string,
+  usageView?: 1 | 2,
 ): RepositoryPage<T> {
   const more = rows.length > size,
     items = rows.slice(0, size),
@@ -248,6 +281,7 @@ function repositoryPage<T extends { id: string; createdAt: Date }>(
       ? {
           nextCursor: Buffer.from(
             JSON.stringify([
+              ...(usageView === undefined ? [] : ["usage", usageView]),
               cursorTime ?? last.createdAt.toISOString(),
               last.id,
             ]),
@@ -258,12 +292,23 @@ function repositoryPage<T extends { id: string; createdAt: Date }>(
 }
 type InferenceUsageRow = Omit<
   InferenceUsage,
-  "inputUnits" | "outputUnits" | "providerUsdMicros" | "chargedCredits"
+  | "inputUnits"
+  | "outputUnits"
+  | "providerUsdMicros"
+  | "chargedCredits"
+  | "customerUsdMicros"
+  | "cacheReadInputUnits"
+  | "cacheWriteInputUnits"
+  | "reasoningOutputUnits"
 > & {
   inputUnits: string | null;
   outputUnits: string | null;
   providerUsdMicros: string | null;
   chargedCredits: string | null;
+  customerUsdMicros?: string | null;
+  cacheReadInputUnits?: string | null;
+  cacheWriteInputUnits?: string | null;
+  reasoningOutputUnits?: string | null;
 };
 type InferencePolicyRow = Int8Row<
   InferencePolicy,
@@ -273,15 +318,71 @@ type InferencePolicyRow = Int8Row<
   | "workspaceProviderUsdMicros"
   | "journeyProviderUsdMicros"
 >;
-const inferenceUsage = (row: InferenceUsageRow): InferenceUsage => ({
-  ...row,
-  inputUnits: row.inputUnits === null ? null : BigInt(row.inputUnits),
-  outputUnits: row.outputUnits === null ? null : BigInt(row.outputUnits),
-  providerUsdMicros:
-    row.providerUsdMicros === null ? null : BigInt(row.providerUsdMicros),
-  chargedCredits:
-    row.chargedCredits === null ? null : BigInt(row.chargedCredits),
-});
+const inferenceUsage = (row: InferenceUsageRow): InferenceUsage => {
+  const {
+    customerUsdMicros,
+    cacheReadInputUnits,
+    cacheWriteInputUnits,
+    reasoningOutputUnits,
+    ...base
+  } = row;
+  return {
+    ...base,
+    inputUnits: row.inputUnits === null ? null : BigInt(row.inputUnits),
+    outputUnits: row.outputUnits === null ? null : BigInt(row.outputUnits),
+    providerUsdMicros:
+      row.providerUsdMicros === null ? null : BigInt(row.providerUsdMicros),
+    chargedCredits:
+      row.chargedCredits === null ? null : BigInt(row.chargedCredits),
+    ...(row.fundingSource
+      ? {
+          customerUsdMicros:
+            customerUsdMicros == null ? null : BigInt(customerUsdMicros),
+          cacheReadInputUnits:
+            cacheReadInputUnits == null ? null : BigInt(cacheReadInputUnits),
+          cacheWriteInputUnits:
+            cacheWriteInputUnits == null ? null : BigInt(cacheWriteInputUnits),
+          reasoningOutputUnits:
+            reasoningOutputUnits == null ? null : BigInt(reasoningOutputUnits),
+        }
+      : {}),
+  };
+};
+
+function inferenceBinding(
+  raw: CustomerInferenceBinding,
+): CustomerInferenceBinding {
+  const { retrievalSnapshotDigest, ...selection } = raw;
+  const parsed = providerConnectionSelectionSchema.safeParse(selection);
+  if (!parsed.success || !/^[a-f0-9]{64}$/.test(retrievalSnapshotDigest))
+    invalid("The provider binding is invalid.");
+  return { ...parsed.data, retrievalSnapshotDigest };
+}
+
+function inferenceUsageDetails(input: FinishInferenceInput) {
+  if (input.usageVersion === undefined || input.usageVersion === 1) {
+    if (
+      [
+        input.customerUsdMicros,
+        input.cacheReadInputUnits,
+        input.cacheWriteInputUnits,
+        input.reasoningOutputUnits,
+      ].some((value) => value !== undefined)
+    )
+      invalid("Legacy usage cannot claim versioned details.");
+    return { version: 1 };
+  }
+  if (input.usageVersion !== 2) invalid("The usage version is unavailable.");
+  const quantity = (value: bigint | null | undefined) =>
+    value == null ? null : integer(value);
+  return {
+    version: 2,
+    customerUsdMicros: quantity(input.customerUsdMicros),
+    cacheReadInputUnits: quantity(input.cacheReadInputUnits),
+    cacheWriteInputUnits: quantity(input.cacheWriteInputUnits),
+    reasoningOutputUnits: quantity(input.reasoningOutputUnits),
+  };
+}
 
 /** Pool lifetime belongs to the runtime. Callbacks contain database work only. */
 export class PostgresRepositories {
@@ -325,18 +426,19 @@ export class PostgresRepositories {
       input.providerRequestId === undefined
         ? null
         : text(input.providerRequestId, 200),
+      JSON.stringify(inferenceUsageDetails(input)),
     ];
     try {
       if (input.resolution !== "unknown")
         await withTransaction(this.pool, (client) =>
           client.query(
-            "SELECT tholi.record_inference_outcome($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+            "SELECT tholi.record_inference_outcome($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)",
             values,
           ),
         );
       return await withTransaction(this.pool, async (client) => {
         await client.query(
-          "SELECT tholi.finish_inference($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+          "SELECT tholi.finish_inference($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)",
           values,
         );
         const result = await client.query<InferenceUsageRow>(
@@ -1218,7 +1320,8 @@ class ScopedRepositories {
       max_retries AS "maxRetries",max_journey_requests AS "maxJourneyRequests",period_seconds AS "periodSeconds",
       account_requests AS "accountRequests",workspace_requests AS "workspaceRequests",
       account_provider_usd_micros::text AS "accountProviderUsdMicros",workspace_provider_usd_micros::text AS "workspaceProviderUsdMicros",
-      journey_provider_usd_micros::text AS "journeyProviderUsdMicros"
+      journey_provider_usd_micros::text AS "journeyProviderUsdMicros",funding_source AS "fundingSource",
+      requests_per_minute AS "requestsPerMinute",catalog_revision AS "catalogRevision",routing_policy_version AS "routingPolicyVersion"
       FROM tholi.inference_policy_versions WHERE version=$1`,
       [text(version, 100)],
     );
@@ -1239,6 +1342,7 @@ class ScopedRepositories {
     journeyId: string;
     policyVersion: string;
     expiresAt: Date;
+    binding?: CustomerInferenceBinding;
   }): Promise<InferenceReservation> {
     const input = snapshot(raw),
       policy = await this.getInferencePolicy(input.policyVersion);
@@ -1248,23 +1352,29 @@ class ScopedRepositories {
         id: string;
         requestId: string;
         claimToken: string;
-        creditReservationId: string;
+        creditReservationId: string | null;
         maxCredits: string;
         expiresAt: Date;
       }>(
         `SELECT id,request_id AS "requestId",claim_token AS "claimToken",credit_reservation_id AS "creditReservationId",
-        max_credits AS "maxCredits",expires_at AS "expiresAt" FROM tholi.reserve_inference($1,$2,$3,$4)`,
+        max_credits AS "maxCredits",expires_at AS "expiresAt" FROM tholi.reserve_inference($1,$2,$3,$4${input.binding ? ",$5::jsonb" : ""})`,
         [
           input.requestId,
           input.journeyId,
           text(input.policyVersion, 100),
           timestamp(input.expiresAt),
+          ...(input.binding
+            ? [JSON.stringify(inferenceBinding(input.binding))]
+            : []),
         ],
       );
       const row = result.rows[0];
       if (!row) conflict();
-      const capturedPlan = await this.client.query<{ plan: unknown }>(
-        "SELECT plan_snapshot AS plan FROM tholi.inference_reservations WHERE id=$1",
+      const capturedPlan = await this.client.query<{
+        plan: unknown;
+        binding: CustomerInferenceBinding | null;
+      }>(
+        "SELECT plan_snapshot AS plan,provider_binding AS binding FROM tholi.inference_reservations WHERE id=$1",
         [row.id],
       );
       const effectivePlan = effectiveProductPlanSchema
@@ -1275,6 +1385,9 @@ class ScopedRepositories {
         maxCredits: BigInt(row.maxCredits),
         policy,
         effectivePlan,
+        binding: capturedPlan.rows[0]?.binding
+          ? inferenceBinding(capturedPlan.rows[0].binding)
+          : null,
       };
     } catch (error) {
       return accountingError(error);
@@ -1329,10 +1442,12 @@ class ScopedRepositories {
 
   async listUsage(
     options: { after?: string; limit?: number } = {},
+    view: 1 | 2 = 1,
   ): Promise<RepositoryPage<InferenceUsage>> {
     options = snapshot(options);
+    if (view !== 1 && view !== 2) invalid("The usage view is unavailable.");
     const size = limit(options.limit),
-      cursor = historyCursor(options.after);
+      cursor = historyCursor(options.after, view);
     const result = await this.client.query<
       InferenceUsageRow & { cursorTime: string }
     >(
@@ -1340,17 +1455,23 @@ class ScopedRepositories {
       to_char(u.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime",
       CASE WHEN i.resolution='unknown' THEN NULL ELSE u.input_units::text END AS "inputUnits",
       CASE WHEN i.resolution='unknown' THEN NULL ELSE u.output_units::text END AS "outputUnits",u.provider_usd_micros::text AS "providerUsdMicros",
-      u.charged_credits::text AS "chargedCredits",u.policy_version AS "policyVersion",u.created_at AS "createdAt"
+      u.charged_credits::text AS "chargedCredits",u.policy_version AS "policyVersion",u.created_at AS "createdAt",
+      u.funding_source AS "fundingSource",(u.usage_details->>'version')::integer AS "usageVersion",
+      u.usage_details->>'customerUsdMicros' AS "customerUsdMicros",u.usage_details->>'cacheReadInputUnits' AS "cacheReadInputUnits",
+      u.usage_details->>'cacheWriteInputUnits' AS "cacheWriteInputUnits",u.usage_details->>'reasoningOutputUnits' AS "reasoningOutputUnits"
       FROM tholi.usage_records u JOIN tholi.requests q ON q.workspace_id=u.workspace_id AND q.id=u.request_id
       LEFT JOIN tholi.inference_reservations i ON i.workspace_id=u.workspace_id AND i.request_id=u.request_id
       WHERE u.workspace_id=$1 AND q.account_id=$2
+        AND (($6::integer=1 AND u.funding_source='managed' AND u.provider IN('fake','vertex'))
+          OR ($6::integer=2 AND u.provider IN('fake','vertex','openai','anthropic','openrouter')))
         AND ($3::timestamptz IS NULL OR (u.created_at,u.id)>($3::timestamptz,$4::uuid)) ORDER BY u.created_at,u.id LIMIT $5`,
-      [...this.parameters, ...cursor, size + 1],
+      [...this.parameters, ...cursor, size + 1, view],
     );
     return repositoryPage(
       result.rows.map(({ cursorTime, ...row }) => inferenceUsage(row)),
       size,
       result.rows[Math.min(size, result.rows.length) - 1]?.cursorTime,
+      view,
     );
   }
 
@@ -1533,12 +1654,182 @@ class ScopedRepositories {
     return result.rows[0].revision;
   }
 
-  async getSavedArtifact(id: string): Promise<SavedDataRecord | undefined> {
+  async getNavigationKnowledgeSiteSettings(
+    origin: string,
+    lock = false,
+  ): Promise<NavigationKnowledgeSiteSettings> {
+    origin = navigationKnowledgeOriginSchema.parse(origin);
+    const result = await this.client.query<{
+      origin: string;
+      revision: string;
+      collect: boolean;
+      use: boolean;
+      updatedAt: Date;
+    }>(
+      `SELECT origin,revision::text,
+        (collect AND last_activity_at>clock_timestamp()-interval '2160 hours') AS collect,
+        (use_knowledge AND last_activity_at>clock_timestamp()-interval '2160 hours') AS use,updated_at AS "updatedAt"
+      FROM tholi.navigation_knowledge_sites WHERE workspace_id=$1 AND account_id=$2 AND origin=$3
+      ${lock ? "FOR UPDATE" : ""}`,
+      [...this.parameters, origin],
+    );
+    const row = result.rows[0];
+    return navigationKnowledgeSiteSettingsSchema.parse(
+      row
+        ? { ...row, updatedAt: row.updatedAt.toISOString() }
+        : {
+            origin,
+            revision: "0",
+            collect: false,
+            use: false,
+            updatedAt: null,
+          },
+    );
+  }
+
+  async setNavigationKnowledgeSiteSettings(
+    raw: NavigationKnowledgeSiteSettingsInput,
+  ) {
+    const input = navigationKnowledgeSiteSettingsInputSchema.parse(
+      snapshot(raw),
+    );
+    await this.lockAccount();
+    await this.lockWorkspace();
+    const { request, replayed } = await this.beginRequest({
+      operation: "saved-data.site-settings.v2",
+      idempotencyKey: input.idempotencyKey,
+      payloadHash: createHash("sha256")
+        .update(JSON.stringify(input))
+        .digest("hex"),
+    });
+    if (replayed) return this.getNavigationKnowledgeSiteSettings(input.origin);
+    const current = await this.getNavigationKnowledgeSiteSettings(
+      input.origin,
+      true,
+    );
+    if (current.revision !== input.expectedRevision) conflict();
+    if (input.expectedRevision === "0") {
+      const count = await this.client.query<{ count: number }>(
+        "SELECT count(*)::integer AS count FROM tholi.navigation_knowledge_sites WHERE account_id=$1",
+        [this.scope.accountId],
+      );
+      if (count.rows[0].count >= NAVIGATION_KNOWLEDGE_LIMITS.candidates)
+        throw new RepositoryError(
+          "QUOTA_EXCEEDED",
+          "The private site settings limit is reached.",
+        );
+    }
+    const revision = await this.nextSyncRevision();
+    const result = await this.client.query(
+      `INSERT INTO tholi.navigation_knowledge_sites(workspace_id,account_id,origin,collect,use_knowledge,revision)
+       VALUES($1,$2,$3,$4,$5,$7) ON CONFLICT(workspace_id,account_id,origin) DO UPDATE
+       SET collect=$4,use_knowledge=$5,revision=$7,updated_at=clock_timestamp(),last_activity_at=clock_timestamp()
+       WHERE tholi.navigation_knowledge_sites.revision=$6`,
+      [
+        ...this.parameters,
+        input.origin,
+        input.collect,
+        input.use,
+        input.expectedRevision,
+        revision,
+      ],
+    );
+    if (!result.rowCount) conflict();
+    await this.client.query(
+      `UPDATE tholi.requests SET status='completed',updated_at=clock_timestamp()
+      WHERE workspace_id=$1 AND account_id=$2 AND id=$3`,
+      [...this.parameters, request.id],
+    );
+    return this.getNavigationKnowledgeSiteSettings(input.origin);
+  }
+
+  private async disableNavigationKnowledgeSite(
+    origin: string,
+    current?: NavigationKnowledgeSiteSettings,
+  ) {
+    const setting =
+      current ?? (await this.getNavigationKnowledgeSiteSettings(origin, true));
+    if (!setting.collect && !setting.use) return setting;
+    const revision = await this.nextSyncRevision();
+    await this.client.query(
+      `UPDATE tholi.navigation_knowledge_sites SET collect=false,use_knowledge=false,
+      revision=$4,updated_at=clock_timestamp(),last_activity_at=clock_timestamp()
+      WHERE workspace_id=$1 AND account_id=$2 AND origin=$3`,
+      [...this.parameters, origin, revision],
+    );
+    return this.getNavigationKnowledgeSiteSettings(origin);
+  }
+
+  async navigationKnowledgeCandidates(origin: string) {
+    origin = navigationKnowledgeOriginSchema.parse(origin);
+    const result = await this.client.query<StoredArtifactRow>(
+      `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts
+       WHERE workspace_id=$1 AND owner_account_id=$2 AND format_version=3 AND kind='site_knowledge'
+         AND deleted_at IS NULL AND content->>'origin'=$3 AND knowledge_expires_at>clock_timestamp()
+       ORDER BY updated_at DESC,id LIMIT $4`,
+      [...this.parameters, origin, NAVIGATION_KNOWLEDGE_LIMITS.candidates],
+    );
+    return result.rows
+      .map(savedDataRecord)
+      .filter((record) => record.schemaVersion === 2 && record.data !== null);
+  }
+
+  async forgetNavigationKnowledgeSite(raw: NavigationKnowledgeForgetSiteInput) {
+    const input = navigationKnowledgeForgetSiteInputSchema.parse(snapshot(raw));
+    const result = await this.savedMutation(
+      "saved-data.forget-site.v2",
+      input.idempotencyKey,
+      input,
+      async () => {
+        const setting = await this.getNavigationKnowledgeSiteSettings(
+          input.origin,
+          true,
+        );
+        if (setting.revision !== input.expectedRevision) conflict();
+        await this.disableNavigationKnowledgeSite(input.origin, setting);
+        const ids = await this.client.query<{ id: string; revision: string }>(
+          `SELECT id,revision::text FROM tholi.saved_artifacts WHERE workspace_id=$1 AND owner_account_id=$2
+          AND format_version=3 AND kind='site_knowledge' AND deleted_at IS NULL AND content->>'origin'=$3
+          ORDER BY id LIMIT $4 FOR UPDATE`,
+          [
+            ...this.parameters,
+            input.origin,
+            NAVIGATION_KNOWLEDGE_LIMITS.forgetBatch,
+          ],
+        );
+        const deleted: SavedDataRecordV2[] = [];
+        for (const row of ids.rows)
+          deleted.push(
+            savedDataRecord(
+              await this.deleteArtifact(row.id, BigInt(row.revision), 3),
+            ),
+          );
+        return deleted;
+      },
+      2,
+    );
+    const remaining = await this.client.query<{ present: boolean }>(
+      `SELECT EXISTS(SELECT FROM tholi.saved_artifacts WHERE workspace_id=$1 AND owner_account_id=$2
+        AND format_version=3 AND kind='site_knowledge' AND deleted_at IS NULL AND content->>'origin'=$3) AS present`,
+      [...this.parameters, input.origin],
+    );
+    return {
+      siteSettings: await this.getNavigationKnowledgeSiteSettings(input.origin),
+      deletedIds: result.items.map((item) => item.id),
+      hasMore: remaining.rows[0].present,
+    };
+  }
+
+  async getSavedArtifact(
+    id: string,
+    view: SavedDataView = 1,
+  ): Promise<SavedDataRecordV2 | undefined> {
     savedDataExportInputSchema.shape.ids.parse([id]);
     const result = await this.client.query<StoredArtifactRow>(
       `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts
-       WHERE workspace_id=$1 AND owner_account_id=$2 AND id=$3 AND format_version=2`,
-      [...this.parameters, id],
+       WHERE workspace_id=$1 AND owner_account_id=$2 AND id=$3 AND format_version=ANY($4::integer[])
+         AND (format_version<>3 OR deleted_at IS NOT NULL OR knowledge_expires_at>clock_timestamp())`,
+      [...this.parameters, id, view === 2 ? [2, 3] : [2]],
     );
     return result.rows[0] && savedDataRecord(result.rows[0]);
   }
@@ -1550,13 +1841,17 @@ class ScopedRepositories {
     return savedDataStorageUsageSchema.parse(result.rows[0]?.usage);
   }
 
-  async listSavedArtifacts(raw: SavedDataListQuery): Promise<SavedDataPage> {
+  async listSavedArtifacts(
+    raw: SavedDataListQuery,
+    view: SavedDataView = 1,
+  ): Promise<SavedDataPageV2> {
     const query = savedDataListQuerySchema.parse(snapshot(raw));
     const fingerprint = createHash("sha256")
       .update(
         JSON.stringify({
           ...this.scope,
           ...query,
+          ...(view === 2 ? { schemaVersion: 2 } : {}),
           cursor: undefined,
         }),
       )
@@ -1582,7 +1877,8 @@ class ScopedRepositories {
     }
     const result = await this.client.query<StoredArtifactRow>(
       `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts
-       WHERE workspace_id=$1 AND owner_account_id=$2 AND format_version=2 AND deleted_at IS NULL
+       WHERE workspace_id=$1 AND owner_account_id=$2 AND format_version=ANY($9::integer[]) AND deleted_at IS NULL
+         AND (format_version<>3 OR knowledge_expires_at>clock_timestamp())
          AND sync_revision>$3 AND ($4::text IS NULL OR kind=$4)
          AND ($5::text IS NULL OR metadata->>'folder'=$5)
          AND ($6::text IS NULL OR metadata->'tags' ? $6)
@@ -1596,6 +1892,7 @@ class ScopedRepositories {
         query.tag ?? null,
         query.query ?? null,
         query.limit + 1,
+        view === 2 ? [2, 3] : [2],
       ],
     );
     const items = result.rows.slice(0, query.limit).map(savedDataRecord);
@@ -1613,15 +1910,17 @@ class ScopedRepositories {
 
   async savedArtifactChanges(
     options: { after?: string; limit?: number } = {},
-  ): Promise<SavedDataChanges> {
+    view: SavedDataView = 1,
+  ): Promise<SavedDataChangesV2> {
     if (!/^(?:0|[1-9][0-9]*)$/.test(options.after ?? "0"))
       invalid("Use a saved-data sync revision.");
     const after = integer(BigInt(options.after ?? "0")),
       pageSize = limit(options.limit);
     const result = await this.client.query<StoredArtifactRow>(
       `SELECT ${storedArtifactColumns} FROM tholi.saved_artifacts WHERE workspace_id=$1
-        AND owner_account_id=$2 AND format_version=2 AND sync_revision>$3 ORDER BY sync_revision LIMIT $4`,
-      [...this.parameters, after, pageSize + 1],
+        AND owner_account_id=$2 AND format_version=ANY($5::integer[]) AND sync_revision>$3
+         AND (format_version<>3 OR deleted_at IS NOT NULL OR knowledge_expires_at>clock_timestamp()) ORDER BY sync_revision LIMIT $4`,
+      [...this.parameters, after, pageSize + 1, view === 2 ? [2, 3] : [2]],
     );
     const items = result.rows.slice(0, pageSize).map(savedDataRecord);
     return {
@@ -1636,8 +1935,9 @@ class ScopedRepositories {
     operation: string,
     idempotencyKey: string,
     payload: unknown,
-    work: () => Promise<SavedDataRecord[]>,
-  ): Promise<SavedDataImportResult> {
+    work: () => Promise<SavedDataRecordV2[]>,
+    view: SavedDataView = 1,
+  ): Promise<SavedDataImportResultV2> {
     await this.lockAccount();
     await this.lockWorkspace();
     const { request, replayed } = await this.beginRequest({
@@ -1655,11 +1955,16 @@ class ScopedRepositories {
         [...this.parameters, request.id],
       );
       const receipt = result.rows[0]?.receipt;
-      if (!receipt || receipt.schemaVersion !== 1) conflict();
-      const ids = savedDataExportInputSchema.shape.ids.parse(receipt.ids);
-      const items: SavedDataRecord[] = [];
+      if (!receipt || receipt.schemaVersion !== view) conflict();
+      const ids =
+        operation === "saved-data.forget-site.v2"
+          ? navigationKnowledgeForgetSiteResultSchema.shape.deletedIds.parse(
+              receipt.ids,
+            )
+          : savedDataExportInputSchema.shape.ids.parse(receipt.ids);
+      const items: SavedDataRecordV2[] = [];
       for (const id of ids) {
-        const current = await this.getSavedArtifact(id);
+        const current = await this.getSavedArtifact(id, view);
         if (!current) conflict();
         items.push(current);
       }
@@ -1672,21 +1977,32 @@ class ScopedRepositories {
       [
         ...this.parameters,
         request.id,
-        JSON.stringify({ schemaVersion: 1, ids: items.map((item) => item.id) }),
+        JSON.stringify({
+          schemaVersion: view,
+          ids: items.map((item) => item.id),
+        }),
       ],
     );
     return { items, replayed: false };
   }
 
-  async saveSavedArtifact(raw: SavedDataMutation): Promise<SavedDataRecord> {
-    const input = savedDataMutationSchema.parse(snapshot(raw));
+  async saveSavedArtifact(
+    raw: SavedDataMutationV2,
+    view: SavedDataView = 1,
+  ): Promise<SavedDataRecordV2> {
+    const input = (
+      view === 2 ? savedDataMutationV2Schema : savedDataMutationSchema
+    ).parse(snapshot(raw));
     const result = await this.savedMutation(
-      "saved-data.save.v1",
+      `saved-data.save.v${view}`,
       input.idempotencyKey,
       {
         expectedRevision: input.expectedRevision,
         approved: input.approved,
         artifact: input.artifact,
+        ...("siteSettingsRevision" in input
+          ? { siteSettingsRevision: input.siteSettingsRevision }
+          : {}),
       },
       async () => [
         savedDataRecord(
@@ -1694,28 +2010,41 @@ class ScopedRepositories {
             id: input.artifact.id,
             expectedRevision: BigInt(input.expectedRevision),
             kind: input.artifact.kind,
-            formatVersion: 2,
+            formatVersion: input.artifact.schemaVersion === 2 ? 3 : 2,
+            siteSettingsRevision:
+              "siteSettingsRevision" in input
+                ? input.siteSettingsRevision
+                : undefined,
             content: input.artifact.data,
             metadata: input.artifact.metadata,
           }),
         ),
       ],
+      view,
     );
     return result.items[0];
   }
 
   async importSavedArtifacts(
-    raw: SavedDataImportInput,
-  ): Promise<SavedDataImportResult> {
-    const input = savedDataImportInputSchema.parse(snapshot(raw));
+    raw: SavedDataImportInputV2,
+    view: SavedDataView = 1,
+  ): Promise<SavedDataImportResultV2> {
+    const input = (
+      view === 2 ? savedDataImportInputV2Schema : savedDataImportInputSchema
+    ).parse(snapshot(raw));
     if (
-      (await savedDataImportHash(this.scope, input.items)) !== input.previewHash
+      (await (view === 2
+        ? savedDataImportHashV2(this.scope, input.items)
+        : savedDataImportHash(
+            this.scope,
+            savedDataImportInputSchema.parse(input).items,
+          ))) !== input.previewHash
     )
       invalid(
         "The saved-data preview no longer matches this account and workspace.",
       );
     return this.savedMutation(
-      "saved-data.import.v1",
+      `saved-data.import.v${view}`,
       input.idempotencyKey,
       {
         approved: input.approved,
@@ -1723,7 +2052,7 @@ class ScopedRepositories {
         items: input.items,
       },
       async () => {
-        const items: SavedDataRecord[] = [];
+        const items: SavedDataRecordV2[] = [];
         for (const item of input.items)
           items.push(
             savedDataRecord(
@@ -1731,7 +2060,11 @@ class ScopedRepositories {
                 id: item.artifact.id,
                 expectedRevision: BigInt(item.expectedRevision),
                 kind: item.artifact.kind,
-                formatVersion: 2,
+                formatVersion: item.artifact.schemaVersion === 2 ? 3 : 2,
+                siteSettingsRevision:
+                  "siteSettingsRevision" in item
+                    ? item.siteSettingsRevision
+                    : undefined,
                 content: item.artifact.data,
                 metadata: item.artifact.metadata,
               }),
@@ -1739,28 +2072,42 @@ class ScopedRepositories {
           );
         return items;
       },
+      view,
     );
   }
 
   async deleteSavedArtifact(
     id: string,
     raw: SavedDataDeleteInput,
-  ): Promise<SavedDataRecord> {
+    view: SavedDataView = 1,
+  ): Promise<SavedDataRecordV2> {
     savedDataExportInputSchema.shape.ids.parse([id]);
     const input = savedDataDeleteInputSchema.parse(snapshot(raw));
     const result = await this.savedMutation(
-      "saved-data.delete.v1",
+      `saved-data.delete.v${view}`,
       input.idempotencyKey,
       {
         id,
         expectedRevision: input.expectedRevision,
         approved: input.approved,
       },
-      async () => [
-        savedDataRecord(
-          await this.deleteArtifact(id, BigInt(input.expectedRevision), 2),
-        ),
-      ],
+      async () => {
+        const current = await this.getSavedArtifact(id, view);
+        if (!current) conflict();
+        if (current.schemaVersion === 2 && current.data) {
+          await this.disableNavigationKnowledgeSite(current.data.origin);
+        }
+        return [
+          savedDataRecord(
+            await this.deleteArtifact(
+              id,
+              BigInt(input.expectedRevision),
+              current.schemaVersion === 2 ? 3 : 2,
+            ),
+          ),
+        ];
+      },
+      view,
     );
     return result.items[0];
   }
@@ -1798,7 +2145,8 @@ class ScopedRepositories {
     id: string;
     expectedRevision: bigint;
     kind: string;
-    formatVersion: 1 | 2;
+    formatVersion: 1 | 2 | 3;
+    siteSettingsRevision?: string;
     content: unknown;
     metadata: unknown;
   }): Promise<StoredArtifactRow> {
@@ -1817,7 +2165,7 @@ class ScopedRepositories {
       ).rowCount
     )
       conflict();
-    if (input.formatVersion === 2) {
+    if (input.formatVersion >= 2) {
       const consent = await this.client.query<{ allowed: boolean }>(
         "SELECT tholi.lock_saved_data_consent() AS allowed",
       );
@@ -1825,6 +2173,31 @@ class ScopedRepositories {
         throw new RepositoryError(
           "FORBIDDEN",
           "Current saved-data consent is required.",
+        );
+    }
+    if (input.formatVersion === 3) {
+      const graph = await assertNavigationKnowledgeKeys(
+        input.content as Parameters<typeof assertNavigationKnowledgeKeys>[0],
+      );
+      const now = Date.now();
+      if (
+        [...graph.states, ...graph.edges].some((entry) => {
+          const time = Date.parse(entry.observedAt);
+          return (
+            time < now - NAVIGATION_KNOWLEDGE_LIMITS.retentionMs ||
+            time > now + NAVIGATION_KNOWLEDGE_LIMITS.clockSkewMs
+          );
+        })
+      )
+        invalid("Navigation memory needs current observed evidence.");
+      const setting = await this.getNavigationKnowledgeSiteSettings(
+        graph.origin,
+        true,
+      );
+      if (!setting.collect || setting.revision !== input.siteSettingsRevision)
+        throw new RepositoryError(
+          "CONFLICT",
+          "The site collection choice has changed.",
         );
     }
     const stamp = await this.nextSyncRevision();
@@ -1852,7 +2225,8 @@ class ScopedRepositories {
              sync_revision = $5,kind=$6,format_version=$7,metadata=$8::jsonb,
              revision = revision + 1, updated_at = clock_timestamp()
            WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3
-             AND revision = $9 AND deleted_at IS NULL AND format_version<=$7
+             AND revision = $9 AND deleted_at IS NULL AND (format_version=$7 OR (format_version=1 AND $7=2))
+             AND (format_version<>3 OR knowledge_expires_at>clock_timestamp())
              RETURNING ${storedArtifactColumns}`,
               [...values, input.expectedRevision.toString()],
             );
@@ -1874,14 +2248,14 @@ class ScopedRepositories {
   private async deleteArtifact(
     id: string,
     expectedRevision: bigint,
-    formatVersion: 1 | 2,
+    formatVersion: 1 | 2 | 3,
   ): Promise<StoredArtifactRow> {
     integer(expectedRevision, 1n);
     await this.lockWorkspace();
     const stamp = await this.nextSyncRevision();
     const result = await this.client.query<StoredArtifactRow>(
       `UPDATE tholi.saved_artifacts SET content = NULL, deleted_at = now(),
-         metadata=CASE WHEN format_version=2 THEN '{"label":"Deleted item","folder":null,"tags":[]}'::jsonb ELSE NULL END,
+         metadata=CASE WHEN format_version IN (2,3) THEN '{"label":"Deleted item","folder":null,"tags":[]}'::jsonb ELSE NULL END,
          revision = revision + 1, sync_revision = $5, updated_at = clock_timestamp()
        WHERE workspace_id = $1 AND owner_account_id = $2 AND id = $3
          AND revision = $4 AND deleted_at IS NULL AND format_version=$6 RETURNING ${storedArtifactColumns}`,

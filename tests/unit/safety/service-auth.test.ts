@@ -9,7 +9,14 @@ import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
   NAVIGATION_EVALUATION_CAPABILITY,
+  NAVIGATION_BYOK_CAPABILITY,
+  type NavigationTransportInput,
 } from "../../../packages/navigation-core/contracts-navigation";
+import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
+import {
+  PROVIDER_CATALOG_REVISION,
+  providerConnectionSelection,
+} from "../../../packages/navigation-core/contracts-providers";
 import { operatorEvaluationPlanFixture } from "../../support/operator-evaluation-fixture";
 import { savedDataRecordFixture } from "../../support/saved-data-fixture";
 import { savedDataImportInputSchema } from "../../../packages/navigation-core/contracts-saved-data";
@@ -55,11 +62,16 @@ const session = {
   expiresAt: tokens.sessionExpiresAt,
 };
 let saved: unknown;
+const auxiliarySettings = new Map<string, unknown>();
 beforeEach(() => {
   saved = { origin };
-  privateStore.getPrivateSetting.mockImplementation(async () => saved);
-  privateStore.setPrivateSetting.mockImplementation(async (_key, value) => {
-    saved = value;
+  auxiliarySettings.clear();
+  privateStore.getPrivateSetting.mockImplementation(async (key) =>
+    key === "service-auth" ? saved : auxiliarySettings.get(key),
+  );
+  privateStore.setPrivateSetting.mockImplementation(async (key, value) => {
+    if (key === "service-auth") saved = value;
+    else auxiliarySettings.set(key, value);
   });
   contains.mockResolvedValue(true);
   request.mockResolvedValue(true);
@@ -326,6 +338,612 @@ function inferenceFixture(images = false) {
     validation,
   };
 }
+
+function customerInferenceFixture() {
+  const fixture = inferenceFixture();
+  let provider = providerConnectionMetadataFixture();
+  const selection = providerConnectionSelection(provider);
+  fixture.capabilities.capabilities.push(NAVIGATION_BYOK_CAPABILITY);
+  saved = {
+    ...fixture.stored,
+    inference: {
+      ...fixture.stored.inference,
+      profile: "customer-funded",
+      connection: selection,
+    },
+  };
+  const input: NavigationTransportInput = {
+    ...fixture.input,
+    profile: "customer-funded",
+    connection: selection,
+  };
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) =>
+    String(url).endsWith("/account/provider-connections")
+      ? json({ catalogRevision: PROVIDER_CATALOG_REVISION, items: [provider] })
+      : original(url, init),
+  );
+  return {
+    ...fixture,
+    input,
+    get selection() {
+      return providerConnectionSelection(provider);
+    },
+    rotate() {
+      provider = providerConnectionMetadataFixture("openai", { revision: "2" });
+    },
+  };
+}
+
+it("customer-funded selection accepts only current metadata, stores no provider key and never verifies through a model call", async () => {
+  const f = customerInferenceFixture();
+  saved = { origin, tokens };
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await expect(
+    serviceAuthCommand({
+      type: "AUTH_INFERENCE_CONFIGURE",
+      profile: "customer-funded",
+      enabled: true,
+      images: false,
+      connection: f.selection,
+      apiKey: "PRIVATE_KEY_SENTINEL",
+    }),
+  ).rejects.toThrow();
+  expect(fetchMock).not.toHaveBeenCalled();
+  const result = await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "customer-funded",
+    enabled: true,
+    images: false,
+    connection: f.selection,
+  });
+  expect(result).toMatchObject({
+    profile: "customer-funded",
+    connection: f.selection,
+    enabled: true,
+    serverConsentUpdated: true,
+  });
+  expect(saved).toMatchObject({
+    inference: {
+      profile: "customer-funded",
+      connection: f.selection,
+      accountId: account.id,
+      workspaceId: account.workspaceId,
+    },
+  });
+  expect(JSON.stringify(saved)).not.toContain("PRIVATE_KEY_SENTINEL");
+  expect(result).not.toHaveProperty("accessToken");
+  expect(result).not.toHaveProperty("refreshToken");
+  expect(result).not.toHaveProperty("tokens");
+  expect(
+    fetchMock.mock.calls.every(([url]) => !String(url).includes("/decisions")),
+  ).toBe(true);
+});
+
+it("a rotated provider revision requires explicit reselection before another customer-funded request", async () => {
+  const f = customerInferenceFixture();
+  f.rotate();
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const guard = vi.fn(async () => {});
+  await expect(
+    backendNavigation(f.input, () => f.validation, guard),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+  expect(guard).not.toHaveBeenCalled();
+  expect(
+    fetchMock.mock.calls.every(([url]) => !String(url).endsWith("/decisions")),
+  ).toBe(true);
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "customer-funded",
+    enabled: true,
+    images: false,
+    connection: f.selection,
+  });
+  await expect(
+    backendNavigation(
+      { ...f.input, connection: f.selection },
+      () => f.validation,
+      guard,
+    ),
+  ).resolves.toEqual(f.response);
+  const decisions = fetchMock.mock.calls.filter(([url]) =>
+    String(url).endsWith("/decisions"),
+  );
+  expect(decisions).toHaveLength(1);
+  expect(JSON.parse(decisions[0][1].body)).toMatchObject({
+    profile: "customer-funded",
+    connection: { revision: "2" },
+    observation: { native: f.input.observation.native },
+  });
+  expect(guard).toHaveBeenCalledOnce();
+});
+
+it("Local immediately cancels the new customer-provider metadata wait and prevents late decision transmission", async () => {
+  const f = customerInferenceFixture();
+  const original = fetchMock.getMockImplementation()!;
+  let release!: (value: Response) => void;
+  fetchMock.mockImplementation(async (url, init) =>
+    String(url).endsWith("/account/provider-connections")
+      ? new Promise<Response>((resolve) => {
+          release = resolve;
+        })
+      : original(url, init),
+  );
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const operation = backendNavigation(
+    f.input,
+    () => f.validation,
+    vi.fn(async () => {}),
+  );
+  const rejected = expect(operation).rejects.toMatchObject({
+    code: "CANCELLED",
+  });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  const [, request] = fetchMock.mock.calls.find(([url]) =>
+    String(url).endsWith("/account/provider-connections"),
+  )!;
+  const disabled = await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: false,
+    images: false,
+  });
+  expect((request.signal as AbortSignal).aborted).toBe(true);
+  await rejected;
+  release(
+    json({
+      catalogRevision: PROVIDER_CATALOG_REVISION,
+      items: [providerConnectionMetadataFixture()],
+    }),
+  );
+  await Promise.resolve();
+  expect(disabled).toMatchObject({ profile: "fake", enabled: false });
+  expect(saved).not.toHaveProperty("inference");
+  expect(
+    fetchMock.mock.calls.every(([url]) => !String(url).endsWith("/decisions")),
+  ).toBe(true);
+});
+
+it("the customer-funded profile preserves the final current native-document guard", async () => {
+  const f = customerInferenceFixture();
+  const { backendNavigation } =
+    await import("../../../apps/extension/src/platform/backend-client");
+  const guard = vi.fn(async () => {
+    f.validation.currentNative.documentId = "different-native-document";
+  });
+  await expect(
+    backendNavigation(f.input, () => f.validation, guard),
+  ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  expect(guard).toHaveBeenCalledOnce();
+  expect(
+    fetchMock.mock.calls.every(([url]) => !String(url).endsWith("/decisions")),
+  ).toBe(true);
+});
+
+async function privateLearningFixture(collect = false, use = false) {
+  const f = inferenceFixture();
+  const { IDBFactory } = await import("fake-indexeddb");
+  vi.stubGlobal("indexedDB", new IDBFactory());
+  const site = {
+    schemaVersion: 1 as const,
+    origin: "https://private-website.example",
+    version: 1,
+    lastSeen: Date.now(),
+    templates: [],
+    pages: [],
+    transitions: [],
+  };
+  let choices =
+    collect || use
+      ? [
+          {
+            serviceOrigin: origin,
+            accountId: account.id,
+            workspaceId: account.workspaceId,
+            origin: site.origin,
+            collect,
+            use,
+          },
+        ]
+      : [];
+  privateStore.getPrivateSetting.mockImplementation(async (key) =>
+    key === "privateSiteLearning" ? choices : saved,
+  );
+  privateStore.setPrivateSetting.mockImplementation(async (key, value) => {
+    if (key === "privateSiteLearning") choices = value;
+    else saved = value;
+  });
+  f.capabilities.capabilities.push(
+    "saved-data",
+    "saved-data-schema-2",
+    "saved-data-write",
+    "account-binding",
+  );
+  const siteSettings = {
+    origin: site.origin,
+    revision: "1",
+    collect,
+    use,
+    updatedAt: new Date(Date.now() - 1000).toISOString(),
+  };
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) => {
+    const path = new URL(String(url)).pathname;
+    let result: Response;
+    if (path.endsWith("/artifacts/site-settings")) {
+      if (init.method === "DELETE")
+        result = json({
+          siteSettings: {
+            ...siteSettings,
+            collect: false,
+            use: false,
+            revision: "2",
+          },
+          deletedIds: [],
+          hasMore: false,
+        });
+      else result = json(siteSettings);
+    } else if (path.endsWith("/artifacts/navigation-knowledge"))
+      result = json({
+        context: null,
+        sources: [],
+        siteSettings: null,
+        contextDigest: null,
+        snapshotDigest: "a".repeat(64),
+        diagnostics: {
+          candidates: 0,
+          selected: 0,
+          omitted: 0,
+          reason: "empty",
+        },
+      });
+    else result = await original(url, init);
+    result.headers.set(SERVICE_ACCOUNT_BINDING_HEADER, account.id);
+    return result;
+  });
+  const platform =
+    await import("../../../apps/extension/src/platform/saved-data");
+  return {
+    ...f,
+    ...platform,
+    site,
+    scope: { accountId: account.id, workspaceId: account.workspaceId },
+    get choices() {
+      return choices;
+    },
+  };
+}
+
+it("automatic private learning and retrieval disclose no site origin without the matching per-site choice", async () => {
+  const f = await privateLearningFixture();
+  await f.learnPrivateNavigation(f.site);
+  await expect(
+    f.retrievePrivateNavigationKnowledge(
+      f.input.observation,
+      f.site.origin,
+      new AbortController().signal,
+      vi.fn(async () => {}),
+    ),
+  ).resolves.toBeUndefined();
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("Local blocks remembered per-site learning and retrieval before any service request", async () => {
+  const f = await privateLearningFixture(true, true);
+  f.stored.inference.enabled = false;
+  await f.learnPrivateNavigation(f.site);
+  await expect(
+    f.retrievePrivateNavigationKnowledge(
+      f.input.observation,
+      f.site.origin,
+      new AbortController().signal,
+      vi.fn(async () => {}),
+    ),
+  ).rejects.toThrow();
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("private retrieval preserves the caller's final native guard and revoked website grants stop automatic origin reads", async () => {
+  const f = await privateLearningFixture(true, true);
+  const guard = vi.fn(async () => {
+    throw new Error("The native document changed.");
+  });
+  await expect(
+    f.retrievePrivateNavigationKnowledge(
+      f.input.observation,
+      f.site.origin,
+      new AbortController().signal,
+      guard,
+    ),
+  ).rejects.toThrow();
+  expect(guard).toHaveBeenCalledOnce();
+  expect(
+    fetchMock.mock.calls.every(
+      ([url]) => !String(url).endsWith("/artifacts/navigation-knowledge"),
+    ),
+  ).toBe(true);
+  fetchMock.mockClear();
+  contains.mockImplementation(
+    async (permissions) =>
+      !permissions.origins?.includes("https://private-website.example/*"),
+  );
+  await expect(f.learnPrivateNavigation(f.site)).rejects.toThrow();
+  expect(
+    fetchMock.mock.calls.every(
+      ([url]) => !String(url).includes(encodeURIComponent(f.site.origin)),
+    ),
+  ).toBe(true);
+});
+
+it("Local during the automatic site-settings lease prevents a late site-origin query", async () => {
+  const f = await privateLearningFixture(true, false);
+  const originalFetch = fetchMock.getMockImplementation()!;
+  const originalRead = privateStore.getPrivateSetting.getMockImplementation()!;
+  let pauseRead = false;
+  let release!: () => void;
+  fetchMock.mockImplementation(async (url, init) => {
+    const result = await originalFetch(url, init);
+    if (String(url).endsWith("/capabilities")) pauseRead = true;
+    return result;
+  });
+  privateStore.getPrivateSetting.mockImplementation(async (key) => {
+    if (key === "service-auth" && pauseRead) {
+      pauseRead = false;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    }
+    return originalRead(key);
+  });
+  const learning = f.learnPrivateNavigation(f.site);
+  const rejected = expect(learning).rejects.toThrow();
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await serviceAuthCommand({
+    type: "AUTH_INFERENCE_CONFIGURE",
+    profile: "fake",
+    enabled: false,
+    images: false,
+  });
+  release();
+  await rejected;
+  expect(
+    fetchMock.mock.calls.every(
+      ([url]) => !String(url).includes(encodeURIComponent(f.site.origin)),
+    ),
+  ).toBe(true);
+});
+
+it("an uncertain cloud forget fences per-site collection and reuse locally without deleting local routes", async () => {
+  const f = await privateLearningFixture(true, true);
+  const { IndexedDBSiteMemory } = await import("../../../packages/site-memory");
+  const { beginJourney, saveTask } =
+    await import("../../../packages/goal-planner/task-journey");
+  const local = new IndexedDBSiteMemory();
+  const task = saveTask(beginJourney("Find Help", f.site.origin));
+  await local.saveTask(task);
+  const original = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) =>
+    init.method === "DELETE"
+      ? Promise.reject(new Error("Unknown server outcome."))
+      : original(url, init),
+  );
+  await expect(
+    f.savedDataCommand({
+      type: "SAVED_DATA_SITE_FORGET",
+      scope: f.scope,
+      origin: f.site.origin,
+      expectedRevision: "1",
+      idempotencyKey: crypto.randomUUID(),
+      approved: true,
+    }),
+  ).rejects.toThrow();
+  expect(f.choices).toEqual([]);
+  fetchMock.mockClear();
+  await f.learnPrivateNavigation(f.site);
+  await expect(
+    f.retrievePrivateNavigationKnowledge(
+      f.input.observation,
+      f.site.origin,
+      new AbortController().signal,
+      vi.fn(async () => {}),
+    ),
+  ).resolves.toBeUndefined();
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect((await local.tasks(f.site.origin)).map((value) => value.id)).toContain(
+    task.id,
+  );
+});
+
+it.each(["read", "configure"])(
+  "a delayed site %s cannot restore collection after a newer uncertain forget",
+  async (kind) => {
+    const f = await privateLearningFixture(true, true);
+    const original = fetchMock.getMockImplementation()!;
+    let release!: () => void;
+    fetchMock.mockImplementation(async (url, init) => {
+      if (init.method === "DELETE") throw new Error("Unknown server outcome.");
+      const response = await original(url, init);
+      if (
+        new URL(String(url)).pathname.endsWith("/artifacts/site-settings") &&
+        init.method === (kind === "read" ? "GET" : "PATCH")
+      )
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      return response;
+    });
+    const previous = f.savedDataCommand(
+      kind === "read"
+        ? {
+            type: "SAVED_DATA_SITE_SETTINGS",
+            scope: f.scope,
+            origin: f.site.origin,
+          }
+        : {
+            type: "SAVED_DATA_SITE_CONFIGURE",
+            scope: f.scope,
+            choice: {
+              origin: f.site.origin,
+              expectedRevision: "1",
+              collect: true,
+              use: true,
+              approved: true,
+            },
+          },
+    );
+    const rejected = expect(previous).rejects.toThrow(
+      "private website memory choice changed",
+    );
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    await expect(
+      f.savedDataCommand({
+        type: "SAVED_DATA_SITE_FORGET",
+        scope: f.scope,
+        origin: f.site.origin,
+        expectedRevision: "1",
+        idempotencyKey: crypto.randomUUID(),
+        approved: true,
+      }),
+    ).rejects.toThrow();
+    expect(f.choices).toEqual([]);
+    release();
+    await rejected;
+    expect(f.choices).toEqual([]);
+    fetchMock.mockClear();
+    await f.learnPrivateNavigation(f.site);
+    await expect(
+      f.retrievePrivateNavigationKnowledge(
+        f.input.observation,
+        f.site.origin,
+        new AbortController().signal,
+        vi.fn(async () => {}),
+      ),
+    ).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  },
+);
+
+it("a read of old server flags during a pending pause cannot widen the local choice or supersede its acknowledgement", async () => {
+  const f = await privateLearningFixture(true, true);
+  const original = fetchMock.getMockImplementation()!;
+  const paused = {
+    origin: f.site.origin,
+    revision: "2",
+    collect: false,
+    use: false,
+    updatedAt: new Date().toISOString(),
+  };
+  let release!: () => void;
+  fetchMock.mockImplementation(async (url, init) => {
+    if (
+      new URL(String(url)).pathname.endsWith("/artifacts/site-settings") &&
+      init.method === "PATCH"
+    ) {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const result = json(paused);
+      result.headers.set(SERVICE_ACCOUNT_BINDING_HEADER, account.id);
+      return result;
+    }
+    return original(url, init);
+  });
+  const pause = f.savedDataCommand({
+    type: "SAVED_DATA_SITE_CONFIGURE",
+    scope: f.scope,
+    choice: {
+      origin: f.site.origin,
+      expectedRevision: "1",
+      collect: false,
+      use: false,
+      approved: true,
+    },
+  });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  expect(f.choices).toMatchObject([{ collect: false, use: false }]);
+  await expect(
+    f.savedDataCommand({
+      type: "SAVED_DATA_SITE_SETTINGS",
+      scope: f.scope,
+      origin: f.site.origin,
+    }),
+  ).resolves.toMatchObject({ revision: "1", collect: false, use: false });
+  expect(f.choices).toEqual([]);
+  release();
+  await expect(pause).resolves.toEqual(paused);
+  expect(f.choices).toEqual([]);
+});
+
+it("a learning span paused between requests cannot resume under a replacement site-choice controller", async () => {
+  const f = await privateLearningFixture(true, false);
+  const originalRead = privateStore.getPrivateSetting.getMockImplementation()!;
+  const originalFetch = fetchMock.getMockImplementation()!;
+  let hold = true,
+    release!: () => void;
+  privateStore.getPrivateSetting.mockImplementation(async (key) => {
+    const value = await originalRead(key);
+    if (key === "privateSiteLearning" && hold) {
+      hold = false;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    }
+    return value;
+  });
+  fetchMock.mockImplementation(async (url, init) => {
+    if (init.method === "DELETE") throw new Error("Unknown server outcome.");
+    return originalFetch(url, init);
+  });
+  const learning = f.learnPrivateNavigation(f.site);
+  const rejected = expect(learning).rejects.toMatchObject({
+    name: "AbortError",
+  });
+  await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+  await expect(
+    f.savedDataCommand({
+      type: "SAVED_DATA_SITE_FORGET",
+      scope: f.scope,
+      origin: f.site.origin,
+      expectedRevision: "1",
+      idempotencyKey: crypto.randomUUID(),
+      approved: true,
+    }),
+  ).rejects.toThrow();
+  expect(f.choices).toEqual([]);
+  // A fresh read of unchanged server flags cannot reverse the local reduction.
+  await f.savedDataCommand({
+    type: "SAVED_DATA_SITE_SETTINGS",
+    scope: f.scope,
+    origin: f.site.origin,
+  });
+  expect(f.choices).toEqual([]);
+  // Even a new explicit enable starts a new span, never renews the old task.
+  await f.savedDataCommand({
+    type: "SAVED_DATA_SITE_CONFIGURE",
+    scope: f.scope,
+    choice: {
+      origin: f.site.origin,
+      expectedRevision: "1",
+      collect: true,
+      use: false,
+      approved: true,
+    },
+  });
+  expect(f.choices).toMatchObject([{ collect: true }]);
+  fetchMock.mockClear();
+  release();
+  await rejected;
+  expect(fetchMock).not.toHaveBeenCalled();
+});
 
 async function operatorFixture(
   arm: "structured" | "multimodal" = "structured",

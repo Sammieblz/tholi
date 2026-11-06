@@ -30,9 +30,10 @@ export function privacySections(): LegalSection[] {
             Tholi uses page context to guide you toward a destination you
             request and verify your progress. Normal guidance runs on your
             device without a Tholi account or backend. Connecting a private
-            backend is optional and changes where some data is processed, as
-            explained below. Other websites, including the operator’s corporate
-            site, have their own privacy practices.
+            backend or choosing a configured account service is optional and
+            changes where some data is processed, as explained below. Other
+            websites, including the operator’s corporate site, have their own
+            privacy practices.
           </p>
         </>
       ),
@@ -55,14 +56,17 @@ export function privacySections(): LegalSection[] {
             verification redirect to that service's identity provider. Tholi
             does not collect your password in its website forms. The account
             service stores your identity link, account and workspace
-            identifiers, session and security metadata. Installation and
+            identifiers, session and security metadata. A configured service can
+            also store data you explicitly save, its revisions and deletion
+            records, and content-free usage and credit records. Installation and
             practice do not create an account or upload local routes. Contact
             drafts and optional account support are handled separately.
           </p>
           <p>
             The account service records redacted operational health data and
             separate security audit metadata for session, membership and consent
-            changes. Audit records expire after 90 days and are pruned by
+            changes, including provider-connection changes without the key
+            itself. Audit records expire after 90 days and are pruned by
             maintenance. Infrastructure logs, operator exports and backups have
             separately configured expiry. Routine telemetry excludes navigation
             content, screenshots, private URLs, form contents and credentials.
@@ -245,7 +249,9 @@ export function privacySections(): LegalSection[] {
             Requests to the configured backend send it in an Authorization
             header. This is separate from website passwords, which page
             discovery does not read. Browser access controls protect these
-            settings; Tholi does not add its own encryption at rest.
+            settings; Tholi does not add its own encryption at rest for this
+            extension token. Provider API keys saved through AI connections use
+            the separate server encryption described below.
           </p>
           <p>
             Firefox also requests optional browser consent for backend
@@ -257,6 +263,115 @@ export function privacySections(): LegalSection[] {
             received by the server. To clear the saved token, disable Connect
             this browser, empty the API token field and select Save connection.
             Rotate the token at your backend if access should be invalidated.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "customer-providers",
+      title: "Optional AI provider connections",
+      children: (
+        <>
+          <p>
+            Where a configured service offers AI connections, a signed-in
+            account can save one connection per supported provider and choose an
+            approved model. The service encrypts provider API keys using a
+            separate operator keyring and account-bound authenticated
+            encryption. Its API process decrypts a key when making an authorized
+            provider request. The extension receives connection metadata, never
+            the key. Keys are not returned by account views or exports or
+            included in routine logs. An operator with access to both the
+            service and its encryption keys can access them; this is not
+            encryption that hides the key from the service operator.
+          </p>
+          <p>
+            Saving, replacing or refreshing a connection makes no model request.
+            A saved connection stays unverified until an explicit guidance
+            request succeeds. Connected guidance can send your destination,
+            relevant task context, sanitized website observations and approved
+            historical hints through the Tholi service to the selected provider.
+            Separately authorized temporary masked images can also be sent.
+            These choices do not upload your existing local collection.
+            Redaction and masking cannot identify every sensitive label or item
+            displayed on a page.
+          </p>
+          <p>
+            Direct OpenAI and Anthropic connections send that information to the
+            selected provider. OpenRouter connections send it to OpenRouter and
+            the approved Anthropic upstream. Tholi requests Anthropic-only
+            routing, supported parameters, no fallback and denial of data
+            collection in routing. Those settings do not establish verified zero
+            retention or a processing country. Provider account terms, safety
+            retention and infrastructure practices still apply. Review{" "}
+            <a href="https://developers.openai.com/api/docs/guides/your-data">
+              OpenAI data controls
+            </a>
+            ,{" "}
+            <a href="https://privacy.claude.com/en/">
+              Anthropic privacy information
+            </a>{" "}
+            and{" "}
+            <a href="https://openrouter.ai/docs/guides/routing/provider-selection">
+              OpenRouter routing and data controls
+            </a>{" "}
+            before enabling a connection.
+          </p>
+          <p>
+            Provider charges belong to your provider account. These requests do
+            not spend Tholi's managed-model credits, but service request and
+            processing limits still apply. Cancellation or an error may arrive
+            after a provider has processed a request. Removing a connection
+            deletes its stored key from the service and invalidates old
+            selections; it does not revoke the key at the provider or erase
+            information already received there. Revoke a key through its
+            provider's dashboard when needed.
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "cloud-knowledge",
+      title: "Private cloud knowledge and its controls",
+      children: (
+        <>
+          <p>
+            Private website learning, where available, starts with collection
+            and reuse both off for each account, workspace and website. Signing
+            in, adding a provider key or allowing images does not enable it.
+            Enabling collection permits future sanitized interface structure and
+            independently verified navigation transitions to be saved privately
+            to that account and workspace. Existing local memory is not uploaded
+            automatically. Reuse is a separate choice that allows bounded
+            historical hints to be included in connected guidance.
+          </p>
+          <p>
+            Saved knowledge contains approved interface labels, roles and
+            structural relationships, website origins, observed transitions,
+            timestamps and outcome counts. It excludes raw page paths and query
+            strings, destinations, field values, selectors, screenshots, image
+            coordinates, OCR text, native browser identifiers and credentials.
+            Sanitization has limitations; interface labels may still reveal
+            personal information. This feature does not publish knowledge to a
+            community, share it across accounts or train a shared model. Current
+            page checks still determine whether guidance is appropriate.
+          </p>
+          <p>
+            Knowledge has a 90-day evidence lifetime; editing a label does not
+            renew it. Expired knowledge is excluded from live use and queued
+            maintenance removes its content and expired export copies. A stopped
+            worker can delay physical cleanup, and operator backups have
+            separate retention. Account exports include approved saved data and
+            safe provider metadata, never provider keys.
+          </p>
+          <p>
+            Turn collection off to stop future saving, or turn reuse off to stop
+            using cloud hints. Forget cloud knowledge disables both and removes
+            that website's cloud knowledge in bounded batches. Continue
+            explicitly if more remains; an interrupted or unknown response does
+            not confirm completion. Local memory, saved routes and conversation
+            excerpts have their own deletion controls. Removing a cloud copy
+            does not recall data already sent to a provider or erase an
+            independent backup.
           </p>
         </>
       ),
@@ -336,12 +451,14 @@ export function privacySections(): LegalSection[] {
         <>
           <p>
             Optional account access uses the configured Tholi service and its
-            identity provider. No hosted inference, cloud saved data, paid plans
-            or advertising integration is available in this release. The
-            optional extension backend described above is a separate connection
-            you configure. Links to GitHub and other websites leave Tholi and
-            are governed by those services. Browser stores also process
-            installation and store account information under their own policies.
+            identity provider. Available features depend on that deployment's
+            configuration and the choices described above. Optional account
+            saved data and customer-funded AI connections do not enable managed
+            Gemini, paid checkout or advertising. The optional extension backend
+            described above is a separate connection you configure. Links to
+            GitHub and other websites leave Tholi and are governed by those
+            services. Browser stores also process installation and store account
+            information under their own policies.
           </p>
           <p>
             Cloudflare Pages hosts tholi.io and delivers its assets. Cloudflare
@@ -422,8 +539,10 @@ export function termsSections(): LegalSection[] {
           <p>
             Local guidance, installation and website practice require no Tholi
             account. Where an identity service is configured, optional accounts
-            let you manage sign-in sessions. Paid subscriptions, cloud guidance
-            and cloud synchronization are not available in this release.
+            let you manage sign-in sessions and supported account data.
+            Separately enabled provider connections and private cloud learning
+            require their relevant choices. These controls do not activate
+            managed Gemini or paid subscriptions.
           </p>
         </>
       ),
@@ -535,7 +654,11 @@ export function termsSections(): LegalSection[] {
             described in those notices.
           </p>
           <p>
-            Future paid services, cloud saved data or cloud inference would need
+            Customer-funded AI connections use your own provider account under
+            its terms and charges. Tholi's managed-model credits are not charged
+            for these requests. Request limits still apply, and a failed or
+            cancelled response is not a guarantee of no provider charge. Saving
+            a key makes no model request. Future paid Tholi services require
             their own accurate terms and disclosures before activation.
           </p>
           <p>
@@ -606,6 +729,13 @@ export function cookieSections(onCookieSettings?: () => void): LegalSection[] {
             appearance. Reading, downloading and practicing work without
             optional storage. Closing the notice or continuing to browse does
             not grant consent.
+          </p>
+          <p>
+            Cookie choices do not authorize AI provider requests or private
+            website learning. Connected page processing, temporary masked
+            images, cloud collection and reuse have their own separate controls.
+            Provider API keys are stored encrypted by the configured account
+            service, not in this website's cookies or browser storage.
           </p>
           <p>
             <strong>Essential only</strong> declines optional storage.{" "}

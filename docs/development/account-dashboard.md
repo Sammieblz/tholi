@@ -7,17 +7,33 @@ data; browser demo accounts cannot authenticate service requests.
 
 ## Pages and existing owners
 
-| Route               | Purpose                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `/account`          | Account overview and current service availability                                           |
-| `/account/data`     | Search, filter, review, edit, organize, export and delete saved items                       |
-| `/account/credits`  | Available, held and consumed credits, grant expiry and paged activity                       |
-| `/account/security` | Verified profile, provider controls, sessions, privacy choices, account export and deletion |
-| `/account/billing`  | Current plan and allowances, explicit Free enrollment where offered, paid availability      |
+| Route                | Purpose                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `/account`           | Account overview and current service availability                                           |
+| `/account/data`      | Search, filter, review, edit, organize, export and delete saved items                       |
+| `/account/credits`   | Available, held and consumed credits, grant expiry and paged activity                       |
+| `/account/providers` | Encrypted customer-provider connection settings, key replacement and removal                |
+| `/account/security`  | Verified profile, provider controls, sessions, privacy choices, account export and deletion |
+| `/account/billing`   | Current plan and allowances, explicit Free enrollment where offered, paid availability      |
 
 `/signin` and `/signup` use the configured identity provider. `/welcome` replaces
 history with `/account`; `/onboarding` remains optional, account-free practice.
 Practice never signs in, changes real extension state or proves installation.
+
+The optional [customer-provider profile](local-stack.md#customer-providers-and-private-learning)
+adds provider metadata to the existing account boundary. Saving a key makes no
+provider request. The website receives no stored key, and the extension selects
+only an opaque connection reference. Managed credits and customer-provider costs
+remain separate. Usage negotiates schema version 2 when advertised; old service
+responses retain their default view.
+
+Graph details in Saved data include the shared private-learning controls.
+Collection and reuse are separate, revision-checked site choices. Forgetting first
+pauses both and deletes bounded graph batches without clearing device memory or
+the other three artifact kinds. Explicit full-account exports negotiate the new
+file view and include connection metadata only. See the
+[saved-data contract](service-saved-data.md#version-2-private-navigation-knowledge)
+for version negotiation, retention and compatibility.
 All account paths and their static aliases are private, uncached and excluded
 from search discovery. Private content is fetched after authentication, not
 embedded in generated HTML or public analytics.

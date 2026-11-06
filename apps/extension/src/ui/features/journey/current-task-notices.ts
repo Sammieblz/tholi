@@ -144,14 +144,14 @@ export function currentProcessing(
         title: `${source} is checking this page`,
         detail: operator
           ? `Temporary ${service.evaluation!.provider === "vertex" ? "Vertex" : "fake-provider"} evaluation with ${service.evaluation!.arm === "multimodal" ? "structured context and a fresh masked image" : "structured context only"}. Pause and Stop remain available.`
-          : "This request uses the development service. Pause and Stop remain available.",
+          : "Connected guidance is checking current controls and any approved private history. Pause and Stop remain available.",
       };
     case "guiding":
       return view.selectedControlId
         ? {
             state: "guiding",
             title: `${source} is ready`,
-            detail: `${operator ? "Temporary operator evaluation" : "Development service"} proposal. Tholi still checks the result of each step.`,
+            detail: `${operator ? "Temporary operator evaluation" : "Connected guidance"} proposal. Tholi still checks the result of each step.`,
           }
         : undefined;
     case "clarify":

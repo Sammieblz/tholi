@@ -289,6 +289,23 @@
   max-width: 20ch;
   margin-top: 8px;
 }
+.account-provider {
+  border-top: 1px solid var(--line);
+  margin-top: 32px;
+  padding-top: 24px;
+}
+.account-provider-fields {
+  border: 0;
+  margin: 24px 0 0;
+  padding: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+}
+.account-provider-fields label {
+  font-weight: 600;
+}
 @media (max-width: 850px) {
   .account-workspace {
     grid-template-columns: minmax(0, 1fr);

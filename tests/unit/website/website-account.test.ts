@@ -32,7 +32,14 @@ import {
 } from "../../../packages/navigation-core/contracts-identity";
 import { AccountAnalytics } from "../../../apps/web/src/features/account/AccountAnalytics";
 import { PreferencesProvider } from "../../../apps/web/src/features/preferences/PreferencesProvider";
+import { AccountProvidersPage } from "../../../apps/web/src/features/account/AccountProvidersPage";
+import {
+  PROVIDER_CATALOG_REVISION,
+  getProviderDefinition,
+  type ProviderConnection,
+} from "../../../packages/navigation-core/contracts-providers";
 import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
+import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
 const session = {
   account: {
     id: "00000000-0000-4000-8000-000000000001",
@@ -60,11 +67,301 @@ function Probe() {
 }
 beforeEach(() => {
   vi.stubGlobal("indexedDB", new IDBFactory());
+  vi.stubGlobal("FormData", window.FormData);
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   config.origin = "https://api.example.test";
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
+});
+
+const providerEndpoint = "/api/v1/account/provider-connections";
+const providerMetadata = (
+  revision = "1",
+  status: ProviderConnection["status"] = "active",
+) => providerConnectionMetadataFixture("openai", { revision, status });
+function ProviderProbe() {
+  current = useAccount();
+  return current.session
+    ? createElement(AccountProvidersPage)
+    : createElement("p", null, "Signed out");
+}
+async function mountProviders() {
+  await act(async () =>
+    root.render(
+      createElement(AccountProvider, null, createElement(ProviderProbe)),
+    ),
+  );
+}
+const providerSection = () =>
+  [...container.querySelectorAll<HTMLElement>(".account-provider")].find(
+    (section) => section.querySelector("h2")?.textContent === "OpenAI",
+  )!;
+function providerFields() {
+  const section = providerSection();
+  return {
+    section,
+    form: section.querySelector("form")!,
+    model: section.querySelector<HTMLSelectElement>('select[name="model"]')!,
+    key: section.querySelector<HTMLInputElement>('input[name="apiKey"]')!,
+  };
+}
+async function submitProvider(secret: string) {
+  const fields = providerFields();
+  fields.model.value = getProviderDefinition("openai").model;
+  fields.key.value = secret;
+  await act(async () =>
+    fields.form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    ),
+  );
+  return fields;
+}
+async function clickAccountControl(
+  label: string,
+  scope: ParentNode = container,
+) {
+  const button = [...scope.querySelectorAll<HTMLButtonElement>("button")].find(
+    (element) => element.textContent === label,
+  );
+  expect(button).toBeDefined();
+  await act(async () => button!.click());
+}
+
+it("AI connections send explicit account-bound model choices once, clear the password before awaiting metadata and never verify through a model call", async () => {
+  let complete!: (value: ProviderConnection) => void;
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return session;
+      if (path === "/api/v1/capabilities")
+        return {
+          capabilities: [
+            "provider-connections",
+            "provider-connections-write",
+            "account-binding",
+          ],
+        };
+      if (path === providerEndpoint && options.method === "GET")
+        return { catalogRevision: PROVIDER_CATALOG_REVISION, items: [] };
+      if (path === providerEndpoint && options.method === "POST")
+        return new Promise((resolve) => {
+          complete = resolve;
+        });
+      throw Error("Unexpected provider or model request.");
+    },
+  );
+  const storage = vi.spyOn(Storage.prototype, "setItem");
+  await mountProviders();
+  const fields = await submitProvider("synthetic-web-provider-key");
+  expect(fields.key.type).toBe("password");
+  expect(fields.key.value).toBe("");
+  expect(fields.model.value).toBe("");
+  expect(fields.section.querySelector("fieldset")?.disabled).toBe(true);
+  const mutation = transport.request.mock.calls.find(
+    (call) => call[1] === providerEndpoint && call[3].method === "POST",
+  )!;
+  expect(mutation[3]).toMatchObject({
+    credentials: "include",
+    requireAccountBinding: true,
+    expectedAccountId: session.account.id,
+    headers: { "X-Tholi-CSRF": session.csrfToken },
+    body: {
+      provider: "openai",
+      model: getProviderDefinition("openai").model,
+      catalogRevision: PROVIDER_CATALOG_REVISION,
+      apiKey: "synthetic-web-provider-key",
+    },
+  });
+  await act(async () => complete(providerMetadata()));
+  expect(providerSection().textContent).toContain("Saved, unverified.");
+  expect(container.textContent).toContain("No provider request was made.");
+  expect(container.innerHTML).not.toContain("synthetic-web-provider-key");
+  expect(storage).not.toHaveBeenCalled();
+  storage.mockRestore();
+  expect(
+    transport.request.mock.calls.every((call) =>
+      ["/api/v1/account", "/api/v1/capabilities", providerEndpoint].includes(
+        call[1],
+      ),
+    ),
+  ).toBe(true);
+});
+
+it("AI key rotation and confirmed removal preserve revision checks and never claim provider revocation", async () => {
+  let row = providerMetadata();
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return session;
+      if (path === "/api/v1/capabilities")
+        return {
+          capabilities: [
+            "provider-connections",
+            "provider-connections-write",
+            "account-binding",
+          ],
+        };
+      if (path === providerEndpoint)
+        return { catalogRevision: PROVIDER_CATALOG_REVISION, items: [row] };
+      if (
+        path === `${providerEndpoint}/${row.id}` &&
+        options.method === "PATCH"
+      ) {
+        expect(options.body.expectedRevision).toBe("1");
+        row = providerMetadata("2");
+        return row;
+      }
+      if (
+        path === `${providerEndpoint}/${row.id}` &&
+        options.method === "DELETE"
+      ) {
+        expect(options.body).toEqual({ expectedRevision: "2" });
+        row = providerMetadata("3", "removed");
+        return row;
+      }
+      throw Error("Unexpected provider request.");
+    },
+  );
+  await mountProviders();
+  await submitProvider("synthetic-rotated-key");
+  expect(providerSection().textContent).toContain("Saved, unverified.");
+  await clickAccountControl("Remove from Tholi", providerSection());
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  await clickAccountControl("Cancel", document);
+  expect(
+    transport.request.mock.calls.some((call) => call[3].method === "DELETE"),
+  ).toBe(false);
+  await clickAccountControl("Remove from Tholi", providerSection());
+  await clickAccountControl("Remove connection", document);
+  expect(providerSection().textContent).toContain("Disconnected from Tholi.");
+  expect(container.textContent).toContain(
+    "It was not revoked at the provider.",
+  );
+  expect(
+    transport.request.mock.calls.filter((call) =>
+      ["PATCH", "DELETE"].includes(call[3].method),
+    ),
+  ).toHaveLength(2);
+});
+
+it("a lost AI-key save response requires an explicit metadata refresh and never retains or automatically resubmits the secret", async () => {
+  let saved = false;
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return session;
+      if (path === "/api/v1/capabilities")
+        return {
+          capabilities: [
+            "provider-connections",
+            "provider-connections-write",
+            "account-binding",
+          ],
+        };
+      if (path === providerEndpoint && options.method === "GET")
+        return {
+          catalogRevision: PROVIDER_CATALOG_REVISION,
+          items: saved ? [providerMetadata()] : [],
+        };
+      if (path === providerEndpoint && options.method === "POST") {
+        saved = true;
+        throw new ServiceClientError(
+          "NETWORK_ERROR",
+          0,
+          "The response was lost.",
+        );
+      }
+      throw Error("Unexpected provider request.");
+    },
+  );
+  await mountProviders();
+  await submitProvider("synthetic-lost-key");
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "Refresh connections",
+  );
+  expect(providerFields().key.value).toBe("");
+  await clickAccountControl("Refresh connections");
+  expect(providerSection().textContent).toContain("Saved, unverified.");
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(container.innerHTML).not.toContain("synthetic-lost-key");
+  expect(
+    transport.request.mock.calls.filter(
+      (call) => call[1] === providerEndpoint && call[3].method === "POST",
+    ),
+  ).toHaveLength(1);
+});
+
+it("an AI-key operation from a replaced account is aborted and cannot populate the new account view", async () => {
+  let actor = session,
+    complete!: (value: ProviderConnection) => void;
+  transport.request.mockImplementation(
+    async (_origin, path, _schema, options) => {
+      if (path === "/api/v1/account") return actor;
+      if (path === "/api/v1/capabilities")
+        return {
+          capabilities: [
+            "provider-connections",
+            "provider-connections-write",
+            "account-binding",
+          ],
+        };
+      if (path === providerEndpoint && options.method === "GET")
+        return { catalogRevision: PROVIDER_CATALOG_REVISION, items: [] };
+      if (path === providerEndpoint && options.method === "POST")
+        return new Promise((resolve) => {
+          complete = resolve;
+        });
+      throw Error("Unexpected provider request.");
+    },
+  );
+  await mountProviders();
+  await submitProvider("synthetic-old-account-key");
+  const mutation = transport.request.mock.calls.find(
+    (call) => call[1] === providerEndpoint && call[3].method === "POST",
+  )!;
+  actor = {
+    ...session,
+    account: {
+      ...session.account,
+      id: "00000000-0000-4000-8000-000000000004",
+      workspaceId: "00000000-0000-4000-8000-000000000005",
+    },
+    session: { ...session.session, id: "00000000-0000-4000-8000-000000000006" },
+  };
+  await act(async () => current.reload());
+  expect(mutation[3].signal.aborted).toBe(true);
+  await act(async () => complete(providerMetadata()));
+  expect(providerSection().textContent).toContain("No key saved.");
+  expect(container.textContent).not.toContain("Connection saved.");
+  expect(
+    transport.request.mock.calls.filter(
+      (call) => call[1] === providerEndpoint && call[3].method === "POST",
+    ),
+  ).toHaveLength(1);
+});
+
+it("disabled AI-key storage retains metadata and confirmed removal while every key input stays disabled", async () => {
+  transport.request.mockImplementation(async (_origin, path) => {
+    if (path === "/api/v1/account") return session;
+    if (path === "/api/v1/capabilities")
+      return { capabilities: ["provider-connections", "account-binding"] };
+    if (path === providerEndpoint)
+      return {
+        catalogRevision: PROVIDER_CATALOG_REVISION,
+        items: [providerMetadata()],
+      };
+    throw Error("Unexpected provider request.");
+  });
+  await mountProviders();
+  expect(container.textContent).toContain("Key storage is disabled");
+  expect(
+    [...container.querySelectorAll("fieldset")].every(
+      (field) => field.disabled,
+    ),
+  ).toBe(true);
+  expect(
+    [...providerSection().querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "Remove from Tholi",
+    )?.disabled,
+  ).toBe(false);
 });
 afterEach(() => {
   act(() => root.unmount());

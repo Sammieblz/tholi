@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PostgresRepositories } from "../../../apps/api/src/database/repositories";
 import type {
   FinishInferenceInput,
+  CustomerInferenceBinding,
   InferenceReservation,
   RepositoryScope,
 } from "../../../apps/api/src/database/contracts";
@@ -15,6 +16,7 @@ export function inferenceFixture(repositories: PostgresRepositories) {
       policyVersion: string,
       journeyId = randomUUID(),
       owner = repositories,
+      binding?: CustomerInferenceBinding,
     ) {
       return owner.transaction(scope, async (scoped) => {
         const { request } = await scoped.beginRequest({
@@ -27,6 +29,7 @@ export function inferenceFixture(repositories: PostgresRepositories) {
           journeyId,
           policyVersion,
           expiresAt: new Date(Date.now() + 20000),
+          ...(binding ? { binding } : {}),
         });
       });
     },

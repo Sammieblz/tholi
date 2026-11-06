@@ -32,6 +32,8 @@ import {
   navigationTransportResponseSchema,
   navigationRequestStatusSchema,
   navigationCancellationSchema,
+  NAVIGATION_LIMITS,
+  navigationProjectionBytes,
   type NavigationTransportInput,
 } from "../../../../packages/navigation-core/contracts-navigation";
 import type { OperatorEvaluationMetadata } from "../../../../packages/navigation-core/contracts-evaluation";
@@ -56,7 +58,12 @@ import {
   resolveModelBudget,
   type ModelBudget,
   type ModelUsage,
+  modelUsageTotals,
 } from "./model-contracts";
+import {
+  navigationKnowledgeContextSchema,
+  type NavigationKnowledgeContext,
+} from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 
 export type IncrementalObservation =
   | z.infer<typeof observationInputSchema>
@@ -220,6 +227,7 @@ export function createNavigationModelService(model: NavigationModel) {
       current: () => NavigationValidationContext,
       context: ServiceRequestContext,
       requestedBudget: Partial<ModelBudget> = {},
+      knowledge?: NavigationKnowledgeContext,
     ): Promise<{ decision: NavigationDecision; usage: ModelUsage }> {
       if (context.signal.aborted) throw new ModelError("CANCELLED");
       const started = Date.now();
@@ -242,6 +250,14 @@ export function createNavigationModelService(model: NavigationModel) {
       // Zod admitted a private copy; providers receive a second copy so mutation
       // can never rewrite the allowlist against which their proposal is joined.
       const observation = initial.observation;
+      if (
+        knowledge &&
+        (!navigationKnowledgeContextSchema.safeParse(knowledge).success ||
+          navigationProjectionBytes(observation) +
+            serializedUtf8Bytes(knowledge) >
+            NAVIGATION_LIMITS.maxProjectionBytes)
+      )
+        throw new ModelError("BUDGET_EXCEEDED");
       if (
         observation.images.length > budget.maxImages ||
         observation.images.some(
@@ -277,6 +293,7 @@ export function createNavigationModelService(model: NavigationModel) {
               {
                 observation: structuredClone(observation),
                 budget: { ...budget },
+                ...(knowledge ? { knowledge: structuredClone(knowledge) } : {}),
               },
               { ...context, deadlineAt, signal },
             );
@@ -307,8 +324,8 @@ export function createNavigationModelService(model: NavigationModel) {
           });
         }
         if (
-          usage.promptTokens > budget.maxInputTokens ||
-          usage.outputTokens + usage.thoughtTokens > budget.maxOutputTokens ||
+          modelUsageTotals(usage).inputTokens > budget.maxInputTokens ||
+          modelUsageTotals(usage).outputTokens > budget.maxOutputTokens ||
           responseBytes > budget.maxResponseBytes
         )
           throw new ModelError("BUDGET_EXCEEDED", {
@@ -380,6 +397,8 @@ const missingNavigationRequest = () =>
 export interface NavigationInferenceOperation {
   model: NavigationModel;
   budget: Partial<ModelBudget>;
+  knowledge?: NavigationKnowledgeContext;
+  revalidate?: () => Promise<void>;
   finish(result: {
     usage?: ModelUsage;
     decision?: NavigationDecision;
@@ -388,6 +407,7 @@ export interface NavigationInferenceOperation {
 }
 export interface NavigationInferencePolicy {
   readonly metadata?: OperatorEvaluationMetadata;
+  readonly customerFunded?: true;
   prepare(
     input: NavigationTransportInput,
     scope: {
@@ -419,6 +439,9 @@ export class NavigationTransportService {
 
   get evaluationMetadata() {
     return this.inference?.metadata;
+  }
+  get customerFunded() {
+    return this.inference?.customerFunded === true;
   }
 
   private key(
@@ -500,7 +523,10 @@ export class NavigationTransportService {
     revalidate: RevalidateNavigationIdentity,
   ) {
     const input = navigationTransportInputSchema.parse(raw);
-    if (input.profile !== this.provider)
+    if (
+      input.profile !== this.provider &&
+      !(input.profile === "customer-funded" && this.inference?.customerFunded)
+    )
       throw new AuthorizationError(
         409,
         "COMPATIBILITY_MISMATCH",
@@ -679,8 +705,10 @@ export class NavigationTransportService {
         current,
         operation,
         inferenceOperation?.budget,
+        inferenceOperation?.knowledge,
       );
       await finish({ usage: result.usage, decision: result.decision });
+      await inferenceOperation?.revalidate?.();
       await identity();
       await this.scoped(
         principal,

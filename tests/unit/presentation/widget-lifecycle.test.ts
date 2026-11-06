@@ -37,6 +37,10 @@ function environment(seed: Record<string, unknown> = {}) {
       id: "tholi-test",
       getURL: (path: string) => "chrome-extension://tholi-test/" + path,
       onConnect: { addListener: vi.fn() },
+      connect: vi.fn(() => ({
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+        disconnect: vi.fn(),
+      })),
     },
     storage: { local: storage(local), session: storage(stored) },
     tabs: {
@@ -296,6 +300,12 @@ it.each([
     const backend =
       await import("../../../apps/extension/src/platform/backend-client");
     const legacy = vi.spyOn(backend, "backendNlp").mockResolvedValue(undefined);
+    const privateData =
+      await import("../../../apps/extension/src/platform/saved-data");
+    vi.spyOn(
+      privateData,
+      "retrievePrivateNavigationKnowledge",
+    ).mockResolvedValue(undefined);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -703,6 +713,7 @@ async function withAccountSettings(
   });
   Object.assign(api, { permissions: { request } });
   const rpc = vi.fn(async (message: AccountMessage) => {
+    if (message.type === "GET_SESSION") return undefined;
     const supplied = options.reply?.(message);
     if (supplied !== undefined) return supplied;
     if (message.type === "AUTH_STATUS") return accountReply();
@@ -766,7 +777,7 @@ it("inference choices keep native access in the enabling gesture, preserve the c
         "authorizes sanitized page-context transmission",
       );
       expect(
-        container.querySelectorAll(".tholi-inference-settings button"),
+        container.querySelectorAll(".tholi-inference-settings > button"),
       ).toHaveLength(0);
       await act(async () => {
         connected.click();

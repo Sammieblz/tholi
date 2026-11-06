@@ -97,7 +97,7 @@ function serviceProposalFixture(goal = "Find the winter workspace") {
   return { coach, message, request, journey, target };
 }
 
-it.each(["fake", "operator-evaluation"] as const)(
+it.each(["fake", "operator-evaluation", "customer-funded"] as const)(
   "a %s proposal replaces old action controls while retaining the request and objective",
   (profile) => {
     const f = serviceProposalFixture();
@@ -157,7 +157,7 @@ it.each(["fake", "operator-evaluation"] as const)(
       expect(f.coach.view.instruction).toMatch(
         profile === "operator-evaluation"
           ? /^Operator evaluation proposal\./
-          : /^Development proposal\./,
+          : /^Connected guidance proposal\./,
       );
       expect(f.coach.view.instruction).not.toContain("task is complete");
     } finally {
@@ -201,7 +201,7 @@ it("a bound development proposal fences an older local replan without resetting 
     await vi.advanceTimersByTimeAsync(1);
     expect(f.coach.view.selectedControlId).toBe(f.target.id);
     expect(f.coach.view.goalPlan?.exploration).toBe(true);
-    expect(f.coach.view.instruction).toMatch(/^Development proposal\./);
+    expect(f.coach.view.instruction).toMatch(/^Connected guidance proposal\./);
     expect(f.coach).toMatchObject({
       recoveryKey: "retained-recovery-budget",
       recoveryStep: 2,
@@ -357,7 +357,7 @@ it.each(["clarify", "unsupported", "request-observation"] as const)(
       expect(f.coach.view.selectedControlId).toBeUndefined();
       expect(f.coach.view.goalPlan?.status).toBe("unresolved");
       expect(f.coach.view.verifiedSteps).toBe(0);
-      expect(f.coach.view.instruction).toMatch(/[Dd]evelopment service/);
+      expect(f.coach.view.instruction).toMatch(/Connected guidance/);
     } finally {
       f.coach.stop();
     }

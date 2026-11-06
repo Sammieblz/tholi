@@ -5,8 +5,10 @@ PostgreSQL credit and usage owner. The API and worker share that owner across
 replicas. Local SQLite knowledge and the browser's pinned journey remain local.
 
 The user deferred [#43's live comparison](testing/perception-comparison.md) and
-authorized offline implementation on October 31, 2026. Live provider calls remain
-disabled. The measured quality decision is still required before beta, commercial
+authorized offline implementation on October 31, 2026. Managed Gemini and live
+evaluation remain disabled. Automated development makes no external model calls;
+the separately enabled customer-funded profile below is not live-quality proof.
+The measured quality decision is still required before beta, commercial
 live validation or release. Development fixtures do not establish model quality,
 real provider billing or production scalability.
 
@@ -104,7 +106,7 @@ outcome evidence; the worker never reruns a model or infers a refund from time.
 
 The generic accounting storage supports versioned cost policies and integer cost
 limits. Offline tests use synthetic nonzero usage to exercise those limits. This
-does not activate a live adapter: ordinary composition accepts only the fixed fake
+does not activate a managed live adapter: default composition accepts only the fixed fake
 development policy. The separate operator experiment retains its own explicit
 single-use data and spending authorization.
 
@@ -115,7 +117,39 @@ metric conversion marks accounting telemetry unavailable. Integer ledger values
 remain authoritative. The verified-outcome availability gauge stays zero; no
 cost-per-success value is emitted. Review alerts do not replace SQL enforcement.
 
-## Validation
+## Customer-funded usage and compatibility
+
+[#87](https://github.com/Sammieblz/tholi/issues/87) reuses this admission, reservation,
+outcome and reconciliation owner for explicitly selected customer credentials.
+Signed-in accounts need no paid enrollment or managed-credit balance. These
+reservations allocate no credit lot and settle zero managed credits and zero
+Tholi provider liability. Customer-provider costs are separate and remain null
+when unconfirmed; zero Tholi liability does not mean the provider request is free.
+
+The versioned development policy starts at six generations per rolling 24 hours,
+two per minute, one foreground request per account across keys/workspaces and two
+generations per journey. Input/output/image caps and cancellation stay shared.
+Operator policy revisions can configure development allowances without relabeling
+historical policies. Changing keys, models or journeys cannot reset account
+limits or escape an uncertain foreground hold. No automatic retry or fallback
+provider is permitted.
+
+The request's original payload hash and reservation bind its connection revision,
+provider/model, catalog/routing policy and retrieval snapshot. Admission and
+dispatch recheck that binding; revocation before response release withholds the
+proposal while retaining known usage. Replay returns request status only and
+never redispatches the model.
+
+Canonical model usage version 2 reports total input and total output, with
+reasoning included once in output. Cache-read, cache-write and reasoning
+breakdowns remain nullable. Existing version-1 records and accounting decode
+unchanged. `GET /usage` retains its strict legacy response and managed rows;
+`GET /usage?schemaVersion=2` explicitly negotiates customer rows and breakdowns
+under `usage-schema-2`. Cursors bind the view. Neither view reports task success
+from a model response. The separate native fixture measures calls/tokens against
+independent DOM outcomes without a live provider.
+
+## Validation evidence
 
 See the [validation record](testing/credit-accounting-validation.md) for actual
 results and pending checks. Existing PostgreSQL integration owners exercise

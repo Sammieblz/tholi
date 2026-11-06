@@ -1,6 +1,7 @@
 import {
   emptySavedDataClientState,
   savedDataClientStateSchema,
+  savedDataClientStateV2Schema,
   savedDataConnectionKey,
   type SavedDataClientState,
   type SavedDataClientStore,
@@ -53,11 +54,39 @@ export class IndexedDBCloudDataStore implements SavedDataClientStore {
           request.onsuccess = () => {
             try {
               current();
-              result(
-                request.result === undefined
-                  ? emptySavedDataClientState()
-                  : savedDataClientStateSchema.parse(request.result),
-              );
+              if (request.result === undefined && scope.schemaVersion === 2) {
+                const legacy = transaction.objectStore("accounts").get(
+                  savedDataConnectionKey({
+                    ...scope,
+                    schemaVersion: undefined,
+                  }),
+                );
+                legacy.onsuccess = () => {
+                  try {
+                    current();
+                    result(
+                      legacy.result === undefined
+                        ? emptySavedDataClientState(2)
+                        : savedDataClientStateV2Schema.parse({
+                            ...savedDataClientStateSchema.parse(legacy.result),
+                            version: 2,
+                            after: "0",
+                          }),
+                    );
+                  } catch (error) {
+                    failure = error;
+                    transaction.abort();
+                  }
+                };
+              } else
+                result(
+                  request.result === undefined
+                    ? emptySavedDataClientState(scope.schemaVersion ?? 1)
+                    : (scope.schemaVersion === 2
+                        ? savedDataClientStateV2Schema
+                        : savedDataClientStateSchema
+                      ).parse(request.result),
+                );
             } catch (error) {
               failure = error;
               transaction.abort();
@@ -88,14 +117,46 @@ export class IndexedDBCloudDataStore implements SavedDataClientStore {
           request.onsuccess = () => {
             try {
               current();
-              const previous =
-                request.result === undefined
-                  ? emptySavedDataClientState()
-                  : savedDataClientStateSchema.parse(request.result);
-              const next = savedDataClientStateSchema.parse(change(previous));
-              current();
-              store.put(next, key);
-              result(next);
+              const apply = (value: unknown, legacy = false) => {
+                current();
+                const previous =
+                  value === undefined
+                    ? emptySavedDataClientState(scope.schemaVersion ?? 1)
+                    : legacy
+                      ? savedDataClientStateV2Schema.parse({
+                          ...savedDataClientStateSchema.parse(value),
+                          version: 2,
+                          after: "0",
+                        })
+                      : (scope.schemaVersion === 2
+                          ? savedDataClientStateV2Schema
+                          : savedDataClientStateSchema
+                        ).parse(value);
+                const next = (
+                  scope.schemaVersion === 2
+                    ? savedDataClientStateV2Schema
+                    : savedDataClientStateSchema
+                ).parse(change(previous));
+                current();
+                store.put(next, key);
+                result(next);
+              };
+              if (request.result === undefined && scope.schemaVersion === 2) {
+                const legacy = store.get(
+                  savedDataConnectionKey({
+                    ...scope,
+                    schemaVersion: undefined,
+                  }),
+                );
+                legacy.onsuccess = () => {
+                  try {
+                    apply(legacy.result, true);
+                  } catch (error) {
+                    failure = error;
+                    transaction.abort();
+                  }
+                };
+              } else apply(request.result);
             } catch (error) {
               failure = error;
               transaction.abort();
@@ -114,9 +175,11 @@ export class IndexedDBCloudDataStore implements SavedDataClientStore {
       "accounts",
       "readwrite",
       (transaction) => {
-        transaction
-          .objectStore("accounts")
-          .delete(savedDataConnectionKey(scope));
+        const store = transaction.objectStore("accounts");
+        store.delete(
+          savedDataConnectionKey({ ...scope, schemaVersion: undefined }),
+        );
+        store.delete(savedDataConnectionKey({ ...scope, schemaVersion: 2 }));
       },
     );
   }

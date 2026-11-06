@@ -6,6 +6,7 @@ import { resolveModelBudget } from "../../apps/api/src/application/model-contrac
 import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
+  NAVIGATION_BYOK_CAPABILITY,
   navigationTransportInputSchema,
   navigationTransportResponseSchema,
   type NavigationProposal,
@@ -13,6 +14,7 @@ import {
 } from "../../packages/navigation-core/contracts-navigation";
 import {
   SERVICE_LIMITS,
+  SERVICE_ACCOUNT_BINDING_HEADER,
   serviceErrorEnvelopeSchema,
   type ServiceErrorCode,
 } from "../../packages/navigation-core/contracts-service";
@@ -21,6 +23,63 @@ import {
   consentUpdateSchema,
   type ConsentUpdate,
 } from "../../packages/navigation-core/contracts-authorization";
+import { providerConnectionMetadataFixture } from "./provider-connection-fixture";
+import {
+  PROVIDER_CATALOG_REVISION,
+  providerConnectionSelection,
+} from "../../packages/navigation-core/contracts-providers";
+import { savedNavigationKnowledgeFixture } from "./saved-data-fixture";
+import { rankNavigationKnowledge } from "../../apps/api/src/application/navigation-knowledge";
+import {
+  navigationKnowledgeQuerySchema,
+  navigationKnowledgeSiteSettingsInputSchema,
+  navigationKnowledgeForgetSiteInputSchema,
+  navigationKnowledgeSiteSettingsSchema,
+  navigationKnowledgeStateKey,
+  navigationKnowledgeSnapshotDigest,
+  serializeNavigationKnowledge,
+} from "../../packages/navigation-core/contracts-navigation-knowledge";
+import type { attachWebDriverExtension } from "./webdriver-extension";
+
+/** Seed synthetic account state through the existing protected native storage owner. */
+export async function seedNavigationServiceAccount(
+  app: Awaited<ReturnType<typeof attachWebDriverExtension>>,
+  settings: unknown,
+  target: "chromium" | "firefox",
+) {
+  await app.extension(
+    async (settings: unknown, target: string) => {
+      const api = (globalThis as any).browser || (globalThis as any).chrome;
+      if (target === "chromium") {
+        await api.storage.local.setAccessLevel({
+          accessLevel: "TRUSTED_CONTEXTS",
+        });
+        await api.storage.local.set({ "service-auth": settings });
+        return;
+      }
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("tholi-private-settings", 1);
+        request.onupgradeneeded = () =>
+          request.result.createObjectStore("settings");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("settings", "readwrite");
+          transaction.objectStore("settings").put(settings, "service-auth");
+          transaction.oncomplete = () => resolve();
+          transaction.onabort = transaction.onerror = () =>
+            reject(transaction.error);
+        });
+      } finally {
+        database.close();
+      }
+    },
+    settings,
+    target,
+  );
+}
 
 type FixtureOutcome =
   | { decision: NavigationProposal }
@@ -29,10 +88,54 @@ type FixtureOutcome =
 export const navigationServicePageHtml =
   '<html lang="en"><head><title>Reading preferences</title></head><body><h1>Reading preferences</h1><label><input id="dark" type="checkbox">Dark</label><input type="password" value="SENTINEL_PRIVATE_FIELD"></body></html>';
 
+export const privateLearningPageHtml =
+  '<html lang="en"><head><title>Workspace</title></head><body><p>Workspace</p><button id="settings" aria-expanded="false" aria-controls="help" onclick="this.setAttribute(\'aria-expanded\',\'true\');document.getElementById(\'help\').hidden=false">Settings</button><a id="help" href="/knowledge/help" hidden>Help</a></body></html>';
+
 /** Shared loopback HTTP fixture; no live provider, account or native prompt proof. */
 export async function navigationServiceFixture(
   clientId: "extension-chromium" | "extension-firefox",
+  options: { customer?: boolean; knowledge?: { origin: string } } = {},
 ) {
+  const provider = providerConnectionMetadataFixture();
+  const graph = options.knowledge
+    ? await savedNavigationKnowledgeFixture(options.knowledge.origin)
+    : undefined;
+  if (graph) {
+    graph.data.states[1].controls = graph.data.controls.map(
+      (control) => control.key,
+    );
+    graph.data.states[1].key = await navigationKnowledgeStateKey(
+      graph.data.states[1].controls,
+    );
+    graph.data.edges[0].to = graph.data.states[1].key;
+    const terminal = {
+      key: await navigationKnowledgeStateKey([]),
+      controls: [],
+      observedAt: new Date().toISOString(),
+    };
+    graph.data.states.push(terminal);
+    graph.data.edges.push({
+      from: graph.data.states[1].key,
+      to: terminal.key,
+      control: graph.data.controls[1].key,
+      operation: "navigate",
+      observedAt: terminal.observedAt,
+      successes: 1,
+      failures: 0,
+    });
+  }
+  let graphPresent = !!graph;
+  let siteSettings = options.knowledge
+    ? navigationKnowledgeSiteSettingsSchema.parse({
+        origin: options.knowledge.origin,
+        revision: "0",
+        collect: false,
+        use: false,
+        updatedAt: null,
+      })
+    : undefined;
+  const knowledgeQueries: { origin: string }[] = [];
+  const siteWrites: { collect: boolean; use: boolean; method: string }[] = [];
   const account = {
     id: randomUUID(),
     workspaceId: randomUUID(),
@@ -74,9 +177,12 @@ export async function navigationServiceFixture(
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader(
       "Access-Control-Allow-Headers",
-      "Authorization,Content-Type,X-Tholi-Timeout-Ms",
+      `Authorization,Content-Type,X-Tholi-Timeout-Ms,${SERVICE_ACCOUNT_BINDING_HEADER}`,
     );
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PATCH,DELETE,OPTIONS",
+    );
     if (request.method === "OPTIONS") {
       response.writeHead(204).end();
       return;
@@ -111,6 +217,17 @@ export async function navigationServiceFixture(
           capabilities: [
             NAVIGATION_TRANSPORT_CAPABILITY,
             NAVIGATION_FAKE_CAPABILITY,
+            ...(options.customer
+              ? [NAVIGATION_BYOK_CAPABILITY, "provider-connections"]
+              : []),
+            ...(options.knowledge
+              ? [
+                  "saved-data",
+                  "saved-data-schema-2",
+                  "saved-data-write",
+                  "account-binding",
+                ]
+              : []),
           ],
           availability: {
             authentication: true,
@@ -124,11 +241,112 @@ export async function navigationServiceFixture(
       }
       if (request.headers.authorization !== `Bearer ${tokens.accessToken}`)
         throw Error("Synthetic fixture authentication was not supplied.");
+      response.setHeader(SERVICE_ACCOUNT_BINDING_HEADER, account.id);
+      if (options.customer && path === "/api/v1/account/provider-connections") {
+        if (request.method !== "GET")
+          throw Error(
+            "The browser fixture cannot store or transmit provider keys.",
+          );
+        send({ catalogRevision: PROVIDER_CATALOG_REVISION, items: [provider] });
+        return;
+      }
       if (path === "/api/v1/account") {
         send({ account, session });
         return;
       }
       const workspace = `/api/v1/workspaces/${account.workspaceId}`;
+      if (siteSettings && path === `${workspace}/artifacts/site-settings`) {
+        if (request.method === "GET") {
+          if (
+            new URL(request.url!, "http://localhost").searchParams.get(
+              "origin",
+            ) !== siteSettings.origin
+          )
+            throw Error("Unexpected private website origin.");
+        } else if (request.method === "PATCH" || request.method === "DELETE") {
+          const raw = await readBody();
+          const choice =
+            request.method === "PATCH"
+              ? navigationKnowledgeSiteSettingsInputSchema.parse(raw)
+              : undefined;
+          const input =
+            choice ?? navigationKnowledgeForgetSiteInputSchema.parse(raw);
+          if (
+            input.origin !== siteSettings.origin ||
+            input.expectedRevision !== siteSettings.revision
+          ) {
+            fail(409, "CONFLICT");
+            return;
+          }
+          const next = {
+            ...siteSettings,
+            collect: choice?.collect ?? false,
+            use: choice?.use ?? false,
+            revision: String(BigInt(siteSettings.revision) + 1n),
+            updatedAt: new Date().toISOString(),
+          };
+          siteSettings = next;
+          siteWrites.push({
+            collect: next.collect,
+            use: next.use,
+            method: request.method,
+          });
+          if (request.method === "DELETE") {
+            const deletedIds = graph && graphPresent ? [graph.id] : [];
+            graphPresent = false;
+            send({
+              siteSettings,
+              deletedIds,
+              hasMore: false,
+            });
+            return;
+          }
+        } else throw Error("Unexpected private settings method.");
+        send(siteSettings);
+        return;
+      }
+      if (
+        siteSettings &&
+        graph &&
+        path === `${workspace}/artifacts/navigation-knowledge` &&
+        request.method === "POST"
+      ) {
+        const query = navigationKnowledgeQuerySchema.parse(await readBody());
+        if (query.origin !== siteSettings.origin)
+          throw Error("Unexpected retrieval origin.");
+        knowledgeQueries.push({ origin: query.origin });
+        const result = await rankNavigationKnowledge(
+          query,
+          graphPresent && siteSettings.use
+            ? [
+                {
+                  id: graph.id,
+                  revision: "1",
+                  updatedAt: new Date().toISOString(),
+                  data: graph.data,
+                },
+              ]
+            : [],
+          new AbortController().signal,
+        );
+        const knowledge = {
+          ...result,
+          siteSettings:
+            siteSettings.use && graphPresent
+              ? { origin: siteSettings.origin, revision: siteSettings.revision }
+              : null,
+          contextDigest: result.context
+            ? (await serializeNavigationKnowledge(result.context)).digest
+            : null,
+          snapshotDigest: "0".repeat(64),
+        };
+        knowledge.snapshotDigest = await navigationKnowledgeSnapshotDigest(
+          query,
+          knowledge,
+        );
+        send(knowledge);
+        return;
+      }
       if (path === `${workspace}/policies`) {
         send({
           workspaceId: account.workspaceId,
@@ -165,6 +383,13 @@ export async function navigationServiceFixture(
       if (request.method !== "POST" || path !== `${workspace}/decisions`)
         throw Error("Unexpected synthetic service operation.");
       const input = navigationTransportInputSchema.parse(await readBody());
+      if (
+        input.profile === "customer-funded" &&
+        (!options.customer ||
+          JSON.stringify(input.connection) !==
+            JSON.stringify(providerConnectionSelection(provider)))
+      )
+        throw Error("Unexpected customer connection.");
       let release!: (outcome?: FixtureOutcome) => void;
       const held = new Promise<FixtureOutcome | undefined>((resolve) => {
         release = resolve;
@@ -249,13 +474,26 @@ export async function navigationServiceFixture(
       tokens,
       inference: {
         profile: "fake" as const,
-        enabled: true,
+        enabled: !options.customer,
         images: false,
         accountId: account.id,
         workspaceId: account.workspaceId,
       },
     };
-    return { origin, settings, decisions, failures, consentWrites, close };
+    return {
+      origin,
+      settings,
+      decisions,
+      failures,
+      consentWrites,
+      knowledgeQueries,
+      siteWrites,
+      provider,
+      get siteSettings() {
+        return siteSettings;
+      },
+      close,
+    };
   } catch (error) {
     await close();
     throw error;

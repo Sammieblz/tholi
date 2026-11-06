@@ -8,16 +8,33 @@ import {
   operatorEvaluationMetadataSchema,
 } from "../../../../packages/navigation-core/contracts-evaluation";
 import { navigationProcessingProfileSchema } from "../../../../packages/navigation-core/contracts-navigation";
-export const serviceInferenceChoicesSchema = z
+import { providerConnectionSelectionSchema } from "../../../../packages/navigation-core/contracts-providers";
+export const serviceInferenceChoiceBaseSchema = z
   .object({
-    profile: z.literal("fake"),
+    profile: z.enum(["fake", "customer-funded"]),
     enabled: z.boolean(),
     images: z.boolean(),
+    connection: providerConnectionSelectionSchema.optional(),
   })
-  .strict()
-  .refine((value) => !value.images || value.enabled, {
-    message: "Image transmission requires inference transmission.",
-  });
+  .strict();
+export function refineServiceInferenceChoices(
+  value: z.infer<typeof serviceInferenceChoiceBaseSchema>,
+  context: z.RefinementCtx,
+) {
+  if (
+    (value.images && !value.enabled) ||
+    (value.profile === "customer-funded"
+      ? !value.enabled || !value.connection
+      : !!value.connection)
+  )
+    context.addIssue({
+      code: "custom",
+      message:
+        "Processing requires an explicit current provider choice and transmission consent.",
+    });
+}
+export const serviceInferenceChoicesSchema =
+  serviceInferenceChoiceBaseSchema.superRefine(refineServiceInferenceChoices);
 /** Saved browser choices are not a plan, balance or provider-availability claim. */
 export const serviceOperatorEvaluationSchema = operatorEvaluationMetadataSchema
   .extend({
@@ -30,6 +47,7 @@ export const serviceInferenceStatusSchema = z
     configured: z.boolean(),
     profile: navigationProcessingProfileSchema,
     evaluation: serviceOperatorEvaluationSchema.optional(),
+    connection: providerConnectionSelectionSchema.optional(),
     enabled: z.boolean(),
     images: z.boolean(),
     serverConsentUpdated: z.boolean().optional(),
@@ -39,7 +57,10 @@ export const serviceInferenceStatusSchema = z
     (value) =>
       value.profile === "operator-evaluation"
         ? value.enabled && !!value.evaluation
-        : value.evaluation === undefined,
+        : value.evaluation === undefined &&
+          (value.profile === "customer-funded"
+            ? value.enabled && !!value.connection
+            : value.connection === undefined),
     "Temporary evaluation must remain explicit and enabled.",
   );
 export type ServiceInferenceStatus = z.infer<

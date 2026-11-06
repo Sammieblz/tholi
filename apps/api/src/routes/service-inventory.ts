@@ -30,6 +30,94 @@ export interface ServiceRouteInventoryEntry {
 export const SERVICE_ROUTES = [
   {
     method: "GET",
+    path: "/api/v1/account/provider-connections",
+    operationId: "listProviderConnections",
+    group: "account",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Read owned provider connection metadata without retrieving credentials or making model requests.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/account/provider-connections",
+    operationId: "createProviderConnection",
+    group: "account",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Encrypt an explicitly selected curated provider key without making a provider request.",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/account/provider-connections/{connectionId}",
+    operationId: "replaceProviderConnection",
+    group: "account",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Update a connection at its expected revision and require renewed selection after key rotation.",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/account/provider-connections/{connectionId}",
+    operationId: "removeProviderConnection",
+    group: "account",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Disable and erase an owned credential from Tholi without claiming provider-side revocation.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/workspaces/{workspaceId}/artifacts/site-settings",
+    operationId: "getNavigationKnowledgeSiteSettings",
+    group: "saved-data",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Read account, workspace and site learning choices through the explicit version-2 saved-data view.",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/workspaces/{workspaceId}/artifacts/site-settings",
+    operationId: "updateNavigationKnowledgeSiteSettings",
+    group: "saved-data",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Change separate collection and retrieval choices using exact revisions and explicit approval.",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/workspaces/{workspaceId}/artifacts/site-settings",
+    operationId: "forgetNavigationKnowledgeSite",
+    group: "saved-data",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Pause learning and delete bounded owned site-knowledge batches with revision and replay fencing.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/workspaces/{workspaceId}/artifacts/navigation-knowledge",
+    operationId: "retrieveNavigationKnowledge",
+    group: "saved-data",
+    status: "planned",
+    issue: 87,
+    access: "authenticated",
+    summary:
+      "Retrieve authorized, fresh structural route hints without granting permissions or current browser identity.",
+  },
+  {
+    method: "GET",
     path: "/api/v1/capabilities",
     operationId: "getServiceCapabilities",
     group: "discovery",

@@ -1,4 +1,19 @@
 import { createHash } from "node:crypto";
+/** Additional feature cases cannot substitute for any native branded surface proof. */
+export function requireBrandedNativeSurfaces(cases) {
+  for (const browser of ["chrome", "edge", "brave"]) {
+    const title =
+      browser +
+      " loads the built Chromium target and verifies a website interaction";
+    const matches = (cases || []).filter((item) => item.name?.endsWith(title));
+    if (
+      matches.length !== 1 ||
+      !matches[0].surfaces?.nativeSidebar ||
+      !matches[0].surfaces?.minimizedArrival
+    )
+      throw Error("Missing unique branded native surface proof: " + browser);
+  }
+}
 export const digest = (files) =>
   createHash("sha256").update(JSON.stringify(files)).digest("hex");
 export function validationIdentity() {

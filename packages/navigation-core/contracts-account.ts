@@ -6,7 +6,12 @@ import {
   servicePageQuerySchema,
   servicePageSchema,
 } from "./contracts-service";
-import { savedDataRecordSchema } from "./contracts-saved-data";
+import {
+  savedDataRecordSchema,
+  savedDataRecordV2Schema,
+} from "./contracts-saved-data";
+import { navigationKnowledgeSiteSettingsSchema } from "./contracts-navigation-knowledge";
+import { providerConnectionSchema } from "./contracts-providers";
 import {
   consentSchema,
   membershipRoleSchema,
@@ -16,6 +21,7 @@ import { identitySessionsSchema } from "./contracts-identity";
 import {
   creditHistoryEntrySchema,
   creditUsageEntrySchema,
+  creditUsageEntryV2Schema,
   workspaceCreditsSchema,
 } from "./contracts-credits";
 import {
@@ -37,6 +43,7 @@ export const accountExportInputSchema = z
   .object({
     idempotencyKey: identifier,
     continuation: serviceCursorSchema.optional(),
+    schemaVersion: z.literal(2).optional(),
   })
   .strict();
 export const accountExportStatusSchema = privateFileRequestSchema
@@ -259,3 +266,65 @@ export type AccountExportManifest = z.infer<typeof accountExportManifestSchema>;
 export type AccountExportSection = z.infer<typeof accountExportSectionSchema>;
 export type AccountDeletionInput = z.infer<typeof accountDeletionInputSchema>;
 export type AccountDeletionResult = z.infer<typeof accountDeletionResultSchema>;
+
+/** Only the explicitly selected new account-export view includes new private data. */
+export const accountExportSectionV2Schema = z.enum([
+  ...accountExportSectionSchema.options,
+  "site_settings",
+  "provider_connections",
+]);
+const partV2 = part.extend({ schemaVersion: z.literal(2) });
+export const accountExportPartV2Schema = z.union([
+  accountExportPartSchema,
+  partV2.extend({
+    section: z.literal("saved_data"),
+    items: z.array(savedDataRecordV2Schema).max(100),
+  }),
+  partV2.extend({
+    section: z.literal("site_settings"),
+    items: z.array(navigationKnowledgeSiteSettingsSchema).max(100),
+  }),
+  partV2.extend({
+    section: z.literal("provider_connections"),
+    items: z.array(providerConnectionSchema).max(100),
+  }),
+  partV2.extend({
+    section: z.literal("usage"),
+    items: z.array(creditUsageEntryV2Schema).max(100),
+  }),
+]);
+export const accountExportManifestV2Schema = accountExportManifestSchema
+  .innerType()
+  .extend({
+    schemaVersion: z.literal(2),
+    parts: z
+      .array(
+        accountExportManifestSchema.innerType().shape.parts.element.extend({
+          section: accountExportSectionV2Schema,
+        }),
+      )
+      .max(ACCOUNT_EXPORT_LIMITS.parts),
+    omissions: z
+      .array(omission.extend({ section: accountExportSectionV2Schema }))
+      .max(100),
+  })
+  .refine(
+    (value) =>
+      !value.complete ||
+      (value.continuation === null && value.omissions.length === 0),
+    "An incomplete preparation must not be described as complete.",
+  );
+export const accountExportManifestFileSchema = z.union([
+  accountExportManifestSchema,
+  accountExportManifestV2Schema,
+]);
+export type AccountExportPartV2 = z.infer<typeof accountExportPartV2Schema>;
+export type AccountExportManifestV2 = z.infer<
+  typeof accountExportManifestV2Schema
+>;
+export type AccountExportManifestFile = z.infer<
+  typeof accountExportManifestFileSchema
+>;
+export type AccountExportSectionV2 = z.infer<
+  typeof accountExportSectionV2Schema
+>;

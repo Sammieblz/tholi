@@ -84,7 +84,7 @@ const projects: Project[] = [
 if (browserGroup === "platform")
   projects.push(
     project("platform-chrome", "platform", "extension/branded", {
-      grep: /chrome loads the built Chromium target/,
+      grep: /chrome loads the built Chromium target|chrome customer-funded guidance and private learning/,
       timeout: 120_000,
       use: { trace: "off", screenshot: "off", video: "off" },
     }),

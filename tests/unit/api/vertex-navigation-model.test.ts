@@ -565,7 +565,7 @@ test("over-budget measured usage is retained for reconciliation", async () => {
   app.input.budget.maxOutputTokens = 24;
   const error = await rejection(app, "BUDGET_EXCEEDED", "reported");
   expect(error.usage?.totalTokens).toBe(125);
-  expect(error.usage?.thoughtTokens).toBe(5);
+  expect(error.usage).toMatchObject({ thoughtTokens: 5 });
 });
 
 test.each([

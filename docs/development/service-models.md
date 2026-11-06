@@ -2,11 +2,14 @@
 
 Operator guide for [issue #39](https://github.com/Sammieblz/tholi/issues/39).
 The deterministic fake and an explicitly approved Vertex experiment share one
-application contract. Ordinary HTTP/Compose startup remains fake-only. The
+application contract. Default HTTP/Compose startup remains fake-only. The
 separate [perception comparison](testing/perception-comparison.md) uses an
 explicit, authenticated operator runtime and its own exact-plan approval.
-This guide does not enable consumer cloud
-navigation, certify model quality or authorize a paid call. Recorded checks and
+Customer-funded providers use the separate explicit
+[BYOK profile](local-stack.md#customer-providers-and-private-learning), with
+account-scoped credentials and the existing usage ledger. They do not enable
+managed Gemini. This operator guide does not certify model quality or authorize
+a paid call. Recorded checks and
 remaining gates are in the [validation record](testing/model-adapters-validation.md).
 
 ## Local default and ownership

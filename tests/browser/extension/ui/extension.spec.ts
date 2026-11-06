@@ -388,7 +388,12 @@ test("widget uses fresh frame binding, blocks secrets, moves and resizes", async
     }
     const stranger = await app.context.newPage();
     await stranger.goto(expanded.url());
-    await expect(stranger.locator("body")).toContainText("Reconnecting");
+    await expect(stranger.getByRole("alert")).toContainText(
+      "UI_REGISTRATION_FAILED",
+    );
+    await expect(
+      stranger.getByRole("button", { name: "Try again", exact: true }),
+    ).toBeEnabled();
     expect(
       await stranger.evaluate(
         async () =>

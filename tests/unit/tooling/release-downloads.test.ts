@@ -363,6 +363,34 @@ test("download sync accepts both release names, preserves archives and rejects t
   }
 });
 
+test("branded surface certification retains one proof per browser when feature cases are added", async () => {
+  const { requireBrandedNativeSurfaces } =
+    await import("../../../scripts/evidence.mjs");
+  const proofs = ["chrome", "edge", "brave"].map((browser) => ({
+    name: `smoke / ${browser} loads the built Chromium target and verifies a website interaction`,
+    surfaces: { nativeSidebar: true, minimizedArrival: true },
+  }));
+  const feature = {
+    name: "chrome customer-funded guidance and private learning keep native authority",
+  };
+  expect(() =>
+    requireBrandedNativeSurfaces([...proofs, feature]),
+  ).not.toThrow();
+  for (const changed of [
+    proofs.slice(1),
+    [...proofs, proofs[0]],
+    proofs.map((item, index) =>
+      index
+        ? item
+        : {
+            ...item,
+            surfaces: { nativeSidebar: true, minimizedArrival: false },
+          },
+    ),
+  ])
+    expect(() => requireBrandedNativeSurfaces([...changed, feature])).toThrow();
+});
+
 test("release evidence rejects PR, partial, skipped, stale and mixed-run certification", async () => {
   const { requireFullEvidence, digest } =
     await import("../../../scripts/evidence.mjs");

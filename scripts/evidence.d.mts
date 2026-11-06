@@ -1,4 +1,10 @@
 export function digest(files: Record<string, string>): string;
+export function requireBrandedNativeSurfaces(
+  cases: {
+    name: string;
+    surfaces?: { nativeSidebar?: boolean; minimizedArrival?: boolean };
+  }[],
+): void;
 export function validationIdentity(): {
   tier: string;
   runId: string;

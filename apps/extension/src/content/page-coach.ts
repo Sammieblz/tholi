@@ -1076,7 +1076,7 @@ export class PageCoach {
     const source =
       message.profile === "operator-evaluation"
         ? "Operator evaluation"
-        : "Development service";
+        : "Connected guidance";
     const request = this.view.request,
       journey = this.view.journey,
       page = this.view.page,
@@ -1284,7 +1284,7 @@ export class PageCoach {
     const proposalPrefix =
       this.view.serviceNavigation?.profile === "operator-evaluation"
         ? "Operator evaluation proposal. "
-        : "Development proposal. ";
+        : "Connected guidance proposal. ";
     const target = this.discovery.bindings.get(id);
     const external = this.view.page?.controls.find(
       (c) => c.id === id && c.reference?.frameId,

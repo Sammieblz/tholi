@@ -1,5 +1,6 @@
 import { expect, test, vi } from "vitest";
 import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, sep } from "node:path";
 import type { WebDriver } from "selenium-webdriver";
@@ -128,7 +129,7 @@ test("disposable profile ownership accepts canonical aliases and closes rejected
       process.platform === "win32" ? "junction" : "dir",
     );
     expect(ownedFirefoxProfile(join(alias, basename(profile)), alias)).toBe(
-      await realpath(profile),
+      realpathSync.native(profile),
     );
     const outside = await mkdtemp(join(directory, "rust_mozprofile"));
     expect(() => ownedFirefoxProfile(outside, alias)).toThrow(

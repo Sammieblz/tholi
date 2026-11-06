@@ -63,11 +63,112 @@ smoke because of a title filter and exposed an undersized headless Chrome fixtur
 viewport. The corrected filter and shared content-viewport helper are covered by
 the fresh seven-case run; the failed probe remains separate.
 
-## Pending evidence
+## Native hosted feedback
 
-Native checks on all four Mac targets, final Windows PR checks, provider and
-learning integration, real PostgreSQL verification and the final complete
-`test:ci` gate remain pending. Store installation, physical Retina displays,
+PR run [42160691132](https://github.com/Sammieblz/tholi/actions/runs/42160691132)
+at `0c9a084fee68848543cf89370e5c5efcb8907168` passed all seven native cases on
+each of `macos-15`, `macos-15-intel`, `macos-26` and `macos-26-intel`.
+Both native browser architectures and measured 2x capture scale matched their
+runner targets. This is feedback for that earlier build, not the final feature.
+
+Earlier failures established two harness causes: Darwin truncated an executable
+in a middle `ps` column, and a runner supplied ChromeDriver 151 beside Chrome
+156/157. The shared resolver now selects an actual matching driver; process
+inspection queries the executable in its own final column. Disposable-profile
+ownership checks remain strict. The subsequent aggregate correctly rejected a
+Firefox runtime attachment missing its driver version. That attachment is
+corrected without weakening the validator. Windows feedback also corrected
+the fixture's native-path expectation for 8.3 aliases and its expectation for
+the newly visible registration failure on an unauthorized widget tab.
+
+## Provider and private learning feedback
+
+Provider lifecycle, isolated loopback HTTP protocols, canonical usage, quota
+admission, versioned private storage and UI contracts have focused source checks.
+Reports remain separate from the earlier model and release records:
+
+- `output/qa/provider-http-focused.json`: 91 provider/domain/Vertex checks.
+- `output/qa/provider-website-focused.json`: 13 account website checks.
+- `output/qa/customer-accounting-87/4cefb9bf-ec52-4cd8-8986-7aef44fdf8c8/`:
+  147 accounting, authorization, usage-version and service checks.
+- `output/qa/87-private-memory-reuse-unit.json`: 31 graph/client/reuse checks.
+- `output/qa/87-private-learning/e1ac6849-04f8-4a14-a2d6-94e953deeb7a/`:
+  73 extension safety and learning presentation checks.
+
+Subsequent integration changes require fresh complete PR validation. Automated
+unit fetch denies external customer and managed model endpoints before dispatch;
+protocol fixtures intercept requests and use owned loopback HTTP servers only.
+These results do not establish vendor availability, real-key acceptance,
+retention promises, live navigation quality or customer prices.
+
+The optional egress tunnel is covered by injected DNS/dial and real loopback
+socket tests. Static authored-YAML checks cover its declared network/key mounts.
+Automatic approval review rejected the separate synthetic Compose interpolation
+check with the reason "blocked by policy" before execution. No temporary fixture,
+container or provider request was created by that rejected check. Compose
+interpolation and runtime validation of the BYOK overlay remain pending.
+
+## Integrated source feedback
+
+The complete local `test:ci` cohort passed **1,241 unit checks and 148 browser
+cases** on 2026-11-06, run `0f3ade28-640f-400d-8e88-96b9cec87bc7`.
+Its immutable build, reports and log are preserved under
+`output/qa/87-final-pr-gate/0f3ade28-640f-400d-8e88-96b9cec87bc7/`.
+This comprises 56 core, 20 integration, five Firefox and 67 interface cases.
+An earlier complete attempt passed through Firefox, then stopped because an
+existing server occupied port 5174. Its reports remain separate; the passing
+cohort used a dedicated test port without stopping that server.
+
+A subsequent cross-owner review identified a pause/read race. Delayed settings
+acknowledgements could restore an older local learning choice after a reduction.
+The existing owner now fences mutation acknowledgements, lets reads only preserve
+or reduce local permission, and retains the original cancellation span through
+learning, retrieval, saving and reconciliation. The final focused cohort passed
+**91/91**, including six distinct race regressions, run
+`d5227365-7645-4cd7-a8da-ec0c6c80e975`. Its report is
+`output/qa/87-private-learning-pause-race.json`, SHA-256
+`a066d9396bd22313edad5bd126dab2c2325b1f83d6133697bcde41c6e71a1dd7`.
+The preceding complete cohort does not substitute for final committed-source CI.
+
+TypeScript, version checks and the production build passed again after that
+correction. Both rebuilt native Windows provider/learning cases passed, run
+`6ccfba0e-90eb-40cb-8e73-64b64af528d7`, preserved under
+`output/qa/87-private-native-final/6ccfba0e-90eb-40cb-8e73-64b64af528d7/`.
+Report SHA-256 is
+`665124de985ea31b990caa889cea310cc19e9d6536dad96ef40c71158fead952`.
+The Chromium digest is
+`c4181d23dc63459da8270d14480343fd085f56849a29e5de6666c3a809757c59`
+and Firefox digest is
+`4698fc69367723fc628d093a43344d571940d368b26f709f6c2bf88085bbba95`.
+The cases verify a known route without a model request, an independently
+completed live task, rejection of changed structure, pause, confirmed forgetting
+and Local transmission fencing. Both themes, keyboard focus, reduced motion
+and four viewport widths are measured. Chrome uses CSS viewport emulation at
+375/640/960/1280; native headless Firefox uses its actual 500/640/960/1280 widths.
+No Firefox 375-pixel viewport or Mac result is inferred from this report.
+
+## Database feedback
+
+The default cloud-free stack passed **27 top-level checks and 112 PostgreSQL
+subchecks** in `tholi-smoke-mw4ha357-43318b0a`. The actual report is
+`output/qa/local-stack/tholi-smoke-mw4ha357-43318b0a/smoke.json`; it covers migration
+upgrade/replay, provider key isolation, customer quotas and reconciliation,
+versioned graphs, retention/export cleanup, backup/restore and owned teardown.
+Four earlier failed SQL/fixture feedback runs remain separate. No BYOK egress
+profile or external model call was enabled. The later PR container job must
+validate the final committed source independently.
+
+## Final evidence requirements
+
+[PR #88](https://github.com/Sammieblz/tholi/pull/88) owns the final committed-source
+PR and container gates. Its native workflow requires nine cases on each of the
+four declared Mac targets, including both provider/learning flows. The aggregate
+requires one fresh cohort, actual browser/driver architectures, both build
+digests and observed 2x capture scale. Earlier seven-case feedback cannot satisfy
+that final contract. Inspect the checks and attached artifacts for the reviewed
+commit; source-only and independently collected reports do not replace them.
+
+Store installation, physical Retina displays,
 native permission prompts, real signed-in provider use and screen-reader checks
 remain pending until performed. Automated provider tests must use local fixtures
 with external provider traffic denied. Managed Gemini and the deferred live
@@ -75,7 +176,13 @@ quality gate remain disabled.
 
 ## UI guidance
 
-Widget recovery follows the existing project UI and accessibility skills: reuse
-tokens and native buttons, announce loading and errors, expose a specific recovery
-action and retain visible focus. No button arrows or new visual system are added.
-Automated DOM checks do not establish actual screen-reader speech.
+Widget recovery, account provider forms and private learning controls apply
+`.codex/skills/fixing-accessibility/SKILL.md` and the local `ui-ux-pro-max`
+quick-reference guidance: named native controls, associated labels/errors,
+keyboard access, visible focus, semantic tokens, minimum 4.5:1 text contrast,
+reduced motion and confirmation dialogs. Base UI owns modal focus and
+cancellation. Password fields clear before awaited mutations; busy, error and
+status feedback are announced. Provider, image, collection and retrieval choices
+remain separate. Native checks measure 44-pixel targets and keyboard focus in
+both themes. No button arrows or new visual system are added. Automated DOM
+checks do not establish actual screen-reader speech.

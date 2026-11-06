@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import {
   creditHistoryPageSchema,
   creditUsagePageSchema,
+  creditUsagePageV2Schema,
   type CreditHistoryPage,
   type CreditUsagePage,
+  type CreditUsagePageV2,
 } from "../../../../../packages/navigation-core/contracts-credits";
+import { serviceCapabilitiesSchema } from "../../../../../packages/navigation-core/contracts-service";
 import { useAccountOperation } from "./useAccountOperation";
 import { useAccount } from "./session";
 import { formatQuantity, type AccountSummary } from "./useAccountSummary";
@@ -36,7 +39,7 @@ export function AccountCreditsPage({ summary }: { summary: AccountSummary }) {
       ? `${account.session.account.id}/${workspace}/${account.session.session.id}`
       : "";
   const [history, setHistory] = useState<CreditHistoryPage>(),
-    [usage, setUsage] = useState<CreditUsagePage>(),
+    [usage, setUsage] = useState<CreditUsagePage | CreditUsagePageV2>(),
     [historyCursors, setHistoryCursors] = useState<(string | undefined)[]>([
       undefined,
     ]),
@@ -73,14 +76,28 @@ export function AccountCreditsPage({ summary }: { summary: AccountSummary }) {
           },
         )
       : run(
-          (signal) =>
-            account.request(
+          async (signal) => {
+            const view2 =
+              cursors.length > 1 && usage
+                ? "schemaVersion" in usage && usage.schemaVersion === 2
+                : (
+                    await account.request(
+                      "/api/v1/capabilities",
+                      serviceCapabilitiesSchema,
+                      "GET",
+                      undefined,
+                      signal,
+                    )
+                  ).capabilities.includes("usage-schema-2");
+            if (view2) query.set("schemaVersion", "2");
+            return account.request(
               `/api/v1/workspaces/${workspace}/usage?${query}`,
-              creditUsagePageSchema,
+              view2 ? creditUsagePageV2Schema : creditUsagePageSchema,
               "GET",
               undefined,
               signal,
-            ),
+            );
+          },
           (result) => {
             setUsage(result);
             setUsageCursors(cursors);
@@ -313,8 +330,10 @@ export function AccountCreditsPage({ summary }: { summary: AccountSummary }) {
       <section aria-labelledby="credit-usage-title">
         <h2 id="credit-usage-title">Usage activity</h2>
         <p>
-          Unconfirmed usage or provider cost stays unconfirmed. Provider cost is
-          a service record, not a charge to your account.
+          Unconfirmed usage and customer provider costs stay unconfirmed.
+          Customer-funded requests do not spend Tholi credits. Your provider's
+          statement determines its charges; Tholi's provider liability is
+          separate.
         </p>
         <button disabled={busy} onClick={() => void load("usage", [undefined])}>
           {usage ? "Refresh usage activity" : "Load usage activity"}
@@ -333,7 +352,8 @@ export function AccountCreditsPage({ summary }: { summary: AccountSummary }) {
                     <th scope="col">Input units</th>
                     <th scope="col">Output units</th>
                     <th scope="col">Credits</th>
-                    <th scope="col">Provider cost</th>
+                    <th scope="col">Tholi provider liability</th>
+                    <th scope="col">Customer provider cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -349,6 +369,12 @@ export function AccountCreditsPage({ summary }: { summary: AccountSummary }) {
                       <td>{measured(item.outputUnits)}</td>
                       <td>{measured(item.chargedCredits)}</td>
                       <td>{providerCost(item.providerUsdMicros)}</td>
+                      <td>
+                        {"fundingSource" in item &&
+                        item.fundingSource === "customer"
+                          ? providerCost(item.customerUsdMicros)
+                          : "Not applicable"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

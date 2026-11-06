@@ -278,7 +278,7 @@ export function AdvancedTools({
                   view.serviceNavigation.profile === "operator-evaluation" ? (
                     "Operator evaluation proposal · Verify on the website"
                   ) : (
-                    "Development service proposal · Verify on the website"
+                    "Connected guidance proposal · Verify on the website"
                   )
                 ) : (
                   <>

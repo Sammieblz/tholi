@@ -11,7 +11,9 @@ import { Key } from "selenium-webdriver";
 import {
   navigationServiceFixture,
   navigationServicePageHtml,
+  seedNavigationServiceAccount,
 } from "../../../support/navigation-service-fixture";
+import { verifyWebDriverPrivateLearning } from "../../../support/webdriver-private-learning";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -84,26 +86,7 @@ async function firefoxServiceFixture(
     });
     // Firefox's existing private-settings owner uses extension-origin IndexedDB.
     // Synthetic credentials never enter website storage or a content script.
-    await app.extension(async (settings: unknown) => {
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("tholi-private-settings", 1);
-        request.onupgradeneeded = () =>
-          request.result.createObjectStore("settings");
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const transaction = database.transaction("settings", "readwrite");
-          transaction.objectStore("settings").put(settings, "service-auth");
-          transaction.oncomplete = () => resolve();
-          transaction.onabort = transaction.onerror = () =>
-            reject(transaction.error);
-        });
-      } finally {
-        database.close();
-      }
-    }, service.settings);
+    await seedNavigationServiceAccount(app, service.settings, "firefox");
     const started = await app.start();
     return { app, service, started, close };
   } catch (error) {
@@ -111,6 +94,10 @@ async function firefoxServiceFixture(
     throw error;
   }
 }
+
+test("Firefox customer-funded guidance and private learning keep native authority", async ({}, info) => {
+  await verifyWebDriverPrivateLearning("firefox", info);
+});
 
 test("Firefox binds an authenticated service proposal to its native document without inventing arrival", async ({}, info) => {
   const fixture = await firefoxServiceFixture(info);
@@ -304,6 +291,7 @@ test("Firefox uses native document identity, local planning and independently ve
         JSON.stringify({
           name: "firefox",
           version: app.version,
+          driverVersion: app.driverVersion,
           target: "firefox",
           platform: app.platform,
           runtimePlatform: app.runtimePlatform,

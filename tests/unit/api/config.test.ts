@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { mkdtemp, rm, rmdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { runDatabaseCommand } from "../../../apps/api/src/database/cli";
 import {
@@ -38,6 +40,132 @@ const supportEnvironment = () => ({
   THOLI_OBJECT_BUCKET: "tholi-private",
   THOLI_OBJECT_ACCESS_KEY: "synthetic-access",
   THOLI_OBJECT_SECRET_KEY: "synthetic-secret",
+});
+
+describe("explicit provider credential configuration", () => {
+  const ring = {
+    version: 1 as const,
+    activeVersion: "config-fixture",
+    keys: { "config-fixture": Buffer.alloc(32, 81).toString("base64url") },
+  };
+  it("keeps provider access disabled by default and independent of private and worker profiles", () => {
+    for (const env of [
+      {},
+      { THOLI_BYOK_ENABLED: "false" },
+      {
+        OPENAI_API_KEY: "UNREAD_PRIVATE_SENTINEL",
+        ANTHROPIC_API_KEY: "UNREAD_PRIVATE_SENTINEL",
+      },
+    ])
+      expect(parseServiceConfig(env).options.providers).toBeUndefined();
+    const byok = {
+      THOLI_BYOK_ENABLED: "true",
+      THOLI_BYOK_KEYRING_FILE: "UNREAD_PRIVATE_PATH",
+    };
+    expect(parsePrivateConfig(byok)).toEqual(parsePrivateConfig({}));
+    const worker = {
+      THOLI_DATABASE_WORKER_URL:
+        "postgresql://worker:synthetic@localhost/tholi",
+    };
+    expect(parseWorkerConfig({ ...worker, ...byok })).toEqual(
+      parseWorkerConfig(worker),
+    );
+    for (const value of ["", "yes", "TRUE", "1"])
+      expect(() => parseServiceConfig({ THOLI_BYOK_ENABLED: value })).toThrow();
+    expect(() =>
+      parseServiceConfig({ THOLI_BYOK_KEYRING_FILE: "UNREAD_PRIVATE_PATH" }),
+    ).toThrow("explicit BYOK");
+    expect(() =>
+      parseServiceConfig({
+        THOLI_BYOK_ENABLED: "false",
+        THOLI_BYOK_KEYRING_FILE: "UNREAD_PRIVATE_PATH",
+      }),
+    ).toThrow("explicit BYOK");
+  });
+  it("requires a dedicated bounded keyring file and composed identity before exposing provider connections", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "tholi-provider-config-"));
+    const path = join(directory, "keyring.json");
+    try {
+      await writeFile(path, JSON.stringify(ring));
+      const env = { THOLI_BYOK_ENABLED: "true", THOLI_BYOK_KEYRING_FILE: path };
+      expect(() => parseServiceConfig(env)).toThrow("identity");
+      const options = parseServiceConfig({
+        ...identityEnvironment(),
+        ...env,
+      }).options;
+      expect(options.providers?.keyring).toEqual(ring);
+      expect(options.navigation).toBeUndefined();
+      for (const providers of [
+        null,
+        false,
+        [],
+        {},
+        { keyring: ring, apiKey: "UNREAD_PRIVATE_SENTINEL" },
+      ])
+        expect(() =>
+          validateServiceOptions({ ...options, providers: providers as never }),
+        ).toThrow();
+      for (const selectedPath of [
+        "relative/keyring.json",
+        join(directory, "missing.json"),
+        directory,
+      ]) {
+        expect(() =>
+          parseServiceConfig({
+            ...identityEnvironment(),
+            ...env,
+            THOLI_BYOK_KEYRING_FILE: selectedPath,
+          }),
+        ).toThrow("keyring");
+      }
+      for (const contents of [
+        "PRIVATE_JSON_SENTINEL",
+        "x".repeat(16385),
+        JSON.stringify({
+          ...ring,
+          keys: { "config-fixture": "PRIVATE_KEY_SENTINEL" },
+        }),
+      ]) {
+        await writeFile(path, contents);
+        let failure: unknown;
+        try {
+          parseServiceConfig({ ...identityEnvironment(), ...env });
+        } catch (error) {
+          failure = error;
+        }
+        expect(String(failure)).toContain("keyring");
+        expect(String(failure)).not.toContain(directory);
+        expect(String(failure)).not.toContain("PRIVATE_");
+      }
+    } finally {
+      await rm(path, { force: true });
+      await rmdir(directory);
+    }
+  });
+  it("rejects provider encryption keys reused from identity or private-file signing", () => {
+    const options = parseServiceConfig({
+      ...identityEnvironment(),
+      ...supportEnvironment(),
+    }).options;
+    for (const key of [
+      options.identity!.flowEncryptionKey,
+      options.support!.fileLinkSecret,
+    ])
+      expect(() =>
+        validateServiceOptions({
+          ...options,
+          providers: { keyring: { ...ring, keys: { "config-fixture": key } } },
+        }),
+      ).toThrow("dedicated");
+    const sharedKey = ring.keys["config-fixture"];
+    expect(() =>
+      validateServiceOptions({
+        ...options,
+        identity: { ...options.identity!, clientSecret: sharedKey },
+        providers: { keyring: ring },
+      }),
+    ).toThrow("dedicated");
+  });
 });
 
 describe("explicit operator model configuration", () => {
@@ -140,7 +268,7 @@ describe("service-only transport policy", () => {
     expect(options.navigation).toEqual({ provider: "fake" });
     expect(() =>
       parseServiceConfig({ ...env, THOLI_MODEL_PROVIDER: "vertex" }),
-    ).toThrow("quota");
+    ).toThrow("Managed HTTP models remain disabled");
     for (const value of ["yes", "TRUE", "1", ""])
       expect(() =>
         parseServiceConfig({

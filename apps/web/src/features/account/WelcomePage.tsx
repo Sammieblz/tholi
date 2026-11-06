@@ -11,6 +11,7 @@ import { SavedDataPage } from "./SavedDataPage";
 import { AccountCreditsPage } from "./AccountCreditsPage";
 import { AccountPlansPage } from "./AccountPlansPage";
 import { AccountSecurityPage } from "./AccountSecurityPage";
+import { AccountProvidersPage } from "./AccountProvidersPage";
 import "./account.css";
 
 /** The account boundary supplies identity; private page state has one scoped lifetime. */
@@ -142,6 +143,8 @@ function Workspace({
           <AccountCreditsPage summary={summary} />
         ) : selected === "/account/billing" ? (
           <AccountPlansPage summary={summary} />
+        ) : selected === "/account/providers" ? (
+          <AccountProvidersPage />
         ) : selected === "/account/security" ? (
           <AccountSecurityPage
             summary={summary}
@@ -189,8 +192,9 @@ function AccountOverview({ summary }: { summary: AccountSummary }) {
         <div className="account-development-note">
           <strong>Development workspace</strong>
           <p>
-            Cloud processing uses the fake development model. Live Gemini
-            access, purchased credits and paid plans are not enabled.
+            Managed cloud processing uses the fake development model. Your own
+            provider connections require separate selection and consent. Live
+            managed Gemini, purchased credits and paid plans are not enabled.
           </p>
         </div>
       )}

@@ -9,15 +9,15 @@ import {
 } from "../../../../../packages/navigation-core/contracts-support";
 import {
   SAVED_DATA_LIMITS,
-  savedDataExportSnapshotSchema,
+  savedDataExportFileSchema,
 } from "../../../../../packages/navigation-core/contracts-saved-data";
 import { serviceApiOrigin } from "../../config/project";
 import type { useAccount } from "./session";
 import { accountError } from "./account-error";
 import {
-  accountExportManifestSchema,
-  accountExportPartSchema,
-  type AccountExportManifest,
+  accountExportManifestFileSchema,
+  accountExportPartV2Schema,
+  type AccountExportManifestFile,
 } from "../../../../../packages/navigation-core/contracts-account";
 import type { z } from "zod";
 
@@ -32,21 +32,21 @@ const formats = {
   "saved-data": {
     name: "saved items",
     filename: "tholi-saved-data.json",
-    schema: savedDataExportSnapshotSchema,
+    schema: savedDataExportFileSchema,
     maxBytes: SAVED_DATA_LIMITS.importBytes,
     ready: "Your saved items are ready to download.",
   },
   "account-manifest": {
     name: "account export manifest",
     filename: "tholi-account-manifest.json",
-    schema: accountExportManifestSchema,
+    schema: accountExportManifestFileSchema,
     maxBytes: SUPPORT_LIMITS.maxFileBytes,
     ready: "Your account export manifest is ready to download.",
   },
   "account-part": {
     name: "account export file",
     filename: "tholi-account-data.json",
-    schema: accountExportPartSchema,
+    schema: accountExportPartV2Schema,
     maxBytes: SUPPORT_LIMITS.maxFileBytes,
     ready: "This account export file is ready to download.",
   },
@@ -71,7 +71,7 @@ export const accountFileMetadata = async (
 
 type ExportExpectation = {
   generation: string;
-  part?: AccountExportManifest["parts"][number];
+  part?: AccountExportManifestFile["parts"][number];
 };
 
 /** Previewing a manifest and downloading a file use the same protected delivery checks. */
@@ -128,8 +128,8 @@ export async function readAccountFile<T>(
   ) {
     const value =
       snapshot.kind === "account-export-manifest"
-        ? accountExportManifestSchema.parse(snapshot)
-        : accountExportPartSchema.parse(snapshot);
+        ? accountExportManifestFileSchema.parse(snapshot)
+        : accountExportPartV2Schema.parse(snapshot);
     if (
       value.accountId !== account.session?.account.id ||
       (expected && value.generation !== expected.generation)

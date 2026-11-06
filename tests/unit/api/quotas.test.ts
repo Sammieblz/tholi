@@ -25,7 +25,10 @@ import {
   type RepositoryScope,
 } from "../../../apps/api/src/database/contracts";
 import { AUTHORIZATION_CONSENT_POLICIES } from "../../../packages/navigation-core/contracts-authorization";
-import { fakeDevelopmentChargingPolicy } from "../../../packages/navigation-core/contracts-credits";
+import {
+  fakeDevelopmentChargingPolicy,
+  customerDevelopmentChargingPolicy,
+} from "../../../packages/navigation-core/contracts-credits";
 import { navigationTransportInputSchema } from "../../../packages/navigation-core/contracts-navigation";
 import { createEffectiveProductPlanFixture } from "../../support/product-plan-fixture";
 import {
@@ -37,6 +40,7 @@ import type { JobLease } from "../../../apps/api/src/application/job-contracts";
 function fixture(
   model: NavigationModel = createFakeNavigationModel(),
   environment: "development" | "production" = "production",
+  customer = false,
 ) {
   const accountId = randomUUID(),
     workspaceId = randomUUID(),
@@ -47,14 +51,7 @@ function fixture(
     deadlineAt: Date.now() + 5000,
     signal: controller.signal,
   };
-  const observation = navigationModelObservation(),
-    input = navigationTransportInputSchema.parse({
-      requestId,
-      profile: "fake",
-      observation,
-      validation: navigationModelValidation(observation),
-      policy: { timeoutMs: 5000 },
-    });
+  const observation = navigationModelObservation();
   const policy: InferencePolicy = {
     version: fakeDevelopmentChargingPolicy.version,
     provider: "fake",
@@ -74,6 +71,41 @@ function fixture(
     workspaceProviderUsdMicros: 0n,
     journeyProviderUsdMicros: 0n,
   };
+  const customerPolicy = customerDevelopmentChargingPolicy("openai");
+  const connection = {
+    connectionId: randomUUID(),
+    provider: customerPolicy.provider,
+    model: customerPolicy.model,
+    catalogRevision: customerPolicy.catalogRevision,
+    routingPolicyVersion: customerPolicy.routingPolicyVersion,
+    policyDigest: "c".repeat(64),
+    revision: "1",
+  };
+  const binding = { ...connection, retrievalSnapshotDigest: "d".repeat(64) };
+  const input = navigationTransportInputSchema.parse({
+    requestId,
+    profile: customer ? "customer-funded" : "fake",
+    observation,
+    validation: navigationModelValidation(observation),
+    policy: { timeoutMs: 5000 },
+    ...(customer ? { connection } : {}),
+  });
+  if (customer)
+    Object.assign(policy, {
+      version: customerPolicy.version,
+      provider: customerPolicy.provider,
+      model: customerPolicy.model,
+      priceRevision: customerPolicy.version,
+      maxCredits: 0n,
+      maxJourneyRequests: 2,
+      periodSeconds: 86400,
+      accountRequests: 6,
+      workspaceRequests: 6,
+      fundingSource: "customer",
+      catalogRevision: customerPolicy.catalogRevision,
+      routingPolicyVersion: customerPolicy.routingPolicyVersion,
+      requestsPerMinute: 2,
+    });
   const membership: Membership = {
     accountId,
     role: "owner",
@@ -119,11 +151,12 @@ function fixture(
       id: randomUUID(),
       requestId,
       claimToken: "private-server-hold-capability",
-      creditReservationId: randomUUID(),
-      maxCredits: 1n,
+      creditReservationId: customer ? null : randomUUID(),
+      maxCredits: customer ? 0n : 1n,
       expiresAt: new Date(context.deadlineAt),
       policy,
       effectivePlan: null,
+      ...(customer ? { binding } : {}),
     })),
     markInferenceDispatched: vi.fn<QuotaTransaction["markInferenceDispatched"]>(
       async () => {},
@@ -152,12 +185,14 @@ function fixture(
     ),
   } satisfies QuotaRepositories;
   const transactions = vi.spyOn(repositories, "transaction");
+  const revalidateConnection = vi.fn(async () => {});
   const revalidate = vi.fn(async () => {}),
     quota = createNavigationQuotaPolicy(
       repositories,
       model,
-      undefined,
+      customer ? customerPolicy : undefined,
       environment,
+      customer ? { binding, revalidateConnection } : undefined,
     ),
     prepare = () =>
       quota.prepare(input, {
@@ -180,9 +215,189 @@ function fixture(
     transactions,
     revalidate,
     model,
+    binding,
+    revalidateConnection,
     prepare,
   };
 }
+
+function customerModel(): NavigationModel {
+  const fake = createFakeNavigationModel();
+  return {
+    async infer(request, context) {
+      const result = await fake.infer(request, context);
+      return {
+        ...result,
+        usage: {
+          version: 2,
+          provider: "openai",
+          source: "measured",
+          model: customerDevelopmentChargingPolicy("openai").model,
+          inputTokens: 12,
+          outputTokens: 2048,
+          cacheReadInputTokens: null,
+          cacheWriteInputTokens: null,
+          reasoningOutputTokens: 1024,
+          totalTokens: 2060,
+        },
+      };
+    },
+  };
+}
+
+test("customer-funded inference needs no managed enrollment or credit hold and counts reasoning once", async () => {
+  const f = fixture(customerModel(), "production", true);
+  f.tx.creditBalance.mockRejectedValue(
+    new Error("Credit balance must not gate customer funding"),
+  );
+  const held = await f.tx.reserveInference({
+    requestId: f.requestId,
+    journeyId: f.input.observation.stamp.journeyId,
+    policyVersion: f.policy.version,
+    expiresAt: new Date(f.context.deadlineAt),
+    binding: f.binding,
+  });
+  held.effectivePlan = createEffectiveProductPlanFixture({
+    status: "inactive",
+    caps: null,
+  });
+  f.tx.reserveInference.mockClear();
+  f.tx.reserveInference.mockResolvedValueOnce(held);
+  const { operation, result } = await propose(f);
+  expect(operation.budget).toEqual({
+    maxInputTokens: 32768,
+    maxOutputTokens: 2048,
+    maxImages: 1,
+  });
+  await operation.finish(result);
+  expect(f.tx.reserveInference).toHaveBeenCalledWith(
+    expect.objectContaining({ binding: f.binding }),
+  );
+  expect(f.tx.creditBalance).not.toHaveBeenCalled();
+  expect(f.repositories.finishInference.mock.calls[0][0]).toMatchObject({
+    resolution: "reported",
+    inputUnits: 12n,
+    outputUnits: 2048n,
+    usageVersion: 2,
+    reasoningOutputUnits: 1024n,
+    cacheReadInputUnits: null,
+    cacheWriteInputUnits: null,
+    providerUsdMicros: 0n,
+    chargedCredits: 0n,
+    customerUsdMicros: null,
+  });
+});
+
+test("a revoked customer connection prevents dispatch and finalizes trusted no-send without a managed charge", async () => {
+  const model = customerModel(),
+    infer = vi.spyOn(model, "infer"),
+    f = fixture(model, "production", true);
+  const operation = await f.prepare();
+  f.revalidateConnection.mockRejectedValueOnce(
+    new AuthorizationError(
+      403,
+      "FORBIDDEN",
+      "The provider connection changed.",
+    ),
+  );
+  const error = await createNavigationModelService(operation.model)
+    .propose(
+      f.input.observation,
+      () => f.input.validation,
+      f.context,
+      operation.budget,
+    )
+    .catch((failure) => failure);
+  expect(error).toMatchObject({ code: "FORBIDDEN" });
+  expect(infer).not.toHaveBeenCalled();
+  expect(f.tx.markInferenceDispatched).not.toHaveBeenCalled();
+  await operation.finish({ error });
+  expect(f.repositories.finishInference.mock.calls[0][0]).toMatchObject({
+    resolution: "not-sent",
+    providerUsdMicros: 0n,
+    chargedCredits: 0n,
+    customerUsdMicros: 0n,
+  });
+});
+
+test("customer connection withdrawal after measured generation retains usage but releases no proposal", async () => {
+  const provider = customerModel();
+  let f!: ReturnType<typeof fixture>;
+  const model: NavigationModel = {
+    async infer(request, context) {
+      const result = await provider.infer(request, context);
+      f.revalidateConnection.mockRejectedValueOnce(
+        new AuthorizationError(
+          403,
+          "FORBIDDEN",
+          "The provider connection changed.",
+        ),
+      );
+      return result;
+    },
+  };
+  f = fixture(model, "production", true);
+  const operation = await f.prepare();
+  const error = await createNavigationModelService(operation.model)
+    .propose(
+      f.input.observation,
+      () => f.input.validation,
+      f.context,
+      operation.budget,
+    )
+    .catch((failure) => failure);
+  expect(error).toMatchObject({ code: "FORBIDDEN" });
+  await operation.finish({ error });
+  expect(f.repositories.finishInference.mock.calls[0][0]).toMatchObject({
+    resolution: "reported",
+    outcome: "failed",
+    outputUnits: 2048n,
+    providerUsdMicros: 0n,
+    chargedCredits: 0n,
+    customerUsdMicros: null,
+  });
+});
+
+test("an unknown customer outcome retains its fence and never invents a customer price or managed liability", async () => {
+  const infer = vi.fn(async () => {
+    throw new Error("PRIVATE_CUSTOMER_PROVIDER_ERROR");
+  });
+  const f = fixture({ infer }, "production", true),
+    operation = await f.prepare();
+  const error = await createNavigationModelService(operation.model)
+    .propose(
+      f.input.observation,
+      () => f.input.validation,
+      f.context,
+      operation.budget,
+    )
+    .catch((failure) => failure);
+  await expect(operation.finish({ error })).rejects.toMatchObject({
+    code: "INVALID_USAGE",
+    outcome: "unknown",
+  });
+  await expect(operation.finish({ error })).rejects.toMatchObject({
+    code: "INVALID_USAGE",
+  });
+  expect(infer).toHaveBeenCalledOnce();
+  expect(f.repositories.finishInference).toHaveBeenCalledOnce();
+  const receipt = f.repositories.finishInference.mock.calls[0][0];
+  expect(receipt).toMatchObject({
+    resolution: "unknown",
+    outcome: "uncertain",
+    usageVersion: 2,
+    providerUsdMicros: 0n,
+    chargedCredits: 0n,
+    customerUsdMicros: null,
+  });
+  expect(receipt).not.toHaveProperty("inputUnits");
+  expect(receipt).not.toHaveProperty("outputUnits");
+  expect(
+    JSON.stringify(receipt, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    ),
+  ).not.toContain("PRIVATE_CUSTOMER_PROVIDER_ERROR");
+});
 
 async function propose(f: ReturnType<typeof fixture>) {
   const operation = await f.prepare();
@@ -542,6 +757,9 @@ test("credit reads remain available without inference consent or balance and exp
         chargedCredits: null,
         policyVersion: "fake-development-v1",
         createdAt,
+        fundingSource: "managed",
+        usageVersion: 1,
+        customerUsdMicros: null,
         claimToken: "PRIVATE_CAPABILITY",
       } as Awaited<ReturnType<QuotaTransaction["listUsage"]>>["items"][number],
     ],
@@ -566,6 +784,25 @@ test("credit reads remain available without inference consent or balance and exp
     costPerVerifiedSuccessUsdMicros: null,
   });
   expect(JSON.stringify(usage)).not.toContain("PRIVATE_CAPABILITY");
+  expect(usage.items[0]).not.toHaveProperty("fundingSource");
+  const extended = await credits.usage(
+    principal,
+    f.workspaceId,
+    { schemaVersion: 2 },
+    f.context,
+  );
+  expect(extended).toMatchObject({
+    schemaVersion: 2,
+    items: [
+      {
+        fundingSource: "managed",
+        usageVersion: 1,
+        customerUsdMicros: null,
+        reasoningOutputUnits: null,
+      },
+    ],
+  });
+  expect(f.tx.listUsage).toHaveBeenLastCalledWith({ limit: 50 }, 2);
   expect(f.tx.reserveInference).not.toHaveBeenCalled();
   f.membership.status = "revoked";
   await expect(

@@ -34,9 +34,11 @@ import type { BrowserContext } from "@playwright/test";
 import { productAnalyticsRecordSchema } from "../../../packages/navigation-core/contracts-analytics";
 import {
   savedDataRecordSchema,
+  savedDataRecordV2Schema,
   savedDataStorageUsageSchema,
-  savedDataExportSnapshotSchema,
+  savedDataExportFileSchema,
   savedDataPageSchema,
+  savedDataPageV2Schema,
   SAVED_DATA_LIMITS,
 } from "../../../packages/navigation-core/contracts-saved-data";
 import { workspaceCreditsSchema } from "../../../packages/navigation-core/contracts-credits";
@@ -48,10 +50,22 @@ import {
 } from "../../../packages/navigation-core/contracts-service";
 import {
   accountDeletionResultSchema,
-  accountExportManifestSchema,
-  accountExportPartSchema,
+  accountExportManifestFileSchema,
+  accountExportPartV2Schema,
 } from "../../../packages/navigation-core/contracts-account";
 import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-support";
+import {
+  PROVIDER_CATALOG_REVISION,
+  getProviderDefinition,
+  type ProviderConnection,
+} from "../../../packages/navigation-core/contracts-providers";
+import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
+import { savedNavigationKnowledgeFixture } from "../../support/saved-data-fixture";
+import {
+  navigationKnowledgeForgetSiteResultSchema,
+  navigationKnowledgeSiteSettingsSchema,
+  retrievedNavigationKnowledgeSchema,
+} from "../../../packages/navigation-core/contracts-navigation-knowledge";
 
 function sourceFailureLine(error: unknown): number | null {
   const line =
@@ -60,6 +74,276 @@ function sourceFailureLine(error: unknown): number | null {
       : undefined;
   return line ? Number(line) : null;
 }
+
+async function blockWebsiteModelRequests(
+  context: BrowserContext,
+  onRequest: () => void,
+) {
+  for (const pattern of [
+    /^https:\/\/(api\.openai\.com|api\.anthropic\.com|openrouter\.ai|(?:[a-z0-9-]+\.)?aiplatform\.googleapis\.com)\//,
+    /\/api\/v1\/workspaces\/[^/]+\/decisions(?:\?|$)/,
+  ])
+    await context.route(pattern, async (route) => {
+      onRequest();
+      await route.abort("blockedbyclient");
+    });
+}
+
+test("real signed-in account manages synthetic AI connection metadata without testing a provider or retaining keys", async ({
+  browser,
+  browserName,
+}, info) => {
+  const environment = nativeIdentityEnvironment(),
+    fixture = syntheticWebsiteIdentity(environment),
+    context = await identityContext(browser),
+    page = await context.newPage();
+  const buildDigest = digest(await artifactFiles(websiteArtifactDirectory()));
+  let passed = false,
+    modelRequests = 0,
+    row: ProviderConnection | undefined,
+    lostResponse = false;
+  const mutations: { method: string; body: Record<string, unknown> }[] = [];
+  try {
+    await blockWebsiteModelRequests(context, () => modelRequests++);
+    await waitForIdentityGatewayCapacity();
+    await page.goto(environment.webOrigin + "/signup");
+    await page
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    const owner = await registerWebsiteAccount(page, environment, fixture);
+    await page.route(
+      environment.serviceOrigin + "/api/v1/capabilities",
+      async (route) => {
+        const response = await route.fetch(),
+          body = serviceCapabilitiesSchema.parse(await response.json());
+        body.capabilities = [
+          ...new Set([
+            ...body.capabilities,
+            "provider-connections",
+            "provider-connections-write",
+          ]),
+        ];
+        await route.fulfill({ response, json: body });
+      },
+    );
+    await page.route(
+      environment.serviceOrigin + "/api/v1/account/provider-connections**",
+      async (route) => {
+        const request = route.request(),
+          method = request.method();
+        const headers = {
+          "Access-Control-Allow-Origin": environment.webOrigin,
+          "Access-Control-Allow-Credentials": "true",
+          "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+          "Access-Control-Allow-Headers":
+            "content-type,x-tholi-account,x-tholi-csrf,x-tholi-timeout-ms",
+          "Access-Control-Expose-Headers": SERVICE_ACCOUNT_BINDING_HEADER,
+          [SERVICE_ACCOUNT_BINDING_HEADER]: owner.account.id,
+        };
+        if (method === "OPTIONS") {
+          await route.fulfill({ status: 204, headers });
+          return;
+        }
+        expect(request.headers()[SERVICE_ACCOUNT_BINDING_HEADER]).toBe(
+          owner.account.id,
+        );
+        if (method === "GET") {
+          await route.fulfill({
+            headers,
+            json: {
+              catalogRevision: PROVIDER_CATALOG_REVISION,
+              items: row ? [row] : [],
+            },
+          });
+          return;
+        }
+        expect(request.headers()["x-tholi-csrf"]).toBe(owner.csrfToken);
+        const body: Record<string, unknown> = request.postDataJSON();
+        mutations.push({ method, body });
+        if (method === "POST") {
+          expect(body).toMatchObject({
+            provider: "openai",
+            model: getProviderDefinition("openai").model,
+            catalogRevision: PROVIDER_CATALOG_REVISION,
+          });
+          row = providerConnectionMetadataFixture();
+        } else if (method === "PATCH") {
+          expect(body.expectedRevision).toBe(row!.revision);
+          row = providerConnectionMetadataFixture("openai", {
+            revision: String(BigInt(row!.revision) + 1n),
+          });
+        } else if (method === "DELETE") {
+          expect(body).toEqual({ expectedRevision: row!.revision });
+          row = {
+            ...row!,
+            revision: String(BigInt(row!.revision) + 1n),
+            status: "removed",
+            verifiedAt: null,
+          };
+        } else throw Error("Unexpected provider metadata request.");
+        if (lostResponse) {
+          lostResponse = false;
+          await route.abort("failed");
+          return;
+        }
+        await route.fulfill({ headers, json: row });
+      },
+    );
+    await page.goto(environment.webOrigin + "/account/providers");
+    await expect(
+      page.getByRole("heading", { name: "AI connections", exact: true }),
+    ).toBeVisible();
+    const openai = page.getByRole("region", { name: "OpenAI", exact: true });
+    await expect(
+      openai.getByText("No key saved.", { exact: true }),
+    ).toBeVisible();
+    await openai
+      .getByLabel("Model", { exact: true })
+      .selectOption(getProviderDefinition("openai").model);
+    await openai
+      .getByLabel("API key", { exact: true })
+      .fill("synthetic-browser-provider-key");
+    await openai
+      .getByRole("button", { name: "Save connection", exact: true })
+      .click();
+    await expect(
+      openai.getByText("Saved, unverified.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      openai.getByLabel("Replacement API key", { exact: true }),
+    ).toHaveValue("");
+    expect(modelRequests).toBe(0);
+    expect(mutations).toHaveLength(1);
+    for (const width of [320, 768, 1280, 1600]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const theme of ["dark", "light"]) {
+        if (
+          (await page.locator("html").getAttribute("data-tholi-theme")) !==
+          theme
+        )
+          await page
+            .getByRole("button", {
+              name: `Switch to ${theme} mode`,
+              exact: true,
+            })
+            .click();
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+          ),
+        ).toBe(true);
+        const key = openai.getByLabel("Replacement API key", { exact: true });
+        await key.scrollIntoViewIfNeeded();
+        await key.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await expect(key).toBeFocused();
+        expect(
+          await key.evaluate((element) => {
+            const style = getComputedStyle(element),
+              rect = element.getBoundingClientRect();
+            return (
+              element.matches(":focus-visible") &&
+              style.outlineStyle !== "none" &&
+              parseFloat(style.outlineWidth) >= 2 &&
+              rect.height >= 44 &&
+              rect.left >= 0 &&
+              rect.right <= innerWidth
+            );
+          }),
+        ).toBe(true);
+      }
+    }
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openai
+      .getByLabel("Model", { exact: true })
+      .selectOption(getProviderDefinition("openai").model);
+    await openai
+      .getByLabel("Replacement API key", { exact: true })
+      .fill("synthetic-browser-rotated-key");
+    lostResponse = true;
+    await openai
+      .getByRole("button", { name: "Replace key", exact: true })
+      .click();
+    await expect(page.getByRole("alert")).toContainText("Refresh connections");
+    await expect(
+      openai.getByLabel("Replacement API key", { exact: true }),
+    ).toHaveValue("");
+    await page
+      .getByRole("button", { name: "Refresh connections", exact: true })
+      .click();
+    await expect(
+      openai.getByText("Saved, unverified.", { exact: true }),
+    ).toBeVisible();
+    expect(mutations).toHaveLength(2);
+    const remove = openai.getByRole("button", {
+      name: "Remove from Tholi",
+      exact: true,
+    });
+    await remove.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("alertdialog", {
+      name: "Remove OpenAI from Tholi?",
+      exact: true,
+    });
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(remove).toBeFocused();
+    expect(mutations).toHaveLength(2);
+    await remove.click();
+    await dialog
+      .getByRole("button", { name: "Remove connection", exact: true })
+      .click();
+    await expect(
+      openai.getByText("Disconnected from Tholi.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "It was not revoked at the provider." }),
+    ).toBeVisible();
+    expect(mutations.map((item) => item.method)).toEqual([
+      "POST",
+      "PATCH",
+      "DELETE",
+    ]);
+    expect(modelRequests).toBe(0);
+    const retained = await page.evaluate(() =>
+      JSON.stringify({
+        local: { ...localStorage },
+        session: { ...sessionStorage },
+        html: document.body.innerHTML,
+      }),
+    );
+    expect(retained).not.toContain("synthetic-browser-provider-key");
+    expect(retained).not.toContain("synthetic-browser-rotated-key");
+    expect(digest(await artifactFiles(websiteArtifactDirectory()))).toBe(
+      buildDigest,
+    );
+    passed = true;
+  } finally {
+    await closeIdentityContext(context);
+    const evidence = {
+      passed,
+      browser: browserName,
+      version: browser.version(),
+      buildDigest,
+      modelRequests,
+      mutationMethods: mutations.map((item) => item.method),
+      fixture:
+        "real local identity; intercepted synthetic provider metadata; no provider or model calls",
+      publicationAuthorized: false,
+      evaluatedAt: new Date().toISOString(),
+    };
+    await writeEvidence(
+      `output/qa/website-identity/${browserName}-provider-settings.json`,
+      evidence,
+    );
+    await info.attach("provider-settings", {
+      body: Buffer.from(JSON.stringify(evidence)),
+      contentType: "application/json",
+    });
+  }
+});
 
 test("configured website uses real signup email recovery and retained identity without requiring accounts for Local", async ({
   browser,
@@ -829,9 +1113,10 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           page,
           downloadButton,
           "tholi-saved-data.json",
-          savedDataExportSnapshotSchema,
+          savedDataExportFileSchema,
           SAVED_DATA_LIMITS.importBytes,
         );
+        expect(snapshot.schemaVersion).toBe(2);
         expect(snapshot.items.map((entry) => entry.id).sort()).toEqual(
           records.map((entry) => entry.id).sort(),
         );
@@ -1102,9 +1387,10 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
               exact: true,
             }),
             /^tholi-account-manifest-[a-f0-9-]{36}\.json$/,
-            accountExportManifestSchema,
+            accountExportManifestFileSchema,
             SUPPORT_LIMITS.maxFileBytes,
           );
+          expect(manifest.schemaVersion).toBe(2);
           expect(manifest.accountId).toBe(owner.account.id);
           expect(manifest.complete).toBe(true);
           expect(manifest.omissions).toEqual([]);
@@ -1119,7 +1405,7 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             .filter({
               has: page.getByRole("heading", {
                 name: new RegExp(
-                  `^Saved items, file ${manifest.parts.indexOf(savedPart) + 1}$`,
+                  `^Saved items, file ${manifest.parts.findIndex((part) => part.fileId === savedPart.fileId) + 1}$`,
                 ),
               }),
             });
@@ -1129,9 +1415,10 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
               name: /^Download Saved items, file /,
             }),
             `tholi-account-part-${savedPart.fileId}.json`,
-            accountExportPartSchema,
+            accountExportPartV2Schema,
             SUPPORT_LIMITS.maxFileBytes,
           );
+          expect(fullSnapshot.schemaVersion).toBe(2);
           expect(fullSnapshot.section).toBe("saved_data");
           if (fullSnapshot.section !== "saved_data")
             throw Error("DASHBOARD_SAVED_EXPORT_PART_INVALID");
@@ -1324,3 +1611,346 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
     }
   });
 }
+
+test("real account privately controls versioned website knowledge without dispatching a model", async ({
+  browser,
+  browserName,
+}, info) => {
+  const environment = nativeIdentityEnvironment(),
+    fixture = syntheticWebsiteIdentity(environment),
+    buildDigest = digest(await artifactFiles(websiteArtifactDirectory())),
+    context = await identityContext(browser),
+    page = await context.newPage();
+  let passed = false,
+    disposed = false,
+    modelRequests = 0,
+    stage = "real account preparation";
+  const checks: string[] = [];
+  try {
+    await blockWebsiteModelRequests(context, () => modelRequests++);
+    const { owner, workspace, records } = await prepareWebsiteDashboardAccount(
+      page,
+      environment,
+      fixture,
+      "api",
+      (value) => {
+        stage = value;
+      },
+    );
+    const artifact = await savedNavigationKnowledgeFixture();
+    artifact.metadata.label = "Dashboard private website knowledge";
+    const origin = artifact.data.origin,
+      settingsPath =
+        `${workspace}/artifacts/site-settings?schemaVersion=2` as const,
+      readSettingsPath =
+        `${settingsPath}&origin=${encodeURIComponent(origin)}` as const;
+    stage = "explicit private graph preparation";
+    const initial = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      readSettingsPath,
+      navigationKnowledgeSiteSettingsSchema,
+    );
+    expect(initial).toMatchObject({
+      revision: "0",
+      collect: false,
+      use: false,
+    });
+    const collecting = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      settingsPath,
+      navigationKnowledgeSiteSettingsSchema,
+      "PATCH",
+      {
+        origin,
+        expectedRevision: initial.revision,
+        idempotencyKey: crypto.randomUUID(),
+        approved: true,
+        collect: true,
+        use: false,
+      },
+    );
+    const graph = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      `${workspace}/artifacts?schemaVersion=2`,
+      savedDataRecordV2Schema,
+      "POST",
+      {
+        artifact,
+        expectedRevision: "0",
+        siteSettingsRevision: collecting.revision,
+        idempotencyKey: crypto.randomUUID(),
+        approved: true,
+      },
+    );
+    expect(graph.schemaVersion).toBe(2);
+    await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      settingsPath,
+      navigationKnowledgeSiteSettingsSchema,
+      "PATCH",
+      {
+        origin,
+        expectedRevision: collecting.revision,
+        idempotencyKey: crypto.randomUUID(),
+        approved: true,
+        collect: false,
+        use: false,
+      },
+    );
+    await waitForIdentityGatewayCapacity();
+    await page.goto(environment.webOrigin + "/account/data");
+    await page
+      .getByRole("button", {
+        name: `View ${artifact.metadata.label}`,
+        exact: true,
+      })
+      .click();
+    const detail = page.locator(".saved-data-detail"),
+      panel = detail.getByRole("region", {
+        name: "Private website learning",
+        exact: true,
+      }),
+      collect = panel.getByRole("checkbox", {
+        name: "Save future website knowledge to my cloud account",
+        exact: true,
+      }),
+      use = panel.getByRole("checkbox", {
+        name: "Use my saved cloud knowledge for this website",
+        exact: true,
+      }),
+      forget = panel.getByRole("button", {
+        name: "Forget cloud knowledge",
+        exact: true,
+      });
+    await expect(collect).toBeEnabled();
+    await expect(collect).not.toBeChecked();
+    await expect(use).not.toBeChecked();
+    await expect(detail).toContainText(
+      "2 observed layouts and 1 verified transitions",
+    );
+    await expect(panel).toContainText(
+      "Existing local memory is not uploaded automatically.",
+    );
+    const siteResponse = (method: "GET" | "PATCH" | "DELETE") =>
+      page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return (
+          url.origin === environment.serviceOrigin &&
+          url.pathname === `${workspace}/artifacts/site-settings` &&
+          url.searchParams.get("schemaVersion") === "2" &&
+          response.request().method() === method
+        );
+      });
+    stage = "acknowledged refresh and explicit collection/reuse";
+    const refreshing = siteResponse("GET");
+    await panel
+      .getByRole("button", { name: "Refresh learning settings", exact: true })
+      .click();
+    expect((await refreshing).status()).toBe(200);
+    await expect(collect).toBeEnabled();
+    const enablingCollection = siteResponse("PATCH");
+    await collect.check();
+    expect((await enablingCollection).status()).toBe(200);
+    await expect(collect).toBeChecked();
+    await expect(use).toBeEnabled();
+    const enablingReuse = siteResponse("PATCH");
+    await use.check();
+    expect((await enablingReuse).status()).toBe(200);
+    await expect(use).toBeChecked();
+    const query = {
+      origin,
+      query: "Help",
+      controls: artifact.data.controls
+        .slice(0, 1)
+        .map(({ role, label, kind }) => ({ role, label, kind })),
+    };
+    const retrieve = () =>
+      websiteAccountRequest(
+        page,
+        environment,
+        owner,
+        `${workspace}/artifacts/navigation-knowledge?schemaVersion=2`,
+        retrievedNavigationKnowledgeSchema,
+        "POST",
+        query,
+      );
+    const retrieved = await retrieve();
+    expect(retrieved.sources).toEqual([
+      { artifactId: graph.id, revision: graph.revision },
+    ]);
+    expect(retrieved.context?.facts).toHaveLength(1);
+    checks.push(
+      "real private graph projection and source revisions are available only after explicit website reuse permission",
+    );
+
+    stage = "responsive themes keyboard focus and reduced motion";
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const width of [320, 768, 1280, 1600]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const theme of ["dark", "light"]) {
+        if (
+          (await page.locator("html").getAttribute("data-tholi-theme")) !==
+          theme
+        )
+          await page
+            .getByRole("button", {
+              name: `Switch to ${theme} mode`,
+              exact: true,
+            })
+            .click();
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+          ),
+        ).toBe(true);
+        await collect.scrollIntoViewIfNeeded();
+        await collect.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await expect(collect).toBeFocused();
+        expect(
+          await collect.evaluate((element) => {
+            const style = getComputedStyle(element),
+              rect = element.getBoundingClientRect(),
+              label = element.closest("label")!.getBoundingClientRect();
+            return (
+              element.matches(":focus-visible") &&
+              style.outlineStyle !== "none" &&
+              parseFloat(style.outlineWidth) >= 2 &&
+              label.height >= 44 &&
+              rect.left >= 7 &&
+              rect.right <= innerWidth - 7
+            );
+          }),
+        ).toBe(true);
+      }
+    }
+    await forget.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("alertdialog", {
+      name: "Forget this website's cloud knowledge?",
+      exact: true,
+    });
+    await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+    await cancel.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toHaveCount(0);
+    await expect(forget).toBeFocused();
+    checks.push(
+      "four widths and both themes preserve visible keyboard focus, 44px choice targets and cancellation focus with reduced motion",
+    );
+
+    stage = "server-acknowledged pause prevents retrieval";
+    const pausingReuse = siteResponse("PATCH");
+    await use.uncheck();
+    expect((await pausingReuse).status()).toBe(200);
+    await expect(use).not.toBeChecked();
+    const paused = await retrieve();
+    expect(paused.context).toBeNull();
+    expect(paused.sources).toEqual([]);
+    expect(paused.diagnostics.reason).toBe("disabled");
+    await expect(collect).toBeChecked();
+    checks.push(
+      "pausing reuse immediately excludes private hints without silently changing collection or local guidance",
+    );
+
+    stage = "confirmed private-site forget and preserved legacy data";
+    await waitForIdentityGatewayCapacity();
+    await forget.click();
+    const forgetting = siteResponse("DELETE");
+    await dialog
+      .getByRole("button", { name: "Forget cloud knowledge", exact: true })
+      .click();
+    const receipt = await forgetting;
+    expect(receipt.status()).toBe(200);
+    const result = navigationKnowledgeForgetSiteResultSchema.parse(
+      await receipt.json(),
+    );
+    expect(result.deletedIds).toEqual([graph.id]);
+    expect(result.hasMore).toBe(false);
+    expect(result.siteSettings).toMatchObject({
+      origin,
+      collect: false,
+      use: false,
+    });
+    await expect(detail).toHaveCount(0);
+    const tombstone = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      `${workspace}/artifacts/${graph.id}?schemaVersion=2`,
+      savedDataRecordV2Schema,
+    );
+    expect(tombstone).toMatchObject({
+      schemaVersion: 2,
+      data: null,
+      metadata: { label: "Deleted item", folder: null, tags: [] },
+    });
+    expect(tombstone.deletedAt).not.toBeNull();
+    const remaining = await websiteAccountRequest(
+      page,
+      environment,
+      owner,
+      `${workspace}/artifacts?schemaVersion=2`,
+      savedDataPageV2Schema,
+    );
+    expect(remaining.items.map((item) => item.id).sort()).toEqual(
+      records.map((item) => item.id).sort(),
+    );
+    await page
+      .getByRole("button", { name: "Refresh list", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("list", { name: "Saved items", exact: true })
+        .locator(":scope > li"),
+    ).toHaveCount(4);
+    expect(modelRequests).toBe(0);
+    expect(digest(await artifactFiles(websiteArtifactDirectory()))).toBe(
+      buildDigest,
+    );
+    checks.push(
+      "confirmed forget pauses both choices, stores a content-free graph tombstone and preserves all four unrelated saved-data kinds without a model request",
+    );
+    passed = true;
+  } catch (failure) {
+    throw Error(
+      `Private website learning verification failed during ${stage}${sourceFailureLine(failure) ? ` at line ${sourceFailureLine(failure)}` : ""}.`,
+    );
+  } finally {
+    const cleanup = await Promise.allSettled([closeIdentityContext(context)]);
+    disposed = cleanup.every((result) => result.status === "fulfilled");
+    const evidence = {
+      passed: passed && disposed,
+      browser: browserName,
+      version: browser.version(),
+      buildDigest,
+      stage,
+      modelRequests,
+      checks,
+      cleanupCompleted: disposed,
+      fixture:
+        "real synthetic local identity, PostgreSQL and private graph routes; no provider or model calls",
+      publicationAuthorized: false,
+      evaluatedAt: new Date().toISOString(),
+    };
+    await writeEvidence(
+      `output/qa/website-identity/${browserName}-private-learning.json`,
+      evidence,
+    );
+    await info.attach("private-website-learning", {
+      body: Buffer.from(JSON.stringify(evidence)),
+      contentType: "application/json",
+    });
+    if (passed && !disposed) throw Error("DASHBOARD_CONTEXT_CLEANUP_FAILED");
+  }
+});

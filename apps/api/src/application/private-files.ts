@@ -5,10 +5,10 @@ import {
   SUPPORT_LIMITS,
 } from "../../../../packages/navigation-core/contracts-support";
 import type { PrivateFile } from "./support-contracts";
-import { savedDataExportSnapshotSchema } from "../../../../packages/navigation-core/contracts-saved-data";
+import { savedDataExportFileSchema } from "../../../../packages/navigation-core/contracts-saved-data";
 import {
-  accountExportPartSchema,
-  accountExportManifestSchema,
+  accountExportPartV2Schema,
+  accountExportManifestFileSchema,
 } from "../../../../packages/navigation-core/contracts-account";
 
 const generatedKey =
@@ -25,7 +25,7 @@ export function diagnosticBytes(value: unknown) {
 }
 
 export function savedDataExportBytes(value: unknown) {
-  return encodedBytes(savedDataExportSnapshotSchema.parse(value));
+  return encodedBytes(savedDataExportFileSchema.parse(value));
 }
 
 export function privateExportBytes(
@@ -38,17 +38,17 @@ export function privateExportBytes(
     case "saved-data-export":
       return savedDataExportBytes(value);
     case "account-export-part":
-      return encodedBytes(accountExportPartSchema.parse(value));
+      return encodedBytes(accountExportPartV2Schema.parse(value));
     case "account-export-manifest":
-      return encodedBytes(accountExportManifestSchema.parse(value));
+      return encodedBytes(accountExportManifestFileSchema.parse(value));
   }
 }
 
 export function validateAccountFile(file: PrivateFile, body: Uint8Array) {
   if (file.purpose === "account-export-part")
-    return accountExportPartSchema.parse(verifiedJson(file, body));
+    return accountExportPartV2Schema.parse(verifiedJson(file, body));
   if (file.purpose === "account-export-manifest")
-    return accountExportManifestSchema.parse(verifiedJson(file, body));
+    return accountExportManifestFileSchema.parse(verifiedJson(file, body));
   throw new Error("The private export purpose is invalid.");
 }
 
@@ -88,7 +88,7 @@ export function validateDiagnosticFile(file: PrivateFile, body: Uint8Array) {
 export function validateSavedDataFile(file: PrivateFile, body: Uint8Array) {
   if (file.purpose !== "saved-data-export")
     throw new Error("The private export purpose is invalid.");
-  return savedDataExportSnapshotSchema.parse(verifiedJson(file, body));
+  return savedDataExportFileSchema.parse(verifiedJson(file, body));
 }
 
 export function validatePrivateFile(file: PrivateFile, body: Uint8Array) {
