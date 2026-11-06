@@ -118,7 +118,9 @@ export function assertOwnedMacFirefoxProcess(
             ? "lifetime"
             : undefined;
   if (failed)
-    throw Error(`Disposable Firefox process identity changed (${failed}).`);
+    throw Error(
+      `Disposable Firefox process identity changed (${failed}${failed === "executable" ? ":" + JSON.stringify(executable) : ""}).`,
+    );
 }
 
 /** Only the registered root PID is signalled; this does not certify every browser child. */
