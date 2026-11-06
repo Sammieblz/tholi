@@ -19,7 +19,10 @@ import {
   LocalModel,
   modelAvailability,
 } from "../../inference/browser-language-model";
-import { requestCurrentSiteAccess } from "../../platform/site-access";
+import {
+  requireCurrentSiteAccess,
+  requestWebsiteAccess,
+} from "../../platform/site-access";
 import { createModelActions } from "../features/advanced/actions";
 import { createConversationActions } from "../features/conversation/actions";
 import { useBackendSettings } from "../hooks/useBackendSettings";
@@ -28,7 +31,7 @@ import { useSessionSnapshot } from "../hooks/useSessionSnapshot";
 import { useAssistance } from "../hooks/useAssistance";
 import { unresolvedTitle } from "./presentationLabels";
 export function useGuidanceController(widget = false) {
-  const { view, setView, context } = useSessionSnapshot(widget);
+  const { view, setView, context, setContext } = useSessionSnapshot(widget);
   const {
     preferences,
     setPreferences,
@@ -54,6 +57,29 @@ export function useGuidanceController(widget = false) {
     tone?: "info" | "success";
   }>();
   const [busy, setBusy] = useState(false);
+  const enableWebsiteAccess = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      if (!(await requestWebsiteAccess()))
+        throw Error(
+          "Website access was not enabled. You can review access in your browser's extension settings.",
+        );
+      const next = await api.runtime.sendMessage({ type: "GET_CONTEXT" });
+      if (next?.routes) {
+        setContext(next);
+        if (next.allWebsiteAccess) focusIntent.current = "composer";
+      }
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Website access is unavailable.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
   useAssistance(
     !!preferences.assisted &&
       hydrated &&
@@ -196,7 +222,7 @@ export function useGuidanceController(widget = false) {
         (type === "START" && (!route || route.id === LIVE_ROUTE_ID)) ||
         (type === "CONTINUE_TASK" && view?.continuationOrigin)
       ) {
-        startTarget = await requestCurrentSiteAccess(
+        startTarget = await requireCurrentSiteAccess(
           type === "CONTINUE_TASK"
             ? view!.continuationOrigin!
             : context?.origin,
@@ -307,7 +333,7 @@ export function useGuidanceController(widget = false) {
     setError("");
     try {
       if (!active) {
-        const startTarget = await requestCurrentSiteAccess(
+        const startTarget = await requireCurrentSiteAccess(
           context?.origin,
           context?.tabId,
         );
@@ -670,6 +696,7 @@ export function useGuidanceController(widget = false) {
     aiProgress,
     planning,
     command,
+    enableWebsiteAccess,
     active,
     paused,
     locked,

@@ -90,6 +90,15 @@ export function privacySections(): LegalSection[] {
       children: (
         <>
           <p>
+            The extension requests access to ordinary HTTP and HTTPS websites
+            during installation. Your browser can restrict or revoke that
+            access. Starting guidance checks current access without opening a
+            permission request. If access is unavailable, choose Enable website
+            access in Tholi to review a request covering both HTTP and HTTPS
+            websites. This does not enable cloud AI, image transmission or
+            private website learning.
+          </p>
+          <p>
             Opening the panel alone does not start page discovery. When you
             start guidance or page exploration on an authorized website, Tholi
             reads bounded control labels, accessible names, headings, roles,
@@ -590,10 +599,13 @@ export function termsSections(): LegalSection[] {
             third-party content or accounts.
           </p>
           <p>
-            Your browser controls extension permissions and capture access. Some
-            pages, frames and native controls are inaccessible. You can decline
-            access, pause or stop guidance, remove stored knowledge or uninstall
-            the extension.
+            Installation requests access to ordinary HTTP and HTTPS websites.
+            Your browser controls site restrictions, revocation and capture
+            access. The explicit Enable website access action requests both
+            types of website access when recovery is needed; starting guidance
+            alone does not open that request. Some pages, frames and native
+            controls are inaccessible. You can decline access, pause or stop
+            guidance, remove stored knowledge or uninstall the extension.
           </p>
         </>
       ),

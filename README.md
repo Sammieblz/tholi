@@ -35,8 +35,9 @@ _Actual Chrome extension capture on public [Wikipedia](https://en.wikipedia.org/
 
 Install Tholi from the Chrome Web Store or Firefox Add-ons using
 **[Get Tholi](https://tholi.io/download)**. No Tholi account is required. Open the
-Extensions menu, pin Tholi, then open it on a website and grant access when asked.
-You choose the destination and make the clicks.
+Extensions menu, pin Tholi, then open it on a website. Tholi requests ordinary
+HTTP/HTTPS website access during installation; your browser can restrict or
+revoke it. You choose the destination and make the clicks.
 
 ### Developer installation
 
@@ -51,7 +52,7 @@ The build fetches and verifies pinned MiniLM and English Tesseract assets. These
 
 1. In Chrome, Edge or Brave, open `chrome://extensions`, `edge://extensions` or `brave://extensions` and turn on **Developer mode**.
 2. Choose **Load unpacked** and select `dist/extension`.
-3. Open a website, click the **Tholi** toolbar icon and allow website access if your browser asks.
+3. Open a website and click the **Tholi** toolbar icon. If access is unavailable, choose **Enable website access** and review the browser's request for HTTP and HTTPS websites.
 4. Enter a destination, such as **Make the text larger** on Wikipedia, then select **Guide me**.
 
 For **Firefox 153+**, open `about:debugging`, select **This Firefox → Load Temporary Add-on**, and choose `dist/extension-firefox/manifest.json`. This unsigned **Firefox developer preview** is removed on browser restart. Chromium requires engine version **140+**. Both targets bundle the same local model and safety checks. Other Chromium browsers are capability-compatible; [branded verification and measurements](docs/releases/v0.10.1/browser-support.md) are recorded separately.

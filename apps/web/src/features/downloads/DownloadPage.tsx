@@ -33,7 +33,7 @@ const chromiumSteps = [
   },
   {
     title: "Choose a destination",
-    text: "Open a website and click the Tholi toolbar icon. Allow website access if your browser asks, then tell your guide what you want to do.",
+    text: "Open a website and select the Tholi toolbar icon. If access is unavailable, choose Enable website access and review the browser's request. Then enter your destination.",
   },
 ];
 function InstallIllustration({
@@ -249,9 +249,11 @@ export function DownloadPage() {
             <span className="install-number">03</span>
             <h3>Choose a destination</h3>
             <p>
-              On the website you want help with, grant website access when
-              asked. Tell Tholi what you want to do and start guidance. You make
-              the clicks and confirm consequential actions.
+              Open the website you want help with and tell Tholi your
+              destination. If access is unavailable, choose Enable website
+              access in Tholi and review the browser's request for HTTP and
+              HTTPS websites. You make the clicks and confirm consequential
+              actions.
             </p>
           </li>
         </ol>
@@ -259,9 +261,9 @@ export function DownloadPage() {
       <div className="web-note">
         <ShieldCheck aria-hidden="true" />
         <p>
-          You choose which websites Tholi can access. Pause or stop guidance
-          whenever you need. Processing stays local by default; connecting your
-          own private backend is optional.
+          Installation requests HTTP and HTTPS website access. Your browser can
+          restrict or revoke it. Processing stays local by default; cloud AI and
+          private learning remain separate choices.
         </p>
       </div>
       <details
@@ -315,7 +317,7 @@ function DeveloperInstallation() {
         },
         {
           title: "Choose a destination",
-          text: "Click the Tholi toolbar icon on a website. Approve its website access when asked, then enter your destination. Temporary installation is removed when Firefox restarts.",
+          text: "Click the Tholi toolbar icon on a website. If access is unavailable, choose Enable website access and review the browser's request for HTTP and HTTPS websites. Then enter your destination. Temporary installation is removed when Firefox restarts.",
         },
       ]
     : chromiumSteps;

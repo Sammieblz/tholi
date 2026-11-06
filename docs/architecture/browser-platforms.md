@@ -16,7 +16,7 @@ Chromium preserves existing keys and protects `storage.local` with `TRUSTED_CONT
 
 `sidebar.ts` maps `sidePanel` and `sidebarAction`. APIs requiring activation begin before asynchronous work. Firefox embeds have the content-script API subset: their snapshot listener uses the existing runtime port rather than tab events. Failed Dock retains the usable widget; Firefox asks for a toolbar action, validates the current session/document after native opening, then removes the widget. A disconnected UI port never proves dismissal.
 
-Host permission requests use visible origin intent in a genuine user action, then revalidate the active tab/origin after approval. Selective grants, frame ownership, nonce-bound widget registration, masked capture and independent outcomes keep their existing owners.
+Both manifests require `http://*/*` and `https://*/*`, without special Wikipedia/local-development grants or optional hosts. Ordinary Start, Resume and exploration inspect current native access without opening a permission request. **Enable website access** explicitly requests both schemes in one user gesture for older installations or missing/revoked access and refreshes the current context. Subsequent guidance still revalidates the active tab/origin. Browser-managed site restrictions remain effective. Broad host access grants no cloud-processing consent, capture authority or journey ownership. Frame ownership, nonce-bound widget registration, masked capture and independent outcomes keep their existing owners.
 
 ## Native capture and coordinate compatibility
 

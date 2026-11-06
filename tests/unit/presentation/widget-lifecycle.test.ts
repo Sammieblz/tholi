@@ -1794,36 +1794,268 @@ it("suppresses DOM and visual highlights while preserving the ability to restore
   target.remove();
 });
 
-it("Firefox requests the displayed origin in the click turn and rejects a changed active site", async () => {
-  const order: string[] = [];
-  let active = { id: 1, url: "https://expected.example:9443/" };
-  const request = vi.fn(() => {
-    order.push("request");
-    return Promise.resolve(true);
-  });
-  vi.stubGlobal("browser", {
-    runtime: { getURL: () => "moz-extension://test/" },
-    permissions: { request },
-    tabs: {
-      query: async () => {
-        order.push("query");
-        return [active];
-      },
-    },
-  });
-  const { requestCurrentSiteAccess } =
+function websiteAccessEnvironment(target: "chromium" | "firefox") {
+  const { api } = environment();
+  api.runtime.getURL = (path: string) =>
+    `${target === "firefox" ? "moz" : "chrome"}-extension://test/${path}`;
+  if (target === "firefox") vi.stubGlobal("browser", api);
+  const current = { tab: { id: 1, url: "https://first.example:8443/start" } };
+  const query = vi.fn(async () => [current.tab]);
+  const contains = vi.fn(async () => true);
+  const request = vi.fn(async () => true);
+  Object.assign(api.tabs, { query });
+  Object.assign(api, { permissions: { contains, request } });
+  return { api, current, query, contains, request };
+}
+
+it.each(["chromium", "firefox"] as const)(
+  "%s reuses native website access across hosts without requesting permissions for tasks",
+  async (target) => {
+    const fixture = websiteAccessEnvironment(target);
+    const { requireCurrentSiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    for (const [id, origin] of [
+      [1, "https://first.example:8443"],
+      [2, "http://second.example:8787"],
+    ] as const) {
+      fixture.current.tab = { id, url: origin + "/start" };
+      await expect(requireCurrentSiteAccess(origin, id)).resolves.toEqual({
+        tabId: id,
+        origin,
+      });
+    }
+    expect(fixture.contains.mock.calls).toEqual([
+      [{ origins: ["https://first.example/*"] }],
+      [{ origins: ["http://second.example/*"] }],
+    ]);
+    expect(fixture.query).toHaveBeenCalledTimes(4);
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["chromium", "firefox"] as const)(
+  "%s blocks a task when native website access is withheld without opening a prompt",
+  async (target) => {
+    const fixture = websiteAccessEnvironment(target);
+    fixture.contains.mockResolvedValue(false);
+    const { requireCurrentSiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    await expect(requireCurrentSiteAccess()).rejects.toThrow(
+      "Website access is unavailable",
+    );
+    expect(fixture.query).toHaveBeenCalledOnce();
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it("an embedded Firefox task reuses two fresh background access checks without privileged APIs", async () => {
+  const fixture = websiteAccessEnvironment("firefox");
+  const read = vi.fn(async () => ({
+    tabId: 1,
+    origin: "https://first.example:8443",
+    siteAccessRequired: false,
+  }));
+  Object.assign(fixture.api, { tabs: undefined, permissions: undefined });
+  Object.assign(fixture.api.runtime, { sendMessage: read });
+  const { requireCurrentSiteAccess } =
     await import("../../../apps/extension/src/platform/site-access");
-  const result = requestCurrentSiteAccess("https://expected.example:8443", 1);
-  expect(order).toEqual(["request"]);
-  await expect(result).rejects.toThrow("active website changed");
-  expect(request).toHaveBeenCalledWith({
-    origins: ["https://expected.example/*"],
-  });
-  expect(order).toEqual(["request", "query"]);
-  active = { id: 2, url: "https://expected.example:8443/" };
   await expect(
-    requestCurrentSiteAccess("https://expected.example:8443", 1),
-  ).rejects.toThrow("active website changed");
+    requireCurrentSiteAccess("https://first.example:8443", 1),
+  ).resolves.toEqual({ tabId: 1, origin: "https://first.example:8443" });
+  expect(read.mock.calls).toEqual([
+    [{ type: "GET_CONTEXT" }],
+    [{ type: "GET_CONTEXT" }],
+  ]);
+  expect(fixture.query).not.toHaveBeenCalled();
+  expect(fixture.contains).not.toHaveBeenCalled();
+  expect(fixture.request).not.toHaveBeenCalled();
+});
+
+it.each([
+  { name: "withheld access", patch: { siteAccessRequired: true } },
+  { name: "unacknowledged access", patch: { siteAccessRequired: undefined } },
+  { name: "negative tab", patch: { tabId: -1 } },
+  { name: "fractional tab", patch: { tabId: 1.5 } },
+  {
+    name: "page URL instead of origin",
+    patch: { origin: "https://first.example/path" },
+  },
+  { name: "unsupported origin", patch: { origin: "file:///private/example" } },
+])(
+  "embedded Firefox rejects $name context before starting a task",
+  async ({ patch }) => {
+    const fixture = websiteAccessEnvironment("firefox");
+    const read = vi.fn(async () => ({
+      tabId: 1,
+      origin: "https://first.example:8443",
+      siteAccessRequired: false,
+      ...patch,
+    }));
+    Object.assign(fixture.api, { tabs: undefined, permissions: undefined });
+    Object.assign(fixture.api.runtime, { sendMessage: read });
+    const { requireCurrentSiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    await expect(requireCurrentSiteAccess()).rejects.toThrow();
+    expect(read).toHaveBeenCalledOnce();
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it.each([
+  { name: "tab", patch: { tabId: 2 } },
+  { name: "origin", patch: { origin: "https://other.example:8443" } },
+  { name: "port", patch: { origin: "https://first.example:9443" } },
+  { name: "grant", patch: { siteAccessRequired: true } },
+])(
+  "embedded Firefox rejects a $name change in its final background access check",
+  async ({ patch }) => {
+    const fixture = websiteAccessEnvironment("firefox");
+    const current = {
+      tabId: 1,
+      origin: "https://first.example:8443",
+      siteAccessRequired: false,
+    };
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce(current)
+      .mockResolvedValueOnce({ ...current, ...patch });
+    Object.assign(fixture.api, { tabs: undefined, permissions: undefined });
+    Object.assign(fixture.api.runtime, { sendMessage: read });
+    const { requireCurrentSiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    await expect(requireCurrentSiteAccess()).rejects.toThrow();
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it.each(
+  (["chromium", "firefox"] as const).flatMap((target) =>
+    (["tab", "origin", "port"] as const).map((change) => ({ target, change })),
+  ),
+)(
+  "$target rejects a $change change while native access is checked",
+  async ({ target, change }) => {
+    const fixture = websiteAccessEnvironment(target);
+    const entered = pendingAccountReply<void>();
+    const granted = pendingAccountReply<boolean>();
+    fixture.contains.mockImplementation(() => {
+      entered.resolve();
+      return granted.promise;
+    });
+    const { requireCurrentSiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    const result = requireCurrentSiteAccess();
+    await entered.promise;
+    fixture.current.tab =
+      change === "tab"
+        ? { id: 2, url: fixture.current.tab.url }
+        : {
+            id: 1,
+            url:
+              change === "origin"
+                ? "https://other.example:8443/"
+                : "https://first.example:9443/",
+          };
+    granted.resolve(true);
+    await expect(result).rejects.toThrow("active website changed");
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it.each(
+  (["chromium", "firefox"] as const).flatMap((target) =>
+    [true, false].map((granted) => ({ target, granted })),
+  ),
+)(
+  "$target explicitly requests broad website access in the click turn (granted=$granted)",
+  async ({ target, granted }) => {
+    const fixture = websiteAccessEnvironment(target);
+    const decision = pendingAccountReply<boolean>();
+    fixture.request.mockImplementation(() => decision.promise);
+    const { requestWebsiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    const result = requestWebsiteAccess();
+    expect(fixture.request).toHaveBeenCalledExactlyOnceWith({
+      origins: ["http://*/*", "https://*/*"],
+    });
+    expect(fixture.query).not.toHaveBeenCalled();
+    expect(fixture.contains).not.toHaveBeenCalled();
+    decision.resolve(granted);
+    await expect(result).resolves.toBe(granted);
+  },
+);
+
+it.each(["chromium", "firefox"] as const)(
+  "%s retains toolbar recovery when an embedded surface has no permission API",
+  async (target) => {
+    const fixture = websiteAccessEnvironment(target);
+    Object.assign(fixture.api, { permissions: undefined });
+    const { requestWebsiteAccess } =
+      await import("../../../apps/extension/src/platform/site-access");
+    await expect(requestWebsiteAccess()).rejects.toThrow(
+      "browser toolbar to enable website access. Your task is retained",
+    );
+    expect(fixture.request).not.toHaveBeenCalled();
+  },
+);
+
+it("website access exposes a described native recovery button and keeps widget recovery in the toolbar", async () => {
+  const { WebsiteAccess } =
+    await import("../../../apps/extension/src/ui/components/WebsiteAccess");
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const reactGlobals = globalThis as typeof globalThis & {
+    IS_REACT_ACT_ENVIRONMENT?: boolean;
+  };
+  const previousAct = reactGlobals.IS_REACT_ACT_ENVIRONMENT;
+  reactGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+  const onEnable = vi.fn();
+  const render = async (options: {
+    granted?: boolean;
+    busy: boolean;
+    widget?: boolean;
+  }) => {
+    await act(async () =>
+      root.render(createElement(WebsiteAccess, { ...options, onEnable })),
+    );
+  };
+  try {
+    await render({ granted: false, busy: false });
+    const control = container.querySelector<HTMLButtonElement>("button")!;
+    expect(control.type).toBe("button");
+    expect(control.textContent).toBe("Enable website access");
+    expect(control.disabled).toBe(false);
+    expect(
+      document.getElementById(control.getAttribute("aria-describedby")!)
+        ?.textContent,
+    ).toContain("without asking for each new site");
+    expect(container.textContent).toContain(
+      "does not enable cloud processing or private learning",
+    );
+    control.focus();
+    expect(document.activeElement).toBe(control);
+    await act(async () => control.click());
+    expect(onEnable).toHaveBeenCalledOnce();
+    await render({ granted: false, busy: true });
+    expect(control.disabled).toBe(true);
+    await act(async () => control.click());
+    expect(onEnable).toHaveBeenCalledOnce();
+    await render({ granted: false, busy: false, widget: true });
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.textContent).toContain("browser toolbar");
+    expect(container.textContent).toContain("Your task is retained");
+    await render({ granted: true, busy: false });
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.textContent).toContain(
+      "Access across websites is enabled",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    reactGlobals.IS_REACT_ACT_ENVIRONMENT = previousAct;
+  }
 });
 it("Firefox sidebar handoff retains the widget when the browser rejects its user activation", async () => {
   const { api, session, sender } = environment();

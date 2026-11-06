@@ -32,8 +32,8 @@ the current guidance.
 
 Tholi can keep your destination through supported menus, dialogs and page
 changes. Complete website sign-in yourself. If the task moves to another
-website or tab, review any access request and choose **Continue task here**
-when offered.
+website or tab, choose **Continue task here** when offered. Browser restrictions
+can still block website access; use **Enable website access** if needed.
 
 Unrelated browsing can pause the task. Return to the intended website and
 resume when you are ready. A retained destination does not guarantee that

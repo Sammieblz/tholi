@@ -10,7 +10,8 @@ keeps the destination but pauses guidance and checking. Choose **Resume** when
 you are ready; Tholi checks the current page before guiding you again.
 
 If the website is still loading or changing, give it a moment to settle before
-resuming. Some questions or website-access requests need your answer first.
+resuming. Answer any clarification first. If browser access is unavailable,
+choose **Enable website access** and review its request before resuming.
 
 ## Stop a task
 

@@ -10,6 +10,7 @@ export function useSessionSnapshot(widget: boolean) {
     tabId?: number;
     origin?: string;
     siteAccessRequired?: boolean;
+    allWebsiteAccess?: boolean;
     canContinueTask?: boolean;
     routes: RoutePreview[];
     reason?: string;

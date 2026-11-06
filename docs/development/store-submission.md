@@ -18,8 +18,10 @@ a Firefox build, rebuild after certification, or change a packaged manifest.
   to the release for the exact source revision. State the validation result and
   remaining manual checks. Store approval and signing are separate outcomes.
 
-The manifests retain Chromium 140+ and Firefox 153+, the existing Firefox ID
-`tholi@ilunonsen.com`, and the existing host grants. Firefox declares no required
+The current source manifests retain Chromium 140+ and Firefox 153+ and the Firefox ID
+`tholi@ilunonsen.com`. They require `http://*/*` and `https://*/*` host access.
+Existing release archives and their original permissions remain unchanged.
+Firefox declares no required
 data transmission and optional backend data categories; connecting a backend
 requests native consent. Declining or revoking it leaves local processing
 available. See [privacy](../architecture/privacy.md).
@@ -36,7 +38,8 @@ Description:
 > your next step and checks the resulting state before recording progress.
 >
 > Language understanding and visual assistance run locally with bundled models.
-> Website access is requested explicitly. Guide mode leaves actions with you;
+> Installation requests access to ordinary HTTP and HTTPS websites. Your browser
+> can restrict or revoke it. Guide mode leaves actions with you;
 > optional assisted navigation can open eligible menus and select requested view
 > options. You handle credentials, forms and final actions.
 >
@@ -91,17 +94,24 @@ remain intact, with the original Firefox ZIP labeled superseded; see the
 
 ## Permission explanations
 
-| Permission                        | Purpose                                                                           |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| `activeTab`, `tabs`               | Identify the active website and authorized guidance/capture context.              |
-| `scripting`                       | Inject observation and guidance into permitted website tabs.                      |
-| `storage`                         | Keep local preferences and trusted session state.                                 |
-| `webNavigation`                   | Follow native frame/document identities and authorized task transitions.          |
-| Chromium `sidePanel`, `offscreen` | Present guidance and host bundled local inference.                                |
-| Optional HTTP/HTTPS host access   | Guide the website explicitly authorized by the user, or connect a chosen backend. |
+| Permission                                       | Purpose                                                                                                           |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `activeTab`, `tabs`                              | Identify the active website and authorized guidance/capture context.                                              |
+| `scripting`                                      | Inject observation and guidance into permitted website tabs.                                                      |
+| `storage`                                        | Keep local preferences and trusted session state.                                                                 |
+| `webNavigation`                                  | Follow native frame/document identities and authorized task transitions.                                          |
+| Chromium `sidePanel`, `offscreen`                | Present guidance and host bundled local inference.                                                                |
+| Required `http://*/*`, `https://*/*` host access | Observe and guide ordinary websites under the browser's current access rules; reach a separately enabled backend. |
 
-Permanent hosts remain localhost, loopback and English Wikipedia. Explain these
-existing grants accurately in the dashboard; do not broaden them for submission.
+The current source requests broad website access during installation. It has no
+special Wikipedia/localhost grant or optional-host list. Explain this scope
+accurately in the dashboard for a new submission; do not describe it as per-site
+opt-in. Older installations or browser-restricted access can use the explicit
+**Enable website access** action, which requests both schemes in one user gesture.
+Normal guidance checks current access without opening a permission request.
+The browser retains site restriction/revocation controls. Cloud AI, private
+learning and image transmission require their separate choices; broad website
+access enables none of them. Restricted browser pages remain unavailable.
 No remote executable code or model API is required for normal guidance. Models,
 OCR workers and WASM are bundled; build-time downloads are hash-verified.
 

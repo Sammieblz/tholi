@@ -143,4 +143,43 @@ export async function openFirefoxExtension(
   }
 }
 export type FirefoxApp = Awaited<ReturnType<typeof openFirefoxExtension>>;
+
+/** Pregrant only explicit fixture permissions in the owned disposable Firefox. */
+export async function grantFirefoxFixturePermissions(
+  driver: firefox.Driver,
+  permissions: { origins?: string[]; data_collection?: readonly string[] },
+) {
+  await driver.setContext(firefox.Context.CHROME);
+  try {
+    return await driver.executeAsyncScript<boolean>(function (
+      requested: { origins?: string[]; data_collection?: string[] },
+      done: (result: boolean) => void,
+    ) {
+      // https://searchfox.org/firefox-main/source/toolkit/components/extensions/ExtensionPermissions.sys.mjs
+      const { ExtensionPermissions } = (
+        globalThis as any
+      ).ChromeUtils.importESModule(
+        "resource://gre/modules/ExtensionPermissions.sys.mjs",
+      );
+      const extension = (globalThis as any).WebExtensionPolicy.getByID(
+        "tholi@ilunonsen.com",
+      )?.extension;
+      if (!extension) return done(false);
+      ExtensionPermissions.add(
+        "tholi@ilunonsen.com",
+        {
+          permissions: [],
+          origins: requested.origins || [],
+          data_collection: requested.data_collection || [],
+        },
+        extension,
+      ).then(
+        () => done(true),
+        () => done(false),
+      );
+    }, permissions);
+  } finally {
+    await driver.setContext(firefox.Context.CONTENT);
+  }
+}
 export { By, until, type WebDriver };

@@ -4,7 +4,10 @@ import { Select } from "selenium-webdriver/lib/select.js";
 import firefox from "selenium-webdriver/firefox.js";
 import type chrome from "selenium-webdriver/chrome.js";
 import { openBrandedExtension } from "./branded-extension";
-import { openFirefoxExtension } from "./firefox-extension";
+import {
+  grantFirefoxFixturePermissions,
+  openFirefoxExtension,
+} from "./firefox-extension";
 import { setNativeViewport } from "./webdriver-extension";
 import { acceptanceServer } from "./fixture-server";
 import {
@@ -43,7 +46,6 @@ export async function verifyWebDriverPrivateLearning(
     if (target === "firefox") {
       // Preserve the shipped optional manifest. Required-permission variants
       // cannot exercise permissions.request for the same categories.
-      // https://searchfox.org/firefox-main/source/toolkit/components/extensions/ExtensionPermissions.sys.mjs
       const manifest = await app.extension(() =>
         (globalThis as any).browser.runtime.getManifest(),
       );
@@ -53,39 +55,11 @@ export async function verifyWebDriverPrivateLearning(
       expect(
         backendDataPermissions.every((category) => optional.includes(category)),
       ).toBe(true);
-      const gecko = app.driver as firefox.Driver;
-      await gecko.setContext(firefox.Context.CHROME);
-      try {
-        const granted = await gecko.executeAsyncScript<boolean>(function (
-          categories: string[],
-          done: (result: boolean) => void,
-        ) {
-          const { ExtensionPermissions } = (
-            globalThis as any
-          ).ChromeUtils.importESModule(
-            "resource://gre/modules/ExtensionPermissions.sys.mjs",
-          );
-          const extension = (globalThis as any).WebExtensionPolicy.getByID(
-            "tholi@ilunonsen.com",
-          )?.extension;
-          if (!extension) return done(false);
-          ExtensionPermissions.add(
-            "tholi@ilunonsen.com",
-            {
-              permissions: [],
-              origins: [],
-              data_collection: categories,
-            },
-            extension,
-          ).then(
-            () => done(true),
-            () => done(false),
-          );
-        }, backendDataPermissions);
-        expect(granted).toBe(true);
-      } finally {
-        await gecko.setContext(firefox.Context.CONTENT);
-      }
+      expect(
+        await grantFirefoxFixturePermissions(app.driver as firefox.Driver, {
+          data_collection: backendDataPermissions,
+        }),
+      ).toBe(true);
       expect(
         await app.extension(
           (categories: string[]) =>

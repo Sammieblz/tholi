@@ -4,7 +4,10 @@ import { statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, sep } from "node:path";
 import { error as webdriverError, type WebDriver } from "selenium-webdriver";
-import { focusWebDriverWindow } from "../../support/webdriver-extension";
+import {
+  attachWebDriverExtension,
+  focusWebDriverWindow,
+} from "../../support/webdriver-extension";
 import {
   installedBrowserBinary,
   nativeBrowserScale,
@@ -54,6 +57,128 @@ test("native BiDi reads preserve same-window focus and frame boundaries while cl
   expect(window).toHaveBeenLastCalledWith("panel");
   expect(defaultContent).toHaveBeenCalledTimes(4);
 });
+
+test.each(["firefox", "chrome"] as const)(
+  "%s explicit panel interaction preserves its native focus contract",
+  async (browserName) => {
+    const execution = browserName === "firefox" ? "bidi" : "classic";
+    const panel = "CDwindow-" + "a".repeat(32),
+      website = "CDwindow-" + "b".repeat(32);
+    let focused = false,
+      visibilityState = "visible",
+      completed = false,
+      selected = execution === "classic" ? website : panel,
+      read!: () => Promise<boolean>,
+      finish!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const window = vi.fn(async (handle: string) => {
+        selected = handle;
+      }),
+      defaultContent = vi.fn(async () => undefined),
+      activate = vi.fn(async () => undefined),
+      wait = vi.fn(
+        async (
+          condition: () => Promise<boolean>,
+          _timeout: number,
+          _label: string,
+        ) => {
+          read = condition;
+          await pending;
+        },
+      ),
+      executeScript = vi.fn(async (script: () => boolean) => script());
+    const driver = {
+      getWindowHandle: async () => selected,
+      switchTo: () => ({ window, defaultContent }),
+      getCapabilities: async () =>
+        new Map([
+          ["browserName", browserName],
+          ["browserVersion", "154.0"],
+          ["moz:geckodriverVersion", "0.37.1"],
+          ["platformName", "mac"],
+        ]),
+      getBidi: async () => ({
+        send: async () => ({
+          result: {
+            type: "success",
+            result: {
+              value: JSON.stringify({ value: { os: "mac", arch: "x86-64" } }),
+            },
+          },
+        }),
+      }),
+      executeAsyncScript: async () =>
+        JSON.stringify({ value: { os: "mac", arch: "x86-64" } }),
+      sendDevToolsCommand: activate,
+      executeScript,
+      wait,
+    } as unknown as WebDriver;
+    const app = await attachWebDriverExtension(
+      driver,
+      website,
+      panel,
+      1,
+      "https://example.test",
+      async () => {},
+      undefined,
+      execution,
+    );
+    if (execution === "classic") {
+      expect(activate).toHaveBeenCalledExactlyOnceWith(
+        "Target.activateTarget",
+        {
+          targetId: "b".repeat(32),
+        },
+      );
+      window.mockClear();
+    }
+    vi.stubGlobal("document", {
+      hasFocus: () => focused,
+      get visibilityState() {
+        return visibilityState;
+      },
+    });
+    try {
+      const interaction = app.focusPanel().then(() => {
+        completed = true;
+      });
+      if (browserName === "chrome") {
+        await interaction;
+        expect(window).toHaveBeenCalledExactlyOnceWith(panel);
+        expect(activate).toHaveBeenCalledExactlyOnceWith(
+          "Target.activateTarget",
+          { targetId: "b".repeat(32) },
+        );
+        expect(defaultContent).toHaveBeenCalledOnce();
+        expect(wait).not.toHaveBeenCalled();
+        expect(executeScript).not.toHaveBeenCalled();
+        expect(completed).toBe(true);
+        return;
+      }
+      await vi.waitFor(() => expect(wait).toHaveBeenCalledOnce());
+      expect(window).not.toHaveBeenCalled();
+      expect(activate).not.toHaveBeenCalled();
+      expect(defaultContent).toHaveBeenCalledOnce();
+      expect(await read()).toBe(false);
+      expect(completed).toBe(false);
+      focused = true;
+      visibilityState = "hidden";
+      expect(await read()).toBe(false);
+      expect(completed).toBe(false);
+      visibilityState = "visible";
+      expect(await read()).toBe(true);
+      finish();
+      await interaction;
+      expect(completed).toBe(true);
+      expect(wait.mock.calls[0][1]).toBe(10000);
+    } finally {
+      finish();
+      vi.unstubAllGlobals();
+    }
+  },
+);
 
 test("macOS discovers browser app bundles and honors explicit per-browser overrides", () => {
   const available = new Set([

@@ -139,9 +139,24 @@ test("authorized frame controls bind to their own document and hide behind paren
     await app.close();
   }
 });
-test("an ungranted embedded origin remains unscanned and exposes selective access recovery", async () => {
+test("a synthetically restricted embedded origin remains unscanned with browser-access recovery guidance", async () => {
   const app = await openNavigatorExtension();
   try {
+    // The shipped manifest grants both schemes by default. Simulate one
+    // browser restriction here; native Firefox covers actual grant revocation.
+    await app.worker.evaluate(() => {
+      const contains = chrome.permissions.contains.bind(chrome.permissions);
+      chrome.permissions.contains = ((
+        permissions: any,
+        callback?: (granted: boolean) => void,
+      ) => {
+        if (permissions.origins?.includes("https://ungranted.test/*")) {
+          callback?.(false);
+          return Promise.resolve(false);
+        }
+        return (contains as any)(permissions, callback);
+      }) as typeof chrome.permissions.contains;
+    });
     await app.context.route("**/frame-denied", (route) =>
       route.fulfill({
         contentType: "text/html",
@@ -162,37 +177,20 @@ test("an ungranted embedded origin remains unscanned and exposes selective acces
     expect(JSON.stringify((await app.view())?.controls)).not.toContain(
       "Private embedded field",
     );
-    await expect(
-      app.panel.getByRole("button", { name: "Allow https://ungranted.test" }),
-    ).toBeVisible();
+    const recovery = app.panel.getByRole("region", {
+      name: "Embedded application access",
+    });
+    await expect(recovery).toContainText(
+      "Your browser has restricted access to some embedded controls",
+    );
     await app.panel
       .getByRole("button", { name: "Conversation", exact: true })
       .click();
-    const allow = app.panel.getByRole("button", {
-      name: "Allow https://ungranted.test",
-      exact: true,
-    });
-    await expect(allow).toBeVisible();
-    await app.panel.evaluate(() => {
-      (globalThis as any).__requestedFrameOrigins = [];
-      chrome.permissions.request = ((
-        permissions: any,
-        callback?: (granted: boolean) => void,
-      ) => {
-        (globalThis as any).__requestedFrameOrigins = permissions.origins;
-        callback?.(false);
-        return Promise.resolve(false);
-      }) as typeof chrome.permissions.request;
-    });
-    await allow.click();
-    await expect(app.panel.getByRole("alert")).toContainText(
-      "Access was not granted",
+    await expect(recovery).toBeVisible();
+    await expect(recovery).toContainText(
+      "Other page controls remain available",
     );
-    expect(
-      await app.panel.evaluate(
-        () => (globalThis as any).__requestedFrameOrigins,
-      ),
-    ).toEqual(["https://ungranted.test/*"]);
+    await expect(recovery.getByRole("button")).toHaveCount(0);
     expect(JSON.stringify((await app.view())?.controls)).not.toContain(
       "Private embedded field",
     );
