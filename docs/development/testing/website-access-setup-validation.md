@@ -80,3 +80,28 @@ JSON import lacked Node's required import attribute. The import was corrected
 and the coordinator restarted with a fresh identity and build. The original
 timings and unit result remain in `output/qa/website-access-setup-attempt1/`;
 they are not relabeled as results from the corrected run.
+
+## First hosted cohort and follow-up
+
+[Run 42259172766](https://github.com/Sammieblz/tholi/actions/runs/42259172766)
+evaluated source `9d373b291c3ccada073241276e8340c2fdcce50f`. Its build,
+container checks, 1,290 unit checks and all 148 ordinary browser checks passed:
+56 core, 20 integration, 5 native Windows Firefox and 67 UI cases. Both Apple
+Silicon macOS targets passed 9/9 native cases. Each Intel macOS target passed
+8/9, with the private-learning fixture reporting closed settings after its
+changed-structure fallback. This cohort is incomplete and does not establish
+passing Intel macOS validation.
+
+The same local coordinator passed core 56/56 and integration 20/20, then failed
+before Firefox startup with Selenium's `instanceof` constructor error. A
+separate prepared-build UI run, `6b2f99d7-eeb6-4fe1-9b11-1e80f333848e`,
+passed 67/67. A fresh-cache diagnostic passed the actual Firefox frame/restart
+case; that observation does not identify the loader failure's cause or replace
+the five-case cohort. The temporary loader probe was removed. Automatic
+approval review blocked an additional clean local Firefox cohort before
+execution with only "blocked by policy"; it was not retried.
+
+The Intel settings failure is being investigated with bounded, content-free
+test diagnostics. Native input, readiness outcomes and timeouts remain
+unchanged. Final implementation must remove temporary probes and record a new
+source-bound passing cohort before this PR is marked ready.

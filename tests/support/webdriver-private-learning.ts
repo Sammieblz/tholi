@@ -101,17 +101,110 @@ export async function verifyWebDriverPrivateLearning(
       const trigger = await visible(
         By.css('button[aria-label="Tholi settings"]'),
       );
-      // Base UI retains its popup during exit motion. Its trigger's expanded
-      // state distinguishes an open popup from the still-mounted closing DOM.
-      const expanded = await trigger.getDomAttribute("aria-expanded");
-      if (expanded === "false") await trigger.sendKeys(Key.ENTER);
-      else if (expanded !== "true")
-        throw Error("The native settings trigger has no expanded state.");
+      const expanded = await current.extension(() => {
+        const scope = globalThis as any;
+        const initialTrigger = document.querySelector<HTMLElement>(
+          'button[aria-label="Tholi settings"]',
+        );
+        const started = performance.now();
+        const events: unknown[] = [];
+        let sequence = 0;
+        const category = (target: EventTarget | null) => {
+          if (!(target instanceof Element)) return "other";
+          const button = document.querySelector(
+            'button[aria-label="Tholi settings"]',
+          );
+          if (button?.contains(target)) return "trigger";
+          if (document.querySelector(".tholi-settings-popup")?.contains(target))
+            return "popup";
+          if (
+            document.getElementById("tholi-destination-input")?.contains(target)
+          )
+            return "composer";
+          return "other";
+        };
+        const snapshot = () => ({
+          expanded:
+            document
+              .querySelector('button[aria-label="Tholi settings"]')
+              ?.getAttribute("aria-expanded") ?? null,
+          triggerConnected: !!initialTrigger?.isConnected,
+          hasFocus: document.hasFocus(),
+          visibilityState: document.visibilityState,
+          activeCategory: category(document.activeElement),
+          composerDisabled:
+            document.querySelector<HTMLTextAreaElement>(
+              "#tholi-destination-input",
+            )?.disabled ?? null,
+        });
+        const record = (
+          type: string,
+          target: EventTarget | null,
+          key?: string,
+        ) => {
+          if (events.length >= 32) return;
+          events.push({
+            sequence: ++sequence,
+            elapsedMs: Math.round(performance.now() - started),
+            type,
+            category: category(target),
+            ...(key ? { key } : {}),
+            state: snapshot(),
+          });
+        };
+        const focus = (event: Event) => record(event.type, event.target);
+        const key = (event: KeyboardEvent) => {
+          const value = event.key === " " ? "Space" : event.key;
+          if (["Enter", "Space", "Escape"].includes(value))
+            record(event.type, event.target, value);
+        };
+        const click = (event: Event) => record("click", event.target);
+        const observer = new MutationObserver(() =>
+          record("trigger-expanded", initialTrigger),
+        );
+        if (initialTrigger)
+          observer.observe(initialTrigger, {
+            attributes: true,
+            attributeFilter: ["aria-expanded"],
+          });
+        for (const name of ["focusin", "focusout"])
+          document.addEventListener(name, focus, true);
+        for (const name of ["keydown", "keyup"])
+          document.addEventListener(name, key as EventListener, true);
+        document.addEventListener("click", click, true);
+        scope.__tholiPrivateLearningReadinessDiagnostic = {
+          states: { beforeEnter: snapshot(), afterEnter: null },
+          events,
+          snapshot,
+          stop() {
+            observer.disconnect();
+            for (const name of ["focusin", "focusout"])
+              document.removeEventListener(name, focus, true);
+            for (const name of ["keydown", "keyup"])
+              document.removeEventListener(name, key as EventListener, true);
+            document.removeEventListener("click", click, true);
+          },
+        };
+        return initialTrigger?.getAttribute("aria-expanded") ?? null;
+      });
       let readiness = "not-observed";
+      const enter = { attempted: false, executed: false };
       try {
+        // Base UI retains its popup during exit motion. Its trigger's expanded
+        // state distinguishes an open popup from the still-mounted closing DOM.
+        if (expanded === "false") {
+          enter.attempted = true;
+          await trigger.sendKeys(Key.ENTER);
+          enter.executed = true;
+        } else if (expanded !== "true")
+          throw Error("The native settings trigger has no expanded state.");
         await current.waitFor(
           async () =>
             (readiness = await current.extension(() => {
+              const diagnostic = (globalThis as any)
+                .__tholiPrivateLearningReadinessDiagnostic;
+              if (diagnostic?.states.afterEnter === null)
+                diagnostic.states.afterEnter = diagnostic.snapshot();
               const popup = document.querySelector<HTMLElement>(
                 ".tholi-settings-popup",
               );
@@ -160,10 +253,39 @@ export async function verifyWebDriverPrivateLearning(
           `The acknowledged private-learning choices are ready during ${phase}`,
         );
       } catch (error) {
+        const diagnostic = await current
+          .extension(() => {
+            const state = (globalThis as any)
+              .__tholiPrivateLearningReadinessDiagnostic;
+            return {
+              states: { ...state.states, failure: state.snapshot() },
+              events: state.events,
+            };
+          })
+          .catch(() => ({ unavailable: true }));
+        const report = JSON.stringify({
+          phase,
+          readiness,
+          enter,
+          ...diagnostic,
+        });
+        console.error("THOLI_SETTINGS_READINESS_DIAGNOSTIC " + report);
+        await info.attach("private-learning-settings-readiness", {
+          body: Buffer.from(report),
+          contentType: "application/json",
+        });
         throw new Error(
           `Private-learning readiness failed during ${phase}: ${readiness}.`,
           { cause: error },
         );
+      } finally {
+        await current
+          .extension(() => {
+            const scope = globalThis as any;
+            scope.__tholiPrivateLearningReadinessDiagnostic?.stop();
+            delete scope.__tholiPrivateLearningReadinessDiagnostic;
+          })
+          .catch(() => {});
       }
     };
     await openSettings("initial provider setup");
