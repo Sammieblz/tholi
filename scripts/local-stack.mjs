@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
+import { buildIdentityTheme } from "./build-identity-theme.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const profiles = new Set(["storage", "telemetry"]);
@@ -188,8 +189,9 @@ export function localStackCommands(options) {
   return commands;
 }
 
-function main(args) {
+async function main(args) {
   const [action, ...flags] = args;
+  if (action === "up") await buildIdentityTheme();
   const options = { action, selectedProfiles: [] };
   for (let i = 0; i < flags.length; i += 2) {
     const value = flags[i + 1];
@@ -264,7 +266,7 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
   try {
-    main(process.argv.slice(2));
+    await main(process.argv.slice(2));
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;

@@ -1,5 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { api } from "../../../platform/api";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { requestServiceAuthAccess } from "../../../platform/service-auth-access";
 import { requestBackendAccess } from "../../../platform/site-access";
 import {
@@ -18,6 +17,10 @@ import {
   type ProviderConnectionSelection,
 } from "../../../../../../packages/navigation-core/contracts-providers";
 import "./account-settings.css";
+import {
+  accountRpc as rpc,
+  beginAccountAuthentication,
+} from "./account-client";
 import { PrivateLearningSettings } from "./PrivateLearningSettings";
 type ProcessingChoice = Pick<
   ServiceInferenceStatus,
@@ -39,6 +42,7 @@ export function AccountSettings() {
   });
   const [origin, setOrigin] = useState("");
   const [busy, setBusy] = useState(true);
+  const [accountRefresh, setAccountRefresh] = useState(0);
   const [error, setError] = useState("");
   const [originInvalid, setOriginInvalid] = useState(false);
   const [sessions, setSessions] = useState<
@@ -53,14 +57,6 @@ export function AccountSettings() {
   const confirmInference = (choices: ProcessingChoice) => {
     confirmedInference.current = choices;
     setInference(choices);
-  };
-  const rpc = async (message: unknown) => {
-    const result: unknown = await api.runtime.sendMessage(message);
-    if (result && typeof result === "object" && "error" in result)
-      throw new Error(
-        "The account request could not be completed. Check your service origin and account permissions, then try again.",
-      );
-    return result;
   };
   const load = async (expected: number, readInference = true) => {
     if (!isCurrent(expected)) return;
@@ -81,6 +77,45 @@ export function AccountSettings() {
     if (!result.account) setSessions([]);
     if (choices) confirmInference(choices);
   };
+  useEffect(() => {
+    const changed = () => {
+      setSessions([]);
+      setProviders([]);
+      setProviderId("");
+      setStatus((previous) => ({
+        configured: previous.configured,
+        origin: previous.origin,
+      }));
+      setAccountRefresh((revision) => revision + 1);
+    };
+    addEventListener("tholi-account-change", changed);
+    return () => removeEventListener("tholi-account-change", changed);
+  }, []);
+  useLayoutEffect(() => {
+    if (!accountRefresh || busy) return;
+    const expected = ++operationVersion.current;
+    setBusy(true);
+    void load(expected)
+      .catch(() => {
+        if (isCurrent(expected)) {
+          setStatus((previous) => ({
+            configured: previous.configured,
+            origin: previous.origin,
+          }));
+          setError(
+            "Your account changed. Reopen account settings when the service is available. Local guidance remains available.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent(expected)) {
+          setAccountRefresh((revision) =>
+            revision === accountRefresh ? 0 : revision,
+          );
+          setBusy(false);
+        }
+      });
+  }, [accountRefresh, busy]);
   useEffect(() => {
     setProviders([]);
     setProviderId("");
@@ -175,19 +210,19 @@ export function AccountSettings() {
     }, "The account service origin was saved.");
   };
   const signIn = (action: "signin" | "signup") => {
-    let access: Promise<boolean>;
+    const expected = operationVersion.current + 1;
+    let authentication: Promise<unknown>;
     try {
-      access = requestServiceAuthAccess(origin);
+      authentication = beginAccountAuthentication(origin, action, false, () =>
+        isCurrent(expected),
+      );
     } catch {
       setOriginInvalid(true);
       setError("Save a valid account service origin first.");
       return;
     }
     void act(async (expected) => {
-      const allowed = await access;
-      if (!isCurrent(expected)) return;
-      if (!allowed) throw new Error("Account access was declined.");
-      await rpc({ type: "AUTH_SIGN_IN", action });
+      await authentication;
       if (!isCurrent(expected)) return;
       setSessions([]);
       await load(expected);
@@ -502,6 +537,15 @@ export function AccountSettings() {
         />
       )}
       <label htmlFor="tholi-service-origin">Account service origin</label>
+      <button
+        onClick={() =>
+          void act(async () => {
+            await rpc({ type: "SETUP_OPEN" });
+          }, "Setup opened in a Tholi tab.")
+        }
+      >
+        Review introduction
+      </button>
       <input
         id="tholi-service-origin"
         type="url"

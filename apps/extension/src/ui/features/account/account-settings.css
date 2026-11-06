@@ -76,3 +76,19 @@
   border-top: 1px solid var(--line);
   font-size: 12px;
 }
+.tholi-setup-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tholi-setup-notice > p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+.tholi-setup-notice > button {
+  flex: none;
+}

@@ -12,6 +12,17 @@ export interface SeleniumBidi {
 export function seleniumBidi(driver: WebDriver) {
   return (driver as unknown as { getBidi(): Promise<SeleniumBidi> }).getBidi();
 }
+/** Extra welcome/auth tabs must never substitute for the requested extension UI. */
+export async function findWebDriverWindow(driver: WebDriver, url: string) {
+  for (const handle of await driver.getAllWindowHandles()) {
+    try {
+      await driver.switchTo().window(handle);
+      if ((await driver.getCurrentUrl()) === url) return handle;
+    } catch (error) {
+      if (!(error instanceof webdriverError.NoSuchWindowError)) throw error;
+    }
+  }
+}
 /** Preserve focus for BiDi reads; classic execution can intentionally differ from actual focus. */
 export async function focusWebDriverWindow(
   driver: WebDriver,

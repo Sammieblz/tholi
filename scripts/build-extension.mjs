@@ -27,7 +27,12 @@ for (const target of requested === "all"
 async function buildExtension(target) {
   const out =
     target === "chromium" ? "dist/extension" : "dist/extension-firefox";
-  const targetDefine = { __THOLI_BROWSER_TARGET__: JSON.stringify(target) };
+  const targetDefine = {
+    __THOLI_BROWSER_TARGET__: JSON.stringify(target),
+    __THOLI_SERVICE_ORIGIN__: JSON.stringify(
+      process.env.VITE_THOLI_SERVICE_ORIGIN?.trim() || "",
+    ),
+  };
   const withPaddle = process.argv.includes("--with-paddle");
   const visionPolicy = JSON.parse(
     await readFile("assets/vision-policy.json", "utf8"),
@@ -76,6 +81,7 @@ async function buildExtension(target) {
       "theme-page": "apps/extension/src/entries/theme-page.ts",
       "frame-agent": "apps/extension/src/entries/frame-agent.ts",
       sidepanel: "apps/extension/src/entries/sidepanel.tsx",
+      welcome: "apps/extension/src/entries/welcome.tsx",
       offscreen: "apps/extension/src/entries/offscreen.ts",
     },
     bundle: true,
@@ -135,6 +141,7 @@ async function buildExtension(target) {
   );
   await copyFile("apps/extension/sidepanel.html", out + "/sidepanel.html");
   await copyFile("apps/extension/widget.html", out + "/widget.html");
+  await copyFile("apps/extension/welcome.html", out + "/welcome.html");
   await buildBrand(out);
   await thirdParty(out);
 

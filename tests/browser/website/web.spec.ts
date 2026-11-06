@@ -6,6 +6,100 @@ const storeUrls = {
   Firefox: "https://addons.mozilla.org/en-US/firefox/addon/tholi/",
 };
 
+test("signup onboarding preserves steps and Back, with honest account availability and a local exit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .locator(".hero")
+    .getByRole("link", { name: "Sign up", exact: true })
+    .click();
+  await expect(page.locator("main h1")).toHaveText(
+    "Tell Tholi where you want to go.",
+  );
+  await expect(
+    page.getByText("Accounts are not available on this website yet.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/signup\?step=2$/);
+  await expect(page.locator("main h1")).toBeFocused();
+  await page.reload();
+  await expect(page.locator("main h1")).toHaveText(
+    "Find your next step. Stay in control.",
+  );
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.locator("main h1")).toHaveText("Your account is optional.");
+  await page.goBack();
+  await expect(page).toHaveURL(/step=2$/);
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/step=1$/);
+  await page.goto("/signup?step=invalid");
+  await expect(page).toHaveURL(/\/signup\?step=1$/);
+  await page
+    .getByRole("link", { name: "Use Tholi locally", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(
+    page
+      .locator(".browser-install-options")
+      .getByRole("link", { name: "Add to Firefox", exact: true }),
+  ).toHaveAttribute("href", storeUrls.Firefox);
+});
+
+for (const width of [375, 768, 1024, 1440])
+  for (const theme of ["light", "dark"] as const)
+    test(`signup onboarding reflows at ${width}px in ${theme} with reduced motion`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      await page.goto("/signup");
+      await page
+        .getByRole("button", { name: "Essential only", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Cookie choices" }),
+      ).toBeHidden();
+      if (theme === "light")
+        await page
+          .getByRole("button", { name: "Switch to light mode" })
+          .click();
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-tholi-theme",
+        theme,
+      );
+      const scene = page.locator(".tholi-introduction-scene");
+      // Settle the existing brief palette transition before checking static scenes.
+      await expect
+        .poll(() =>
+          scene.evaluate(
+            (element) => element.getAnimations({ subtree: true }).length,
+          ),
+        )
+        .toBe(0);
+      for (let step = 1; step <= 3; step++) {
+        await expect(scene).toBeVisible();
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        expect(
+          await scene.evaluate(
+            (element) => element.getAnimations({ subtree: true }).length,
+          ),
+        ).toBe(0);
+        await page.screenshot({
+          path: info.outputPath(`signup-${width}-${theme}-${step}.png`),
+          fullPage: true,
+        });
+        if (step < 3)
+          await page.getByRole("button", { name: "Next", exact: true }).click();
+      }
+    });
+
 test("mobile account-free navigation offers browser selection and both stores", async ({
   page,
 }) => {
@@ -25,8 +119,8 @@ test("mobile account-free navigation offers browser selection and both stores", 
   await page.getByRole("button", { name: "Open navigation" }).click();
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByRole("link", { name: /Sign in|Sign up|Get started/ }),
-  ).toHaveCount(0);
+    dialog.getByRole("link", { name: "Sign in", exact: true }),
+  ).toHaveAttribute("href", "/signin");
   await dialog.locator(".web-primary").click();
   await expect(page).toHaveURL(/\/download$/);
   await expect(dialog).toHaveCount(0);
@@ -68,10 +162,16 @@ test("published store download links navigate independently of cookies and devel
     "About",
     "Get Tholi",
     "Docs",
+    "Sign in",
   ]);
   await expect(
-    page.getByRole("link", { name: /Get started|Sign in|Sign up/ }),
-  ).toHaveCount(0);
+    page.locator(".hero").getByRole("link", { name: "Sign up", exact: true }),
+  ).toHaveAttribute("href", "/signup");
+  await expect(
+    page
+      .locator(".hero")
+      .getByRole("link", { name: "Use Tholi locally", exact: true }),
+  ).toHaveAttribute("href", "/download");
   const headerStore = browserName === "firefox" ? "Firefox" : "Chrome";
   await page
     .locator(".header-actions")
@@ -171,10 +271,8 @@ for (const route of ["signin", "signup", "welcome", "welcome.html"])
       "Legacy account reader",
     );
     await expect(
-      page
-        .locator("nav")
-        .getByRole("link", { name: /Welcome|Sign in|Sign up/ }),
-    ).toHaveCount(0);
+      page.locator("nav").getByRole("link", { name: "Sign in", exact: true }),
+    ).toHaveCount(1);
     await page.goBack();
     await expect(page).toHaveURL(/\/about$/);
     await page.goForward();

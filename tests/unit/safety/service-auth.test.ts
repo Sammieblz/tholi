@@ -107,6 +107,56 @@ it("requests only account host and authentication consent directly in the user g
   });
   await expect(pending).resolves.toBe(true);
 });
+it("a changed account choice cannot launch delayed authentication after native permission resolves", async () => {
+  let grant!: (allowed: boolean) => void;
+  request.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        grant = resolve;
+      }),
+  );
+  const sendMessage = vi.fn();
+  Object.assign((globalThis as any).browser.runtime, { sendMessage });
+  const { beginAccountAuthentication } =
+    await import("../../../apps/extension/src/ui/features/account/account-client");
+  let current = true;
+  const pending = beginAccountAuthentication(
+    origin,
+    "signup",
+    true,
+    () => current,
+  );
+  expect(request).toHaveBeenCalledOnce();
+  current = false;
+  grant(true);
+  await expect(pending).rejects.toThrow("choice changed");
+  expect(sendMessage).not.toHaveBeenCalled();
+});
+it("choosing Local fences an outstanding native callback before any token exchange", async () => {
+  let finish!: (value: string) => void;
+  let authorization!: URL;
+  launch.mockImplementation(({ url }) => {
+    authorization = new URL(url);
+    return new Promise((resolve) => {
+      finish = resolve;
+    });
+  });
+  const { serviceAuthCommand, cancelPendingServiceSignIn } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const pending = serviceAuthCommand({
+    type: "AUTH_SIGN_IN",
+    action: "signup",
+  });
+  const rejected = expect(pending).rejects.toThrow("connection changed");
+  await vi.waitFor(() => expect(launch).toHaveBeenCalledOnce());
+  cancelPendingServiceSignIn();
+  finish(
+    `https://stable.extensions.allizom.org/?code=${"c".repeat(43)}&state=${authorization.searchParams.get("state")}`,
+  );
+  await rejected;
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(saved).toEqual({ origin });
+});
 it("verifies native state and S256 before exchanging once, keeping tokens out of panel metadata", async () => {
   let authorize: URL;
   launch.mockImplementation(async ({ url }) => {

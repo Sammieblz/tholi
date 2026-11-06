@@ -21,6 +21,7 @@ import {
   seedNavigationServiceAccount,
 } from "../../../support/navigation-service-fixture";
 import { verifyWebDriverPrivateLearning } from "../../../support/webdriver-private-learning";
+import { verifyFreshWelcomeSetup } from "../../../support/webdriver-welcome";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -292,6 +293,7 @@ test("Firefox uses native document identity, local planning and independently ve
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
   try {
     app = await openFirefoxExtension(fixture.url);
+    await verifyFreshWelcomeSetup(app);
     const current = app;
     await info.attach("browser-runtime", {
       body: Buffer.from(

@@ -1,0 +1,188 @@
+@import "../../../../../../../packages/ui/styles/tokens.css";
+@import "../../../../../../../packages/ui/styles/editorial.css";
+
+html,
+body {
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+}
+.pf-v5-c-login {
+  background: var(--surface);
+  color: var(--ink);
+}
+.pf-v5-c-login__container {
+  max-width: 1080px;
+  margin: 64px auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 0.8fr 1fr;
+  gap: 72px;
+  align-items: start;
+}
+#kc-header {
+  padding-top: 40px;
+}
+#kc-header-wrapper {
+  font-size: 0;
+}
+#kc-header-wrapper::before {
+  content: "";
+  display: block;
+  width: 128px;
+  height: 52px;
+  background: url("../img/tholi_brand_logo.png") center / contain no-repeat;
+}
+#kc-header-wrapper::after {
+  content: "Find your way. Keep control.";
+  display: block;
+  font: 500 clamp(36px, 5vw, 60px)/1.1 var(--web-font-display);
+  letter-spacing: -0.025em;
+  padding-top: 48px;
+  max-width: 9ch;
+}
+.pf-v5-c-login__main {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 36px;
+  min-width: 0;
+}
+.pf-v5-c-login__main-header,
+.pf-v5-c-login__main-body,
+.pf-v5-c-login__main-footer {
+  padding: 0;
+}
+.pf-v5-c-form-control {
+  background: transparent;
+  border: 0;
+}
+.pf-v5-c-form-control::after {
+  border: 0;
+}
+.pf-v5-c-login .pf-v5-c-form-control > :is(input, textarea, select) {
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--field-line);
+  border-radius: 12px;
+}
+#kc-page-title {
+  font-family: var(--web-font-display);
+  font-weight: 500;
+  font-size: 36px;
+  margin: 0 0 24px;
+  line-height: 1.15;
+}
+#kc-content {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.form-group {
+  margin-block: 20px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]),
+select {
+  width: 100%;
+}
+input[type="submit"],
+.pf-v5-c-button.pf-m-primary {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  background: var(--jade);
+  color: var(--on-jade);
+  border: 1px solid var(--jade);
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pf-v5-c-login .pf-v5-c-form-control > input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.kc-feedback-text,
+.pf-m-error,
+.alert-error {
+  color: var(--danger);
+}
+.alert {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+.pf-c-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.pf-c-input-group input {
+  min-width: 0;
+}
+.pf-c-input-group button {
+  flex: none;
+}
+.tholi-identity-footer {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+.tholi-identity-footer > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.tholi-identity-footer > div {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tholi-identity-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+#tholi-identity-theme {
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .pf-v5-c-login__container {
+    display: block;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  #kc-header {
+    padding: 8px 0 28px;
+  }
+  #kc-header-wrapper::after {
+    display: none;
+  }
+  .pf-v5-c-login__main {
+    padding: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -188,14 +188,19 @@ for (const allowance of ["RATE_LIMITED", "QUOTA_EXCEEDED"] as const)
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      expect(
-        await processing.evaluate(
-          (element) =>
-            element
-              .getAnimations({ subtree: true })
-              .filter((animation) => animation.playState === "running").length,
-        ),
-      ).toBe(0);
+      // Native scrollbar hover/focus can finish an 80ms color transition.
+      // Check the settled reduced-motion state without allowing a looping cue.
+      await expect
+        .poll(() =>
+          processing.evaluate(
+            (element) =>
+              element
+                .getAnimations({ subtree: true })
+                .filter((animation) => animation.playState === "running")
+                .length,
+          ),
+        )
+        .toBe(0);
       await app.panel.screenshot({
         path: info.outputPath(
           `processing-${allowance.toLowerCase()}-narrow.png`,

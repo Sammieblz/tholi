@@ -17,6 +17,11 @@ import {
   restartNativeBackground,
 } from "../../support/webdriver-auth";
 import { serviceAuthStatusSchema } from "../../../apps/extension/src/platform/service-auth-contract";
+import {
+  openWelcomeSetup,
+  verifyFreshWelcomeSetup,
+  welcomeTabCount,
+} from "../../support/webdriver-welcome";
 
 for (const browser of ["chrome", "firefox"] as const)
   test(`${browser} uses native local OIDC with private sessions and preserves local guidance`, async ({}, info) => {
@@ -36,6 +41,10 @@ for (const browser of ["chrome", "firefox"] as const)
         browser === "firefox"
           ? await openFirefoxExtension(fixture.url)
           : await openBrandedExtension("chrome", fixture.url);
+      await verifyFreshWelcomeSetup(app);
+      checks.push(
+        "fresh installation opens the shared introduction; local completion enables no transmission",
+      );
       await app.start();
       await app.goal("Show search");
       await app.message({ type: "PAUSE" });
@@ -51,7 +60,35 @@ for (const browser of ["chrome", "firefox"] as const)
       checks.push(permissionCheck);
       await cancelNativeSignIn(app, environment);
       checks.push("native popup cancellation creates no session");
-      const signedIn = await completeNativeSignIn(app, environment);
+      const welcome = await openWelcomeSetup(app);
+      if (!welcome) throw Error("The packaged welcome tab is missing.");
+      await app.driver.navigate().refresh();
+      await (await accountControl(app, "Review introduction")).click();
+      for (let step = 2; step <= 3; step++)
+        await (await accountControl(app, "Next")).click();
+      await cancelNativeSignIn(app, environment, {
+        handle: welcome,
+        signup: true,
+      });
+      checks.push(
+        "welcome sign-up opens the real provider registration form; cancellation creates no native session",
+      );
+      await app.driver.switchTo().window(welcome);
+      await app.driver.navigate().refresh();
+      const signedIn = await completeNativeSignIn(app, environment, welcome);
+      await app.driver.switchTo().window(welcome);
+      const currentApp = app;
+      await app.driver.wait(
+        async () =>
+          (await currentApp.driver.findElements(By.css(".welcome-complete")))
+            .length > 0,
+        15_000,
+      );
+      expect(await app.message({ type: "SETUP_STATUS" })).toMatchObject({
+        complete: true,
+        choice: "account",
+      });
+      await openAccountSettings(app);
       expect(signedIn.account).toBeDefined();
       expect(signedIn.session?.clientKind).toBe("extension");
       expect(Object.keys(signedIn).sort()).toEqual([
@@ -72,7 +109,7 @@ for (const browser of ["chrome", "firefox"] as const)
       await app.waitFor(
         () =>
           driver
-            .findElement(By.css('.tholi-account-settings [role="status"]'))
+            .findElement(By.css('.tholi-account-settings > [role="status"]'))
             .getText(),
         (text) => text === "Your session was renewed.",
         "Native session renewal completes",
@@ -83,7 +120,9 @@ for (const browser of ["chrome", "firefox"] as const)
         ).session?.id,
       ).toBe(signedIn.session?.id);
       checks.push("refresh preserves the current session");
+      const welcomeCount = await welcomeTabCount(app);
       await restartNativeBackground(app, target);
+      expect(await welcomeTabCount(app)).toBe(welcomeCount);
       expect(
         serviceAuthStatusSchema.parse(
           await app.message({ type: "AUTH_STATUS" }),

@@ -49,6 +49,7 @@ async function nativeCdp(
     clearTimeout(timer);
   }
 }
+
 export type NativeIdentityEnvironment = {
   envFile: string;
   project: string;
@@ -474,20 +475,36 @@ async function newAuthWindow(
 export async function cancelNativeSignIn(
   app: App,
   environment: NativeIdentityEnvironment,
+  surface?: { handle: string; signup?: boolean },
 ) {
   const previous = await app.driver.getAllWindowHandles();
   let stage = "open-sign-in";
   try {
-    await (await accountControl(app, "Sign in")).click();
+    if (surface) await app.driver.switchTo().window(surface.handle);
+    await (
+      await accountControl(
+        app,
+        surface?.signup ? "Create your account" : "Sign in",
+      )
+    ).click();
     stage = "cancel-provider-window";
     await newAuthWindow(app, previous, environment);
+    if (surface?.signup)
+      await app.driver.wait(
+        until.elementLocated(By.id("kc-register-form")),
+        10_000,
+      );
     await app.driver.close();
-    await app.driver.switchTo().window(app.panel);
+    await app.driver.switchTo().window(surface?.handle ?? app.panel);
     stage = "verify-cancellation";
     await app.waitFor(
       () =>
         app.driver.findElements(
-          By.css('.tholi-account-settings [role="alert"]'),
+          By.css(
+            surface
+              ? '.welcome-error[role="alert"]'
+              : '.tholi-account-settings [role="alert"]',
+          ),
         ),
       (items) => items.length > 0,
       "Cancellation is reported in the account panel",
@@ -507,6 +524,7 @@ export async function cancelNativeSignIn(
 export async function completeNativeSignIn(
   app: App,
   environment: NativeIdentityEnvironment,
+  surface?: string,
 ) {
   const previous = await app.driver.getAllWindowHandles();
   const attempted = new Set<string>();
@@ -530,6 +548,7 @@ export async function completeNativeSignIn(
     return true;
   }
   try {
+    if (surface) await app.driver.switchTo().window(surface);
     await (await accountControl(app, "Sign in")).click();
     await app.driver.wait(
       async () => {

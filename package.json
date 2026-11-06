@@ -14,6 +14,7 @@
     "build": "npm run check:version && npm run build:demo && npm run build:extension && npm run build:web && npm run build:api && npm run build:test-fixtures",
     "build:demo": "vite build --config apps/demo-saas/vite.config.ts",
     "build:extension": "node scripts/build-extension.mjs",
+    "build:identity-theme": "node scripts/build-identity-theme.mjs",
     "build:extension:experimental:paddle": "node scripts/build-extension.mjs --with-paddle",
     "check:version": "node scripts/version.mjs --check",
     "release:version": "node scripts/version.mjs",

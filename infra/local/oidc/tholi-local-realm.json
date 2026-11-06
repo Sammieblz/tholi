@@ -4,6 +4,7 @@
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": true,
+  "loginTheme": "tholi",
   "resetPasswordAllowed": true,
   "loginWithEmailAllowed": true,
   "verifyEmail": true,

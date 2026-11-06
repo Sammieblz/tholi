@@ -7,6 +7,7 @@ import {
   attachWebDriverExtension,
   seleniumBidi,
   setNativeViewport,
+  findWebDriverWindow,
 } from "./webdriver-extension";
 import {
   assertFixtureUrl,
@@ -107,8 +108,16 @@ export async function openFirefoxExtension(
       "moz-extension://" + uuid + "/sidepanel.html",
     );
     await driver.setContext(firefox.Context.CONTENT);
-    const handles = await driver.getAllWindowHandles(),
-      panel = handles[handles.length - 1];
+    const panel = await driver.wait(
+      () =>
+        findWebDriverWindow(
+          driver,
+          "moz-extension://" + uuid + "/sidepanel.html",
+        ),
+      10_000,
+      "The exact packaged Firefox sidebar tab is available",
+    );
+    if (!panel) throw Error("The packaged Firefox sidebar is missing.");
     await driver.switchTo().window(panel);
     await driver.wait(until.elementLocated(By.css(".tholi-app")), 10000);
     const tabId = await driver.executeAsyncScript<number>(function (
