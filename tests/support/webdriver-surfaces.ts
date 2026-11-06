@@ -3,30 +3,36 @@ import firefox from "selenium-webdriver/firefox.js";
 import { By, until, type WebDriver } from "selenium-webdriver";
 import type { attachWebDriverExtension } from "./webdriver-extension";
 type App = Awaited<ReturnType<typeof attachWebDriverExtension>>;
+async function placeFirefoxToolbarButton(
+  driver: firefox.Driver,
+  widgetId: string,
+) {
+  await driver.executeScript((widgetId: string) => {
+    const scope = globalThis as any;
+    let CustomizableUI = scope.CustomizableUI;
+    if (!CustomizableUI) {
+      try {
+        CustomizableUI = scope.ChromeUtils.importESModule(
+          "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
+        ).CustomizableUI;
+      } catch {
+        CustomizableUI = scope.ChromeUtils.importESModule(
+          "resource:///modules/CustomizableUI.sys.mjs",
+        ).CustomizableUI;
+      }
+    }
+    CustomizableUI.addWidgetToArea(widgetId, "nav-bar");
+  }, widgetId);
+}
 /** Exercise the real Firefox toolbar gesture in a disposable test profile. */
 export async function activateFirefoxToolbar(driver: WebDriver) {
   const gecko = driver as firefox.Driver;
   await gecko.setContext(firefox.Context.CHROME);
   try {
-    await gecko.executeScript(() => {
-      const scope = globalThis as any;
-      let CustomizableUI = scope.CustomizableUI;
-      if (!CustomizableUI) {
-        try {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        } catch {
-          CustomizableUI = scope.ChromeUtils.importESModule(
-            "resource:///modules/CustomizableUI.sys.mjs",
-          ).CustomizableUI;
-        }
-      }
-      CustomizableUI.addWidgetToArea(
-        "tholi_ilunonsen_com-browser-action",
-        "nav-bar",
-      );
-    });
+    await placeFirefoxToolbarButton(
+      gecko,
+      "tholi_ilunonsen_com-browser-action",
+    );
     const toolbar = await gecko.findElement(
       By.id("tholi_ilunonsen_com-browser-action"),
     );
@@ -42,6 +48,7 @@ export async function closeFirefoxSidebar(driver: WebDriver) {
   try {
     // Revamp hides the legacy sidebar-close header. Its built-in toolbar button
     // owns the native panel toggle; callers must verify the panel actually closed.
+    await placeFirefoxToolbarButton(gecko, "sidebar-button");
     const close = await gecko.wait(
       until.elementLocated(By.id("sidebar-button")),
       5000,

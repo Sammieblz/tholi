@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
-import { realpathSync } from "node:fs";
+import { statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, sep } from "node:path";
 import type { WebDriver } from "selenium-webdriver";
@@ -128,9 +128,17 @@ test("disposable profile ownership accepts canonical aliases and closes rejected
       alias,
       process.platform === "win32" ? "junction" : "dir",
     );
-    expect(ownedFirefoxProfile(join(alias, basename(profile)), alias)).toBe(
-      realpathSync.native(profile),
+    // Windows may retain an 8.3 alias in either canonical spelling. Prove the
+    // accepted alias is the same physical directory without requiring one spelling.
+    const actual = statSync(
+      ownedFirefoxProfile(join(alias, basename(profile)), alias),
+      { bigint: true },
     );
+    const expected = statSync(profile, { bigint: true });
+    expect(actual.isDirectory() && expected.isDirectory()).toBe(true);
+    expect(actual.ino).toBeGreaterThan(0n);
+    expect(expected.ino).toBeGreaterThan(0n);
+    expect([actual.dev, actual.ino]).toEqual([expected.dev, expected.ino]);
     const outside = await mkdtemp(join(directory, "rust_mozprofile"));
     expect(() => ownedFirefoxProfile(outside, alias)).toThrow(
       "disposable profile ownership",
