@@ -17,6 +17,7 @@ for (const browser of ["chrome", "edge", "brave"] as const)
             JSON.stringify({
               name: browser,
               version: app.version,
+              driverVersion: app.driverVersion,
               target: "chromium",
               platform: app.platform,
               runtimePlatform: app.runtimePlatform,

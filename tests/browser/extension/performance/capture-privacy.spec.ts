@@ -28,6 +28,7 @@ for (const target of ["chromium", "firefox"] as const) {
           JSON.stringify({
             name: target === "chromium" ? "chrome" : "firefox",
             version: app.version,
+            driverVersion: app.driverVersion,
             target,
             platform: app.platform,
             runtimePlatform: app.runtimePlatform,

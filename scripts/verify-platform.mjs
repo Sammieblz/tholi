@@ -84,6 +84,10 @@ export function validatePlatformReports(reports, buildTargets, options = {}) {
         (browser) =>
           !/mac|darwin/i.test(browser.platform || "") ||
           !browser.version ||
+          !browser.driverVersion ||
+          (browser.target === "chromium" &&
+            browser.driverVersion.split(".")[0] !==
+              browser.version.split(".")[0]) ||
           browser.runtimePlatform?.os !== "mac" ||
           !(
             target.arch === "arm64" ? ["arm64", "aarch64"] : ["x86-64"]

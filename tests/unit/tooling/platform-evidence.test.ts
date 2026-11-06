@@ -38,6 +38,7 @@ function cohort() {
         target: "chromium",
         platform: "mac",
         version: "156.0",
+        driverVersion: "156.0.1",
         runtimePlatform: {
           os: "mac",
           arch: target.arch === "arm64" ? "arm64" : "x86-64",
@@ -47,6 +48,7 @@ function cohort() {
         target: "firefox",
         platform: "mac",
         version: "157.0",
+        driverVersion: "0.37.1",
         runtimePlatform: {
           os: "mac",
           arch: target.arch === "arm64" ? "aarch64" : "x86-64",
@@ -108,6 +110,9 @@ it("rejects claimed Mac coverage from a different host, translated architecture 
     },
     (report: ReturnType<typeof cohort>[number]) => {
       report.browsers[1].runtimePlatform.os = "linux";
+    },
+    (report: ReturnType<typeof cohort>[number]) => {
+      report.browsers[0].driverVersion = "151.0.1";
     },
   ]) {
     const reports = cohort();

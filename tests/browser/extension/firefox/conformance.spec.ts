@@ -69,6 +69,7 @@ async function firefoxServiceFixture(
         JSON.stringify({
           browser: "firefox",
           version: app.version,
+          driverVersion: app.driverVersion,
           runtimeManifestHash: createHash("sha256")
             .update(JSON.stringify(grants.manifest))
             .digest("hex"),

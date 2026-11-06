@@ -42,8 +42,13 @@ export async function openBrandedExtension(
     name === "edge" ? "MicrosoftEdge" : "chrome",
   );
   if (name === "chrome") {
-    const binary = installedBrowserBinary("chrome");
-    if (binary) (options as chrome.Options).setChromeBinaryPath(binary);
+    const paths = resolveBrowserTools({
+      browser: "chrome",
+      binary: installedBrowserBinary("chrome"),
+      skipDriverInPath: true,
+    });
+    (options as chrome.Options).setChromeBinaryPath(paths.browserPath);
+    builder.setChromeService(new chrome.ServiceBuilder(paths.driverPath));
   }
   if (name === "brave") {
     const binary =

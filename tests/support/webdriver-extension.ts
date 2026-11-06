@@ -176,6 +176,15 @@ export async function attachWebDriverExtension(
         return result.value;
       });
   }
+  const capabilities = await driver.getCapabilities();
+  const driverVersion =
+    capabilities.get("moz:geckodriverVersion") ??
+    (
+      capabilities.get("chrome") as { chromedriverVersion?: string } | undefined
+    )?.chromedriverVersion?.split(" ")[0] ??
+    (
+      capabilities.get("msedge") as { msedgedriverVersion?: string } | undefined
+    )?.msedgedriverVersion?.split(" ")[0];
   return {
     driver,
     website,
@@ -184,8 +193,9 @@ export async function attachWebDriverExtension(
     message,
     site,
     waitFor,
-    version: (await driver.getCapabilities()).get("browserVersion") as string,
-    platform: (await driver.getCapabilities()).get("platformName") as string,
+    version: capabilities.get("browserVersion") as string,
+    driverVersion: driverVersion as string | undefined,
+    platform: capabilities.get("platformName") as string,
     runtimePlatform: await extension(() => {
       const api = (globalThis as any).browser || (globalThis as any).chrome;
       return api.runtime.getPlatformInfo() as Promise<{
