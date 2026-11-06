@@ -104,16 +104,21 @@ export function assertOwnedMacFirefoxProcess(
           `(?:^|\\s)--?profile(?:\\s+|=)(?:"${escapePattern(profile)}"|'${escapePattern(profile)}'|${escapePattern(profile)})(?=\\s|$)`,
         ).test(actual.command),
     );
-  if (
-    !["firefox", "firefox-bin"].includes(executable) ||
-    !/(?:^|\s)--?headless(?=\s|$)/.test(actual.command) ||
-    !matchesProfile ||
-    !actual.started ||
-    (expected.macProcess &&
-      (actual.started !== expected.macProcess.started ||
-        actual.executable !== expected.macProcess.executable))
-  )
-    throw Error("Disposable Firefox process identity changed.");
+  const failed = !["firefox", "firefox-bin"].includes(executable)
+    ? "executable"
+    : !/(?:^|\s)--?headless(?=\s|$)/.test(actual.command)
+      ? "headless"
+      : !matchesProfile
+        ? "profile"
+        : !actual.started
+          ? "start-time"
+          : expected.macProcess &&
+              (actual.started !== expected.macProcess.started ||
+                actual.executable !== expected.macProcess.executable)
+            ? "lifetime"
+            : undefined;
+  if (failed)
+    throw Error(`Disposable Firefox process identity changed (${failed}).`);
 }
 
 /** Only the registered root PID is signalled; this does not certify every browser child. */
