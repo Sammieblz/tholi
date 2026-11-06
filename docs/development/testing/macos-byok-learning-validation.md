@@ -147,6 +147,50 @@ and four viewport widths are measured. Chrome uses CSS viewport emulation at
 375/640/960/1280; native headless Firefox uses its actual 500/640/960/1280 widths.
 No Firefox 375-pixel viewport or Mac result is inferred from this report.
 
+## Subsequent native and configured feedback
+
+The first integrated hosted cohort at `523c045654a59e75675e2b26adbbd1c68fd46042`
+exposed an OS-dependent fixture assumption: both new flows waited for provider
+selection after the same arrow-key sequence. Mac 15 on both architectures and
+Mac 26 on ARM each passed the seven earlier cases and failed the two new cases
+at that wait. The next cohort uses Selenium's native option selection, verifies
+the selected value and retains keyboard activation and the same time budget.
+Run [42171572877](https://github.com/Sammieblz/tholi/actions/runs/42171572877)
+at `be18e68f702adb182edab9bce18556e53d4a616f` passed all nine cases on Mac 15
+ARM. Other feedback in that cohort exposed a restart fixture seeding a draft
+outside its mounted UI owner, plus a private-learning readiness timeout whose
+phase was not retained. The restart setup now types through the actual textarea
+and waits for the existing draft acknowledgement. Fixed, content-free readiness
+labels distinguish initial, layout and later settings phases without logging
+account values or page data. These changes require a fresh final native cohort.
+
+That hosted integration run also exposed a real discovery defect. After a
+pointer-triggered scan drained, changing native `<details open>` could leave
+indexed descendants stale because the existing attribute invalidation branch
+omitted `open`. One deterministic regression reproduced zero notifications
+before the correction. The existing discovery owner now invalidates descendants;
+all **55** focused checks passed, run `a4e3d267-0a6f-4227-85df-69dcfe23237b`.
+Report `output/qa/87-native-details.json` has SHA-256
+`f089e31a7c19a2ef8d6cf8b75f88206c2d6379ae0e87d8a34067a156f0b2913a`.
+No navigation expectation, observation budget or timeout was weakened.
+
+The first actual-OIDC configured website cohort passed four of eight cases:
+provider settings and account export/deletion passed in both browsers; saved-data
+editing/filtering and private-learning interactions failed. Its retained report
+is `output/qa/87-configured-web/tholi-smoke-mw4jypw8-babf47c5/validation.json`.
+A separate two-case diagnostic cohort is preserved under
+`output/qa/87-configured-web/tholi-smoke-mw4kkahk-0332655c/`.
+Saved-data editing, search, export and deletion passed with HTTP 200; the earlier
+data failure did not reproduce, so no service-limit or production change was
+justified. Private learning again failed the fixture's immediate `.check()`
+assumption, before its mutation dispatched. The acknowledged-only controls now
+use native clicks, exact HTTP 200 responses and checked/unchecked assertions.
+Edit/search assertions also wait for their actual typed responses. Temporary
+response probes were removed; zero-model-request guards remain. Both disposable
+projects, containers, networks, volumes and private environments were cleaned,
+with default artifacts unchanged. Final eight-case evidence must follow these
+fixture corrections and the rebuilt final source.
+
 ## Database feedback
 
 The default cloud-free stack passed **27 top-level checks and 112 PostgreSQL

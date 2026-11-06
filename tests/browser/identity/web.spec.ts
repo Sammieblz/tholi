@@ -940,7 +940,8 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
       disposed = false,
       failureReason = "none";
     let failureLine: number | null = null;
-    let analyticsRequests = 0;
+    let analyticsRequests = 0,
+      modelRequests = 0;
     page.on("request", (request) => {
       const url = new URL(request.url());
       if (
@@ -951,6 +952,7 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         analyticsRequests++;
     });
     try {
+      await blockWebsiteModelRequests(context, () => modelRequests++);
       const prepared = await prepareWebsiteDashboardAccount(
         page,
         environment,
@@ -997,9 +999,29 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         await details
           .getByRole("textbox", { name: /^Tags\b/ })
           .fill("review, work");
+        const renamedRecord = page.waitForResponse((response) => {
+          const url = new URL(response.url());
+          return (
+            url.origin === environment.serviceOrigin &&
+            url.pathname === `${workspace}/artifacts/${records[0].id}` &&
+            response.request().method() === "PATCH"
+          );
+        });
         await details
           .getByRole("button", { name: "Save cloud changes", exact: true })
           .click();
+        const renamedReply = await renamedRecord;
+        expect(renamedReply.status()).toBe(200);
+        expect(
+          savedDataRecordSchema.parse(await renamedReply.json()),
+        ).toMatchObject({
+          id: records[0].id,
+          metadata: {
+            label: "Dashboard renamed route",
+            folder: "Daily work",
+            tags: ["review", "work"],
+          },
+        });
         await expect(
           details.getByRole("heading", {
             name: "Dashboard renamed route",
@@ -1012,9 +1034,25 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         await page
           .getByLabel("Search saved data", { exact: true })
           .fill("renamed");
+        const filteredRecords = page.waitForResponse((response) => {
+          const url = new URL(response.url());
+          return (
+            url.origin === environment.serviceOrigin &&
+            url.pathname === `${workspace}/artifacts/search` &&
+            url.searchParams.get("query") === "renamed" &&
+            response.request().method() === "GET"
+          );
+        });
         await page
           .getByRole("button", { name: "Apply filters", exact: true })
           .click();
+        const filteredReply = await filteredRecords;
+        expect(filteredReply.status()).toBe(200);
+        expect(
+          savedDataPageV2Schema
+            .parse(await filteredReply.json())
+            .items.map((record) => record.id),
+        ).toEqual([records[0].id]);
         await expect(items.locator(":scope > li")).toHaveCount(1);
         await expect(items).toContainText("Dashboard renamed route");
         await waitForIdentityGatewayCapacity();
@@ -1562,6 +1600,7 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         }
       }
       expect(analyticsRequests).toBe(0);
+      expect(modelRequests).toBe(0);
       expect(digest(await artifactFiles(websiteArtifactDirectory()))).toBe(
         buildDigest,
       );
@@ -1595,6 +1634,7 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         failureReason,
         failureLine,
         checks,
+        modelRequests,
         cleanupCompleted: disposed,
         fixture: "real synthetic local identity and approved data",
         publicationAuthorized: false,
@@ -1757,12 +1797,12 @@ test("real account privately controls versioned website knowledge without dispat
     expect((await refreshing).status()).toBe(200);
     await expect(collect).toBeEnabled();
     const enablingCollection = siteResponse("PATCH");
-    await collect.check();
+    await collect.click();
     expect((await enablingCollection).status()).toBe(200);
     await expect(collect).toBeChecked();
     await expect(use).toBeEnabled();
     const enablingReuse = siteResponse("PATCH");
-    await use.check();
+    await use.click();
     expect((await enablingReuse).status()).toBe(200);
     await expect(use).toBeChecked();
     const query = {
@@ -1851,7 +1891,7 @@ test("real account privately controls versioned website knowledge without dispat
 
     stage = "server-acknowledged pause prevents retrieval";
     const pausingReuse = siteResponse("PATCH");
-    await use.uncheck();
+    await use.click();
     expect((await pausingReuse).status()).toBe(200);
     await expect(use).not.toBeChecked();
     const paused = await retrieve();

@@ -123,7 +123,7 @@ export async function verifyWebDriverPrivateLearning(
     };
     const named = (name: string) =>
       visible(By.xpath(`//button[normalize-space(.)="${name}"]`));
-    const openSettings = async () => {
+    const openSettings = async (phase: string) => {
       await panel();
       const popovers = await current.driver.findElements(
         By.css(".tholi-settings-popup"),
@@ -132,19 +132,43 @@ export async function verifyWebDriverPrivateLearning(
         await (
           await visible(By.css('button[aria-label="Tholi settings"]'))
         ).sendKeys(Key.ENTER);
-      await current.waitFor(
-        () =>
-          current.extension(() => {
-            const field = document.querySelector<HTMLFieldSetElement>(
-              ".tholi-private-learning fieldset",
-            );
-            return !!field && !field.disabled;
-          }),
-        Boolean,
-        "The acknowledged private-learning choices are ready",
-      );
+      let readiness = "not-observed";
+      try {
+        await current.waitFor(
+          async () =>
+            (readiness = await current.extension(() => {
+              const field = document.querySelector<HTMLFieldSetElement>(
+                ".tholi-private-learning fieldset",
+              );
+              if (field && !field.disabled) return "ready";
+              const accountError = document.getElementById(
+                "tholi-account-error",
+              );
+              if (accountError && !accountError.hidden) return "account-error";
+              if (
+                document.querySelector('.tholi-private-learning [role="alert"]')
+              )
+                return "learning-error";
+              if (field) return "learning-pending";
+              if (
+                document.querySelector(
+                  'section[aria-label="Private website learning"]',
+                )
+              )
+                return "pinned-site-unavailable";
+              return "learning-unmounted";
+            })),
+          (value) => value === "ready",
+          `The acknowledged private-learning choices are ready during ${phase}`,
+        );
+      } catch (error) {
+        throw new Error(
+          `Private-learning readiness failed during ${phase}: ${readiness}.`,
+          { cause: error },
+        );
+      }
     };
-    await openSettings();
+    await openSettings("initial provider setup");
     await (await named("Refresh AI connections")).sendKeys(Key.ENTER);
     const selector = await visible(By.css("#tholi-provider-choice"));
     await current.driver.wait(
@@ -274,7 +298,7 @@ export async function verifyWebDriverPrivateLearning(
         } else {
           await setNativeViewport(current.driver, { width, height: 900 });
         }
-        await openSettings();
+        await openSettings(`appearance ${theme} at declared width ${width}`);
         const control = await visible(
           By.css('.tholi-private-learning input[type="checkbox"]'),
         );
@@ -433,7 +457,7 @@ export async function verifyWebDriverPrivateLearning(
       (view) => view.serviceNavigation?.state === "guiding",
       "The fixture fallback binds through the shared native join",
     );
-    await openSettings();
+    await openSettings("after changed-structure fallback");
     const remembered = await current.driver.findElements(
       By.css('.tholi-private-learning input[type="checkbox"]'),
     );
@@ -474,7 +498,7 @@ export async function verifyWebDriverPrivateLearning(
       Boolean,
       "Cloud forgetting requires explicit confirmation",
     );
-    await openSettings();
+    await openSettings("after confirmed cloud forgetting");
     const local = await visible(By.css('input[type="radio"][value="local"]'));
     await local.sendKeys(Key.SPACE);
     await current.waitFor(

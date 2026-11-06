@@ -280,6 +280,59 @@ it("ignores Tholi's own roots and unrelated text churn without missing website c
     vi.useRealTimers();
   }
 });
+it("notifies native details visibility changes after the preceding interaction observation has drained", async () => {
+  vi.useFakeTimers();
+  fixture(
+    '<details><summary>Languages</summary><fieldset><legend>Language</legend><label><input type="radio" name="language" checked>English</label><label><input type="radio" name="language">Spanish</label></fieldset></details>',
+  );
+  const discovery = new PageDiscovery();
+  let page = discovery.snapshot();
+  const notify = vi.fn(() => {
+      page = discovery.snapshot();
+    }),
+    stop = discovery.observe(notify);
+  try {
+    await vi.advanceTimersByTimeAsync(1000);
+    const details = document.querySelector("details")!,
+      summary = document.querySelector("summary")!;
+    summary.dispatchEvent(new Event("pointerover", { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(300);
+    notify.mockClear();
+    const closedRevision = page.revision;
+    expect(
+      page.controls
+        .filter((control) => control.kind === "choice")
+        .every((control) => !control.visible),
+    ).toBe(true);
+    details.open = true;
+    await vi.advanceTimersByTimeAsync(300);
+    expect(notify).toHaveBeenCalledOnce();
+    expect(page.revision).toBeGreaterThan(closedRevision);
+    expect(
+      page.controls.find((control) => control.label === "Languages")?.expanded,
+    ).toBe(true);
+    expect(
+      page.controls
+        .filter((control) => control.kind === "choice")
+        .every((control) => control.visible),
+    ).toBe(true);
+    expect(planGoal(page, "Show languages").status).toBe("awaiting-choice");
+    details.open = false;
+    await vi.advanceTimersByTimeAsync(300);
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(
+      page.controls.find((control) => control.label === "Languages")?.expanded,
+    ).toBe(false);
+    expect(
+      page.controls
+        .filter((control) => control.kind === "choice")
+        .every((control) => !control.visible),
+    ).toBe(true);
+  } finally {
+    stop();
+    vi.useRealTimers();
+  }
+});
 it("preserves real headings and ARIA footer links under dense navigation", () => {
   fixture(
     `<main><h1>Catalogue</h1><nav>${Array.from({ length: 900 }, (_, i) => `<a href="/related/${i}">Related item ${i}</a>`).join("")}</nav><h2 id="references">References</h2></main><div role="contentinfo"><a href="/privacy">Privacy policy</a></div>`,

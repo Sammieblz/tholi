@@ -7,7 +7,7 @@ import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
 import type { CaptureMetadata } from "../../../../packages/vision/contracts";
 import { createHash } from "node:crypto";
-import { Key } from "selenium-webdriver";
+import { By, Key } from "selenium-webdriver";
 import {
   navigationServiceFixture,
   navigationServicePageHtml,
@@ -523,16 +523,29 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     "/private-controls": '<input aria-label="Private embedded field">',
   });
   let app: Awaited<ReturnType<typeof openFirefoxExtension>> | undefined;
+  let failure: unknown;
   try {
     app = await openFirefoxExtension(fixture.url);
     await app.start();
     await app.goal("Show search");
     const before = await app.message({ type: "GET_SESSION" });
     await app.message({ type: "PAUSE" });
-    await app.message({
-      type: "UI_SAVE",
-      draft: "Retained after event-page suspension",
-    });
+    // Let the live presentation owner persist real typing before suspension;
+    // an out-of-band storage write can race its pending initial draft save.
+    await app.driver.switchTo().window(app.panel);
+    const draft = await app.driver.findElement(
+      By.id("tholi-destination-input"),
+    );
+    await draft.clear();
+    await draft.sendKeys("Retained after event-page suspension");
+    expect(await draft.getAttribute("value")).toBe(
+      "Retained after event-page suspension",
+    );
+    await app.waitFor(
+      () => app!.message({ type: "UI_GET" }),
+      (value) => value.draft === "Retained after event-page suspension",
+      "The typed draft is acknowledged before event-page suspension",
+    );
     const settings = {
       url: "http://127.0.0.1:8787",
       token: "SYNTHETIC_PRIVATE_TOKEN_FOR_ISOLATION",
@@ -594,7 +607,11 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     expect(isolation.content.denied.error).toMatch(/panel/i);
     expect(isolation.content.sessionKeys).toEqual([]);
     expect(isolation.content.databases).not.toContain("tholi-private-settings");
+    // The synthetic panel is a tab; site memory follows the active website.
+    await app.site(() => document.title);
     const knowledgeBefore = await app.message({ type: "GET_MEMORY" });
+    expect(knowledgeBefore.error).toBeUndefined();
+    expect(knowledgeBefore.memory).toBeDefined();
     expect(knowledgeBefore.memory.pages.length).toBeGreaterThan(0);
     await app.driver.switchTo().window(app.panel);
     const panelUrl = await app.driver.getCurrentUrl();
@@ -635,6 +652,25 @@ test("Firefox event-page restart protects settings and rebinds native documents 
     expect(after.view.status).toBe("paused");
     expect((await current.message({ type: "UI_GET" })).draft).toBe(
       "Retained after event-page suspension",
+    );
+    // Later tasks use the background fixture; clear the proven retained draft
+    // through its UI owner so they do not mix with unrelated draft suggestions.
+    await current.driver.switchTo().window(current.panel);
+    const restoredDraft = await current.driver.findElement(
+      By.id("tholi-destination-input"),
+    );
+    await restoredDraft.sendKeys(
+      Key.chord(
+        current.runtimePlatform.os === "mac" ? Key.COMMAND : Key.CONTROL,
+        "a",
+      ),
+      Key.BACK_SPACE,
+    );
+    expect(await restoredDraft.getAttribute("value")).toBe("");
+    await current.waitFor(
+      () => current.message({ type: "UI_GET" }),
+      (value) => value.draft === "",
+      "Clearing the retained draft is acknowledged before resuming",
     );
     expect(await current.message({ type: "GET_BACKEND" })).toEqual(settings);
     await app.driver.switchTo().window(app.website);
@@ -720,8 +756,19 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       ),
       contentType: "application/json",
     });
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
-    await app?.close();
-    await fixture.close();
+    try {
+      await app?.close();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        failure === undefined ? [cleanupError] : [failure, cleanupError],
+        "Firefox restart verification and cleanup failures",
+      );
+    } finally {
+      await fixture.close();
+    }
   }
 });
