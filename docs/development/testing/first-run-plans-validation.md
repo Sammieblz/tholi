@@ -124,6 +124,14 @@ The final matching-head hosted PR gate is required before merge and its results
 are recorded with the implementation PR linked from #61. No earlier report is
 relabelled as evidence for the later artifacts.
 
+The first hosted head run exposed a fixture mismatch in Firefox: welcome can read
+the real public GET plan catalog without credentials, but the synthetic navigation
+server required authentication for that route. The existing fixture now explicitly
+serves that public metadata before its unchanged protected-route authentication
+check. The Firefox recovery case forces that passive catalog read and verifies it
+creates no model decision. The focused native case passed with all original privacy,
+keyboard, decision-count and independent-outcome assertions retained.
+
 Raw logs and fresh reports are retained under ignored `output/qa/61-first-run/`.
 Both allocated fixture projects were removed with their own containers, volumes
 and networks. Their private environment and temporary orchestration file were
