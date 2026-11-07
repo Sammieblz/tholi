@@ -115,6 +115,11 @@ headroom twenty-four. An external identity database does not free that reserve
 for unreviewed scaling. Manual worker capacity is capped at two in configuration.
 This is a capacity bound, not a financial cap or proof of throughput.
 
+The API ceiling applies at service level across revisions, with SQL role limits
+as an independent aggregate bound. Platform rollout bursts and real cloud capacity
+still require deployed verification. PostgreSQL suppresses statement/parameter logs
+and verbose error row details to keep private payloads out of database logs.
+
 API/worker retain the existing eight-second drain and shared SQL timeouts. Failed
 interactive work keeps its original idempotency and uncertain-outcome rules.
 Cloud Run job supervision does not retry migrations. Never roll an old image back

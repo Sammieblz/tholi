@@ -98,6 +98,18 @@ services:
         shared_buffers=64MB,
         -c,
         password_encryption=scram-sha-256,
+        -c,
+        log_error_verbosity=terse,
+        -c,
+        log_min_error_statement=panic,
+        -c,
+        log_parameter_max_length_on_error=0,
+        -c,
+        log_parameter_max_length=0,
+        -c,
+        log_statement=none,
+        -c,
+        log_min_duration_statement=-1,
       ]
     env_file:
       ["${THOLI_VM_POSTGRES_ENV:?Select a protected PostgreSQL bootstrap file}"]

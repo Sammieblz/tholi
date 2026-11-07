@@ -98,6 +98,20 @@ resource "google_sql_database_instance" "service" {
       name  = "password_encryption"
       value = "scram-sha-256"
     }
+    dynamic "database_flags" {
+      for_each = {
+        log_error_verbosity               = "terse"
+        log_min_error_statement           = "panic"
+        log_parameter_max_length_on_error = "0"
+        log_parameter_max_length          = "0"
+        log_statement                     = "none"
+        log_min_duration_statement        = "-1"
+      }
+      content {
+        name  = database_flags.key
+        value = database_flags.value
+      }
+    }
     backup_configuration {
       enabled                        = true
       point_in_time_recovery_enabled = true
@@ -134,14 +148,14 @@ resource "google_cloud_run_v2_service" "api" {
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   deletion_protection = true
+  scaling {
+    min_instance_count = 0
+    max_instance_count = local.capacity.apiReplicas
+  }
   template {
     service_account                  = google_service_account.runtime["api"].email
     timeout                          = "35s"
     max_instance_request_concurrency = 32
-    scaling {
-      min_instance_count = 0
-      max_instance_count = local.capacity.apiReplicas
-    }
     vpc_access {
       egress = "PRIVATE_RANGES_ONLY"
       network_interfaces {

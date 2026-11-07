@@ -63,8 +63,12 @@ run "portable_preparation" {
     error_message = "Database must stay private, API uncached and direct public Run ingress closed."
   }
   assert {
-    condition     = google_cloud_run_v2_service.api[0].template[0].scaling[0].max_instance_count == 4 && google_cloud_run_v2_worker_pool.worker[0].scaling[0].manual_instance_count == 1 && length(google_secret_manager_secret_iam_member.runtime) == 5 && google_cloud_run_v2_job.migration.template[0].template[0].max_retries == 0
+    condition     = google_cloud_run_v2_service.api[0].scaling[0].max_instance_count == 4 && google_cloud_run_v2_worker_pool.worker[0].scaling[0].manual_instance_count == 1 && length(google_secret_manager_secret_iam_member.runtime) == 5 && google_cloud_run_v2_job.migration.template[0].template[0].max_retries == 0
     error_message = "Keep finite capacity, per-secret role grants and no automatic migration retry."
+  }
+  assert {
+    condition     = alltrue([for flag in google_sql_database_instance.service.settings[0].database_flags : flag.name != "log_error_verbosity" || flag.value == "terse"]) && length([for flag in google_sql_database_instance.service.settings[0].database_flags : flag if flag.name == "log_parameter_max_length_on_error" && flag.value == "0"]) == 1
+    error_message = "Database logging must omit row details and parameter values."
   }
 }
 run "foundation_before_workloads" {

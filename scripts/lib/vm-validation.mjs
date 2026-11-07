@@ -330,6 +330,32 @@ export async function runVmChecks({
       console.log("VM check passed: " + name);
     };
     record("standalone-production-vm-profile", policy);
+    for (const [setting, expected] of Object.entries({
+      log_error_verbosity: "terse",
+      log_min_error_statement: "panic",
+      log_parameter_max_length_on_error: "0",
+      log_parameter_max_length: "0",
+      log_statement: "none",
+      log_min_duration_statement: "-1",
+    })) {
+      assert.equal(
+        (
+          await compose([
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-U",
+            "postgres",
+            "-d",
+            "tholi",
+            "-Atc",
+            `SHOW ${setting}`,
+          ])
+        ).trim(),
+        expected,
+      );
+    }
     const ids = (await compose(["ps", "--quiet", "api", "worker"]))
       .trim()
       .split(/\s+/);

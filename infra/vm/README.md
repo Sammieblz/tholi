@@ -77,7 +77,10 @@ No local Mailpit, public object bucket or mock identity is substituted.
    installation or a redirect alone is not successful authentication.
 
 The API and worker run nonroot, read-only, without added capabilities or public
-ports. The database network is internal. Application egress is available for
+ports. The database network is internal.
+PostgreSQL omits statement/parameter logging and verbose row details from errors;
+inspect sanitized service classifications instead of collecting private payloads.
+Application egress is available for
 explicit identity/support endpoints; restrict the host firewall and outbound
 policy for the selected transports before deployment. No model egress is enabled.
 

@@ -60,8 +60,12 @@ still present in the adjacent type declaration; the declaration was corrected
 before this complete fresh pass. Generated acceptance output is kept separately
 in ignored QA storage; historical tracked reports were restored.
 
-The frozen combined local/VM smoke and final matching-head hosted checks remain
-required before merge. Final evidence belongs
+The frozen combined local/VM cohort `tholi-smoke-mw7099at-2d0da87a` passes at
+source `7babc9fe2987c1f18331b8b5d929599a7b4afdcd`, including both successful and
+failed local migration supervision. Review then added explicit private PostgreSQL
+logging flags and a service-wide Google replica cap across revisions. This earlier
+cohort is not relabeled as evidence for those changes. Final matching-head hosted
+checks remain required before merge. Final evidence belongs
 with the implementation PR and issue acceptance record; focused and failed cohorts
 must not be combined or relabeled as that result.
 
