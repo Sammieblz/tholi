@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import { createServer, type Server } from "node:http";
 import { parseWorkerConfig, type Environment } from "./config";
 import { createServiceDatabase } from "./adapters/service-database";
 import { PostgresJobs } from "./database/jobs";
@@ -124,10 +125,38 @@ export async function createWorkerRuntime(
   let timer: ReturnType<typeof setInterval> | undefined;
   let writing = Promise.resolve();
   let closed = false;
+  let healthServer: Server | undefined;
   return {
     async start() {
       if (path) await rm(path, { force: true });
       await worker.start();
+      if (config.healthPort !== undefined) {
+        // Private orchestrator probes only. No job, identity or queue metadata.
+        healthServer = createServer((request, response) => {
+          response.setHeader("Cache-Control", "no-store");
+          const known =
+            ["GET", "HEAD"].includes(request.method ?? "") &&
+            ["/health/live", "/health/ready"].includes(request.url ?? "");
+          const healthy =
+            !closed &&
+            (request.url === "/health/live" ||
+              (worker.ready() &&
+                Date.now() - worker.lastHealthyAt() <= healthMaxAgeMs));
+          response.statusCode = !known ? 404 : healthy ? 200 : 503;
+          response.end();
+        });
+        healthServer.requestTimeout = 5000;
+        healthServer.headersTimeout = 5000;
+        healthServer.keepAliveTimeout = 1000;
+        healthServer.maxHeadersCount = 16;
+        await new Promise<void>((resolve, reject) => {
+          healthServer!.once("error", reject);
+          healthServer!.listen(config.healthPort, "0.0.0.0", () => {
+            healthServer!.off("error", reject);
+            resolve();
+          });
+        });
+      }
       if (path) {
         timer = setInterval(() => {
           writing = writing
@@ -154,6 +183,12 @@ export async function createWorkerRuntime(
       closed = true;
       if (timer) clearInterval(timer);
       try {
+        if (healthServer?.listening) {
+          healthServer.closeAllConnections();
+          await new Promise<void>((resolve, reject) =>
+            healthServer!.close((error) => (error ? reject(error) : resolve())),
+          );
+        }
         await worker.stop();
         await writing;
         if (path) await rm(path, { force: true });

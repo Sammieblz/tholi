@@ -1,0 +1,163 @@
+# Standalone VM profile. Use --project-directory at the repository root.
+# Protected env files contain distinct database and application credentials.
+x-runtime: &runtime
+  image: ${THOLI_SERVICE_IMAGE:?Select the reviewed immutable service image}
+  pull_policy: never
+  user: "1000:1000"
+  read_only: true
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=32m,mode=1777"]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  pids_limit: 64
+  mem_limit: 256m
+  cpus: 1
+  stop_grace_period: 10s
+  logging:
+    driver: json-file
+    options: { max-size: "5m", max-file: "2" }
+
+services:
+  api:
+    <<: *runtime
+    restart: unless-stopped
+    command: [node, apps/api/dist/service.js]
+    env_file: ["${THOLI_VM_API_ENV:?Select a protected API environment file}"]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      THOLI_SERVICE_HOST: 0.0.0.0
+      THOLI_SERVICE_PORT: "8788"
+      THOLI_MODEL_PROVIDER: fake
+      THOLI_NAVIGATION_TRANSPORT_ENABLED: "false"
+      THOLI_BYOK_ENABLED: "false"
+      THOLI_DATABASE_POOL_MAX: "4"
+    networks: [application, database]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          --input-type=module,
+          -e,
+          "const r=await fetch('http://127.0.0.1:8788/health/ready',{signal:AbortSignal.timeout(2000)});process.exit(r.ok?0:1)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 10s
+    depends_on:
+      database-migrate: { condition: service_completed_successfully }
+
+  worker:
+    <<: *runtime
+    restart: unless-stopped
+    command: [node, apps/api/dist/worker.js]
+    env_file:
+      ["${THOLI_VM_WORKER_ENV:?Select a protected worker environment file}"]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      THOLI_DATABASE_POOL_MAX: "2"
+      THOLI_WORKER_HEALTH_FILE: /tmp/tholi-worker-health.json
+    networks: [application, database]
+    healthcheck:
+      test: [CMD, node, apps/api/dist/worker.js, --health]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 10s
+    depends_on:
+      database-migrate: { condition: service_completed_successfully }
+
+  database-migrate:
+    <<: *runtime
+    command: [node, apps/api/dist/database-cli.js, migrate]
+    env_file:
+      [
+        "${THOLI_VM_MIGRATION_ENV:?Select a protected migration environment file}",
+      ]
+    environment:
+      NODE_ENV: production
+      THOLI_DATABASE_POOL_MAX: "1"
+      THOLI_DATABASE_RUNTIME_ROLE: tholi_runtime
+      THOLI_DATABASE_WORKER_ROLE: tholi_worker
+    networks: [database]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  postgres:
+    image: postgres:18.6-bookworm@sha256:5c4783a8cc3f0074912164f94dfa1be4e043438f0f707cf968d7af9a0d31a2c8
+    restart: unless-stopped
+    command:
+      [
+        postgres,
+        -c,
+        max_connections=60,
+        -c,
+        shared_buffers=64MB,
+        -c,
+        password_encryption=scram-sha-256,
+      ]
+    env_file:
+      ["${THOLI_VM_POSTGRES_ENV:?Select a protected PostgreSQL bootstrap file}"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./infra/local/postgres/bootstrap.sh:/docker-entrypoint-initdb.d/bootstrap.sh:ro
+      - ./infra/local/postgres/bootstrap.sql:/opt/tholi/postgres/bootstrap.sql:ro
+    networks: [database]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1
+    stop_grace_period: 30s
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, postgres, -d, postgres]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 20s
+
+  gateway:
+    image: nginx/nginx-unprivileged:1.30.6-alpine-slim@sha256:984a21e29bb10d4c0e122374b97b89a2101823a9331e0f3c6c04bc285ccf447f
+    user: "101:101"
+    restart: unless-stopped
+    entrypoint: [nginx]
+    command: [-g, "daemon off;"]
+    ports:
+      - "${THOLI_VM_BIND_ADDRESS:-0.0.0.0}:${THOLI_VM_HTTP_PORT:-80}:8080"
+      - "${THOLI_VM_BIND_ADDRESS:-0.0.0.0}:${THOLI_VM_HTTPS_PORT:-443}:8443"
+    volumes:
+      - ./infra/vm/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/local/gateway/proxy.conf:/etc/nginx/tholi-proxy.conf:ro
+      - ./infra/local/gateway/api.conf:/etc/nginx/tholi-api.conf:ro
+      - ./infra/local/gateway/upstream.conf:/etc/nginx/tholi-upstream.conf:ro
+      - ${THOLI_TLS_DIRECTORY:?Mount operator-issued certificates}:/etc/nginx/tls:ro
+    networks: [ingress, application]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 64m
+    cpus: 0.5
+    stop_grace_period: 10s
+    healthcheck:
+      test: [CMD, nginx, -t]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      api: { condition: service_healthy }
+
+networks:
+  ingress: {}
+  application: {}
+  database: { internal: true }
+volumes:
+  postgres-data: {}

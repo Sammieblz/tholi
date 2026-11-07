@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
+import { createServer } from "node:net";
 import type { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseWorkerConfig } from "../../../apps/api/src/config";
@@ -16,6 +17,8 @@ const boundaries = vi.hoisted(() => ({
   start: vi.fn(),
   stop: vi.fn(),
   close: vi.fn(),
+  healthy: false,
+  healthyAt: 0,
   failConstruction: false,
 }));
 vi.mock("../../../apps/api/src/adapters/service-database", () => ({
@@ -26,8 +29,8 @@ vi.mock("../../../apps/api/src/application/job-worker", () => ({
     start = boundaries.start;
     stop = boundaries.stop;
     close = boundaries.close;
-    ready = () => false;
-    lastHealthyAt = () => 0;
+    ready = () => boundaries.healthy;
+    lastHealthyAt = () => boundaries.healthyAt;
     constructor(...args: unknown[]) {
       boundaries.constructed(...args);
       if (boundaries.failConstruction)
@@ -51,6 +54,8 @@ const resource = {
 beforeEach(() => {
   vi.clearAllMocks();
   boundaries.failConstruction = false;
+  boundaries.healthy = false;
+  boundaries.healthyAt = 0;
   boundaries.start.mockResolvedValue(undefined);
   boundaries.stop.mockResolvedValue(undefined);
   boundaries.close.mockResolvedValue(undefined);
@@ -77,6 +82,48 @@ afterEach(async () => {
 });
 
 describe("worker composition cleanup", () => {
+  it("serves optional private worker probes from current worker health and closes them on drain", async () => {
+    for (const value of ["0", "1023", "65536", "1.5", "NaN"])
+      expect(() =>
+        parseWorkerConfig({ ...environment, THOLI_WORKER_HEALTH_PORT: value }),
+      ).toThrow();
+    expect(parseWorkerConfig(environment).healthPort).toBeUndefined();
+    const reservation = createServer();
+    await new Promise<void>((resolve) =>
+      reservation.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (reservation.address() as { port: number }).port;
+    await new Promise<void>((resolve) => reservation.close(() => resolve()));
+    const application = await createWorkerRuntime(
+      parseWorkerConfig({
+        ...environment,
+        THOLI_WORKER_HEALTH_PORT: String(port),
+      }),
+    );
+    const url = `http://127.0.0.1:${port}`;
+    try {
+      await application.start();
+      expect((await fetch(url + "/health/live")).status).toBe(200);
+      expect((await fetch(url + "/health/ready")).status).toBe(503);
+      boundaries.healthy = true;
+      boundaries.healthyAt = Date.now();
+      const ready = await fetch(url + "/health/ready");
+      expect(ready.status).toBe(200);
+      expect(ready.headers.get("cache-control")).toBe("no-store");
+      expect(await ready.text()).toBe("");
+      boundaries.healthyAt = Date.now() - 30001;
+      expect((await fetch(url + "/health/ready")).status).toBe(503);
+      expect((await fetch(url + "/jobs")).status).toBe(404);
+      expect(
+        (await fetch(url + "/health/live", { method: "POST" })).status,
+      ).toBe(404);
+    } finally {
+      await application.close();
+    }
+    await expect(fetch(url + "/health/live")).rejects.toThrow();
+    expect(boundaries.close).toHaveBeenCalledOnce();
+    expect(resource.close).toHaveBeenCalledOnce();
+  });
   it.each([undefined, "production", "development"])(
     "funds development Free periods only in the explicit development worker (%s)",
     async (nodeEnvironment) => {

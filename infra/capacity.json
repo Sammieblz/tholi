@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "vm": {
+    "databaseConnections": 60,
+    "apiReplicas": 2,
+    "apiPool": 4,
+    "workerReplicas": 2,
+    "workerPool": 2,
+    "identityConnections": 6,
+    "migrationConnections": 2,
+    "operationsConnections": 8,
+    "rolloutConnections": 12,
+    "headroomConnections": 20
+  },
+  "google": {
+    "databaseConnections": 100,
+    "apiReplicas": 4,
+    "apiPool": 8,
+    "workerReplicas": 2,
+    "workerPool": 4,
+    "identityConnections": 10,
+    "migrationConnections": 2,
+    "operationsConnections": 8,
+    "rolloutConnections": 16,
+    "headroomConnections": 24
+  }
+}

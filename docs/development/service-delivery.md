@@ -91,15 +91,19 @@ supported. The S3 route preserves the original Host, path, query and body for
 signature verification; it does not rewrite signed bytes or retry a failed PUT.
 Local HTTP and captured SMTP are explicitly development-only.
 
-The VM reference under [`infra/vm/`](../../infra/vm/) replaces the gateway
-listener with certificate-mounted TLS and an exact configured API hostname.
-It exposes only the API and its health routes, with unknown hosts rejected.
-It does not publish the local mail UI, object-storage endpoint, SQL listener or
-identity administration UI. Read its setup instructions before using the
-Compose override. Production secrets, the public API and website origins, a
-production OIDC provider, durable backups and operator-owned certificates must
-be configured separately. A development realm is not a production identity
-deployment.
+The standalone [VM profile](../../infra/vm/README.md) uses the same immutable
+API/worker/migration image with distinct protected environment files, production
+identity settings, private PostgreSQL and certificate-mounted TLS. It exposes
+only the API and health routes; unknown gateway hosts are rejected. The earlier
+gateway-only overlay has been removed. Production identity, durable off-host
+backups and operator certificates still require separate deployment validation.
+A development realm is not a production identity deployment.
+
+The prepared [Google profile](../../infra/google/README.md) separates foundation
+bootstrap/migration from workload startup. Its Terraform provider-schema and
+mocked plans are checked with networking disabled. No cloud resources or model
+calls are created; actual IAM, Cloud SQL, native identity, managed TLS and restore
+remain untested. Support transports and model transmission are disabled there.
 
 Certificate keys are mounted read-only at runtime, never committed or baked
 into an image. Rotate them using the operator's secret/certificate workflow.

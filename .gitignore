@@ -30,3 +30,11 @@ output/browser-tools/
 .env
 .env.*
 !.env.example
+
+# Operator deployment state and local IaC/provider caches are never source.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
