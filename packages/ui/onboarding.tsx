@@ -135,8 +135,6 @@ export function Introduction({
 interface IntroductionClip extends RecordingSource {
   id: string;
   label: string;
-  description: string;
-  transcript: string;
 }
 
 /** Genuine, local recordings. Playback never controls an installed extension. */
@@ -157,17 +155,14 @@ export function IntroductionRecording({ step }: { step: number }) {
           manifest.clips.some(
             (clip: IntroductionClip, index: number) =>
               clip.id !== ids[index] ||
-              ![clip.src, clip.poster, clip.captions, clip.transcript].every(
+              ![clip.src, clip.poster].every(
                 (path) =>
                   typeof path === "string" &&
-                  /^\/media\/onboarding\/[a-z-]+\.(?:webm|webp|vtt|txt)$/.test(
-                    path,
-                  ),
+                  /^\/media\/onboarding\/[a-z-]+\.(?:webm|webp)$/.test(path),
               ) ||
               clip.width !== 1040 ||
               clip.height !== 800 ||
-              typeof clip.label !== "string" ||
-              typeof clip.description !== "string",
+              typeof clip.label !== "string",
           )
         )
           throw Error("Recording incomplete");
@@ -189,16 +184,8 @@ export function IntroductionRecording({ step }: { step: number }) {
           key={clip.id}
           variant={clip}
           label={clip.label}
-          autoPlay={false}
-          loop={false}
-          controls
-        >
-          <strong>{clip.label}</strong>
-          <p>{clip.description}</p>
-          <div>
-            <a href={clip.transcript}>Read the transcript</a>
-          </div>
-        </RecordedVideo>
+          showControls={false}
+        />
       ) : (
         <div className="video-unavailable" role="status">
           <p>
@@ -208,10 +195,6 @@ export function IntroductionRecording({ step }: { step: number }) {
           </p>
         </div>
       )}
-      <p className="tholi-recording-note">
-        Play to watch, or open fullscreen for a closer look. No sound. Playback
-        does not control your extension.
-      </p>
     </div>
   );
 }

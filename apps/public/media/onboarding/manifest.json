@@ -10,11 +10,9 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 6.229,
+      "durationSeconds": 6.52,
       "src": "/media/onboarding/destination.webm",
-      "poster": "/media/onboarding/destination.webp",
-      "captions": "/media/onboarding/destination.vtt",
-      "transcript": "/media/onboarding/destination.txt"
+      "poster": "/media/onboarding/destination.webp"
     },
     {
       "id": "guidance",
@@ -23,11 +21,9 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 10.824,
+      "durationSeconds": 10.947,
       "src": "/media/onboarding/guidance.webm",
-      "poster": "/media/onboarding/guidance.webp",
-      "captions": "/media/onboarding/guidance.vtt",
-      "transcript": "/media/onboarding/guidance.txt"
+      "poster": "/media/onboarding/guidance.webp"
     },
     {
       "id": "local",
@@ -36,11 +32,9 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 4.739,
+      "durationSeconds": 4.783,
       "src": "/media/onboarding/local.webm",
-      "poster": "/media/onboarding/local.webp",
-      "captions": "/media/onboarding/local.vtt",
-      "transcript": "/media/onboarding/local.txt"
+      "poster": "/media/onboarding/local.webp"
     }
   ]
 }

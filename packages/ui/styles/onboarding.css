@@ -169,18 +169,6 @@
 .tholi-introduction-scene .video-frame {
   aspect-ratio: 13 / 10;
 }
-.tholi-introduction-scene .product-video figcaption {
-  padding-top: 20px;
-}
-.tholi-introduction-scene .product-video figcaption strong {
-  font-size: 20px;
-}
-.tholi-recording-note {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-  margin: 12px 0 0;
-}
 @keyframes tholi-introduction-enter {
   from {
     opacity: 0.3;

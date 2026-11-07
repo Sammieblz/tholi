@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-11-06T22:51:15.114Z",
+  "capturedAt": "2026-11-07T02:54:03.357Z",
   "extensionVersion": "0.11.0",
-  "extensionBuildSha256": "30bfa5e0734b66a4c8490be8a457c13c77b1e5194b75a7f08658eeaf35106488",
+  "extensionBuildSha256": "1015e36c177bf866e5161a470c47ccb4545a67e47df680d6f35ded07711eb6e9",
   "artifactFiles": {
     "LICENSE": "bd417b32c476a9fc491bf2545e2aa97e33e4fd8129c373292bcfaaee6146294b",
     "THIRD_PARTY_NOTICES.md": "2ea511a06ca0f8e122c46fb75319c8a0123bdea294449c0e4f5f24568dcc393e",
@@ -302,20 +302,20 @@
     "media/icon-16.png": "31cb0cc626200eb9127b0c86bd57a9048ad296d0580eec4b20592ca7b182cd46",
     "media/icon-32.png": "ad33d21ef92feb1791dee198eb6415a99b0c87eb415e9d918cd6b760b079f29a",
     "media/icon-48.png": "c21a6aef78bfd72688969abe70633afd5bb1522f834d962509b37fa26aaf3252",
-    "media/onboarding/destination.txt": "6a630257e4100b3ac0b6ce1ce57c573e1f5165ebabef42b963eb23e0d235815a",
-    "media/onboarding/destination.vtt": "a03cfd5d0a0c3aaa3bb431640ab2d49c1f0b06cded3ac606175613084cf3385b",
-    "media/onboarding/destination.webm": "491f490e2a3259d326efec20ec935c2d4cb9770fe6c5d3651241a1e283937dce",
-    "media/onboarding/destination.webp": "ab5361814b609329a8750dffd100a3e4da5b28f53e1888492b307518c932d040",
-    "media/onboarding/guidance.txt": "c33fc480ce1eebb0bd995743a33bbbbb4f63bd9b2fd779fa09aac36213d063c5",
-    "media/onboarding/guidance.vtt": "e13c7e1009e134fc9ab87bce544ae9a6f5de1ce920afdcd98c74930dd0598648",
-    "media/onboarding/guidance.webm": "de5d9455afb2e90e31e437895744d372f8fa2d92985a550e58b84a985647239d",
-    "media/onboarding/guidance.webp": "6f493fa748c6d0a9c13d67eeb826e54f4b2bc0628dcc90d6312cf0513016bd08",
-    "media/onboarding/local.txt": "72f383410c8d314687b7bd054b07314ebb06e438a1d790eaa58fd10fe6c8bb88",
-    "media/onboarding/local.vtt": "d03b311e589ca8a233f592f9dedb8e545b241d48617fb988c7397bf6b09c9623",
-    "media/onboarding/local.webm": "6b925702f0dbcbeaa9eca0b5dcf75001b70ce492a7e7bcb20471e785cc0e2b00",
-    "media/onboarding/local.webp": "89ff63c4f162af7da58fb8c2ff02acfe6a10fc7e5ddf6d49ad4fece84a4d5eaf",
-    "media/onboarding/manifest.json": "edb7da65ae25df701950f47746122fe02c28c1dfd199334a0439c43dcc52ade6",
-    "media/onboarding/provenance.json": "53c9564ed8d867308b8f874d7356dbf41c0d85e6ba6485c7ba7312e76c86228c",
+    "media/onboarding/destination.txt": "945e63705f2bea6c59c95fab4ebf775df28d2227a4e3eb005d1977c2dd7cebf2",
+    "media/onboarding/destination.vtt": "a6fb756f4521f565efb3a32c1301705f38882ad1c49033efdb0ba165ac205690",
+    "media/onboarding/destination.webm": "8dd161b63a93256f9407e2c2a0c99e84e5781046497bda3e9d911a96c6e187e0",
+    "media/onboarding/destination.webp": "6ae88d271b6724007685a6163a9c2a75afcc750c7e49c60616261954ab964460",
+    "media/onboarding/guidance.txt": "6e88e24146a57148aa33456072c07d6b5e660026ac65283a2df8ab5b5b322839",
+    "media/onboarding/guidance.vtt": "09b3b75767ee9da202de1f231e25f6d7c4fff3452678f295b563c34afda7eae0",
+    "media/onboarding/guidance.webm": "743d096ab7bab567461d30070a6713895ebb041db3f30bad80e5bc7db02e65e0",
+    "media/onboarding/guidance.webp": "fb973a518501e66c08217921315e0f9eee4e32b132c94756af8d1b514170a086",
+    "media/onboarding/local.txt": "04fabaadcd8d9499e68038649684a8c92e6ed029fbe9eeb2ed67f4a59d82693f",
+    "media/onboarding/local.vtt": "8ef4db3244dd952a1648c8126723e3fa2291f33f04dee014d6a6dc0d5ce833a9",
+    "media/onboarding/local.webm": "dbbe29c0a62622ba6225e243de4c965c9b63bf8b80fca7b0f38591cc14d68b67",
+    "media/onboarding/local.webp": "a5ddbec4f4e26199ab9a2cbb42704b6ade72d378bcd94351bf805056d3c520ea",
+    "media/onboarding/manifest.json": "3e4183bb09a79f912ebf146d9a2f7218c37445f9b130279e1ddc78e3ec15105b",
+    "media/onboarding/provenance.json": "625f85958e36e675f9c4cbb1ce07be3bd8ee62fd5cb46b9234f51c7f9fa9cc70",
     "media/tholi_brand_logo.png": "a72353cc73aecd97c1813feda2c53fbe35e51d549edc9b3d92b22fce25b2c458",
     "media/tholi_icon.png": "1ad7fec0d5473bd917f6e3b9871c1b1abf1760ecf8c1630a70abad3baff9518b",
     "model-lock.json": "404c3b4edb0e28ee3fa4a4ec8acd1bf6037a0ff622cb1a590570dd7db43ac46b",
@@ -348,11 +348,11 @@
     "theme-page.js.map": "cec1fddcf03f4d4f802910cca162248b6927704cb9986458141b7b4c5d04f23b",
     "third-party.json": "7f4666901e6ef07191c375139f36f4405a527971e6359b6568a3a3a594e0e7c7",
     "vision-policy.json": "d885022d8ab0bc4f3cd07a065464ce3f4b87a869de09b35861dcc67dda43c7c1",
-    "welcome.css": "848e557a0b35eeb5fe1bc7e1af58d5c0001764a17122fb9ee82cd4cdf16eff59",
-    "welcome.css.map": "f5a1735b27baa6e3672d4ab133c8266a582ad45b835b5feee603e8beadfe440e",
+    "welcome.css": "bf1e92e8f57010a1cf9544cf2a61c80927d9d9b89164189a438c9cac22067f21",
+    "welcome.css.map": "d0d3842468af935b7aecfd9d15c19d1a152cae1ad4c7e6d2a86a47003001c497",
     "welcome.html": "45b0050b355fd0f8c5563e30c665afc4c1ca98052af2268fc1f17ba1c197a3f3",
-    "welcome.js": "34eebbf53f81c5fe1cc2395c6833abad39739bd9f75eb505036f14bc87a0314c",
-    "welcome.js.map": "88da871aeb733f14a61ca7c19f026cc7066dde1f0d2df7de38a45752267ce104",
+    "welcome.js": "5e60fd0a7fa8b27e9ef91accbdc6458643954c6eb39d5a9451e844c4ab20bf17",
+    "welcome.js.map": "6e2e3f301d19df8a5f8770ce73342f449f7fe98641effa669f26ea7d38b36ae0",
     "widget.html": "02e067f49f69098d2210b8eabd442c4fa55070ad851f4540106d60ef1728ef04",
     "worker.js": "e9c019885054ba36a52f60617d879b140721a8f37d49c3092d18a839624a980e",
     "worker.js.map": "5626bcf39996fab4068a2a456636167b14712073bddd0aac13a617812ea7f0f9"
@@ -376,7 +376,7 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 6.229,
+      "durationSeconds": 6.52,
       "src": "/media/onboarding/destination.webm",
       "poster": "/media/onboarding/destination.webp",
       "captions": "/media/onboarding/destination.vtt",
@@ -384,23 +384,23 @@
       "assets": {
         "src": {
           "file": "destination.webm",
-          "bytes": 683229,
-          "sha256": "3344966313d98aa708ed48f226026fd42f002649fc6998209200e0a61e50f3bf"
+          "bytes": 705046,
+          "sha256": "38315c7b3a27a7be766402de6fe9d8bf19a2da4e13a758e9fa98f1256ade07cb"
         },
         "poster": {
           "file": "destination.webp",
-          "bytes": 49342,
-          "sha256": "e8867e800d9137052a602a6aa029268f0417dde2ddfd7f89f56a2566779add5c"
+          "bytes": 49080,
+          "sha256": "00a8c35df757473c0c8e5556727f68511406dc0e795429257f3ff426ccde41cf"
         },
         "captions": {
           "file": "destination.vtt",
           "bytes": 354,
-          "sha256": "02ab4c917a608da87cd7b4970802bd730d9f12733a6fa677ab02ca5335af70b7"
+          "sha256": "384b601984bd9169073cd566b18b54b66b619671decb2b27010d4e45ec2211d4"
         },
         "transcript": {
           "file": "destination.txt",
           "bytes": 408,
-          "sha256": "d0b57617ded4cbf0a426930ef9ac618a4846f778c33b570679e9b0f4132744dc"
+          "sha256": "1c7789e0df723513ba21b56336a2fd1990436853b1a39a7e7b0ed585384ceeed"
         }
       },
       "events": [
@@ -409,11 +409,11 @@
           "text": "The actual floating widget is open on a controlled demo website."
         },
         {
-          "at": 2.692,
+          "at": 2.693,
           "text": "Enter Make the text larger in the Navigation goal field, then choose Guide me."
         },
         {
-          "at": 3.43,
+          "at": 3.73,
           "text": "The bundled local engine finds the live control. Tholi shows guidance and highlights it on the website."
         }
       ],
@@ -421,7 +421,7 @@
         "width": 1040,
         "height": 800,
         "uniformGrayFraction": 0,
-        "frameCount": 223,
+        "frameCount": 257,
         "sourceViewports": [
           "1040x800"
         ]
@@ -434,7 +434,7 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 10.824,
+      "durationSeconds": 10.947,
       "src": "/media/onboarding/guidance.webm",
       "poster": "/media/onboarding/guidance.webp",
       "captions": "/media/onboarding/guidance.vtt",
@@ -442,44 +442,44 @@
       "assets": {
         "src": {
           "file": "guidance.webm",
-          "bytes": 1516759,
-          "sha256": "6fef4a66689bea54021600e71379f2029fc0d542b7a0675871b1c48165642524"
+          "bytes": 1505797,
+          "sha256": "76525aeebe66e38fcb9a7b96a3e45c83e5dfcfd50656fad6fbbf29c98868be94"
         },
         "poster": {
           "file": "guidance.webp",
-          "bytes": 44558,
-          "sha256": "6f493fa748c6d0a9c13d67eeb826e54f4b2bc0628dcc90d6312cf0513016bd08"
+          "bytes": 44566,
+          "sha256": "fb973a518501e66c08217921315e0f9eee4e32b132c94756af8d1b514170a086"
         },
         "captions": {
           "file": "guidance.vtt",
           "bytes": 646,
-          "sha256": "797b891fdf4c00fc5749d8f831806c57fbdee8bb3f0860ed096f85b5e1d46621"
+          "sha256": "a4a0cc82eb55f3a00557564d4deeb9f50cbc2a1637d0319171464fad8525c91a"
         },
         "transcript": {
           "file": "guidance.txt",
           "bytes": 709,
-          "sha256": "bdebd80fe3b142e89b54ff8d98241dd56ff12a146c233ed8d2be356069bc9fcd"
+          "sha256": "f3bd4b03614b92a942cf2fc2a9fbe3218e84359d9d1d8e8ab91af670591f388c"
         }
       },
       "events": [
         {
-          "at": 0.002,
+          "at": 0.003,
           "text": "Tholi points to Large text. The guiding Wayfinder and page highlight are actual extension animations."
         },
         {
-          "at": 2.434,
+          "at": 2.412,
           "text": "Conversation explains the current step using the same local journey. No cloud model is called."
         },
         {
-          "at": 4.478,
+          "at": 4.498,
           "text": "Choose Pause to pause guidance. The task stays available to resume."
         },
         {
-          "at": 6.148,
+          "at": 6.15,
           "text": "Choose Resume. The live control is checked again before guidance continues."
         },
         {
-          "at": 7.451,
+          "at": 7.569,
           "text": "Large text is selected and the article text is larger. Tholi verifies the result and its Wayfinder changes into the completion mark."
         }
       ],
@@ -487,7 +487,7 @@
         "width": 1040,
         "height": 800,
         "uniformGrayFraction": 0,
-        "frameCount": 382,
+        "frameCount": 404,
         "sourceViewports": [
           "1040x800"
         ]
@@ -500,7 +500,7 @@
       "width": 1040,
       "height": 800,
       "fps": 30,
-      "durationSeconds": 4.739,
+      "durationSeconds": 4.783,
       "src": "/media/onboarding/local.webm",
       "poster": "/media/onboarding/local.webp",
       "captions": "/media/onboarding/local.vtt",
@@ -508,32 +508,32 @@
       "assets": {
         "src": {
           "file": "local.webm",
-          "bytes": 667550,
-          "sha256": "da760a2cc18d87eefdef82aeaf922afd13c3e0887c1da047adf4b7c7975dd884"
+          "bytes": 677937,
+          "sha256": "61db915a7687894c75310a4688c0fb69d4bc3d21ed70a28c50ccc0b3d1ca890e"
         },
         "poster": {
           "file": "local.webp",
-          "bytes": 71416,
-          "sha256": "3e97c5725a123920aeb1482c08263de9af49bba896016727bf3250fb9745c2ab"
+          "bytes": 65332,
+          "sha256": "4ff4599807759c8b921f8ffc334f52b2e02bafd449108fd442fe17069e1963ba"
         },
         "captions": {
           "file": "local.vtt",
           "bytes": 310,
-          "sha256": "117c6058bfe86b9e950edf9a1ee1421d966dd9a017abd47f6dfc4ad7e156ac8f"
+          "sha256": "2cea80692589f839eccf6a2c618c3bfef24de59916ec4e52d473dad78ff667b3"
         },
         "transcript": {
           "file": "local.txt",
           "bytes": 442,
-          "sha256": "7d762a37842fd18d0803bf2731defba155e82c4b0272794f106be5a7fbbfe44d"
+          "sha256": "ab58b503e8d46c9dec3aea5709d906127874d15d9141b44513c56f4411914f1a"
         }
       },
       "events": [
         {
-          "at": 0.002,
+          "at": 0.044,
           "text": "The actual welcome page offers Sign up, Sign in and Use Tholi locally. No account is required for local guidance."
         },
         {
-          "at": 1.36,
+          "at": 1.389,
           "text": "Local setup is complete. Tholi explains how to open guidance on a website. Context and image transmission remain disabled."
         }
       ],
@@ -541,7 +541,7 @@
         "width": 1040,
         "height": 800,
         "uniformGrayFraction": 0,
-        "frameCount": 3,
+        "frameCount": 43,
         "sourceViewports": [
           "1040x800"
         ]

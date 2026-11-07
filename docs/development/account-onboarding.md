@@ -60,15 +60,15 @@ separate from this local theme preparation.
 ## Design guidance and validation
 
 Applied the repository's ui-ux-pro-max, animate and fixing-accessibility skills:
-skippable progress, native controls, descriptive labels, visible focus, 44px targets,
+skippable progress, native buttons and links, descriptive labels, visible focus, 44px targets,
 existing brand typography and tokens, and meaningful state feedback. The current introduction uses real extension footage. A highlight alone does not
 prove arrival; the capture requires independent DOM and worker outcome checks.
 
 Chapter entrances use transform/opacity for 220ms, without delaying controls.
-Recordings start paused, play once on request and stop when hidden or offscreen.
-Reduced-motion and data-saving preferences suppress automatic playback. Native
-video controls provide seeking, captions and fullscreen; descriptive transcripts
-remain available. The introduction never advances automatically. Existing
+Onboarding recordings automatically play muted and loop while visible. They have
+no playback controls, caption tracks, caption text or transcript links, as
+requested. Hidden/offscreen footage pauses; reduced-motion and data-saving
+preferences keep a still poster. Playback never advances the introduction. Existing
 homepage GSAP motion remains separate. No animation dependency was added.
 
 Foundation evidence is recorded in [the feature validation record](testing/account-onboarding-validation.md).
@@ -84,7 +84,7 @@ changes the viewer's preferences, setup progress or account choice.
 
 The existing `RecordedVideo` owner is shared with the homepage, preserving that
 recording's deliberate pause, theme change and visibility behavior. Onboarding
-uses native controls with no autoplay or looping. Posters reserve the video's
+uses automatic muted looping without controls or captions. Posters reserve the video's
 aspect ratio, and media failure never blocks Next, Back, sign-in or Local choices.
 The former simulated interface, scene selectors and illustration keyframes have
 been removed.
@@ -109,10 +109,14 @@ transmission status must remain disabled.
 New media lives in `apps/public/media/onboarding/`, with captions, transcripts,
 posters, artifact hashes and capture provenance. Both browser targets copy this
 folder into their private packaged welcome assets; it is not web-accessible.
+Generated captions and transcripts remain capture evidence only. They are omitted
+from the onboarding catalog and are not rendered or linked by the introduction.
 The old 0.10.1 Wikipedia recordings and their evidence remain unchanged. Fresh
 recordings identify their actual extension build, rather than certifying every
 site, operating system or browser permission flow.
 
-Fresh recording/player evidence is in [the recording validation record](testing/account-onboarding-recording-validation.md).
+Fresh autoplay/player evidence is in [the autoplay validation record](testing/account-onboarding-autoplay-validation.md).
+The [earlier controlled-playback evidence](https://github.com/Sammieblz/tholi/blob/96ec168bc778ff736f8da5c5c131210e4b21b9f8/docs/development/testing/account-onboarding-recording-validation.md)
+remains scoped to that earlier build.
 The [earlier illustrated showcase evidence](testing/account-onboarding-showcase-validation.md)
 remains historical and does not certify the replacement media.

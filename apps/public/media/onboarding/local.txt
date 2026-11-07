@@ -2,5 +2,5 @@ Local guidance, on your terms
 
 Actual extension welcome screen. Choose Use Tholi locally to finish setup without an account. Signing in and sharing data remain separate choices.
 
-00:00:00.002 The actual welcome page offers Sign up, Sign in and Use Tholi locally. No account is required for local guidance.
-00:00:01.360 Local setup is complete. Tholi explains how to open guidance on a website. Context and image transmission remain disabled.
+00:00:00.044 The actual welcome page offers Sign up, Sign in and Use Tholi locally. No account is required for local guidance.
+00:00:01.389 Local setup is complete. Tholi explains how to open guidance on a website. Context and image transmission remain disabled.

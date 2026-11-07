@@ -881,6 +881,15 @@ async function captureOnboarding() {
       "Local guidance, on your terms",
       "Actual extension welcome screen. Choose Use Tholi locally to finish setup without an account. Signing in and sharing data remain separate choices.",
       async (event, poster) => {
+        const recording = welcome.locator(".tholi-introduction-scene video");
+        await expect(recording).toHaveJSProperty("controls", false);
+        await expect(recording).toHaveJSProperty("loop", true);
+        await expect(recording).toHaveJSProperty("paused", false);
+        await expect(
+          welcome
+            .locator(".tholi-introduction-scene")
+            .locator("track, a, button, .video-toolbar, figcaption"),
+        ).toHaveCount(0);
         event(
           "The actual welcome page offers Sign up, Sign in and Use Tholi locally. No account is required for local guidance.",
         );
@@ -947,7 +956,14 @@ async function captureOnboarding() {
           extensionVersion,
           provenance: "/media/onboarding/provenance.json",
           clips: clips.map(
-            ({ assets, events, frameValidation, ...clip }) => clip,
+            ({
+              assets,
+              events,
+              frameValidation,
+              captions,
+              transcript,
+              ...clip
+            }) => clip,
           ),
         },
         null,

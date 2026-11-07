@@ -52,7 +52,9 @@ describe("genuine product recording", () => {
       for (const kind of ["src", "poster", "captions", "transcript"]) {
         const asset = source.assets[kind];
         const bytes = await readFile(`${directory}/${asset.file}`);
-        expect(clip[kind]).toBe(`/media/onboarding/${asset.file}`);
+        if (kind === "src" || kind === "poster")
+          expect(clip[kind]).toBe(`/media/onboarding/${asset.file}`);
+        else expect(clip[kind]).toBeUndefined();
         expect(bytes.length).toBe(asset.bytes);
         expect(hash(bytes)).toBe(asset.sha256);
         if (kind === "src") {

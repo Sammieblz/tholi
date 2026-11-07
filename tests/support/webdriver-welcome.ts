@@ -57,12 +57,17 @@ export async function verifyFreshWelcomeSetup(app: App) {
   );
   expect(
     await app.driver.executeScript(
-      "return arguments[0].controls && arguments[0].paused && !arguments[0].loop",
+      "return !arguments[0].controls && arguments[0].muted && arguments[0].loop",
       recording,
     ),
   ).toBe(true);
+  // Native WebDriver windows can be short. Make the footage visible before
+  // checking automatic playback, rather than bypassing its visibility gate.
+  await app.driver.executeScript(
+    "arguments[0].scrollIntoView({block:'center',behavior:'instant'})",
+    recording,
+  );
   // Decode the privately packaged video in both native browser targets.
-  await app.driver.executeScript("return arguments[0].play()", recording);
   await app.driver.wait(
     async () =>
       await app.driver.executeScript(
@@ -71,7 +76,18 @@ export async function verifyFreshWelcomeSetup(app: App) {
       ),
     15000,
   );
-  await app.driver.executeScript("arguments[0].pause()", recording);
+  await app.driver.wait(
+    async () =>
+      await app.driver.executeScript("return !arguments[0].paused", recording),
+    15000,
+  );
+  expect(
+    await app.driver.findElements(
+      By.css(
+        ".welcome-choice .video-toolbar, .welcome-choice track, .welcome-choice .product-video a, .welcome-choice figcaption",
+      ),
+    ),
+  ).toHaveLength(0);
   const signup = await app.driver.wait(async () => {
     const signup = await app.driver.findElement(
       By.xpath('//button[normalize-space(.)="Sign up"]'),

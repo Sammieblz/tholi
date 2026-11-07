@@ -10,7 +10,7 @@
   background: #101713;
   aspect-ratio: 3 / 2;
 }
-.product-video[data-native-controls="true"] .video-frame {
+.product-video[data-controls="false"] .video-frame {
   border-radius: 14px;
 }
 .video-frame video {

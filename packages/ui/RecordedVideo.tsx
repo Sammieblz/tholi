@@ -5,7 +5,6 @@ import "./styles/recorded-video.css";
 export interface RecordingSource {
   src: string;
   poster: string;
-  captions?: string;
   width: number;
   height: number;
 }
@@ -14,16 +13,12 @@ export function RecordedVideo({
   variant,
   label,
   children,
-  autoPlay = true,
-  loop = true,
-  controls = false,
+  showControls = true,
 }: {
   variant: RecordingSource;
   label: string;
   children?: ReactNode;
-  autoPlay?: boolean;
-  loop?: boolean;
-  controls?: boolean;
+  showControls?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const frame = useRef<HTMLDivElement>(null);
@@ -49,17 +44,9 @@ export function RecordedVideo({
         !visible ||
         document.hidden ||
         manualPause.current ||
-        (autoPlay &&
-          !explicitPlayback.current &&
-          (reduced.matches || connection?.saveData))
+        (!explicitPlayback.current && (reduced.matches || connection?.saveData))
       ) {
         element.pause();
-        return;
-      }
-      if (!autoPlay) {
-        // Give native controls a duration and decoded poster without starting
-        // playback or leaving their loading indicator over the paused image.
-        setLoaded(true);
         return;
       }
       if (element.ended) return;
@@ -72,7 +59,12 @@ export function RecordedVideo({
             if (!disposed) setNotice("");
           })
           .catch(() => {
-            if (!disposed) setNotice("Select Resume to watch the recording.");
+            if (!disposed)
+              setNotice(
+                showControls
+                  ? "Select Resume to watch the recording."
+                  : "Automatic playback is unavailable. You can continue without the recording.",
+              );
           })
           .finally(() => {
             starting = false;
@@ -99,7 +91,7 @@ export function RecordedVideo({
       document.removeEventListener("visibilitychange", update);
       reduced.removeEventListener("change", update);
     };
-  }, [variant.src, autoPlay]);
+  }, [variant.src, showControls]);
   const play = () => {
     const element = video.current;
     if (!element) return;
@@ -110,11 +102,13 @@ export function RecordedVideo({
       .play()
       .then(() => setNotice(""))
       .catch(() =>
-        setNotice("Playback is unavailable. Read the transcript below."),
+        setNotice(
+          "Playback is unavailable. You can continue without the recording.",
+        ),
       );
   };
   return (
-    <figure className="product-video" data-native-controls={controls}>
+    <figure className="product-video" data-controls={showControls}>
       <div className="video-frame" ref={frame}>
         <video
           ref={video}
@@ -125,10 +119,8 @@ export function RecordedVideo({
           preload={loaded ? "metadata" : "none"}
           muted
           playsInline
-          loop={loop}
-          controls={controls}
+          loop
           onPlay={() => {
-            if (controls) explicitPlayback.current = true;
             setLoaded(true);
             setPlaying(true);
             setError(false);
@@ -153,20 +145,10 @@ export function RecordedVideo({
           onError={() => setError(true)}
           aria-label={`Actual Tholi extension: ${label}`}
         >
-          {controls && variant.captions && (
-            <track
-              key={variant.captions}
-              kind="captions"
-              src={variant.captions}
-              srcLang="en"
-              label="English descriptions"
-              default
-            />
-          )}
-          Your browser cannot play this recording. Read the transcript below.
+          Your browser cannot play this recording. You can continue without it.
         </video>
       </div>
-      {!controls && (
+      {showControls && (
         <div className="video-toolbar">
           <div className="video-playback">
             <button
@@ -192,7 +174,7 @@ export function RecordedVideo({
       {(error || notice) && (
         <p role="status">
           {notice ||
-            "The video could not be played. You can read the transcript below and continue without playback."}
+            "The video could not be played. You can continue without the recording."}
         </p>
       )}
     </figure>
