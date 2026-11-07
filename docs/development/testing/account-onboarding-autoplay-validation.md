@@ -131,3 +131,18 @@ all four native macOS results are tracked by the replacement run on PR #90;
 the earlier failed run and validation records remain historical. These fixes do
 not establish native store installation, screen-reader behavior or release
 certification.
+
+The first repair commit passed [every hosted PR gate](https://github.com/Sammieblz/tholi/actions/runs/42363177787),
+including Linux containers, all Windows suites and native Chrome/Firefox on all
+four macOS targets. Each native report retains its own OS/architecture and target
+digests. Both macOS 15 reports confirm that native reduced motion is enabled and
+the welcome check verifies its paused poster state.
+
+A separate local run exposed an overbroad reduced-motion assertion in the
+existing quota-message check. A temporary diagnostic identified finite, single
+80ms `color` and `scrollbar-color` transitions, permitted by the existing tokens;
+it was removed after verification. The assertion now permits only those bounded
+color transitions and still rejects other running effects, loops and spatial
+motion. No animation style, timeout or product budget changed. The earlier local
+failures, including an authorization timeout while the container smoke was also
+running, remain separate logs under `output/qa/pr90-ci/`.
