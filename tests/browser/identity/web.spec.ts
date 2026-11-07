@@ -569,6 +569,16 @@ test("configured website uses real signup email recovery and retained identity w
         if (step === "password-set") progress.passwordSetupCompleted = true;
         await saveProgress();
       },
+      { mode: "free-cloud" },
+    );
+    await expect(page).toHaveURL(
+      environment.webOrigin + "/account/billing?plan=free-cloud",
+    );
+    await expect(
+      page.getByText("You selected Free Cloud.", { exact: false }),
+    ).toBeVisible();
+    checks.push(
+      "Free Cloud preference survives real registration and verification, returning to plan review without automatic enrollment or transmission",
     );
     progress.accountHttpStatus = 200;
     progress.accountErrorCode = "none";

@@ -26,6 +26,33 @@ record keep their normal experience. Closing setup never blocks Local guidance.
 Incomplete sidebar setup exposes Finish setup; settings retain Review introduction.
 Setup progress is device-local and independent of account logout or deletion.
 
+## Plan preference and explicit activation
+
+The welcome page also distinguishes Local, Free Cloud and the operator's paid
+catalog entries. Review guidance options in setup to change the choice later.
+Plan intent is an optional additive field in the existing version-1 progress
+record, never a credential or entitlement. Missing records still denote retained
+installations. Choosing a plan stops any prior transmission choice before
+retaining the preference. Existing local routes and journey state are unchanged.
+
+Free Cloud remains development-only and uses the fake adapter. After native
+authentication, setup shows the current server allowance, its expiry/refill policy
+and request limits. Context and optional masked-image transmission are separate,
+unchecked choices. Confirming requires native transmission permission, a verified
+free grant and a fresh active entitlement matching the catalog. The existing
+account owner records purpose-specific consent. Local choice fences an unfinished
+activation, including a late enrollment response. No request is retried, no model
+is invoked during enrollment, and no local knowledge is imported or synchronized.
+Import can be explicitly requested later through the existing saved-data workspace.
+
+Paid selections retain the catalog plan ID/version while checkout and activation
+remain unavailable. Neither an authentication callback nor a payment-return query
+grants paid access. The website keeps a validated, non-sensitive plan preference
+through introduction steps and provider registration in tab-scoped session storage;
+after authentication it replaces history with Plans for review. Duplicate or malformed
+plan parameters are rejected. Local exit removes the pending preference. Storage
+unavailability does not prevent authentication or independent store installation.
+
 ## Ownership and configuration
 
 `packages/ui/onboarding.tsx` owns the shared explanation and recording selection only.
@@ -34,10 +61,12 @@ owners retain website sessions and privileged native credentials respectively.
 Marketing pages mount no account/session provider.
 
 The background setup service serializes version-1 progress and completion writes
-through protected settings. Typed SETUP_STATUS, SETUP_OPEN, SETUP_STEP and
-SETUP_COMPLETE commands are admitted only from the exact sidebar or top-level
+through protected settings. Typed SETUP_STATUS, SETUP_OPEN, SETUP_STEP,
+SETUP_COMPLETE, SETUP_PLANS, SETUP_SELECT and SETUP_ACTIVATE commands are admitted only from the exact sidebar or top-level
 packaged welcome page. The welcome role can additionally use AUTH_STATUS,
-AUTH_CONFIGURE and AUTH_SIGN_IN. It cannot access saved data, inference controls,
+AUTH_CONFIGURE and AUTH_SIGN_IN. The narrowly scoped SETUP_ACTIVATE operation
+can enable only the verified fake Free profile after explicit consent. It cannot
+dispatch inference or select a customer-funded provider. The welcome page cannot access saved data, general inference controls,
 journeys, widgets or content observations. It is not a web-accessible resource.
 
 The existing privileged panel port carries metadata-free account/setup changes.
@@ -72,6 +101,8 @@ preferences keep a still poster. Playback never advances the introduction. Exist
 homepage GSAP motion remains separate. No animation dependency was added.
 
 Foundation evidence is recorded in [the feature validation record](testing/account-onboarding-validation.md).
+The subsequent [first-run plan record](testing/first-run-plans-validation.md)
+tracks verified Free development enrollment and the separate plan/consent handoff.
 Native store installation and screen-reader checks remain pending until performed.
 
 ## Product showcase

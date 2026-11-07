@@ -182,6 +182,10 @@ test("Firefox binds an authenticated service proposal to its native document wit
 test("Firefox announces connected processing and supports keyboard Local recovery", async ({}, info) => {
   const fixture = await firefoxServiceFixture(info);
   const { app, service } = fixture;
+  expect(await app.message({ type: "SETUP_PLANS" })).toMatchObject({
+    catalog: { environment: "development" },
+  });
+  expect(service.decisions).toHaveLength(0);
   const processing = () =>
     app.extension(() => {
       const elements = document.querySelectorAll(

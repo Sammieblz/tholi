@@ -48,6 +48,46 @@ test("signup onboarding preserves steps and Back, with honest account availabili
   ).toHaveAttribute("href", storeUrls.Firefox);
 });
 
+test("a plan preference survives introduction and sign-in navigation without enabling an account or cloud access", async ({
+  page,
+}) => {
+  await page.goto("/signup?step=1&plan=paid&planId=paid-cloud&planVersion=1");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(
+    /step=2&plan=paid&planId=paid-cloud&planVersion=1$/,
+  );
+  await page.reload();
+  await page
+    .getByRole("link", {
+      name: "Already have an account? Sign in",
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL(
+    /\/signin\?plan=paid&planId=paid-cloud&planVersion=1$/,
+  );
+  await expect(
+    page.getByText("Accounts are not available on this website yet.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: "New here? Sign up", exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    /\/signup\?plan=paid&planId=paid-cloud&planVersion=1$/,
+  );
+  await page
+    .getByRole("link", { name: "Use Tholi locally", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(
+    page
+      .locator(".browser-install-options")
+      .getByRole("link", { name: "Add to Chrome", exact: true }),
+  ).toHaveAttribute("href", storeUrls.Chrome);
+});
+
 for (const width of [375, 768, 1024, 1440])
   for (const theme of ["light", "dark"] as const)
     test(`signup onboarding reflows at ${width}px in ${theme} with reduced motion`, async ({

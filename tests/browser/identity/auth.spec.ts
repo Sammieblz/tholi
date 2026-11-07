@@ -1,8 +1,14 @@
 import { test, expect } from "../../support/browser-test";
 import { By } from "selenium-webdriver";
 import { openBrandedExtension } from "../../support/branded-extension";
-import { openFirefoxExtension } from "../../support/firefox-extension";
+import {
+  openFirefoxExtension,
+  grantFirefoxFixturePermissions,
+} from "../../support/firefox-extension";
+import type firefox from "selenium-webdriver/firefox.js";
+import backendDataPermissions from "../../../config/backend-data-permissions.json" with { type: "json" };
 import { acceptanceServer } from "../../support/fixture-server";
+import { waitForIdentityGatewayCapacity } from "../../support/identity-gateway";
 import { buildProvenance } from "../../support/build-provenance";
 import { unchangedBuild, writeEvidence } from "../../support/evidence";
 import {
@@ -55,6 +61,7 @@ for (const browser of ["chrome", "firefox"] as const)
       const journey = await app.message({ type: "GET_SESSION" });
       const memory = (await app.message({ type: "GET_MEMORY" })).memory.pages
         .length;
+      await waitForIdentityGatewayCapacity();
       await registerNativeCallback(app, target, environment);
       await configureNativeAccount(app, target, environment);
       checks.push(permissionCheck);
@@ -62,6 +69,11 @@ for (const browser of ["chrome", "firefox"] as const)
       checks.push("native popup cancellation creates no session");
       const welcome = await openWelcomeSetup(app);
       if (!welcome) throw Error("The packaged welcome tab is missing.");
+      const welcomeRpc = async (command: unknown) => {
+        const result = await app!.message(command);
+        await app!.driver.switchTo().window(welcome);
+        return result;
+      };
       await app.driver.navigate().refresh();
       await (await accountControl(app, "Review introduction")).click();
       for (let step = 2; step <= 3; step++)
@@ -75,19 +87,130 @@ for (const browser of ["chrome", "firefox"] as const)
       );
       await app.driver.switchTo().window(welcome);
       await app.driver.navigate().refresh();
+      await (await accountControl(app, "Review guidance options")).click();
+      await (await accountControl(app, "Choose Free Cloud")).click();
+      expect(await welcomeRpc({ type: "SETUP_STATUS" })).toMatchObject({
+        complete: false,
+        planIntent: { mode: "free-cloud" },
+      });
       const signedIn = await completeNativeSignIn(app, environment, welcome);
       await app.driver.switchTo().window(welcome);
       const currentApp = app;
       await app.driver.wait(
         async () =>
-          (await currentApp.driver.findElements(By.css(".welcome-complete")))
+          (await currentApp.driver.findElements(By.css(".welcome-plan-review")))
             .length > 0,
         15_000,
       );
-      expect(await app.message({ type: "SETUP_STATUS" })).toMatchObject({
+      expect(await welcomeRpc({ type: "AUTH_INFERENCE_STATUS" })).toMatchObject(
+        { enabled: false, images: false },
+      );
+      expect(
+        await app.driver
+          .findElement(
+            By.xpath(
+              '//button[normalize-space(.)="Confirm Free Cloud development"]',
+            ),
+          )
+          .isEnabled(),
+      ).toBe(false);
+      if (browser === "firefox") {
+        expect(
+          await grantFirefoxFixturePermissions(app.driver as firefox.Driver, {
+            data_collection: backendDataPermissions,
+          }),
+        ).toBe(true);
+        checks.push(
+          "backend data categories pregranted for fake transport; native data-consent prompt remains pending",
+        );
+        await app.driver.switchTo().window(welcome);
+      }
+      await app.driver
+        .findElement(By.css('.welcome-consent input[type="checkbox"]'))
+        .click();
+      await waitForIdentityGatewayCapacity();
+      await (
+        await accountControl(app, "Confirm Free Cloud development")
+      ).click();
+      await app.driver.wait(
+        async () => {
+          return (
+            (
+              await currentApp.driver.findElements(
+                By.css(".welcome-complete:not(.welcome-plan-review)"),
+              )
+            ).length > 0
+          );
+        },
+        15_000,
+        "Verified Free enrollment and explicit consent complete setup",
+      );
+      expect(await welcomeRpc({ type: "SETUP_STATUS" })).toMatchObject({
         complete: true,
         choice: "account",
+        planIntent: { mode: "free-cloud" },
       });
+      expect(await welcomeRpc({ type: "AUTH_INFERENCE_STATUS" })).toMatchObject(
+        { enabled: true, images: false, profile: "fake" },
+      );
+      checks.push(
+        "native plan intent survives real PKCE sign-in; verified PostgreSQL Free allowance and separate context consent complete setup without checkout or uploads",
+      );
+      await (await accountControl(app, "Review guidance options")).click();
+      const catalog = await welcomeRpc({ type: "SETUP_PLANS" });
+      const paid = catalog.catalog.plans.find(
+        (plan: { mode: string }) => plan.mode === "paid",
+      );
+      expect(paid).toBeTruthy();
+      await (await accountControl(app, `Review ${paid.name}`)).click();
+      await app.driver.wait(
+        async () =>
+          (await currentApp.driver.findElements(By.css(".welcome-plan-review")))
+            .length > 0,
+        10_000,
+        "Paid plan review appears after the saved choice is acknowledged",
+      );
+      expect(await welcomeRpc({ type: "SETUP_STATUS" })).toMatchObject({
+        complete: false,
+        planIntent: {
+          mode: "paid",
+          planId: paid.id,
+          planVersion: paid.version,
+        },
+      });
+      expect(
+        await app.driver.findElements(
+          By.css(
+            'input[autocomplete="cc-number"], input[autocomplete="cc-csc"], .welcome-consent',
+          ),
+        ),
+      ).toHaveLength(0);
+      expect(await welcomeRpc({ type: "AUTH_INFERENCE_STATUS" })).toMatchObject(
+        { enabled: false, images: false },
+      );
+      checks.push(
+        "paid intent retains the server catalog ID/version with checkout and processing disabled; explicit Local fallback completes without data loss",
+      );
+      await (await accountControl(app, "Use Tholi locally")).click();
+      await app.driver.wait(
+        async () =>
+          (
+            await currentApp.driver.findElements(
+              By.css(".welcome-complete:not(.welcome-plan-review)"),
+            )
+          ).length > 0,
+        10_000,
+        "Local completion is acknowledged",
+      );
+      expect(await welcomeRpc({ type: "SETUP_STATUS" })).toMatchObject({
+        complete: true,
+        choice: "local",
+        planIntent: { mode: "local" },
+      });
+      expect(
+        await app.message({ type: "AUTH_INFERENCE_STATUS" }),
+      ).toMatchObject({ enabled: false, images: false });
+      await waitForIdentityGatewayCapacity();
       await openAccountSettings(app);
       expect(signedIn.account).toBeDefined();
       expect(signedIn.session?.clientKind).toBe("extension");
@@ -104,6 +227,12 @@ for (const browser of ["chrome", "firefox"] as const)
         privateDatabaseExposed: false,
       });
       checks.push("content cannot read account credentials or use account RPC");
+      expect(
+        serviceAuthStatusSchema.parse(
+          await app.message({ type: "AUTH_STATUS" }),
+        ).account?.id,
+      ).toBe(signedIn.account?.id);
+      await app.focusPanel();
       await (await accountControl(app, "Renew session")).click();
       const driver = app.driver;
       await app.waitFor(

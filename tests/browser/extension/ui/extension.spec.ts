@@ -1,6 +1,77 @@
 import { test, expect } from "../../../support/browser-test";
 import { openNavigatorExtension } from "../../../support/navigator-extension";
 import { captureMetadataSchema } from "../../../../packages/vision/contracts";
+test("packaged plan choices reflow in both themes and retain a keyboard choice without enabling transmission", async ({}, info) => {
+  const app = await openNavigatorExtension(undefined, []);
+  try {
+    const welcome = app.context
+      .pages()
+      .find((page) => new URL(page.url()).pathname === "/welcome.html");
+    if (!welcome) throw Error("The installed welcome page is missing.");
+    await welcome.emulateMedia({ reducedMotion: "reduce" });
+    await expect(
+      welcome.getByRole("button", { name: "Choose Free Cloud", exact: true }),
+    ).toBeEnabled();
+    for (const theme of ["light", "dark"] as const) {
+      if (
+        (await welcome.locator("html").getAttribute("data-tholi-theme")) !==
+        theme
+      )
+        await welcome
+          .getByRole("button", { name: `Use ${theme} theme`, exact: true })
+          .click();
+      for (const width of [375, 768, 1024, 1440]) {
+        await welcome.setViewportSize({ width, height: 1000 });
+        const checks = await welcome
+          .locator(".welcome-plans")
+          .evaluate((section) => ({
+            fits: document.documentElement.scrollWidth <= innerWidth,
+            targets: [...section.querySelectorAll("button")].map(
+              (button) => button.getBoundingClientRect().height,
+            ),
+          }));
+        expect(checks.fits).toBe(true);
+        expect(checks.targets.every((height) => height >= 44)).toBe(true);
+        await welcome.screenshot({
+          path: info.outputPath(`plan-choices-${theme}-${width}.png`),
+          fullPage: true,
+        });
+      }
+    }
+    const choose = welcome.getByRole("button", {
+      name: "Choose Free Cloud",
+      exact: true,
+    });
+    await choose.focus();
+    await expect(choose).toBeFocused();
+    await welcome.keyboard.press("Enter");
+    await expect(
+      welcome.getByRole("status").filter({ hasText: "Selected: Free Cloud" }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        app.panel.evaluate(() =>
+          chrome.runtime.sendMessage({ type: "SETUP_STATUS" }),
+        ),
+      )
+      .toMatchObject({ complete: false, planIntent: { mode: "free-cloud" } });
+    await welcome.reload();
+    await expect(
+      welcome.getByRole("status").filter({ hasText: "Selected: Free Cloud" }),
+    ).toBeVisible();
+    await welcome
+      .getByRole("button", { name: "Use Tholi locally", exact: true })
+      .click();
+    await expect(welcome.locator(".welcome-complete h1")).toBeFocused();
+    expect(
+      await app.panel.evaluate(() =>
+        chrome.runtime.sendMessage({ type: "AUTH_INFERENCE_STATUS" }),
+      ),
+    ).toMatchObject({ enabled: false, images: false });
+  } finally {
+    await app.close();
+  }
+});
 async function fixture(holdHydration = false) {
   const app = await openNavigatorExtension(undefined, []);
   if (holdHydration) {

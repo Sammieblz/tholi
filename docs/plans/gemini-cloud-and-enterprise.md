@@ -13,6 +13,15 @@ Issue #25 changes documentation only. The profiles, ports and hosted routes desc
 
 ## Current execution scope
 
+On November 7, 2026, the user resumed the roadmap after the merge of #87 and
+PR #90's optional account introduction. The next unfinished prerequisite is #61:
+retain the first-run plan preference, verify development Free enrollment and
+collect separate processing consent. Continue #45 only after that issue's
+acceptance evidence is recorded. The existing zero-spend decision, deferred
+#43 quality comparison, excluded #54 desktop implementation and separate
+deployment/release authorizations still apply. Do not infer production cloud
+availability or paid checkout from an account session or plan selection.
+
 On 2026-11-05 the user authorized [#87](https://github.com/Sammieblz/tholi/issues/87):
 macOS Chrome/Firefox compatibility, customer-funded provider connections and private
 navigation learning. This follows the completed #60 account workspace and replaces

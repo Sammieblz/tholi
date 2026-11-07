@@ -34,6 +34,7 @@ vi.mock("../../../apps/web/src/features/account/AccountAnalytics", () => ({
   AccountAnalytics: () => null,
 }));
 vi.mock("../../../apps/web/src/app/router", () => ({
+  useRouter: () => ({ go: vi.fn(), search: "" }),
   SiteLink: ({
     to,
     children,

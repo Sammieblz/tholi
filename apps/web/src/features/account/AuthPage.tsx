@@ -8,37 +8,61 @@ import { ShieldCheck } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
 import { useAccount } from "./session";
+import {
+  readPlanIntent,
+  planIntentQuery,
+  rememberPlanIntent,
+  pendingPlanIntent,
+  planAccountPath,
+} from "./plan-intent";
 
 export function AuthPage({ signup }: { signup: boolean }) {
   const account = useAccount();
   const { search, go } = useRouter();
   const rawStep = new URLSearchParams(search).get("step");
   const step = introductionStep(rawStep);
+  const intent = readPlanIntent(search) ?? pendingPlanIntent();
+  const intentQuery = planIntentQuery(intent);
+  const authPath = (path: string) =>
+    `${path}${intentQuery ? `${path.includes("?") ? "&" : "?"}${intentQuery}` : ""}`;
   useEffect(() => {
-    if (account.session) go("/account", { replace: true });
-  }, [account.session, go]);
+    if (account.session) {
+      rememberPlanIntent(undefined);
+      go(planAccountPath(intent), { replace: true });
+    }
+  }, [account.session, intentQuery, go]);
   useEffect(() => {
     if (signup && rawStep !== null && !["1", "2", "3"].includes(rawStep))
-      go("/signup?step=1", { replace: true });
-  }, [signup, rawStep, go]);
+      go(authPath("/signup?step=1"), { replace: true });
+  }, [signup, rawStep, intentQuery, go]);
   if (signup)
     return (
       <Introduction
         step={step}
-        onStep={(next) => go(`/signup?step=${next}`)}
+        onStep={(next) => go(authPath(`/signup?step=${next}`))}
         register={
           account.configured && !account.loading && !account.session ? (
             <a
               className={step === 3 ? "tholi-introduction-primary" : undefined}
               href={account.authorizationUrl("signup")}
+              onClick={() => rememberPlanIntent(intent)}
             >
               {step === 3 ? "Create your account" : "Skip introduction"}
             </a>
           ) : null
         }
-        local={<SiteLink to="/download">Use Tholi locally</SiteLink>}
+        local={
+          <SiteLink
+            to="/download"
+            onClick={() => rememberPlanIntent(undefined)}
+          >
+            Use Tholi locally
+          </SiteLink>
+        }
         signIn={
-          <SiteLink to="/signin">Already have an account? Sign in</SiteLink>
+          <SiteLink to={authPath("/signin")}>
+            Already have an account? Sign in
+          </SiteLink>
         }
         notice={
           <>
@@ -110,6 +134,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
             <a
               className="primary web-primary"
               href={account.authorizationUrl("signin")}
+              onClick={() => rememberPlanIntent(intent)}
             >
               Continue to sign in
             </a>
@@ -140,7 +165,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
           </p>
         )}
         <p className="auth-switch">
-          <SiteLink to="/signup">New here? Sign up</SiteLink>
+          <SiteLink to={authPath("/signup")}>New here? Sign up</SiteLink>
         </p>
         <p className="auth-legal small">
           Read our <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
@@ -149,7 +174,12 @@ export function AuthPage({ signup }: { signup: boolean }) {
         </p>
         <div className="auth-independent">
           <ShieldCheck width={18} aria-hidden="true" />
-          <SiteLink to="/download">Use Tholi locally</SiteLink>
+          <SiteLink
+            to="/download"
+            onClick={() => rememberPlanIntent(undefined)}
+          >
+            Use Tholi locally
+          </SiteLink>
         </div>
       </div>
     </section>

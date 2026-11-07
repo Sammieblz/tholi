@@ -24,6 +24,7 @@ import {
   type ConsentUpdate,
 } from "../../packages/navigation-core/contracts-authorization";
 import { providerConnectionMetadataFixture } from "./provider-connection-fixture";
+import { createProductCatalogFixture } from "./product-plan-fixture";
 import {
   PROVIDER_CATALOG_REVISION,
   providerConnectionSelection,
@@ -237,6 +238,10 @@ export async function navigationServiceFixture(
           },
           limits: SERVICE_LIMITS,
         });
+        return;
+      }
+      if (path === "/api/v1/plans" && request.method === "GET") {
+        send(createProductCatalogFixture());
         return;
       }
       if (request.headers.authorization !== `Bearer ${tokens.accessToken}`)

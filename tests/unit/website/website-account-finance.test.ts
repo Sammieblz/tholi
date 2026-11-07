@@ -10,10 +10,18 @@ import {
 } from "../../support/product-plan-fixture";
 import type { AccountSummary } from "../../../apps/web/src/features/account/useAccountSummary";
 const state = vi.hoisted(() => ({ account: undefined as unknown }));
+import {
+  readPlanIntent,
+  planIntentQuery,
+  rememberPlanIntent,
+  pendingPlanIntent,
+  planAccountPath,
+} from "../../../apps/web/src/features/account/plan-intent";
 vi.mock("../../../apps/web/src/features/account/session", () => ({
   useAccount: () => state.account,
 }));
 vi.mock("../../../apps/web/src/app/router", () => ({
+  useRouter: () => ({ search: "" }),
   SiteLink: ({ to, children }: { to: string; children: React.ReactNode }) =>
     createElement("a", { href: to }, children),
 }));
@@ -176,6 +184,29 @@ it("shows exact authoritative balances and storage without fetching them again, 
     "No product cloud plan is enrolled",
   );
   expect(request).toHaveBeenCalledTimes(4);
+});
+
+it("keeps plan intent as a bounded navigation preference through registration without granting account authority", () => {
+  const paid = { mode: "paid" as const, planId: "paid-cloud", planVersion: 1 };
+  expect(readPlanIntent("?" + planIntentQuery(paid))).toEqual(paid);
+  for (const query of [
+    "?plan=paid",
+    "?plan=free-cloud&plan=paid",
+    "?plan=paid&planId=https://evil.test&planVersion=1",
+    "?plan=paid&planId=paid-cloud&planVersion=1e0",
+    "?plan=free-cloud&planVersion=1",
+    "?plan=paid&planId=paid-cloud&planVersion=4294967296",
+  ])
+    expect(readPlanIntent(query)).toBeUndefined();
+  rememberPlanIntent(paid);
+  expect(pendingPlanIntent()).toEqual(paid);
+  expect(planAccountPath(pendingPlanIntent())).toBe(
+    "/account/billing?plan=paid&planId=paid-cloud&planVersion=1",
+  );
+  rememberPlanIntent(undefined);
+  expect(pendingPlanIntent()).toBeUndefined();
+  expect(planAccountPath({ mode: "local" })).toBe("/account");
+  expect(request).not.toHaveBeenCalled();
 });
 
 it("has no paid checkout or inactive action buttons and enables Free only with the catalog's actual development availability", async () => {

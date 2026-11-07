@@ -96,10 +96,51 @@
   margin-left: auto;
   color: var(--muted);
 }
+.welcome-plans {
+  margin-block: 64px 32px;
+  padding-block-start: 32px;
+  border-top: 1px solid var(--line);
+}
+.welcome-plans > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.welcome-plans article {
+  padding-block: 20px;
+  border-top: 1px solid var(--line);
+}
+.welcome-plans h2,
+.welcome-plan-review h1 {
+  text-wrap: balance;
+}
+.welcome-plans h3 {
+  font-size: 20px;
+}
+.welcome-consent {
+  border: 1px solid var(--line);
+  margin-block: 24px;
+  padding: 20px;
+}
+.welcome-consent label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  margin-block: 12px;
+  line-height: 1.65;
+}
+.welcome-consent input {
+  flex: none;
+  margin-top: 6px;
+}
 @media (max-width: 760px) {
   .welcome-choice {
     grid-template-columns: 1fr;
     gap: 32px;
+  }
+  .welcome-plans > div {
+    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {

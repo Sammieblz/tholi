@@ -6,8 +6,8 @@ import {
   type Locator,
 } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { setTimeout as delay } from "node:timers/promises";
+import { waitForIdentityGatewayCapacity } from "./identity-gateway";
+export { waitForIdentityGatewayCapacity } from "./identity-gateway";
 import { composite, luminance, parseColor } from "../../packages/ui/page-theme";
 import {
   identityAccountResponseSchema,
@@ -119,40 +119,6 @@ export async function downloadWebsiteJson<T>(
   }
 }
 
-/** Capacity schedule for actual rapid UI cohorts, never a retry after rejection. */
-export async function waitForIdentityGatewayCapacity() {
-  const proxy = readFileSync(
-    new URL("../../infra/local/gateway/proxy.conf", import.meta.url),
-    "utf8",
-  );
-  const api = readFileSync(
-    new URL("../../infra/local/gateway/api.conf", import.meta.url),
-    "utf8",
-  );
-  const rate =
-    /^limit_req_zone\s+\$binary_remote_addr\s+zone=([a-z_][a-z0-9_]*):\S+\s+rate=([1-9][0-9]*)r\/(m|s);$/m.exec(
-      proxy,
-    );
-  const burst =
-    /^limit_req\s+zone=([a-z_][a-z0-9_]*)\s+burst=([1-9][0-9]*)\s+nodelay;$/m.exec(
-      api,
-    );
-  if (!rate || !burst || rate[1] !== burst[1])
-    throw new Error("IDENTITY_GATEWAY_CAPACITY_POLICY_INVALID");
-  const milliseconds = Math.ceil(
-    (Number(burst[2]) * (rate[3] === "m" ? 60000 : 1000)) / Number(rate[2]),
-  );
-  if (
-    !Number.isSafeInteger(milliseconds) ||
-    milliseconds < 1 ||
-    milliseconds > 30000
-  )
-    throw new Error("IDENTITY_GATEWAY_CAPACITY_WAIT_EXCEEDS_BUDGET");
-  // Each declared phase has fewer requests than the real gateway burst budget.
-  // Draining a full burst also isolates consecutive browsers sharing one IP.
-  await delay(milliseconds);
-  return milliseconds;
-}
 export async function closeIdentityContext(context: BrowserContext) {
   try {
     await context.close();
@@ -348,13 +314,19 @@ export async function accountResponse(
 export async function waitForWebsiteAccount(
   page: Page,
   environment: NativeIdentityEnvironment,
+  planIntent?: import("../../packages/navigation-core/contracts-service").ServiceAuthIntent["planIntent"],
 ) {
+  const plans = planIntent && planIntent.mode !== "local";
   await page.waitForURL(
     (url) =>
-      url.origin === environment.webOrigin && url.pathname === "/account",
+      url.origin === environment.webOrigin &&
+      url.pathname === (plans ? "/account/billing" : "/account"),
   );
   await expect(
-    page.getByRole("heading", { name: "Your Tholi account", exact: true }),
+    page.getByRole("heading", {
+      name: plans ? "Plans and billing" : "Your Tholi account",
+      exact: true,
+    }),
   ).toBeVisible();
   const result = await accountResponse(page, environment);
   if (result.status !== 200 || !result.value)
@@ -380,9 +352,15 @@ export async function registerWebsiteAccount(
     value: RegistrationStage,
     account?: { status: number; errorCode: string },
   ) => Promise<void> = async () => {},
+  planIntent?: import("../../packages/navigation-core/contracts-service").ServiceAuthIntent["planIntent"],
 ) {
   const before = await capturedMessageIds(environment, fixture.email);
-  await page.goto(environment.webOrigin + "/signup");
+  const { planIntentQuery } =
+    await import("../../apps/web/src/features/account/plan-intent");
+  const query = planIntentQuery(planIntent);
+  await page.goto(
+    environment.webOrigin + "/signup" + (query ? "?" + query : ""),
+  );
   await page
     .getByRole("link", { name: "Skip introduction", exact: true })
     .click();
@@ -416,7 +394,7 @@ export async function registerWebsiteAccount(
   await stage("password-form");
   await setWebsitePassword(page, fixture.password);
   await stage("password-set");
-  return waitForWebsiteAccount(page, environment);
+  return waitForWebsiteAccount(page, environment, planIntent);
 }
 export async function signInWebsite(
   page: Page,
