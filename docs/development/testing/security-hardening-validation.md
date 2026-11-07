@@ -60,6 +60,12 @@ separately retained copies and server-authoritative development allowances.
   The fixture now seeds logout expiry after those writes. All assertions remain;
   the corrected real PostgreSQL cohort passes locally. The earlier failure remains
   separate from the required final matching-head result.
+- The corrected container cohort passes locally and on run 42418675461. That run's
+  Intel macOS 15 cohort reached native surface recovery, then Selenium's fixed
+  30-second BiDi response timeout expired during the existing masked OCR operation.
+  The native test now starts the same operation and reads its bounded result with
+  short commands. Its 30-second OCR deadline and all privacy assertions remain
+  unchanged; the 35-second polling envelope matches the existing script timeout.
 
 The frozen hardened-image stack subsequently passed all local-stack checks in
 `tholi-smoke-mw6xe9sa-ef53d1be`, with the API and worker on runtime image
