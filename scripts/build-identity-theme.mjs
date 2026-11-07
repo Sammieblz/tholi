@@ -1,10 +1,11 @@
-import { build } from "esbuild";
 import { cp, copyFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /** One portable provider theme; fonts, palette and logo retain their existing owners. */
 export async function buildIdentityTheme() {
+  // Plain-Node local init/status must not load build-only dependencies.
+  const { build } = await import("esbuild");
   const source = "infra/identity/themes/tholi/login";
   const destination = "dist/identity-theme/tholi/login";
   await mkdir(destination + "/resources/img", { recursive: true });

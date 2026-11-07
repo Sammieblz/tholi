@@ -98,3 +98,36 @@ This is preparation evidence, not full release certification.
 Native store installation, native macOS and manual screen-reader validation
 remain pending. These local checks do not certify production cloud/account
 hosting or authorize an extension/store release.
+
+## PR #90 CI repair, 7 November 2026
+
+The [first hosted run](https://github.com/Sammieblz/tholi/actions/runs/42333822042)
+failed before container startup because its job had not installed the theme
+compiler. It now uses the existing dependency setup action. Theme compilation
+loads esbuild only when requested, so plain-Node initialization and status still
+work before dependency installation. A dependency-free temporary checkout tests
+that bootstrap contract.
+
+The native welcome check previously expected autoplay even when macOS requested
+reduced motion. GitHub's [runner configuration](https://github.com/actions/runner-images/blob/fad015e47059f40cf0786dcb4593384f6a0720d3/images/macos/scripts/build/configure-system.sh)
+enables that preference. The shared check now verifies a decoded poster and
+paused player for reduced motion or data saving, and decoded playback otherwise.
+Sanitized evidence records the actual preference, playback stage and dimensions.
+It does not disable accessibility preferences or call `play()` to bypass gates.
+
+Both native harnesses now wait for the actual automatically opened welcome tab
+before returning an installed fixture. Extension installation can resolve before
+the background install handler finishes creating that tab. Waiting preserves the
+exactly-one-tab assertion and prevents late installation focus from racing
+website guidance. It does not create a tab to manufacture installation evidence,
+weaken native document checks or retry a guidance request.
+
+Fresh Windows x64 checks passed against the unchanged artifact digests above:
+TypeScript/version checks, 34 focused infrastructure/platform contracts, native
+Chrome welcome and verified interaction, and all five native Firefox cases.
+The native checks used a requested 2x backing scale. Logs are under
+`output/qa/pr90-ci/`. The complete deterministic gate, Linux container result and
+all four native macOS results are tracked by the replacement run on PR #90;
+the earlier failed run and validation records remain historical. These fixes do
+not establish native store installation, screen-reader behavior or release
+certification.

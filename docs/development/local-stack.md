@@ -22,9 +22,15 @@ From the repository root:
 
 ```sh
 npm run local:init
+npm ci
 npm run local:up
 node scripts/local-stack.mjs status
 ```
+
+`npm ci` installs the theme compiler and bundled font sources used by
+`local:up`. Plain-Node initialization and status commands do not load those
+build dependencies. The container CI job uses the shared repository setup for
+the same dependency preparation, without downloading host browser or CUDA assets.
 
 `local:init` creates an ignored `.env`, generates separate local credentials and
 refuses to overwrite an existing file. Keep it private. On Windows the file uses

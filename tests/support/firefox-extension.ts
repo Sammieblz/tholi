@@ -14,6 +14,7 @@ import {
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
 import { permissionVariant } from "./permission-variant";
+import { waitForWelcomeInstallation } from "./webdriver-welcome";
 import { Builder, By, until, type WebDriver } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
 import { randomUUID } from "node:crypto";
@@ -134,16 +135,18 @@ export async function openFirefoxExtension(
     // extension-local workers are separately constrained by packaged CSP and asset tests.
     const finishNetwork = await fixtureOnlySeleniumNetwork(driver, [website]);
     if (tabId < 0) throw Error("Firefox fixture tab not found: " + url);
+    const app = await attachWebDriverExtension(
+      driver,
+      website,
+      panel,
+      tabId,
+      url,
+      finishNetwork,
+      () => closeFirefoxDriver(driver),
+    );
+    await waitForWelcomeInstallation(app);
     return {
-      ...(await attachWebDriverExtension(
-        driver,
-        website,
-        panel,
-        tabId,
-        url,
-        finishNetwork,
-        () => closeFirefoxDriver(driver),
-      )),
+      ...app,
       driver,
     };
   } catch (error) {

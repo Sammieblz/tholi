@@ -1,5 +1,5 @@
 import { By } from "selenium-webdriver";
-import { expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   findWebDriverWindow,
   type attachWebDriverExtension,
@@ -15,11 +15,8 @@ export function welcomeTabCount(app: App) {
   });
 }
 
-export async function openWelcomeSetup(app: App) {
-  const url = await app.extension(() => {
-    const api = (globalThis as any).browser || (globalThis as any).chrome;
-    return api.runtime.getURL("welcome.html") as string;
-  });
+/** Install resolves before the worker's onInstalled/tab creation has finished. */
+export async function waitForWelcomeInstallation(app: App) {
   const installed = await app.waitFor(
     () => welcomeTabCount(app),
     (count) => count > 0,
@@ -27,6 +24,14 @@ export async function openWelcomeSetup(app: App) {
     15_000,
   );
   if (!installed) throw Error("The installed welcome tab is missing.");
+}
+
+export async function openWelcomeSetup(app: App) {
+  await waitForWelcomeInstallation(app);
+  const url = await app.extension(() => {
+    const api = (globalThis as any).browser || (globalThis as any).chrome;
+    return api.runtime.getURL("welcome.html") as string;
+  });
   const existing = await findWebDriverWindow(app.driver, url);
   if (existing) return existing;
   if (!url.startsWith("chrome-extension://"))
@@ -67,20 +72,75 @@ export async function verifyFreshWelcomeSetup(app: App) {
     "arguments[0].scrollIntoView({block:'center',behavior:'instant'})",
     recording,
   );
-  // Decode the privately packaged video in both native browser targets.
-  await app.driver.wait(
-    async () =>
-      await app.driver.executeScript(
-        "return arguments[0].videoWidth === 1040 && arguments[0].videoHeight === 800",
+  const preferences = await app.driver.executeScript<{
+    reduced: boolean;
+    saveData: boolean;
+  }>(
+    "return {reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,saveData:!!navigator.connection?.saveData}",
+  );
+  const posterOnly = preferences.reduced || preferences.saveData;
+  let stage = posterOnly ? "poster" : "decode";
+  let posterDimensions: number[] | null = null;
+  try {
+    if (posterOnly) {
+      posterDimensions = await app.driver.executeAsyncScript<number[] | null>(
+        function (
+          video: HTMLVideoElement,
+          done: (dimensions: number[] | null) => void,
+        ) {
+          const image = new Image();
+          image.onload = () => done([image.naturalWidth, image.naturalHeight]);
+          image.onerror = () => done(null);
+          image.src = video.poster;
+        },
         recording,
+      );
+      expect(posterDimensions).toEqual([1040, 800]);
+      expect(await recording.getAttribute("preload")).toBe("none");
+      expect(
+        await app.driver.executeScript("return arguments[0].paused", recording),
+      ).toBe(true);
+    } else {
+      // Autoplay is expected only when native preferences allow motion/data use.
+      await app.driver.wait(
+        async () =>
+          await app.driver.executeScript(
+            "return arguments[0].videoWidth === 1040 && arguments[0].videoHeight === 800",
+            recording,
+          ),
+        15000,
+        "The visible welcome recording decodes when motion is allowed",
+      );
+      stage = "playback";
+      await app.driver.wait(
+        async () =>
+          await app.driver.executeScript(
+            "return !arguments[0].paused",
+            recording,
+          ),
+        15000,
+        "The visible welcome recording plays when motion is allowed",
+      );
+    }
+    stage = "verified";
+  } finally {
+    const state = await app.driver.executeScript(
+      "const v=arguments[0],r=v.getBoundingClientRect();return {hidden:document.hidden,viewport:[innerWidth,innerHeight],frame:[r.width,r.height],decoded:[v.videoWidth,v.videoHeight],paused:v.paused,mediaError:v.error?.code??null}",
+      recording,
+    );
+    await test.info().attach("welcome-playback", {
+      contentType: "application/json",
+      body: Buffer.from(
+        JSON.stringify({
+          preferences,
+          mode: posterOnly ? "poster" : "playback",
+          stage,
+          posterDimensions,
+          state,
+        }),
       ),
-    15000,
-  );
-  await app.driver.wait(
-    async () =>
-      await app.driver.executeScript("return !arguments[0].paused", recording),
-    15000,
-  );
+    });
+  }
   expect(
     await app.driver.findElements(
       By.css(
