@@ -46,10 +46,40 @@ export async function setNativeViewport(
   viewport: { width: number; height: number },
 ) {
   await driver.manage().window().setRect(viewport);
-  const inset = await driver.executeScript<{ x: number; y: number }>(() => ({
-    x: outerWidth - innerWidth,
-    y: outerHeight - innerHeight,
-  }));
+  // Native resize acknowledgement can precede the document's layout update.
+  let previous: string | undefined;
+  const inset = await driver.wait(
+    async () => {
+      const measured = await driver.executeScript<{
+        outerWidth: number;
+        outerHeight: number;
+        innerWidth: number;
+        innerHeight: number;
+      }>(() => ({ outerWidth, outerHeight, innerWidth, innerHeight }));
+      if (
+        !Object.values(measured).every(
+          (value) => Number.isFinite(value) && value > 0,
+        ) ||
+        measured.outerWidth < measured.innerWidth ||
+        measured.outerHeight < measured.innerHeight
+      ) {
+        previous = undefined;
+        return false;
+      }
+      const key = JSON.stringify(measured);
+      const settled = previous === key;
+      previous = key;
+      return (
+        settled && {
+          x: measured.outerWidth - measured.innerWidth,
+          y: measured.outerHeight - measured.innerHeight,
+        }
+      );
+    },
+    10_000,
+    "The owned native window geometry settles before calculating its inset",
+  );
+  if (!inset) throw Error("The owned native window inset is unavailable.");
   await driver
     .manage()
     .window()
@@ -57,6 +87,16 @@ export async function setNativeViewport(
       width: viewport.width + inset.x,
       height: viewport.height + inset.y,
     });
+  await driver.wait(
+    () =>
+      driver.executeScript(
+        (expected: { width: number; height: number }) =>
+          innerWidth === expected.width && innerHeight === expected.height,
+        viewport,
+      ),
+    10_000,
+    "The owned native viewport matches its requested dimensions",
+  );
 }
 export async function attachWebDriverExtension(
   driver: WebDriver,

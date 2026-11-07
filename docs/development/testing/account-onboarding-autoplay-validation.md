@@ -194,3 +194,22 @@ encountered GitHub ArtifactService `ListArtifacts` timeouts on Intel macOS 15
 before any browser test ran. This infrastructure failure is distinct from the
 capture rejection above. Final hosted results belong to the complete fresh
 workflow on PR #90's current head, without mixing native reports across attempts.
+
+Intel macOS 15 subsequently passed the bounded pixel cohort. A separate macOS 26
+Chrome 157 run exposed a native resize acknowledgement arriving before valid
+window layout measurements. The shared viewport owner now waits for stable,
+positive native geometry before calculating browser insets, then verifies the
+requested actual viewport. The pixel case activates its actual website first.
+It does not clamp invalid geometry or replace it with emulated measurements.
+
+A later Firefox failure narrowed the Local-choice race further: the native radio
+was selected but its background acknowledgement never arrived. The settings
+readiness owner had returned when the learning fieldset was ready, before checking
+the independently loading account panel. Account readiness now precedes learning
+readiness, and the test requires Local to be unselected before sending Space.
+It still requires a fresh cloud-off acknowledgement and no further service calls.
+Failures retain only Boolean UI readiness diagnostics, with no private contents.
+
+After these readiness corrections, TypeScript/version checks and all nine native
+Chrome/Firefox platform cases passed locally at 2x scale. This Windows evidence
+remains separate from the required hosted macOS reports.

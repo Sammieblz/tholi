@@ -142,7 +142,6 @@ export async function verifyWebDriverPrivateLearning(
               const field = document.querySelector<HTMLFieldSetElement>(
                 ".tholi-private-learning fieldset",
               );
-              if (field && !field.disabled) return "ready";
               const account = document.querySelector(".tholi-account-settings");
               if (!account) return "account-unmounted";
               const accountError = document.getElementById(
@@ -156,6 +155,9 @@ export async function verifyWebDriverPrivateLearning(
                 return "account-loading";
               if (!account.querySelector(".tholi-account-id"))
                 return "account-signed-out";
+              // These sibling panels hydrate independently. A ready learning
+              // fieldset does not establish an acknowledged processing choice.
+              if (field && !field.disabled) return "ready";
               if (
                 document.querySelector('.tholi-private-learning [role="alert"]')
               )
@@ -512,17 +514,36 @@ export async function verifyWebDriverPrivateLearning(
     );
     await openSettings("after confirmed cloud forgetting");
     const local = await visible(By.css('input[type="radio"][value="local"]'));
+    expect(await local.isSelected()).toBe(false);
     await local.sendKeys(Key.SPACE);
     await current.driver.wait(
       until.elementIsSelected(local),
       10_000,
       "The native Local radio acknowledges the keyboard choice",
     );
-    await current.waitFor(
-      () => current.message({ type: "AUTH_INFERENCE_STATUS" }),
-      (value) => !value.enabled,
-      "Local processing is acknowledged",
-    );
+    try {
+      await current.waitFor(
+        () => current.message({ type: "AUTH_INFERENCE_STATUS" }),
+        (value) => !value.enabled,
+        "Local processing is acknowledged",
+      );
+    } catch (error) {
+      const readiness = await current.extension(() => ({
+        selected: document.querySelector<HTMLInputElement>(
+          'input[type="radio"][value="local"]',
+        )?.checked,
+        loading: document.querySelector<HTMLInputElement>(
+          "#tholi-service-origin",
+        )?.disabled,
+        errorVisible:
+          document.getElementById("tholi-account-error")?.hidden === false,
+        hidden: document.hidden,
+      }));
+      throw new Error(
+        "Local processing acknowledgement failed: " + JSON.stringify(readiness),
+        { cause: error },
+      );
+    }
     const counts = [service.decisions.length, service.knowledgeQueries.length];
     await panel();
     await current.driver.actions().sendKeys(Key.ESCAPE).perform();

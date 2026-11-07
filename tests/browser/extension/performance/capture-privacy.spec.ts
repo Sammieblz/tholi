@@ -31,6 +31,7 @@ for (const target of ["chromium", "firefox"] as const) {
         target === "chromium"
           ? { width: 960, height: 800 }
           : { width: 1280, height: 900 };
+      await app.site(() => document.title);
       await setNativeViewport(app.driver, viewport);
       expect(
         await app.site(() => ({ width: innerWidth, height: innerHeight })),
