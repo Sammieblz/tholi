@@ -72,6 +72,7 @@ export async function nativeVisionPixels({
     captureMs?: number;
     checkMs?: number;
     revisionChanged?: boolean;
+    zoom?: number;
   } = {};
   async function capture(): Promise<Capture> {
     const captureId = crypto.randomUUID();
@@ -97,6 +98,7 @@ export async function nativeVisionPixels({
       const metadata: CaptureMetadata = reply.metadata;
       captureTiming.prepareMs = Math.round(performance.now() - prepareStarted);
       const browserZoom = await api.tabs.getZoom(tabId);
+      captureTiming.zoom = browserZoom;
       const current = await api.tabs.get(tabId);
       if (!current.active || current.windowId !== tab.windowId)
         throw Error("Native capture tab changed");
@@ -441,6 +443,7 @@ export async function nativeVisionPixels({
         prepared.width * prepared.height <= 4_000_000 &&
         crop.width * crop.height <= 4_000_000 &&
         ocr.width * ocr.height <= 4_000_000,
+      captureTiming,
     };
   } catch {
     throw Error(

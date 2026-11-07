@@ -8,6 +8,7 @@ import { privateCapturePage } from "../../../fixtures/vision/private-page";
 import { readFile } from "node:fs/promises";
 import { nativeBrowserScale } from "../../../support/browser-tools";
 import { matchesBrowserBackingScale } from "../../../../scripts/verify-platform.mjs";
+import { setNativeViewport } from "../../../support/webdriver-extension";
 
 // Private captures and prepared PNGs remain inside the installed extension/worker.
 test.use({ trace: "off", screenshot: "off", video: "off" });
@@ -23,6 +24,17 @@ for (const target of ["chromium", "firefox"] as const) {
         : await openBrandedExtension("chrome", fixture.url, ["<all_urls>"]);
     const measurements = [];
     try {
+      // Keep Chrome PNG encoding inside the unchanged one-second suppression
+      // lease on standard Intel runners. Each browser uses the same viewport
+      // across operating systems; Firefox retains its larger sidebar window.
+      const viewport =
+        target === "chromium"
+          ? { width: 960, height: 800 }
+          : { width: 1280, height: 900 };
+      await setNativeViewport(app.driver, viewport);
+      expect(
+        await app.site(() => ({ width: innerWidth, height: innerHeight })),
+      ).toEqual(viewport);
       await info.attach("browser-runtime", {
         body: Buffer.from(
           JSON.stringify({

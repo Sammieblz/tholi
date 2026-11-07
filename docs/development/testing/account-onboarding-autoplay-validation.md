@@ -169,3 +169,14 @@ path. Failures record sanitized prepare/capture/check durations and whether the
 viewport revision changed. The exact earlier invalidation cause remains unknown;
 no privacy deadline, suppression budget, identity check or rejection was relaxed,
 and captures are not retried automatically.
+
+Fresh Intel diagnostics then measured 34ms preparation, 1,240ms native screenshot
+encoding and a 2ms rejected check, with an unchanged viewport revision. The
+existing one-second owned-UI suppression watchdog had expired. That guard is
+unchanged. Chrome's pixel cohort now explicitly measures a 960 x 800 native
+viewport on every OS. Firefox retains its 1280 x 900 native sidebar window.
+Both retain 2x backing scale, 0.8/1.25/2 zoom and every masking,
+crop, OCR, comparison and lease assertion. The separate native layout cohort
+retains its larger viewports. This bounded pixel evidence does not promise that
+larger screenshots on slower hardware finish before the guard; those captures
+continue to fail closed. Successful pixel reports retain sanitized timing too.
