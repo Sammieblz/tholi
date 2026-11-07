@@ -1,5 +1,6 @@
 import { freeEnrollmentSchema } from "../../../../../packages/navigation-core/contracts-plans";
-import { SiteLink } from "../../app/router";
+import { SiteLink, useRouter } from "../../app/router";
+import { readPlanIntent } from "./plan-intent";
 import { useAccountOperation } from "./useAccountOperation";
 import { useAccount } from "./session";
 import { formatQuantity, type AccountSummary } from "./useAccountSummary";
@@ -20,6 +21,7 @@ function period(seconds: number) {
 }
 
 export function AccountPlansPage({ summary }: { summary: AccountSummary }) {
+  const intent = readPlanIntent(useRouter().search);
   const account = useAccount(),
     workspace = account.session?.account.workspaceId,
     { busy, error, notice, run } = useAccountOperation(account);
@@ -55,6 +57,15 @@ export function AccountPlansPage({ summary }: { summary: AccountSummary }) {
           uploads your local data automatically.
         </p>
       </header>
+      {intent && intent.mode !== "local" && (
+        <p role="status">
+          {intent.mode === "free-cloud"
+            ? "You selected Free Cloud. Review the server-confirmed availability below before enabling an allowance."
+            : "You selected a paid cloud plan. Checkout is not enabled and no paid access has been granted."}{" "}
+          This preference is not an entitlement or transmission consent. Your
+          extension processing choice is unchanged.
+        </p>
+      )}
       <p role="status" aria-live="polite" aria-atomic="true">
         {busy ? "Checking Free Cloud eligibility." : notice}
       </p>

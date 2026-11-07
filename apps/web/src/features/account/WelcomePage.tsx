@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { SiteLink } from "../../app/router";
+import { SiteLink, useRouter } from "../../app/router";
+import {
+  pendingPlanIntent,
+  planAccountPath,
+  rememberPlanIntent,
+} from "./plan-intent";
 import { useAccount } from "./session";
 import { ACCOUNT_SECTIONS } from "./paths";
 import {
@@ -16,6 +21,7 @@ import "./account.css";
 
 /** The account boundary supplies identity; private page state has one scoped lifetime. */
 export function WelcomePage({ path }: { path: string }) {
+  const { go } = useRouter();
   const account = useAccount(),
     actor = account.session?.account.id,
     sessionId = account.session?.session.id;
@@ -25,6 +31,15 @@ export function WelcomePage({ path }: { path: string }) {
     sessionId: string;
     providerUrl?: string;
   }>();
+  useEffect(() => {
+    if (!actor || path !== "/account") return;
+    const intent = pendingPlanIntent();
+    if (intent) {
+      rememberPlanIntent(undefined);
+      const next = planAccountPath(intent);
+      if (next !== "/account") go(next, { replace: true });
+    }
+  }, [actor, path, go]);
   useEffect(() => {
     if (actor && actor !== deletionActor) setDeletionActor(undefined);
     if (

@@ -19,6 +19,10 @@ import {
 } from "../../../packages/navigation-core/contracts-providers";
 import { operatorEvaluationPlanFixture } from "../../support/operator-evaluation-fixture";
 import { savedDataRecordFixture } from "../../support/saved-data-fixture";
+import {
+  createProductCatalogFixture,
+  createEffectiveProductPlanFixture,
+} from "../../support/product-plan-fixture";
 import { savedDataImportInputSchema } from "../../../packages/navigation-core/contracts-saved-data";
 import {
   operatorEvaluationManifestSha256,
@@ -96,6 +100,187 @@ function json(value: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+it("setup catalog reads disclose no credentials and require an existing native service grant", async () => {
+  const catalog = createProductCatalogFixture();
+  fetchMock.mockResolvedValue(json(catalog));
+  const { servicePlanCatalog } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await expect(servicePlanCatalog()).resolves.toEqual(catalog);
+  expect(fetchMock).toHaveBeenCalledOnce();
+  expect(
+    new Headers(fetchMock.mock.calls[0][1].headers).has("Authorization"),
+  ).toBe(false);
+  expect(fetchMock.mock.calls[0][1].credentials).toBe("omit");
+  expect(saved).toEqual({ origin });
+  contains.mockResolvedValue(false);
+  await expect(servicePlanCatalog()).rejects.toThrow("revoked");
+  expect(fetchMock).toHaveBeenCalledOnce();
+});
+
+it("setup verifies the current free allowance before recording consent and never dispatches inference", async () => {
+  const fixture = inferenceFixture();
+  const prior = fetchMock.getMockImplementation()!;
+  const catalog = createProductCatalogFixture();
+  const effective = createEffectiveProductPlanFixture();
+  saved = { origin, tokens };
+  fixture.consents.items.splice(0);
+  fetchMock.mockImplementation(async (url, init) => {
+    const path = new URL(url).pathname;
+    if (path === "/api/v1/plans") return json(catalog);
+    if (path.endsWith("/entitlements/free"))
+      return json({
+        effective,
+        grant: {
+          id: crypto.randomUUID(),
+          amount: "6",
+          expiresAt: effective.periodEnd,
+        },
+        replayed: false,
+      });
+    if (path.endsWith("/entitlements"))
+      return json({
+        catalogVersion: catalog.catalogVersion,
+        effective,
+        items: [],
+      });
+    return prior(url, init);
+  });
+  const { activateSetupPlan } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await expect(
+    activateSetupPlan({ mode: "free-cloud" }, false, () => {}),
+  ).resolves.toMatchObject({ enabled: true, images: false, profile: "fake" });
+  expect(
+    fixture.consents.items.find((item) => item.purpose === "cloud_inference")
+      ?.granted,
+  ).toBe(true);
+  expect(
+    fixture.consents.items.find(
+      (item) => item.purpose === "image_transmission",
+    ),
+  ).toBeUndefined();
+  const paths = fetchMock.mock.calls.map(([url]) => new URL(url).pathname);
+  expect(
+    paths.filter((path) => path.endsWith("/entitlements/free")),
+  ).toHaveLength(1);
+  expect(paths.some((path) => path.includes("decisions"))).toBe(false);
+  expect(
+    fetchMock.mock.calls.every(([url]) => new URL(url).origin === origin),
+  ).toBe(true);
+});
+
+it("Local withdraws the actual stored consent versions after catalog rotation without inventing denied records", async () => {
+  const fixture = inferenceFixture(true);
+  fixture.consents.items[0].policyVersion = "retired-context";
+  fixture.consents.items[1].policyVersion = "retired-images";
+  const { serviceAuthCommand } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  await expect(
+    serviceAuthCommand({
+      type: "AUTH_INFERENCE_CONFIGURE",
+      profile: "fake",
+      enabled: false,
+      images: false,
+    }),
+  ).resolves.toMatchObject({ enabled: false, serverConsentUpdated: true });
+  const bodies = fetchMock.mock.calls
+    .filter(
+      ([url, init]) =>
+        new URL(url).pathname.endsWith("/consents") && init.method === "POST",
+    )
+    .map(([, init]) => JSON.parse(init.body));
+  expect(bodies).toEqual([
+    {
+      purpose: "cloud_inference",
+      policyVersion: "retired-context",
+      granted: false,
+      expectedRevision: "1",
+    },
+    {
+      purpose: "image_transmission",
+      policyVersion: "retired-images",
+      granted: false,
+      expectedRevision: "1",
+    },
+  ]);
+  expect(fixture.consents.items.every((item) => !item.granted)).toBe(true);
+});
+
+it.each([
+  "inactive",
+  "different-plan",
+  "changed-choice",
+  "changed-account",
+  "changed-processing",
+  "paid",
+])("setup rejects %s without enabling transmission", async (kind) => {
+  inferenceFixture();
+  saved = { origin, tokens };
+  const catalog = createProductCatalogFixture();
+  const effective = createEffectiveProductPlanFixture();
+  let changed = false;
+  fetchMock.mockImplementation(async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/api/v1/plans") return json(catalog);
+    if (path.endsWith("/entitlements/free")) {
+      if (kind === "changed-account")
+        saved = {
+          origin,
+          tokens: {
+            ...tokens,
+            account: { ...account, id: crypto.randomUUID() },
+          },
+        };
+      return json({
+        effective,
+        grant: {
+          id: crypto.randomUUID(),
+          amount: "6",
+          expiresAt: effective.periodEnd,
+        },
+        replayed: false,
+      });
+    }
+    if (path.endsWith("/entitlements")) {
+      changed = kind === "changed-choice";
+      if (kind === "changed-processing") {
+        const { cancelServiceInference } =
+          await import("../../../apps/extension/src/platform/service-auth");
+        cancelServiceInference();
+      }
+      return json({
+        catalogVersion: catalog.catalogVersion,
+        effective: {
+          ...effective,
+          ...(kind === "inactive" ? { status: "inactive", caps: null } : {}),
+          ...(kind === "different-plan" ? { planId: "other" } : {}),
+        },
+        items: [],
+      });
+    }
+    throw Error(
+      "Setup must not dispatch consent or inference on rejected evidence.",
+    );
+  });
+  const { activateSetupPlan } =
+    await import("../../../apps/extension/src/platform/service-auth");
+  const intent =
+    kind === "paid"
+      ? { mode: "paid", planId: "paid-cloud", planVersion: 1 }
+      : { mode: "free-cloud" };
+  await expect(
+    activateSetupPlan(intent, false, () => {
+      if (changed) throw Error("Choice changed");
+    }),
+  ).rejects.toThrow();
+  expect(saved).not.toHaveProperty("inference");
+  expect(
+    fetchMock.mock.calls.some(([url]) =>
+      /\/consents|\/decisions/.test(new URL(url).pathname),
+    ),
+  ).toBe(false);
+});
 
 it("requests only account host and authentication consent directly in the user gesture", async () => {
   const { requestServiceAuthAccess } =
@@ -352,9 +537,19 @@ function inferenceFixture(images = false) {
     if (path.endsWith("/consents")) {
       if (init.method === "POST") {
         const body = JSON.parse(init.body);
-        const consent = consents.items.find(
+        let consent = consents.items.find(
           (item) => item.purpose === body.purpose,
-        )!;
+        );
+        if (!consent) {
+          consent = {
+            id: crypto.randomUUID(),
+            purpose: body.purpose,
+            policyVersion: body.policyVersion,
+            granted: false,
+            revision: "0",
+          };
+          consents.items.push(consent);
+        }
         Object.assign(consent, {
           policyVersion: body.policyVersion,
           granted: body.granted,

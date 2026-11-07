@@ -120,7 +120,11 @@ export function registerMessages(context: Context) {
       }
       void setupCommand(raw)
         .then((result) => {
-          if (raw.type === "SETUP_COMPLETE")
+          if (
+            ["SETUP_COMPLETE", "SETUP_ACTIVATE", "SETUP_SELECT"].includes(
+              raw.type,
+            )
+          )
             invalidateAccountUi("SETUP_CHANGED", sender);
           respond(result);
         })

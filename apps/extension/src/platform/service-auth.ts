@@ -22,7 +22,15 @@ import {
   consentSchema,
   policyCatalogSchema,
 } from "../../../../packages/navigation-core/contracts-authorization";
-import { serviceCapabilitiesSchema } from "../../../../packages/navigation-core/contracts-service";
+import {
+  serviceCapabilitiesSchema,
+  servicePlanIntentSchema,
+} from "../../../../packages/navigation-core/contracts-service";
+import {
+  productCatalogSchema,
+  productEntitlementsSchema,
+  freeEnrollmentSchema,
+} from "../../../../packages/navigation-core/contracts-plans";
 import {
   NAVIGATION_FAKE_CAPABILITY,
   NAVIGATION_TRANSPORT_CAPABILITY,
@@ -475,6 +483,102 @@ async function status() {
     account: response.account,
     session: response.session,
   };
+}
+
+/** Public metadata still requires the explicitly configured account connection. */
+export async function servicePlanCatalog() {
+  const expected = generation;
+  const saved = await connection(expected);
+  const catalog = await serviceRequest(
+    saved.origin,
+    "/api/v1/plans",
+    productCatalogSchema,
+    {
+      signal: pending.signal,
+      beforeSend: async () => {
+        const fresh = await connection(expected);
+        if (fresh.origin !== saved.origin)
+          throw new Error("The account service changed.");
+      },
+    },
+  );
+  current(expected);
+  return catalog;
+}
+
+/** Setup intent never grants a plan. Verify enrollment before recording processing consent. */
+export async function activateSetupPlan(
+  raw: unknown,
+  images: boolean,
+  checkSetup: () => void,
+) {
+  const intent = servicePlanIntentSchema.parse(raw);
+  const expected = generation;
+  const expectedProcessing = inferenceGeneration;
+  const check = () => {
+    current(expected);
+    checkSetup();
+    if (inferenceGeneration !== expectedProcessing)
+      throw new Error("The processing choice changed during setup.");
+  };
+  const saved = await connection(expected);
+  if (!saved.tokens || intent.mode !== "free-cloud")
+    throw new Error(
+      "Sign in and choose an available Free Cloud plan. Paid checkout is not enabled.",
+    );
+  const guard = async (fresh: ServiceAccountConnection) => {
+    check();
+    if (
+      fresh.origin !== saved.origin ||
+      fresh.account.id !== saved.tokens!.account.id ||
+      fresh.account.workspaceId !== saved.tokens!.account.workspaceId
+    )
+      throw new Error("The setup account changed.");
+  };
+  const catalog = await servicePlanCatalog();
+  check();
+  const free = catalog.plans.find((plan) => plan.mode === "free-cloud");
+  if (
+    catalog.environment !== "development" ||
+    !free?.availability.available ||
+    !free.developmentAllowance
+  )
+    throw new Error(
+      "Free Cloud is not available in this deployment. Local guidance is available.",
+    );
+  const enrolled = await serviceAuthorizedRequest(
+    (account) => `/api/v1/workspaces/${account.workspaceId}/entitlements/free`,
+    freeEnrollmentSchema,
+    "POST",
+    {},
+    { beforeSend: guard },
+  );
+  await guard({ origin: saved.origin, account: saved.tokens.account });
+  if (
+    enrolled.effective.status !== "active" ||
+    enrolled.effective.planId !== free.id ||
+    enrolled.effective.planVersion !== free.version ||
+    enrolled.effective.catalogVersion !== catalog.catalogVersion
+  )
+    throw new Error("The Free Cloud allowance could not be verified.");
+  const verified = await serviceAuthorizedRequest(
+    (account) => `/api/v1/workspaces/${account.workspaceId}/entitlements`,
+    productEntitlementsSchema,
+    "GET",
+    undefined,
+    { beforeSend: guard },
+  );
+  await guard({ origin: saved.origin, account: saved.tokens.account });
+  if (
+    verified.catalogVersion !== catalog.catalogVersion ||
+    verified.effective?.status !== "active" ||
+    verified.effective.planId !== free.id ||
+    verified.effective.planVersion !== free.version
+  )
+    throw new Error("The Free Cloud entitlement is no longer active.");
+  // No await between the final fences and the existing immediate inference fence.
+  check();
+  return configureInference({ profile: "fake", enabled: true, images });
 }
 
 function inferenceChoices(saved: Settings | undefined) {
@@ -1152,18 +1256,24 @@ async function configureInference(
         const policy = policies.consentPolicies.find(
           (item) => item.purpose === purpose,
         );
-        if (!policy)
-          throw new Error(
-            "The service inference consent policy is unavailable.",
-          );
         const granted =
           purpose === "cloud_inference" ? choices.enabled : choices.images;
         const previous = consents.items.find(
           (item) => item.purpose === purpose,
         );
+        // Missing consent is already denied. Withdrawal can only target a
+        // stored version, including one retired from the current catalog.
+        if (!granted && (!previous || !previous.granted)) continue;
+        if (granted && !policy)
+          throw new Error(
+            "The service inference consent policy is unavailable.",
+          );
+        const policyVersion = granted
+          ? policy!.policyVersion
+          : previous!.policyVersion;
         if (
           previous?.granted === granted &&
-          previous.policyVersion === policy.policyVersion
+          previous.policyVersion === policyVersion
         )
           continue;
         const recorded = await serviceAuthorizedRequest(
@@ -1172,7 +1282,7 @@ async function configureInference(
           "POST",
           {
             purpose,
-            policyVersion: policy.policyVersion,
+            policyVersion,
             granted,
             expectedRevision: previous?.revision ?? "0",
           },
@@ -1181,7 +1291,7 @@ async function configureInference(
         check();
         if (
           recorded.purpose !== purpose ||
-          recorded.policyVersion !== policy.policyVersion ||
+          recorded.policyVersion !== policyVersion ||
           recorded.granted !== granted
         )
           throw new ServiceClientError(

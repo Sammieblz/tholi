@@ -23,6 +23,11 @@ real local identity, private route isolation, all four saved-data types, exact
 credit and storage displays, account exports and pending deletion. These checks
 do not establish paid billing, deployment or the deferred live quality gate.
 
+The [first-run plan validation record](first-run-plans-validation.md) tracks
+retained Local choices, native authentication, server-confirmed Free development
+enrollment and separate processing consent. Paid intent never establishes checkout
+or entitlement, and account setup never imports device knowledge automatically.
+
 Use Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
 Windows retains the existing complete validation owners. Native macOS coverage
 uses the same built extension targets through the shared browser harness, as

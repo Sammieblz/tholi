@@ -6,6 +6,8 @@ import {
 import {
   cancelPendingServiceSignIn,
   serviceAuthCommand,
+  servicePlanCatalog,
+  activateSetupPlan,
 } from "../platform/service-auth";
 import { serviceAuthStatusSchema } from "../platform/service-auth-contract";
 import {
@@ -15,6 +17,7 @@ import {
 } from "../platform/setup-contract";
 
 let writes = Promise.resolve();
+let selection = 0;
 function serialize<T>(operation: () => Promise<T>) {
   const result = writes.catch(() => {}).then(operation);
   writes = result.then(
@@ -61,13 +64,23 @@ export function setupInstalled(reason: string) {
 export async function setupCommand(raw: unknown) {
   const command = setupCommandSchema.parse(raw);
   if (command.type === "SETUP_STATUS") return setupStatus();
+  if (command.type === "SETUP_PLANS")
+    return { catalog: await servicePlanCatalog() };
   if (command.type === "SETUP_OPEN") {
     return serialize(async () => {
       await openWelcome();
       return { ok: true };
     });
   }
-  if (command.type === "SETUP_COMPLETE" && command.choice === "local") {
+  const operation =
+    command.type === "SETUP_SELECT" ||
+    (command.type === "SETUP_COMPLETE" && command.choice === "local")
+      ? ++selection
+      : selection;
+  if (
+    command.type === "SETUP_SELECT" ||
+    (command.type === "SETUP_COMPLETE" && command.choice === "local")
+  ) {
     cancelPendingServiceSignIn();
     await serviceAuthCommand({
       type: "AUTH_INFERENCE_CONFIGURE",
@@ -78,6 +91,32 @@ export async function setupCommand(raw: unknown) {
   }
   return serialize(async () => {
     const current = await setupStatus();
+    const check = () => {
+      if (selection !== operation) throw Error("The setup choice changed.");
+    };
+    check();
+    if (command.type === "SETUP_SELECT") {
+      const next = {
+        ...current,
+        complete: false,
+        planIntent: command.planIntent,
+      };
+      await setPrivateSetting("first-run", next);
+      return next;
+    }
+    if (command.type === "SETUP_ACTIVATE") {
+      if (current.planIntent?.mode !== "free-cloud")
+        throw Error("Choose Free Cloud before enabling it.");
+      await activateSetupPlan(current.planIntent, command.images, check);
+      check();
+      const next: SetupState = {
+        ...current,
+        complete: true,
+        choice: "account",
+      };
+      await setPrivateSetting("first-run", next);
+      return next;
+    }
     if (command.type === "SETUP_COMPLETE") {
       if (command.choice === "account") {
         const status = serviceAuthStatusSchema.parse(
@@ -85,11 +124,19 @@ export async function setupCommand(raw: unknown) {
         );
         if (!status.account)
           throw Error("Complete sign-in before account setup.");
+        check();
+        if (current.planIntent && current.planIntent.mode !== "local")
+          throw Error(
+            "Review the selected plan and processing consent before finishing setup.",
+          );
       }
       const next: SetupState = {
         ...current,
         complete: true,
         choice: command.choice,
+        ...(command.choice === "local"
+          ? { planIntent: { mode: "local" as const } }
+          : {}),
       };
       await setPrivateSetting("first-run", next);
       return next;
