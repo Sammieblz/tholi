@@ -6,6 +6,11 @@ protocol is `tholi-service`. This version is independent of extension/API releas
 profile explicitly; an existing private bearer does not authenticate a service
 account or enable cloud inference.
 
+Service JSON also has a structural admission budget before route validators:
+depth 64, 32,768 total nodes and 4,096 entries in a collection. Exceeding it returns
+the existing redacted `413 PAYLOAD_TOO_LARGE` envelope. Route-specific byte,
+collection and image limits still apply. See [service security](service-security.md).
+
 ## Discovery and compatibility
 
 Start the [local stack](local-stack.md), or build and run `npm run start:service`.

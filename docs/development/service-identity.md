@@ -138,10 +138,13 @@ events are bounded and deduplicated; pending broker grants are fenced against
 logout races. No provider network request occurs inside a SQL transaction.
 
 Flows expire after five minutes and native brokers after one minute. Expired
-ephemeral rows are removed in bounded batches on later writes, so TTL expiry does
-not promise immediate physical deletion during idle periods. Refresh history
-supports session security; broader retention and privileged account erasure
-remain their roadmap owners.
+ephemeral rows are removed in bounded batches on later writes. Migration 015
+also gives the existing worker an expiry-only idle-maintenance capability for
+flows, logout proofs and absolutely expired sessions/refresh history. Unexpired
+refresh families, including revoked sessions, remain available for replay defense.
+Stopped workers or backlogs can delay physical cleanup. Account erasure uses the
+[existing lifecycle owner](account-dashboard.md#account-deletion), with separate
+[backup and secret-rotation procedures](service-security.md).
 
 ## VM, cloud and future desktop clients
 

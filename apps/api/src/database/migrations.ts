@@ -14,6 +14,7 @@ import { accountLifecycle } from "./migrations/011-account-lifecycle";
 import { providerConnections } from "./migrations/012-provider-connections";
 import { customerInference } from "./migrations/013-customer-inference";
 import { navigationKnowledge } from "./migrations/014-navigation-knowledge";
+import { identityRetention } from "./migrations/015-identity-retention";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -51,6 +52,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(12, "provider-connections", providerConnections),
   migration(13, "customer-inference", customerInference),
   migration(14, "navigation-knowledge", navigationKnowledge),
+  migration(15, "identity-retention", identityRetention),
 ]);
 
 export interface MigrationOptions {
@@ -159,6 +161,16 @@ async function grantWorker(client: PoolClient, role: string) {
     await client.query(`GRANT EXECUTE ON FUNCTION tholi.cleanup_account_deletion(uuid,uuid,uuid,uuid,integer),
       tholi.authorize_account_export(uuid,uuid,uuid,uuid),tholi.valid_account_export_metadata(jsonb,boolean),
       tholi.current_account_export_allowed(jsonb),tholi.valid_saved_text(jsonb,integer) TO ${identifier}`);
+  if (
+    (
+      await client.query(
+        "SELECT to_regprocedure('tholi.prune_identity_metadata(integer)') AS present",
+      )
+    ).rows[0]?.present
+  )
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.prune_identity_metadata(integer) TO ${identifier}`,
+    );
 }
 
 async function validateWorkerRole(client: PoolClient, role: string) {

@@ -14,10 +14,11 @@ Issue #25 changes documentation only. The profiles, ports and hosted routes desc
 ## Current execution scope
 
 On November 7, 2026, the user resumed the roadmap after the merge of #87 and
-PR #90's optional account introduction. The next unfinished prerequisite is #61:
-retain the first-run plan preference, verify development Free enrollment and
-collect separate processing consent. Continue #45 only after that issue's
-acceptance evidence is recorded. The existing zero-spend decision, deferred
+PR #90's optional account introduction. #61 is complete through PR #91, including
+retained plan preference, verified development Free enrollment and separate
+processing consent. The user then authorized at least the next three tickets:
+#45 security/lifecycle, #46 portable deployment profiles and #47 scaling/resilience,
+in that order after each predecessor's acceptance evidence. The existing zero-spend decision, deferred
 #43 quality comparison, excluded #54 desktop implementation and separate
 deployment/release authorizations still apply. Do not infer production cloud
 availability or paid checkout from an account session or plan selection.

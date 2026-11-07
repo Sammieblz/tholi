@@ -20,6 +20,7 @@
 - [Durable quota reservations, credit expiry and accounting reads](../development/service-credits.md)
 - [Protected website account, saved-data and credits workspace](../development/account-dashboard.md)
 - [Developer privacy](privacy.md) and [security boundaries](security.md)
+- [Service threat model, retention inventory and operator runbooks](../development/service-security.md)
 - [Frontend ownership](frontend/README.md), including [extension](frontend/extension.md), [website](frontend/website.md) and [shared UI](frontend/shared-ui.md)
 
 Public launch-review legal drafts are maintained separately in `apps/web/src/features/legal`, rendered at `/privacy`, `/terms` and `/cookies`. Developer privacy/security contracts are not substitutes for those policies.

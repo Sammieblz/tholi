@@ -103,7 +103,9 @@ not normal logs or public analytics. Rows expire after 90 days; bounded worker
 maintenance or `audit-prune BATCH` deletes due records, including inactive accounts.
 Expiry immediately excludes rows from the export helper; physical pruning can
 lag behind a large backlog. Restrict operator exports and expire backup copies.
-General account-erasure and saved-data export flows remain later roadmap work.
+Account erasure and saved-data export use their
+[existing account owner](account-dashboard.md). Security audit expiry remains
+separate from optional analytics, support content and financial liabilities.
 
 ## Consented product analytics
 

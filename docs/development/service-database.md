@@ -122,7 +122,10 @@ grants operations on named tables only. Runtime gets no DDL, TRUNCATE or blanket
 future-table grants. DELETE is limited to expiring identity flows, brokers and
 provider logout markers for one-use consumption and bounded cleanup. Saved data
 remains tombstoned and catalog/financial tables remain append-only for runtime;
-broader physical erasure remains later privileged deletion work.
+physical erasure uses the existing fenced account/private-object worker owners.
+Migration 015 adds only a bounded expiry capability for idle authentication
+metadata; it grants the worker no credential or audit read access. See
+[service security and retention](service-security.md).
 
 Migration `003-portable-identity` extends the existing session foundation and
 revokes pre-identity active session rows rather than interpreting them as issued

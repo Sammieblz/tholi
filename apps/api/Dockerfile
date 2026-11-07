@@ -36,6 +36,13 @@ CMD ["node", "/app/postgres-check.mjs"]
 FROM base AS runtime
 ENV NODE_ENV=production \
     THOLI_SERVICE_HOST=0.0.0.0
+# Apply the distro's available security fixes, then remove build/package-manager
+# tooling from the runtime. The release records and reuses this exact image;
+# rebuilding against a later security repository produces new reviewable bytes.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /opt/yarn-* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=production-dependencies /app/node_modules/ ./node_modules/
 COPY --from=build /app/apps/api/dist/ ./apps/api/dist/
 COPY LICENSE ./LICENSE
