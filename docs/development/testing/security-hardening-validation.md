@@ -66,6 +66,13 @@ separately retained copies and server-authoritative development allowances.
   The native test now starts the same operation and reads its bounded result with
   short commands. Its 30-second OCR deadline and all privacy assertions remain
   unchanged; the 35-second polling envelope matches the existing script timeout.
+- Run 42419800863 then reported the actual OCR deadline on macOS 15 ARM, while
+  the Intel macOS 15 and ARM macOS 26 cohorts passed. The fixture now captures the
+  active website and restores suppression before foregrounding its packaged
+  extension test tab for cold OCR. This excludes background-tab scheduling from
+  that worker test and preserves its deadline, image, masking and assertions.
+  The Windows focused case passes; final native results are required. This
+  fixture does not certify the production background OCR host.
 
 The frozen hardened-image stack subsequently passed all local-stack checks in
 `tholi-smoke-mw6xe9sa-ef53d1be`, with the API and worker on runtime image

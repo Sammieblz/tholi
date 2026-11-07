@@ -409,7 +409,12 @@ test("Firefox uses native document identity, local planning and independently ve
     await app.extension((tabId: number) => {
       // Selenium BiDi expires one command after 30 seconds. Keep the OCR
       // owner's existing deadline and observe its result through short reads.
-      const result: { status: string; value?: unknown; error?: string } = {
+      const result: {
+        status: string;
+        value?: unknown;
+        error?: string;
+        resume?: () => void;
+      } = {
         status: "pending",
       };
       (globalThis as any).__tholiConformanceCapture = result;
@@ -466,6 +471,13 @@ test("Firefox uses native document identity, local planning and independently ve
             { frameId: 0 },
           );
         }
+        // Capture the website while it is active, restore suppression, then let
+        // the harness foreground this extension-owned worker test tab. This
+        // checks packaged cold OCR without background-tab timer throttling.
+        result.status = "captured";
+        await new Promise<void>((resolve) => {
+          result.resume = resolve;
+        });
         const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
           type: "module",
         });
@@ -527,6 +539,20 @@ test("Firefox uses native document identity, local planning and independently ve
           }),
       );
     }, app.tabId);
+    const staged = await app.waitFor(
+      () =>
+        current.extension(() => (globalThis as any).__tholiConformanceCapture),
+      (result) => ["captured", "failed"].includes(result?.status),
+      "Native pixels are captured and suppression is restored before changing test-tab focus",
+    );
+    expect(staged.status, staged.error).toBe("captured");
+    await app.focusPanel();
+    await app.extension(() => {
+      const result = (globalThis as any).__tholiConformanceCapture;
+      result.status = "processing";
+      result.resume();
+      delete result.resume;
+    });
     const captured = await app
       .waitFor(
         () =>
@@ -548,12 +574,15 @@ test("Firefox uses native document identity, local planning and independently ve
     expect(capture.metadata.masks.length).toBeGreaterThan(0);
     expect(JSON.stringify(capture)).not.toContain("SENTINEL");
     expect(capture.leaked).toBe(false);
+    await app.site(() => document.title);
     await info.attach("firefox-masked-capture", {
       body: Buffer.from(
         JSON.stringify({
           maskedRegions: capture.metadata.masks.length,
           png: true,
           noPrivateOcrText: true,
+          workerHost: "foreground packaged extension test tab",
+          backgroundWorkerHostCertified: false,
         }),
       ),
       contentType: "application/json",
