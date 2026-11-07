@@ -76,6 +76,14 @@ environment files stay outside that mount. Windows bind-mount behavior had hidde
 this fixture permission failure. The hosted failure is retained, and a new complete
 matching-head cohort is required.
 
+That fresh hosted cohort confirms TLS and the private PostgreSQL logging settings.
+It then caught a second fixture error: concurrent migration operators deliberately
+reject overlap promptly through the existing advisory lock. The VM assertion had
+incorrectly required both concurrent operators to succeed. It now classifies only
+the exact existing busy result, requires a successful owner, then checks normal
+sequential replay and runtime schema verification. No migration lock, retry budget
+or application behavior was relaxed.
+
 Production DNS/certificates, external identity/native callbacks, Google IAM/SQL,
 managed backups, configured mail/object transports, hosted alerting and production
 restore remain unperformed. The prepared Google profile cannot yet admit production

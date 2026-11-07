@@ -380,11 +380,34 @@ export async function runVmChecks({
       ]),
     );
     record("production-tls-cookie-and-callback", secure);
-    await Promise.all(
+    // The existing operator lock rejects overlap promptly, rather than queuing
+    // another migration. Treat only that exact known result as a busy operator.
+    const migrationProbe = `import {runDatabaseCommand} from './apps/api/dist/database-cli.js';
+      try {await runDatabaseCommand('migrate');console.log('migration-complete')}
+      catch(error){if(error instanceof Error && error.message==='Another database migration is already running.')console.log('migration-busy');else process.exitCode=1}`;
+    const migrations = await Promise.all(
       [1, 2].map(() =>
-        compose(["run", "--rm", "--no-deps", "database-migrate"]),
+        compose([
+          "run",
+          "--rm",
+          "--no-deps",
+          "database-migrate",
+          "node",
+          "--input-type=module",
+          "-e",
+          migrationProbe,
+        ]),
       ),
     );
+    assert.ok(
+      migrations.some((result) => result.trim() === "migration-complete"),
+    );
+    assert.ok(
+      migrations.every((result) =>
+        ["migration-complete", "migration-busy"].includes(result.trim()),
+      ),
+    );
+    await compose(["run", "--rm", "--no-deps", "database-migrate"]);
     await compose([
       "exec",
       "-T",
