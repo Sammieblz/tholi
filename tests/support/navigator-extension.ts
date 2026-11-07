@@ -1,6 +1,7 @@
 import { permissionVariant } from "./permission-variant";
 import { prepareChromiumProfile } from "./chromium-profile";
 import { installSidebarTabHarness } from "./sidebar-tab";
+import { installedWelcomeCount } from "./webdriver-welcome";
 import {
   chromium,
   expect,
@@ -45,11 +46,15 @@ export async function openNavigatorExtension(
       viewport: options.nativeViewport ? null : viewport,
     });
   let context: BrowserContext, worker: Worker, page: Page, panel: Page;
-  const initialize = async () => {
+  const initialize = async (freshInstallation = false) => {
     context = await launch();
     worker =
       context.serviceWorkers()[0] ||
       (await context.waitForEvent("serviceworker"));
+    if (freshInstallation)
+      await expect
+        .poll(() => worker.evaluate(installedWelcomeCount), { timeout: 15_000 })
+        .toBe(1);
     page = await context.newPage();
     panel = await context.newPage();
     await installSidebarTabHarness(panel, options.allowAutomaticDownloads);
@@ -294,7 +299,7 @@ export async function openNavigatorExtension(
     await initialize();
   };
   try {
-    await initialize();
+    await initialize(true);
   } catch (error) {
     // Callers cannot run their finally block until this factory returns. Close
     // a partly initialized profile here too, so failed startup cannot strand it.

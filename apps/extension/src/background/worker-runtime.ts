@@ -1,3 +1,4 @@
+import { setupInstalled } from "./setup-service";
 import {
   configureNativeSidebar,
   openNativeSidebar,
@@ -145,6 +146,9 @@ const ready = api.storage.session
       session.view.journey = resumeJourney(session.view.journey);
   });
 api.runtime.onInstalled.addListener((details) => {
+  void setupInstalled(details.reason).catch(() => {
+    // Setup remains accessible from the sidebar if the welcome tab cannot open.
+  });
   if (details.reason !== "update") return;
   void ready.then(async () => {
     if (session?.view) {

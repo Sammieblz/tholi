@@ -16,7 +16,9 @@ data; browser demo accounts cannot authenticate service requests.
 | `/account/security`  | Verified profile, provider controls, sessions, privacy choices, account export and deletion |
 | `/account/billing`   | Current plan and allowances, explicit Free enrollment where offered, paid availability      |
 
-`/signin` and `/signup` use the configured identity provider. `/welcome` replaces
+`/signin` uses the configured identity provider directly. `/signup` starts the
+shared, skippable [account introduction](account-onboarding.md), then continues
+to the same provider's registration form. `/welcome` replaces
 history with `/account`; `/onboarding` remains optional, account-free practice.
 Practice never signs in, changes real extension state or proves installation.
 

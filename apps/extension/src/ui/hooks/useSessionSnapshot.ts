@@ -47,7 +47,18 @@ export function useSessionSnapshot(widget: boolean) {
     const port = api.runtime.connect({
       name: widget ? "tholi-widget" : "tholi-panel",
     });
-    port?.onMessage.addListener(refresh);
+    port?.onMessage.addListener((message) => {
+      const notification =
+        message && typeof message === "object" && "type" in message
+          ? message.type
+          : undefined;
+      if (notification === "ACCOUNT_CHANGED")
+        window.dispatchEvent(new Event("tholi-account-change"));
+      else if (notification === "SETUP_CHANGED") {
+        window.dispatchEvent(new Event("tholi-setup-change"));
+        window.dispatchEvent(new Event("tholi-account-change"));
+      } else refresh();
+    });
     // Firefox embeds expose the content-script API subset; the worker port
     // remains the single snapshot subscription on both surfaces.
     api.tabs?.onActivated.addListener(refresh);

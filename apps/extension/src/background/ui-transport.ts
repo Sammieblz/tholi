@@ -182,9 +182,27 @@ export function trustedUi(
   return isPanel(sender) || isWidget(sender, session);
 }
 export function invalidateUi() {
+  notifyUi("SESSION_CHANGED");
+}
+export function invalidateAccountUi(
+  type: "ACCOUNT_CHANGED" | "SETUP_CHANGED" = "ACCOUNT_CHANGED",
+  source?: Runtime.MessageSender,
+) {
+  notifyUi(type, true, source);
+}
+function notifyUi(
+  type: string,
+  panelsOnly = false,
+  source?: Runtime.MessageSender,
+) {
   for (const port of ports) {
+    if (panelsOnly && port.name !== "tholi-panel") continue;
+    // The originating panel already awaits its command and reloads metadata.
+    // Suppress only an exact native document match, never a URL substitute.
+    if (source?.documentId && port.sender?.documentId === source.documentId)
+      continue;
     try {
-      port.postMessage({ type: "SESSION_CHANGED" });
+      port.postMessage({ type });
     } catch {
       ports.delete(port);
     }

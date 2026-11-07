@@ -14,6 +14,7 @@ import {
   capturedMessageIds,
   checkCookieBinding,
   checkAccountLayout,
+  checkProviderAppearance,
   closeIdentityContext,
   identityContext,
   localEmailAction,
@@ -391,6 +392,7 @@ test("configured website uses real signup email recovery and retained identity w
     rateLimitResponses: { json: 0, html: 0, other: 0 },
     gatewayCapacityWaitMs: {
       initial: 0,
+      accountEntry: 0,
       publicReentry: 0,
       primaryReload: 0,
       afterAnalytics: 0,
@@ -546,7 +548,13 @@ test("configured website uses real signup email recovery and retained identity w
       fixture,
       async (step, pending) => {
         progress.operation = `real registration: ${step}`;
-        if (step === "form") progress.registrationFormObserved = true;
+        if (step === "form") {
+          progress.registrationFormObserved = true;
+          await checkProviderAppearance(page);
+          checks.push(
+            "blank provider registration reflows at four widths with readable fields and labels in both themes",
+          );
+        }
         if (step === "fields") progress.registrationFieldsFilled = true;
         if (step === "submitted") progress.registrationSubmitted = true;
         if (pending) {
@@ -564,6 +572,20 @@ test("configured website uses real signup email recovery and retained identity w
     );
     progress.accountHttpStatus = 200;
     progress.accountErrorCode = "none";
+    for (const entry of ["/signin", "/signup?step=2"]) {
+      progress.gatewayCapacityWaitMs.accountEntry +=
+        await waitForIdentityGatewayCapacity();
+      await page.goto(environment.webOrigin + entry);
+      await expect(page).toHaveURL(environment.webOrigin + "/account");
+      expect((await accountResponse(page, environment)).value?.account.id).toBe(
+        first.account.id,
+      );
+    }
+    checks.push(
+      "authenticated sign-in and sign-up entry replace navigation with the existing account workspace",
+    );
+    progress.gatewayCapacityWaitMs.accountEntry +=
+      await waitForIdentityGatewayCapacity();
     await saveProgress();
     checks.push(
       "real registration requires email verification before creating account access",

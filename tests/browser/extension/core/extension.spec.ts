@@ -144,6 +144,57 @@ async function next(name: string, heading: string) {
     )
     .toBe(states[heading]);
 }
+test("first-run welcome offers accounts and Local without gaining journey authority, and retains progress", async () => {
+  const url = new URL("welcome.html", worker.url()).href;
+  await expect
+    .poll(
+      () =>
+        context.pages().filter((candidate) => candidate.url() === url).length,
+    )
+    .toBe(1);
+  const welcome = context.pages().find((candidate) => candidate.url() === url)!;
+  await expect(
+    welcome.getByRole("button", { name: "Sign up", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    welcome.getByRole("button", { name: "Sign in", exact: true }),
+  ).toBeDisabled();
+  await welcome.getByRole("button", { name: "Sign up", exact: true }).click();
+  await welcome.getByRole("button", { name: "Next", exact: true }).click();
+  await expect
+    .poll(() =>
+      panel.evaluate(
+        async () =>
+          (await chrome.runtime.sendMessage({ type: "SETUP_STATUS" })).step,
+      ),
+    )
+    .toBe(2);
+  await welcome.reload();
+  await welcome.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(welcome.locator("h1")).toHaveText(
+    "Find your next step. Stay in control.",
+  );
+  const denied = await welcome.evaluate(() =>
+    chrome.runtime.sendMessage({ type: "GET_SESSION" }),
+  );
+  expect(denied.error).toBeTruthy();
+  await welcome
+    .getByRole("button", { name: "Use Tholi locally", exact: true })
+    .click();
+  await expect(welcome.locator(".welcome-complete")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Finish setup", exact: true }),
+  ).toHaveCount(0);
+  await welcome.reload();
+  await expect(welcome.locator(".welcome-complete")).toBeVisible();
+  expect(
+    await panel.evaluate(() =>
+      chrome.runtime.sendMessage({ type: "AUTH_INFERENCE_STATUS" }),
+    ),
+  ).toMatchObject({ enabled: false, images: false });
+  await page.bringToFront();
+});
+
 test("explicit activation, verified steps, retention branch and final hard stop", async () => {
   await expect(page.locator("#internet-navigator-overlay")).toHaveCount(0);
   await start();

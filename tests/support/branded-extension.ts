@@ -19,6 +19,7 @@ import {
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
 import { permissionVariant } from "./permission-variant";
+import { waitForWelcomeInstallation } from "./webdriver-welcome";
 
 export async function openBrandedExtension(
   name: "chrome" | "edge" | "brave",
@@ -129,7 +130,7 @@ export async function openBrandedExtension(
       if (reply.error)
         throw Error("The native Chrome debugger attachment policy failed.");
     }
-    return await attachWebDriverExtension(
+    const app = await attachWebDriverExtension(
       driver,
       website,
       panel,
@@ -139,6 +140,8 @@ export async function openBrandedExtension(
       undefined,
       nativeLifecycle ? "classic" : "bidi",
     );
+    await waitForWelcomeInstallation(app);
+    return app;
   } catch (error) {
     await driver.quit().catch(() => {});
     throw error;

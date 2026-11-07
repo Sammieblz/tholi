@@ -1,0 +1,7 @@
+Start with your destination
+
+Actual Tholi extension on a local reading demo. No account or external AI service is used.
+
+00:00:00.003 The actual floating widget is open on a controlled demo website.
+00:00:02.693 Enter Make the text larger in the Navigation goal field, then choose Guide me.
+00:00:03.730 The bundled local engine finds the live control. Tholi shows guidance and highlights it on the website.

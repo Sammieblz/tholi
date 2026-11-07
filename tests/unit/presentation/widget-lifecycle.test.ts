@@ -134,6 +134,25 @@ it("account and cloud-data RPC accept only the exact privileged panel and never 
   }
   expect(operation).not.toHaveBeenCalled();
   expect(cloudOperation).not.toHaveBeenCalled();
+  const welcome = { ...sender, url: api.runtime.getURL("welcome.html") };
+  for (const type of [
+    "AUTH_SIGN_OUT",
+    "AUTH_INFERENCE_CONFIGURE",
+    "AUTH_PROVIDER_CONNECTIONS",
+    "SAVED_DATA_CACHED",
+    "SET_GOAL",
+    "UI_RESET_SESSION",
+  ]) {
+    const denied = vi.fn();
+    handle({ type }, welcome, denied);
+    expect(denied.mock.calls[0][0].error).toBeTruthy();
+  }
+  expect(operation).not.toHaveBeenCalled();
+  const welcomeReply = vi.fn();
+  handle({ type: "AUTH_STATUS" }, welcome, welcomeReply);
+  await vi.waitFor(() =>
+    expect(welcomeReply).toHaveBeenCalledWith({ configured: false }),
+  );
   const respond = vi.fn();
   expect(
     handle(
@@ -175,6 +194,35 @@ it("account and cloud-data RPC accept only the exact privileged panel and never 
   expect(enqueue).not.toHaveBeenCalled();
 });
 
+it("account notifications contain no metadata and skip only their exact originating panel document", async () => {
+  const { api, sender } = environment();
+  const { invalidateAccountUi } =
+    await import("../../../apps/extension/src/background/ui-transport");
+  const connect = api.runtime.onConnect.addListener.mock.calls[0][0];
+  const panels = ["document-one", "document-two"].map((documentId) => ({
+    name: "tholi-panel",
+    sender: {
+      ...sender,
+      documentId,
+      url: api.runtime.getURL("sidepanel.html"),
+    },
+    postMessage: vi.fn(),
+    onDisconnect: { addListener: vi.fn() },
+  }));
+  panels.forEach(connect);
+  invalidateAccountUi("ACCOUNT_CHANGED", panels[0].sender);
+  expect(panels[0].postMessage).not.toHaveBeenCalled();
+  expect(panels[1].postMessage).toHaveBeenCalledExactlyOnceWith({
+    type: "ACCOUNT_CHANGED",
+  });
+  invalidateAccountUi("SETUP_CHANGED", {
+    ...panels[0].sender,
+    documentId: undefined,
+  });
+  expect(panels[0].postMessage).toHaveBeenCalledExactlyOnceWith({
+    type: "SETUP_CHANGED",
+  });
+});
 it("private service proposals cannot enter through public background messages", async () => {
   const { api, session, sender } = environment();
   const listen = vi.fn();
@@ -762,6 +810,46 @@ async function withAccountSettings(
   }
 }
 
+it("an external account notification reloads verified metadata and clears a retained settings view after logout", async () => {
+  let authenticated = false;
+  await withAccountSettings(
+    {
+      reply: (message) =>
+        message.type === "AUTH_STATUS"
+          ? authenticated
+            ? accountReply()
+            : { configured: true, origin: "http://127.0.0.1:8788" }
+          : undefined,
+    },
+    async ({ container, rpc }) => {
+      expect(container.textContent).not.toContain("Renew session");
+      authenticated = true;
+      await act(async () => {
+        dispatchEvent(
+          new CustomEvent("tholi-account-change", {
+            detail: { account: "untrusted-notification-account" },
+          }),
+        );
+      });
+      await vi.waitFor(() =>
+        expect(container.textContent).toContain("Renew session"),
+      );
+      expect(container.textContent).not.toContain(
+        "untrusted-notification-account",
+      );
+      authenticated = false;
+      await act(async () => {
+        dispatchEvent(new Event("tholi-account-change"));
+      });
+      await vi.waitFor(() =>
+        expect(container.textContent).not.toContain("Renew session"),
+      );
+      expect(
+        rpc.mock.calls.filter(([message]) => message.type === "AUTH_STATUS"),
+      ).toHaveLength(3);
+    },
+  );
+});
 it("inference choices keep native access in the enabling gesture, preserve the current choice if it throws and withdraw without another grant", async () => {
   await withAccountSettings(
     {},

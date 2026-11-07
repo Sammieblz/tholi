@@ -17,6 +17,7 @@ import {
 } from "./lib/local-stack-policy.mjs";
 import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 import { runObservabilityChecks } from "./lib/observability-validation.mjs";
+import { buildIdentityTheme } from "./build-identity-theme.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const execute = promisify(execFile);
@@ -240,6 +241,7 @@ async function signedS3Request({
 
 /** This smoke owns a fresh project and never deletes the developer's local stack. */
 export async function runLocalStackSmoke({ optional = false } = {}) {
+  await buildIdentityTheme();
   const project = `tholi-smoke-${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
   const directory = resolve(root, "output/qa/local-stack", project);
   const envFile = resolve(directory, ".env");

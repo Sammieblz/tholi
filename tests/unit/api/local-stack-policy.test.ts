@@ -1,5 +1,14 @@
 import { expect, test } from "vitest";
-import { mkdtemp, readFile, rm, rmdir, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  rmdir,
+  writeFile,
+} from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { parseEnv } from "node:util";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
@@ -12,6 +21,40 @@ import {
   localStackCommands,
   initializeLocalEnvironment,
 } from "../../../scripts/local-stack.mjs";
+
+test("a cold plain-Node checkout initializes local settings without theme build dependencies", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tholi-bootstrap-"));
+  const scripts = join(directory, "scripts");
+  const envFile = join(directory, ".env");
+  await mkdir(scripts);
+  const files = [
+    "scripts/local-stack.mjs",
+    "scripts/build-identity-theme.mjs",
+    ".env.example",
+  ];
+  try {
+    for (const file of files)
+      await copyFile(resolve(file), join(directory, file));
+    const result = spawnSync(
+      process.execPath,
+      [join(scripts, "local-stack.mjs"), "init"],
+      {
+        cwd: directory,
+        encoding: "utf8",
+      },
+    );
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(
+      (await readFile(envFile, "utf8")).includes("COMPOSE_PROJECT_NAME="),
+    ).toBe(true);
+  } finally {
+    await rm(envFile, { force: true });
+    for (const file of files) await rm(join(directory, file), { force: true });
+    await rmdir(scripts);
+    await rmdir(directory);
+  }
+});
 
 test("identity environment upgrades preserve existing credentials and add missing settings once", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tholi-identity-env-"));

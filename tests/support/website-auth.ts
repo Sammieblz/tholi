@@ -8,6 +8,7 @@ import {
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
+import { composite, luminance, parseColor } from "../../packages/ui/page-theme";
 import {
   identityAccountResponseSchema,
   identityProfileSchema,
@@ -383,7 +384,7 @@ export async function registerWebsiteAccount(
   const before = await capturedMessageIds(environment, fixture.email);
   await page.goto(environment.webOrigin + "/signup");
   await page
-    .getByRole("link", { name: "Continue to sign up", exact: true })
+    .getByRole("link", { name: "Skip introduction", exact: true })
     .click();
   await page.waitForURL((url) => url.origin === environment.providerOrigin);
   await expect(page.locator("#kc-register-form")).toBeVisible();
@@ -450,6 +451,76 @@ export async function setWebsitePassword(page: Page, password: string) {
   await form.locator("#password-confirm").fill(password);
   await form.locator("#kc-submit").click();
   await expect(form).not.toBeVisible();
+}
+/** Blank real provider forms only; collect visual measurements, never field values. */
+export async function checkProviderAppearance(page: Page) {
+  const original = page.viewportSize();
+  const initial = await page.locator("html").getAttribute("data-tholi-theme");
+  const measurements = [];
+  for (const theme of ["light", "dark"] as const) {
+    if ((await page.locator("html").getAttribute("data-tholi-theme")) !== theme)
+      await page
+        .getByRole("button", { name: `Use ${theme} theme`, exact: true })
+        .click();
+    for (const width of [375, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const colors = await page
+        .locator('#kc-register-form input:not([type="hidden"])')
+        .first()
+        .evaluate((input) => {
+          const field = getComputedStyle(input);
+          const card = getComputedStyle(input.closest("main")!);
+          const label = getComputedStyle(document.querySelector("label")!);
+          return {
+            foreground: field.color,
+            background: field.backgroundColor,
+            card: card.backgroundColor,
+            label: label.color,
+            overflow: document.documentElement.scrollWidth > innerWidth,
+            target: input.getBoundingClientRect().height,
+          };
+        });
+      const background = composite(
+        parseColor(colors.background)!,
+        parseColor(colors.card)!,
+      );
+      const ratio = (color: string) => {
+        const values = [
+          luminance(parseColor(color)!),
+          luminance(background),
+        ].sort((a, b) => b - a);
+        return (values[0] + 0.05) / (values[1] + 0.05);
+      };
+      const row = {
+        theme,
+        width,
+        inputContrast: ratio(colors.foreground),
+        labelContrast: ratio(colors.label),
+        overflow: colors.overflow,
+        target: colors.target,
+      };
+      measurements.push(row);
+      expect(
+        row.inputContrast,
+        "Provider input contrast",
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        row.labelContrast,
+        "Provider label contrast",
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(row.overflow, "Provider form reflow").toBe(false);
+      expect(row.target, "Provider input target").toBeGreaterThanOrEqual(44);
+    }
+  }
+  if (original) await page.setViewportSize(original);
+  if (
+    initial &&
+    initial !== (await page.locator("html").getAttribute("data-tholi-theme"))
+  )
+    await page
+      .getByRole("button", { name: `Use ${initial} theme`, exact: true })
+      .click();
+  return measurements;
 }
 export async function identityContext(browser: Browser) {
   const context = await browser.newContext({
