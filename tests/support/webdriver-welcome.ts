@@ -6,13 +6,16 @@ import {
 } from "./webdriver-extension";
 type App = Awaited<ReturnType<typeof attachWebDriverExtension>>;
 
+/** Execute in a privileged extension context in either browser harness. */
+export async function installedWelcomeCount() {
+  const api = (globalThis as any).browser || (globalThis as any).chrome;
+  return (await api.tabs.query({})).filter(
+    (tab: any) => tab.url === api.runtime.getURL("welcome.html"),
+  ).length as number;
+}
+
 export function welcomeTabCount(app: App) {
-  return app.extension(async () => {
-    const api = (globalThis as any).browser || (globalThis as any).chrome;
-    return (await api.tabs.query({})).filter(
-      (tab: any) => tab.url === api.runtime.getURL("welcome.html"),
-    ).length as number;
-  });
+  return app.extension(installedWelcomeCount);
 }
 
 /** Install resolves before the worker's onInstalled/tab creation has finished. */

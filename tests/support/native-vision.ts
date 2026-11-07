@@ -66,13 +66,19 @@ export async function nativeVisionPixels({
     return result.result;
   };
   const priorStyles = await styles();
-  const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
-    type: "module",
-  });
+  let worker: Worker | undefined;
+  let captureTiming: {
+    prepareMs?: number;
+    captureMs?: number;
+    checkMs?: number;
+    revisionChanged?: boolean;
+  } = {};
   async function capture(): Promise<Capture> {
     const captureId = crypto.randomUUID();
+    captureTiming = {};
     try {
       stage = "prepare";
+      const prepareStarted = performance.now();
       const reply = await api.tabs.sendMessage(
         tabId,
         { type: "PREPARE_CAPTURE", sessionId: session.sessionId, captureId },
@@ -89,20 +95,27 @@ export async function nativeVisionPixels({
         throw Error("Current capture metadata unavailable");
       }
       const metadata: CaptureMetadata = reply.metadata;
+      captureTiming.prepareMs = Math.round(performance.now() - prepareStarted);
       const browserZoom = await api.tabs.getZoom(tabId);
       const current = await api.tabs.get(tabId);
       if (!current.active || current.windowId !== tab.windowId)
         throw Error("Native capture tab changed");
       stage = "native-capture";
+      const captureStarted = performance.now();
       const image = await api.tabs.captureVisibleTab(tab.windowId, {
         format: "png",
       });
+      captureTiming.captureMs = Math.round(performance.now() - captureStarted);
       stage = "current-proof";
+      const checkStarted = performance.now();
       const checked = await api.tabs.sendMessage(
         tabId,
         { type: "CHECK_CAPTURE", sessionId: session.sessionId, captureId },
         { frameId: 0 },
       );
+      captureTiming.checkMs = Math.round(performance.now() - checkStarted);
+      captureTiming.revisionChanged =
+        checked?.viewportRevision !== metadata.viewportRevision;
       if (!checked?.current) throw Error("Capture evidence changed");
       return {
         image,
@@ -124,24 +137,30 @@ export async function nativeVisionPixels({
     }
   }
   async function request<T>(body: Record<string, unknown>): Promise<T> {
+    // Pixel processing begins after the privacy-critical native capture/check.
+    // Cold worker compilation must not compete with its fixed proof deadlines.
+    worker ??= new Worker(api.runtime.getURL("ocr-worker.js"), {
+      type: "module",
+    });
+    const pixelWorker = worker;
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
         () => reject(Error("Native pixel worker deadline")),
         30_000,
       );
-      worker.onerror = () => {
+      pixelWorker.onerror = () => {
         clearTimeout(timer);
         reject(Error("Native pixel worker failed"));
       };
-      worker.onmessage = ({ data }) => {
+      pixelWorker.onmessage = ({ data }) => {
         if (data.id !== id) return;
         clearTimeout(timer);
         data.error
           ? reject(Error("Native pixel preparation rejected"))
           : resolve(data.value);
       };
-      worker.postMessage({ type: "OCR_REQUEST", id, ...body });
+      pixelWorker.postMessage({ type: "OCR_REQUEST", id, ...body });
     });
   }
   async function inspect(
@@ -424,8 +443,13 @@ export async function nativeVisionPixels({
         ocr.width * ocr.height <= 4_000_000,
     };
   } catch {
-    throw Error("Native privacy proof failed at " + stage);
+    throw Error(
+      "Native privacy proof failed at " +
+        stage +
+        " " +
+        JSON.stringify(captureTiming),
+    );
   } finally {
-    worker.terminate();
+    worker?.terminate();
   }
 }

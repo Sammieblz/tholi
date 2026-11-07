@@ -155,3 +155,17 @@ radio selection and background acknowledgement. Cancellation follows the same
 readiness owner. This retains the real keyboard interaction, explicit Local
 choice, privacy checks and existing request deadlines. The failed run remains
 separate from the final PR checks.
+
+The next hosted run also exposed the install-tab race in the Playwright harness:
+its failed saved-route snapshot had advanced mode enabled but no active website.
+Fresh initialization now waits for the same exact automatic welcome-tab count
+used by WebDriver before creating website/panel fixtures. Browser restart does
+not wait for a new install event.
+
+An Intel macOS capture was correctly rejected at the current-proof stage. The
+native pixel fixture now creates its processing worker only after that capture
+and its privacy check, keeping cold compilation outside the proof's critical
+path. Failures record sanitized prepare/capture/check durations and whether the
+viewport revision changed. The exact earlier invalidation cause remains unknown;
+no privacy deadline, suppression budget, identity check or rejection was relaxed,
+and captures are not retried automatically.
