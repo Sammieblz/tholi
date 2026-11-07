@@ -7,12 +7,14 @@ import {
   attachWebDriverExtension,
   seleniumBidi,
   setNativeViewport,
+  findWebDriverWindow,
 } from "./webdriver-extension";
 import {
   assertFixtureUrl,
   fixtureOnlySeleniumNetwork,
 } from "./selenium-network";
 import { permissionVariant } from "./permission-variant";
+import { waitForWelcomeInstallation } from "./webdriver-welcome";
 import { Builder, By, until, type WebDriver } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
 import { randomUUID } from "node:crypto";
@@ -107,8 +109,16 @@ export async function openFirefoxExtension(
       "moz-extension://" + uuid + "/sidepanel.html",
     );
     await driver.setContext(firefox.Context.CONTENT);
-    const handles = await driver.getAllWindowHandles(),
-      panel = handles[handles.length - 1];
+    const panel = await driver.wait(
+      () =>
+        findWebDriverWindow(
+          driver,
+          "moz-extension://" + uuid + "/sidepanel.html",
+        ),
+      10_000,
+      "The exact packaged Firefox sidebar tab is available",
+    );
+    if (!panel) throw Error("The packaged Firefox sidebar is missing.");
     await driver.switchTo().window(panel);
     await driver.wait(until.elementLocated(By.css(".tholi-app")), 10000);
     const tabId = await driver.executeAsyncScript<number>(function (
@@ -125,16 +135,18 @@ export async function openFirefoxExtension(
     // extension-local workers are separately constrained by packaged CSP and asset tests.
     const finishNetwork = await fixtureOnlySeleniumNetwork(driver, [website]);
     if (tabId < 0) throw Error("Firefox fixture tab not found: " + url);
+    const app = await attachWebDriverExtension(
+      driver,
+      website,
+      panel,
+      tabId,
+      url,
+      finishNetwork,
+      () => closeFirefoxDriver(driver),
+    );
+    await waitForWelcomeInstallation(app);
     return {
-      ...(await attachWebDriverExtension(
-        driver,
-        website,
-        panel,
-        tabId,
-        url,
-        finishNetwork,
-        () => closeFirefoxDriver(driver),
-      )),
+      ...app,
       driver,
     };
   } catch (error) {

@@ -78,11 +78,12 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      ONNXRUNTIME_NODE_INSTALL: skip
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.19.0
+      - uses: ./.github/actions/setup
       - run: npm run test:local-stack -- --optional
       - uses: actions/upload-artifact@v4
         if: always()

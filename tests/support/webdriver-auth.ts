@@ -49,6 +49,7 @@ async function nativeCdp(
     clearTimeout(timer);
   }
 }
+
 export type NativeIdentityEnvironment = {
   envFile: string;
   project: string;
@@ -322,15 +323,47 @@ export async function accountControl(
   if (!control) throw Error("The native account control is unavailable.");
   return control;
 }
-export async function openAccountSettings(app: App) {
-  await app.driver.switchTo().window(app.panel);
-  if (!(await app.driver.findElements(By.id("tholi-service-origin"))).length)
-    await app.driver
-      .findElement(By.css('button[aria-label="Tholi settings"]'))
-      .click();
+export async function openAccountSettings(
+  app: App,
+  options: { keyboard?: boolean } = {},
+) {
+  await app.focusPanel();
+  const trigger = await app.driver.findElement(
+    By.css('button[aria-label="Tholi settings"]'),
+  );
+  const expanded = await trigger.getDomAttribute("aria-expanded");
+  if (expanded === "false") {
+    if (options.keyboard) await trigger.sendKeys(Key.ENTER);
+    else await trigger.click();
+  } else if (expanded !== "true") {
+    throw Error("The native settings trigger has no expanded state.");
+  }
   await app.driver.wait(
-    until.elementLocated(By.id("tholi-service-origin")),
+    () =>
+      app.extension(() => {
+        const popup = document.querySelector<HTMLElement>(
+          ".tholi-settings-popup",
+        );
+        const origin = popup?.querySelector<HTMLInputElement>(
+          "#tholi-service-origin",
+        );
+        return !!(
+          document
+            .querySelector('button[aria-label="Tholi settings"]')
+            ?.getAttribute("aria-expanded") === "true" &&
+          popup?.getClientRects().length &&
+          getComputedStyle(popup).visibility !== "hidden" &&
+          !popup.hasAttribute("data-starting-style") &&
+          !popup.hasAttribute("data-ending-style") &&
+          !document.querySelector(
+            '[role="alertdialog"], .tholi-private-learning-backdrop',
+          ) &&
+          origin &&
+          !origin.disabled
+        );
+      }),
     10_000,
+    "The native account popover is settled and its processing choices are loaded",
   );
 }
 export async function configureNativeAccount(
@@ -474,20 +507,36 @@ async function newAuthWindow(
 export async function cancelNativeSignIn(
   app: App,
   environment: NativeIdentityEnvironment,
+  surface?: { handle: string; signup?: boolean },
 ) {
   const previous = await app.driver.getAllWindowHandles();
   let stage = "open-sign-in";
   try {
-    await (await accountControl(app, "Sign in")).click();
+    if (surface) await app.driver.switchTo().window(surface.handle);
+    await (
+      await accountControl(
+        app,
+        surface?.signup ? "Create your account" : "Sign in",
+      )
+    ).click();
     stage = "cancel-provider-window";
     await newAuthWindow(app, previous, environment);
+    if (surface?.signup)
+      await app.driver.wait(
+        until.elementLocated(By.id("kc-register-form")),
+        10_000,
+      );
     await app.driver.close();
-    await app.driver.switchTo().window(app.panel);
+    await app.driver.switchTo().window(surface?.handle ?? app.panel);
     stage = "verify-cancellation";
     await app.waitFor(
       () =>
         app.driver.findElements(
-          By.css('.tholi-account-settings [role="alert"]'),
+          By.css(
+            surface
+              ? '.welcome-error[role="alert"]'
+              : '.tholi-account-settings [role="alert"]',
+          ),
         ),
       (items) => items.length > 0,
       "Cancellation is reported in the account panel",
@@ -507,6 +556,7 @@ export async function cancelNativeSignIn(
 export async function completeNativeSignIn(
   app: App,
   environment: NativeIdentityEnvironment,
+  surface?: string,
 ) {
   const previous = await app.driver.getAllWindowHandles();
   const attempted = new Set<string>();
@@ -530,6 +580,7 @@ export async function completeNativeSignIn(
     return true;
   }
   try {
+    if (surface) await app.driver.switchTo().window(surface);
     await (await accountControl(app, "Sign in")).click();
     await app.driver.wait(
       async () => {

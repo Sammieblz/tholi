@@ -93,6 +93,7 @@ test("header returns on upward scroll and keyboard focus; download reveals respe
     "About",
     "Get Tholi",
     "Docs",
+    "Sign in",
   ]);
   await page.mouse.wheel(0, 700);
   await expect

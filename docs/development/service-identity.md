@@ -36,6 +36,21 @@ no relay or external delivery. Keep the existing environment file private.
 Without a configured website service origin, installation works and account
 pages explain that the account service is unavailable.
 
+Public account links remain visible. Sign up opens the shared introduction;
+Sign in opens account entry directly. Fresh extension installations open one
+packaged welcome tab offering Sign up, Sign in and **Use Tholi locally**. This
+uses the native identity flow, not the website's cookie session. See
+[account onboarding](account-onboarding.md) for setup state and sender boundaries.
+
+`local:up` prepares the portable `tholi` login theme in `dist/identity-theme`
+before Compose starts. The disposable-stack smoke prepares the same theme.
+`npm run build:identity-theme` prepares it explicitly for other local tooling.
+The realm reconciliation selects it for new and retained local installations
+without replacing users. Its CSS, fonts and logo come from existing brand owners;
+provider forms continue to own validation, verification and recovery.
+Theme caches are disabled only in this local development profile. Production
+operators should retain normal caching when deploying a prepared theme.
+
 Keycloak reconciliation updates only owned realm settings and the confidential
 `tholi-service` client. It retains users and their credentials. The exact API
 callback is `/api/v1/auth/callback`; its post-logout return is the configured

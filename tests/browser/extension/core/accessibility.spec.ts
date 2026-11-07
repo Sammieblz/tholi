@@ -188,14 +188,34 @@ for (const allowance of ["RATE_LIMITED", "QUOTA_EXCEEDED"] as const)
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      expect(
-        await processing.evaluate(
-          (element) =>
+      // Reduced motion permits 80ms color transitions. Chromium can continually
+      // restart inherited scrollbar-color transitions while the panel updates.
+      // Reject every other running effect, including loops and spatial motion.
+      await expect
+        .poll(() =>
+          processing.evaluate((element) =>
             element
               .getAnimations({ subtree: true })
-              .filter((animation) => animation.playState === "running").length,
-        ),
-      ).toBe(0);
+              .filter((animation) => {
+                if (animation.playState !== "running") return false;
+                const timing = animation.effect?.getComputedTiming();
+                return !(
+                  animation instanceof CSSTransition &&
+                  ["color", "scrollbar-color"].includes(
+                    animation.transitionProperty,
+                  ) &&
+                  timing?.iterations === 1 &&
+                  typeof timing.endTime === "number" &&
+                  timing.endTime <= 80
+                );
+              })
+              .map((animation) => ({
+                kind: animation.constructor.name,
+                timing: animation.effect?.getTiming(),
+              })),
+          ),
+        )
+        .toEqual([]);
       await app.panel.screenshot({
         path: info.outputPath(
           `processing-${allowance.toLowerCase()}-narrow.png`,

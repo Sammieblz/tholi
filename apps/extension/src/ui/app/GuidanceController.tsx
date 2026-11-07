@@ -5,6 +5,7 @@ import { JourneyDetails } from "../features/journey/JourneyDetails";
 import { AdvancedTools } from "../features/advanced/AdvancedTools";
 import { WorkflowPanel } from "../features/journey/WorkflowPanel";
 import { AccountSettings } from "../features/account/AccountSettings";
+import { SetupNotice } from "../features/account/SetupNotice";
 import { WebsiteAccess } from "../components/WebsiteAccess";
 import {
   currentAttentionWorkflow,
@@ -160,6 +161,7 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       }
       primary={
         <>
+          {!widget && <SetupNotice />}
           {showWebsiteSetup && websiteAccess}
           {context && !context.routes.length && <h2>Open a website</h2>}
           {otherTab && (

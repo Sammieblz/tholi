@@ -2,7 +2,7 @@ import { api, browserTarget, chromiumApi } from "./api";
 let database: Promise<IDBDatabase> | undefined;
 let protectedLocal: Promise<void> | undefined;
 type PrivateSettingKey =
-  "backend" | "vision" | "service-auth" | "privateSiteLearning";
+  "backend" | "vision" | "service-auth" | "privateSiteLearning" | "first-run";
 export function protectLocalSettings() {
   if (browserTarget() === "firefox") return Promise.resolve();
   return (protectedLocal ||= (async () => {

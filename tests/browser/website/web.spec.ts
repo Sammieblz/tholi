@@ -6,6 +6,240 @@ const storeUrls = {
   Firefox: "https://addons.mozilla.org/en-US/firefox/addon/tholi/",
 };
 
+test("signup onboarding preserves steps and Back, with honest account availability and a local exit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .locator(".hero")
+    .getByRole("link", { name: "Sign up", exact: true })
+    .click();
+  await expect(page.locator("main h1")).toHaveText(
+    "Tell Tholi where you want to go.",
+  );
+  await expect(
+    page.getByText("Accounts are not available on this website yet.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/signup\?step=2$/);
+  await expect(page.locator("main h1")).toBeFocused();
+  await page.reload();
+  await expect(page.locator("main h1")).toHaveText(
+    "Find your next step. Stay in control.",
+  );
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.locator("main h1")).toHaveText("Your account is optional.");
+  await page.goBack();
+  await expect(page).toHaveURL(/step=2$/);
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/step=1$/);
+  await page.goto("/signup?step=invalid");
+  await expect(page).toHaveURL(/\/signup\?step=1$/);
+  await page
+    .getByRole("link", { name: "Use Tholi locally", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(
+    page
+      .locator(".browser-install-options")
+      .getByRole("link", { name: "Add to Firefox", exact: true }),
+  ).toHaveAttribute("href", storeUrls.Firefox);
+});
+
+for (const width of [375, 768, 1024, 1440])
+  for (const theme of ["light", "dark"] as const)
+    test(`signup onboarding reflows at ${width}px in ${theme} with reduced motion`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      await page.goto("/signup");
+      await page
+        .getByRole("button", { name: "Essential only", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Cookie choices" }),
+      ).toBeHidden();
+      if (theme === "light")
+        await page
+          .getByRole("button", { name: "Switch to light mode" })
+          .click();
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-tholi-theme",
+        theme,
+      );
+      const scene = page.locator(".tholi-introduction-scene");
+      for (let step = 1; step <= 3; step++) {
+        await expect(scene).toBeVisible();
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        await expect(scene).toHaveCSS("animation-name", "none");
+        await page.evaluate(() =>
+          window.scrollTo({ top: 0, behavior: "instant" }),
+        );
+        const video = scene.locator("video");
+        await expect(video).toHaveAttribute(
+          "src",
+          `/media/onboarding/${["destination", "guidance", "local"][step - 1]}.webm`,
+        );
+        await expect(video).toHaveJSProperty("controls", false);
+        await expect(video).toHaveJSProperty("loop", true);
+        await expect(video).toHaveJSProperty("paused", true);
+        expect(
+          await video.evaluate((element: HTMLVideoElement) => element.autoplay),
+        ).toBe(false);
+        expect(
+          await video.evaluate((element: HTMLVideoElement) => element.poster),
+        ).toContain("/media/onboarding/");
+        await expect(
+          scene.locator(".video-toolbar, track, a, button, figcaption"),
+        ).toHaveCount(0);
+        await video.evaluate(async (element: HTMLVideoElement) => {
+          const poster = new Image();
+          poster.src = element.poster;
+          await poster.decode();
+        });
+        await page.screenshot({
+          path: info.outputPath(`signup-${width}-${theme}-${step}.png`),
+          fullPage: true,
+        });
+        if (step < 3)
+          await page.getByRole("button", { name: "Next", exact: true }).click();
+      }
+    });
+
+test("signup onboarding recordings autoplay silently, loop and pause when hidden without advancing setup", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/signup?step=2");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const video = page.locator(".tholi-introduction-scene video");
+  await video.scrollIntoViewIfNeeded();
+  await expect(video).toHaveJSProperty("paused", false);
+  await expect(video).toHaveJSProperty("muted", true);
+  await expect(video).toHaveJSProperty("controls", false);
+  await expect(video).toHaveJSProperty("loop", true);
+  await expect(
+    page
+      .locator(".tholi-introduction-scene")
+      .locator("track, button, a, .video-toolbar, figcaption"),
+  ).toHaveCount(0);
+  expect(
+    await video.evaluate((element: HTMLVideoElement) => [
+      element.videoWidth,
+      element.videoHeight,
+    ]),
+  ).toEqual([1040, 800]);
+  await video.evaluate((element: HTMLVideoElement) => {
+    element.currentTime = element.duration - 0.15;
+  });
+  await expect
+    .poll(() =>
+      video.evaluate((element: HTMLVideoElement) => element.currentTime),
+    )
+    .toBeLessThan(2);
+  await expect(video).toHaveJSProperty("paused", false);
+  await expect(page).toHaveURL(/step=2$/);
+  await page.setViewportSize({ width: 1280, height: 320 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(video).toHaveJSProperty("paused", true);
+  await video.scrollIntoViewIfNeeded();
+  await expect(video).toHaveJSProperty("paused", false);
+  // Headless tabs stay visible. Exercise the real visibility listener explicitly.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(video).toHaveJSProperty("paused", true);
+  await page.evaluate(() => {
+    delete (document as unknown as { hidden?: boolean }).hidden;
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(video).toHaveJSProperty("paused", false);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(video).toHaveJSProperty("paused", true);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(video).toHaveJSProperty("paused", false);
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  await next.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/step=3$/);
+  await expect(page.locator("main h1")).toBeFocused();
+});
+
+test("signup onboarding media failure leaves progress available and data saving suppresses autoplay", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      value: { saveData: true },
+    }),
+  );
+  await page.goto("/signup");
+  await page
+    .getByRole("button", { name: "Essential only", exact: true })
+    .click();
+  const video = page.locator(".tholi-introduction-scene video");
+  await expect(video).toHaveJSProperty("paused", true);
+  await expect(video).toHaveAttribute("preload", "none");
+  await page.route("**/media/onboarding/guidance.webm", (route) =>
+    route.fulfill({ status: 404 }),
+  );
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await video.evaluate((element: HTMLVideoElement) =>
+    element.play().catch(() => {}),
+  );
+  await expect(page.locator(".product-video [role=status]")).toContainText(
+    "video could not be played",
+  );
+  await expect(page.locator(".product-video [role=status]")).not.toContainText(
+    /transcript|Resume/,
+  );
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.locator("main h1")).toHaveText("Your account is optional.");
+});
+
+for (const failure of ["missing", "invalid", "unavailable"]) {
+  test(`signup continues when recording metadata is ${failure}`, async ({
+    page,
+  }) => {
+    await page.route("**/media/onboarding/manifest.json", (route) =>
+      failure === "missing"
+        ? route.abort()
+        : route.fulfill({
+            status: failure === "unavailable" ? 503 : 200,
+            contentType: "application/json",
+            body: JSON.stringify({ schemaVersion: 1, clips: [] }),
+          }),
+    );
+    await page.goto("/signup");
+    await page
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    await expect(page.locator(".video-unavailable")).toContainText(
+      "continue the introduction without it",
+    );
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page).toHaveURL(/step=2$/);
+    await page
+      .getByRole("link", { name: "Use Tholi locally", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/download$/);
+  });
+}
+
 test("mobile account-free navigation offers browser selection and both stores", async ({
   page,
 }) => {
@@ -25,8 +259,8 @@ test("mobile account-free navigation offers browser selection and both stores", 
   await page.getByRole("button", { name: "Open navigation" }).click();
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByRole("link", { name: /Sign in|Sign up|Get started/ }),
-  ).toHaveCount(0);
+    dialog.getByRole("link", { name: "Sign in", exact: true }),
+  ).toHaveAttribute("href", "/signin");
   await dialog.locator(".web-primary").click();
   await expect(page).toHaveURL(/\/download$/);
   await expect(dialog).toHaveCount(0);
@@ -68,10 +302,16 @@ test("published store download links navigate independently of cookies and devel
     "About",
     "Get Tholi",
     "Docs",
+    "Sign in",
   ]);
   await expect(
-    page.getByRole("link", { name: /Get started|Sign in|Sign up/ }),
-  ).toHaveCount(0);
+    page.locator(".hero").getByRole("link", { name: "Sign up", exact: true }),
+  ).toHaveAttribute("href", "/signup");
+  await expect(
+    page
+      .locator(".hero")
+      .getByRole("link", { name: "Use Tholi locally", exact: true }),
+  ).toHaveAttribute("href", "/download");
   const headerStore = browserName === "firefox" ? "Firefox" : "Chrome";
   await page
     .locator(".header-actions")
@@ -171,10 +411,8 @@ for (const route of ["signin", "signup", "welcome", "welcome.html"])
       "Legacy account reader",
     );
     await expect(
-      page
-        .locator("nav")
-        .getByRole("link", { name: /Welcome|Sign in|Sign up/ }),
-    ).toHaveCount(0);
+      page.locator("nav").getByRole("link", { name: "Sign in", exact: true }),
+    ).toHaveCount(1);
     await page.goBack();
     await expect(page).toHaveURL(/\/about$/);
     await page.goForward();

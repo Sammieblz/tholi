@@ -1,4 +1,9 @@
 import "./account.css";
+import { useEffect } from "react";
+import {
+  Introduction,
+  introductionStep,
+} from "../../../../../packages/ui/onboarding";
 import { ShieldCheck } from "iconoir-react";
 import { Wayfinder } from "../../../../../packages/ui/WayfinderMark";
 import { SiteLink, useRouter } from "../../app/router";
@@ -6,8 +11,60 @@ import { useAccount } from "./session";
 
 export function AuthPage({ signup }: { signup: boolean }) {
   const account = useAccount();
-  const { search } = useRouter();
-  const action = signup ? "signup" : "signin";
+  const { search, go } = useRouter();
+  const rawStep = new URLSearchParams(search).get("step");
+  const step = introductionStep(rawStep);
+  useEffect(() => {
+    if (account.session) go("/account", { replace: true });
+  }, [account.session, go]);
+  useEffect(() => {
+    if (signup && rawStep !== null && !["1", "2", "3"].includes(rawStep))
+      go("/signup?step=1", { replace: true });
+  }, [signup, rawStep, go]);
+  if (signup)
+    return (
+      <Introduction
+        step={step}
+        onStep={(next) => go(`/signup?step=${next}`)}
+        register={
+          account.configured && !account.loading && !account.session ? (
+            <a
+              className={step === 3 ? "tholi-introduction-primary" : undefined}
+              href={account.authorizationUrl("signup")}
+            >
+              {step === 3 ? "Create your account" : "Skip introduction"}
+            </a>
+          ) : null
+        }
+        local={<SiteLink to="/download">Use Tholi locally</SiteLink>}
+        signIn={
+          <SiteLink to="/signin">Already have an account? Sign in</SiteLink>
+        }
+        notice={
+          <>
+            {account.loading && (
+              <p role="status">Checking your account session.</p>
+            )}
+            {!account.configured && (
+              <p className="small" role="status">
+                Accounts are not available on this website yet. You can install
+                and use Tholi locally without an account.
+              </p>
+            )}
+            {account.error && (
+              <p className="auth-error" role="alert">
+                {account.error}
+              </p>
+            )}
+            <p className="small">
+              Creating an account does not enable cloud processing. Read our{" "}
+              <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
+              <SiteLink to="/terms">terms</SiteLink>.
+            </p>
+          </>
+        }
+      />
+    );
   return (
     <section className="auth-layout" aria-busy={account.loading}>
       <aside className="auth-aside" aria-hidden="true">
@@ -29,7 +86,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
       </aside>
       <div className="auth-card">
         <p className="eyebrow">YOUR THOLI ACCOUNT</p>
-        <h1>{signup ? "A clear place to start." : "Welcome back."}</h1>
+        <h1>Welcome back.</h1>
         {new URLSearchParams(search).has("error") && (
           <p className="auth-error" role="alert">
             Sign-in was not completed. Try again when you are ready.
@@ -47,15 +104,14 @@ export function AuthPage({ signup }: { signup: boolean }) {
         ) : account.configured ? (
           <>
             <p>
-              Continue to Tholi's identity provider to{" "}
-              {signup ? "create your account" : "sign in"}. Your password stays
-              with the identity provider.
+              Continue to Tholi's identity provider to sign in. Your password
+              stays with the identity provider.
             </p>
             <a
               className="primary web-primary"
-              href={account.authorizationUrl(action)}
+              href={account.authorizationUrl("signin")}
             >
-              Continue to {signup ? "sign up" : "sign in"}
+              Continue to sign in
             </a>
             <p className="small">
               Secure session cookies are essential for accounts. Optional cookie
@@ -65,13 +121,6 @@ export function AuthPage({ signup }: { signup: boolean }) {
               <a href={account.authorizationUrl("recover")}>
                 Recover account access
               </a>
-            </p>
-            <p className="auth-switch">
-              <SiteLink to={signup ? "/signin" : "/signup"}>
-                {signup
-                  ? "Already have an account? Sign in"
-                  : "New here? Sign up"}
-              </SiteLink>
             </p>
           </>
         ) : (
@@ -90,6 +139,9 @@ export function AuthPage({ signup }: { signup: boolean }) {
             {account.error}
           </p>
         )}
+        <p className="auth-switch">
+          <SiteLink to="/signup">New here? Sign up</SiteLink>
+        </p>
         <p className="auth-legal small">
           Read our <SiteLink to="/privacy">privacy notice</SiteLink> and{" "}
           <SiteLink to="/terms">terms</SiteLink>. Account features depend on the
@@ -97,9 +149,7 @@ export function AuthPage({ signup }: { signup: boolean }) {
         </p>
         <div className="auth-independent">
           <ShieldCheck width={18} aria-hidden="true" />
-          <SiteLink to="/download">
-            Use local guidance without an account
-          </SiteLink>
+          <SiteLink to="/download">Use Tholi locally</SiteLink>
         </div>
       </div>
     </section>

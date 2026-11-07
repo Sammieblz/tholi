@@ -284,7 +284,14 @@ services:
 
   oidc:
     image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
-    command: ["start-dev", "--import-realm"]
+    command:
+      [
+        "start-dev",
+        "--import-realm",
+        "--spi-theme--static-max-age=-1",
+        "--spi-theme--cache-themes=false",
+        "--spi-theme--cache-templates=false",
+      ]
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/tholi_identity
@@ -305,6 +312,7 @@ services:
       THOLI_SERVICE_PUBLIC_ORIGIN: http://127.0.0.1:${API_HOST_PORT:-8788}
       THOLI_WEB_ORIGIN: ${THOLI_WEB_ORIGIN:-http://127.0.0.1:5174}
     volumes:
+      - ./dist/identity-theme/tholi:/opt/keycloak/themes/tholi:ro
       - ./infra/local/oidc/tholi-local-realm.json:/opt/keycloak/data/import/tholi-local-realm.json:ro
       - ./infra/local/oidc/seed.sh:/opt/keycloak/data/seed.sh:ro
     networks: [application, database]

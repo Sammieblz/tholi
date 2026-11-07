@@ -214,6 +214,10 @@ function invalidate() {
   cancelServiceInference();
   if (!accountChanging) invalidateAccountData();
 }
+/** Local setup may outlive a dismissed authentication surface. Fence its callback. */
+export function cancelPendingServiceSignIn() {
+  if (signingIn) invalidate();
+}
 /** Revoke a transmission span immediately without signing the account out. */
 export function cancelServiceInference() {
   inferenceGeneration++;

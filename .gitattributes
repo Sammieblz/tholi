@@ -1,6 +1,9 @@
 # Preserve the raw bytes checked against recording provenance on every OS.
 apps/public/media/video/*.vtt text eol=lf
 apps/public/media/video/*.txt text eol=lf
+apps/public/media/onboarding/*.vtt text eol=lf
+apps/public/media/onboarding/*.txt text eol=lf
+scripts/fixtures/onboarding.html text eol=lf
 
 # Frozen validation inputs and their checksums use canonical LF endings.
 tests/fixtures/*/corpus.json text eol=lf

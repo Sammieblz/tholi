@@ -1,0 +1,9 @@
+Follow the highlight at your pace
+
+Actual Pause, Resume and verified arrival animations. The operator clicks the website control; Tholi independently checks the result.
+
+00:00:00.003 Tholi points to Large text. The guiding Wayfinder and page highlight are actual extension animations.
+00:00:02.412 Conversation explains the current step using the same local journey. No cloud model is called.
+00:00:04.498 Choose Pause to pause guidance. The task stays available to resume.
+00:00:06.150 Choose Resume. The live control is checked again before guidance continues.
+00:00:07.569 Large text is selected and the article text is larger. Tholi verifies the result and its Wayfinder changes into the completion mark.

@@ -2,6 +2,7 @@ import { test, expect } from "../../../support/browser-test";
 import { openBrandedExtension } from "../../../support/branded-extension";
 import { verifyWebDriverSurfaces } from "../../../support/webdriver-surfaces";
 import { acceptanceServer } from "../../../support/fixture-server";
+import { verifyFreshWelcomeSetup } from "../../../support/webdriver-welcome";
 for (const browser of ["chrome", "edge", "brave"] as const)
   test(
     browser +
@@ -10,7 +11,10 @@ for (const browser of ["chrome", "edge", "brave"] as const)
       const fixture = await acceptanceServer();
       let app: Awaited<ReturnType<typeof openBrandedExtension>> | undefined;
       try {
-        app = await openBrandedExtension(browser, fixture.url);
+        app = await openBrandedExtension(browser, fixture.url, [], {
+          nativeLifecycle: browser === "chrome",
+        });
+        if (browser === "chrome") await verifyFreshWelcomeSetup(app);
         const current = app;
         await info.attach("browser-runtime", {
           body: Buffer.from(

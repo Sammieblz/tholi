@@ -4,6 +4,7 @@ import {
   setPrivateSetting,
 } from "../platform/private-settings";
 import { api, type Tabs } from "../platform/api";
+import { isWelcome, setupCommand } from "./setup-service";
 import {
   hostPermissionPattern,
   websiteHostPermissions,
@@ -66,6 +67,7 @@ import {
 import {
   clearSurfacePresentation,
   invalidateUi,
+  invalidateAccountUi,
   isPanel,
   isWidget,
   trustedUi,
@@ -111,6 +113,32 @@ interface Context {
 
 export function registerMessages(context: Context) {
   api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (typeof raw?.type === "string" && raw.type.startsWith("SETUP_")) {
+      if (!isPanel(sender) && !isWelcome(sender)) {
+        respond({ error: "Open setup from a trusted Tholi interface." });
+        return;
+      }
+      void setupCommand(raw)
+        .then((result) => {
+          if (raw.type === "SETUP_COMPLETE")
+            invalidateAccountUi("SETUP_CHANGED", sender);
+          respond(result);
+        })
+        .catch(() =>
+          respond({
+            error:
+              "Setup could not be updated. Local guidance remains available.",
+          }),
+        );
+      return true;
+    }
+    if (
+      isWelcome(sender) &&
+      !["AUTH_STATUS", "AUTH_CONFIGURE", "AUTH_SIGN_IN"].includes(raw?.type)
+    ) {
+      respond({ error: "The welcome page can only manage setup and sign-in." });
+      return;
+    }
     if (typeof raw?.type === "string" && raw.type.startsWith("SAVED_DATA_")) {
       if (!isPanel(sender)) {
         respond({ error: "Open cloud-saved data from the Tholi sidebar." });
@@ -142,7 +170,7 @@ export function registerMessages(context: Context) {
       return;
     }
     if (typeof raw?.type === "string" && raw.type.startsWith("AUTH_")) {
-      if (!isPanel(sender)) {
+      if (!isPanel(sender) && !isWelcome(sender)) {
         respond({ error: "Open account controls from the Tholi sidebar." });
         return;
       }
@@ -160,7 +188,21 @@ export function registerMessages(context: Context) {
             error:
               "The account request could not be completed. Review the service origin and account permissions, then try again.",
           }),
-        );
+        )
+        .finally(() => {
+          if (
+            [
+              "AUTH_CONFIGURE",
+              "AUTH_SIGN_IN",
+              "AUTH_SIGN_OUT",
+              "AUTH_REFRESH",
+              "AUTH_REVOKE",
+              "AUTH_INFERENCE_CONFIGURE",
+              "AUTH_EVALUATION_ACTIVATE",
+            ].includes(raw.type)
+          )
+            invalidateAccountUi("ACCOUNT_CHANGED", sender);
+        });
       return true;
     }
     if (raw?.type === "UI_RESET_SESSION") {

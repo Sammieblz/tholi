@@ -34,10 +34,13 @@ export function HomePage() {
             changes.
           </p>
           <div className="hero-actions">
-            <SiteLink to="/download" className="web-primary">
-              Get Tholi
+            <SiteLink to="/signup" className="web-primary">
+              Sign up
             </SiteLink>
-            <SiteLink to="/#practice" className="web-secondary">
+            <SiteLink to="/download" className="web-secondary">
+              Use Tholi locally
+            </SiteLink>
+            <SiteLink to="/#practice" className="web-text-link">
               Try it here
             </SiteLink>
           </div>
