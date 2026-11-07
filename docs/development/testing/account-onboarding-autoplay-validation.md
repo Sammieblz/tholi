@@ -180,3 +180,17 @@ crop, OCR, comparison and lease assertion. The separate native layout cohort
 retains its larger viewports. This bounded pixel evidence does not promise that
 larger screenshots on slower hardware finish before the guard; those captures
 continue to fail closed. Successful pixel reports retain sanitized timing too.
+
+The fresh complete local `test:ci` gate passed as run
+`ab8d0521-dca5-4f11-9195-f4e7b21f2cac`: 1,302 unit tests and 174 browser cases
+(57 core, 20 integration, five native Firefox and 92 UI). It verified the
+unchanged immutable artifacts before running. The subsequent pixel-only fixture
+tuning passed both native target cases at 2x scale, retaining all assertions;
+its separate log is `output/qa/pr90-ci/bounded-native-capture-targets.log`.
+The real Docker smoke also passed and removed only its disposable project.
+
+The [following hosted attempt](https://github.com/Sammieblz/tholi/actions/runs/42367436446)
+encountered GitHub ArtifactService `ListArtifacts` timeouts on Intel macOS 15
+before any browser test ran. This infrastructure failure is distinct from the
+capture rejection above. Final hosted results belong to the complete fresh
+workflow on PR #90's current head, without mixing native reports across attempts.
