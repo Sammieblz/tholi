@@ -406,113 +406,183 @@ test("Firefox uses native document identity, local planning and independently ve
     const currentPage = await app.message({ type: "GET_PAGE" });
     expect(currentPage.error).toBeUndefined();
     expect(currentPage.perception).toBeTruthy();
-    const capture = await app.extension(async (tabId: number) => {
-      const api = (globalThis as any).browser;
-      const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
-      const captureId = crypto.randomUUID();
-      let metadata: CaptureMetadata;
-      let image: string;
-      let browserZoom: number;
-      try {
-        const prepared = await api.tabs.sendMessage(
-          tabId,
-          { type: "PREPARE_CAPTURE", sessionId: session.sessionId, captureId },
-          { frameId: 0 },
-        );
-        if (prepared?.error || !prepared?.metadata) {
-          const reasons = [
-            "A current running task is required for capture.",
-            "Current page perception is unavailable.",
-            "The capture task changed.",
-            "Complete private capture evidence is unavailable.",
-          ];
-          throw Error(
-            "Current Firefox capture metadata unavailable (prepare:" +
-              reasons.indexOf(prepared?.error) +
-              ")",
-          );
-        }
-        metadata = prepared.metadata;
-        browserZoom = await api.tabs.getZoom(tabId);
-        image = await api.tabs.captureVisibleTab(
-          (await api.tabs.get(tabId)).windowId,
-          { format: "png" },
-        );
-        const checked = await api.tabs.sendMessage(
-          tabId,
-          { type: "CHECK_CAPTURE", sessionId: session.sessionId, captureId },
-          { frameId: 0 },
-        );
-        if (!checked?.current) throw Error("Firefox capture was invalidated");
-      } finally {
-        await api.tabs.sendMessage(
-          tabId,
-          { type: "RESTORE_CAPTURE", sessionId: session.sessionId, captureId },
-          { frameId: 0 },
-        );
-      }
-      const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
-        type: "module",
-      });
-      try {
-        const id = crypto.randomUUID();
-        const result: any = await new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () => reject(Error("Masked capture OCR deadline")),
-            30000,
-          );
-          worker.onerror = (event) => {
-            clearTimeout(timer);
-            reject(Error(event.message));
-          };
-          worker.onmessage = ({ data }) => {
-            if (data.id === id) {
-              clearTimeout(timer);
-              data.error ? reject(Error(data.error)) : resolve(data.value);
-            }
-          };
-          worker.postMessage({
-            type: "OCR_REQUEST",
-            id,
-            image,
-            metadata,
-            browserZoom,
-            captureCssBounds: {
-              x: 0,
-              y: 0,
-              width: metadata.viewport.width,
-              height: metadata.viewport.height,
-            },
-            stamp: {
-              requestId: session.view.request.id,
-              journeyId: session.view.journey.id,
-              contextRevision: session.view.journey.workflow?.revision || 0,
-              documentId: session.documentId,
-              observationRevision: metadata.observationRevision,
-              viewportRevision: metadata.viewportRevision,
+    await app.extension((tabId: number) => {
+      // Selenium BiDi expires one command after 30 seconds. Keep the OCR
+      // owner's existing deadline and observe its result through short reads.
+      const result: {
+        status: string;
+        value?: unknown;
+        error?: string;
+        resume?: () => void;
+      } = {
+        status: "pending",
+      };
+      (globalThis as any).__tholiConformanceCapture = result;
+      void (async () => {
+        const api = (globalThis as any).browser;
+        const session = await api.runtime.sendMessage({ type: "GET_SESSION" });
+        const captureId = crypto.randomUUID();
+        let metadata: CaptureMetadata;
+        let image: string;
+        let browserZoom: number;
+        try {
+          const prepared = await api.tabs.sendMessage(
+            tabId,
+            {
+              type: "PREPARE_CAPTURE",
+              sessionId: session.sessionId,
               captureId,
             },
-          });
+            { frameId: 0 },
+          );
+          if (prepared?.error || !prepared?.metadata) {
+            const reasons = [
+              "A current running task is required for capture.",
+              "Current page perception is unavailable.",
+              "The capture task changed.",
+              "Complete private capture evidence is unavailable.",
+            ];
+            throw Error(
+              "Current Firefox capture metadata unavailable (prepare:" +
+                reasons.indexOf(prepared?.error) +
+                ")",
+            );
+          }
+          metadata = prepared.metadata;
+          browserZoom = await api.tabs.getZoom(tabId);
+          image = await api.tabs.captureVisibleTab(
+            (await api.tabs.get(tabId)).windowId,
+            { format: "png" },
+          );
+          const checked = await api.tabs.sendMessage(
+            tabId,
+            { type: "CHECK_CAPTURE", sessionId: session.sessionId, captureId },
+            { frameId: 0 },
+          );
+          if (!checked?.current) throw Error("Firefox capture was invalidated");
+        } finally {
+          await api.tabs.sendMessage(
+            tabId,
+            {
+              type: "RESTORE_CAPTURE",
+              sessionId: session.sessionId,
+              captureId,
+            },
+            { frameId: 0 },
+          );
+        }
+        // Capture the website while it is active, restore suppression, then let
+        // the harness foreground this extension-owned worker test tab. This
+        // checks packaged cold OCR without background-tab timer throttling.
+        result.status = "captured";
+        await new Promise<void>((resolve) => {
+          result.resume = resolve;
         });
-        return {
-          metadata,
-          png: image.startsWith("data:image/png;base64,"),
-          leaked: JSON.stringify(result).includes("SENTINEL"),
-        };
-      } finally {
-        worker.terminate();
-      }
+        const worker = new Worker(api.runtime.getURL("ocr-worker.js"), {
+          type: "module",
+        });
+        try {
+          const id = crypto.randomUUID();
+          const result: any = await new Promise((resolve, reject) => {
+            const timer = setTimeout(
+              () => reject(Error("Masked capture OCR deadline")),
+              30000,
+            );
+            worker.onerror = (event) => {
+              clearTimeout(timer);
+              reject(Error(event.message));
+            };
+            worker.onmessage = ({ data }) => {
+              if (data.id === id) {
+                clearTimeout(timer);
+                data.error ? reject(Error(data.error)) : resolve(data.value);
+              }
+            };
+            worker.postMessage({
+              type: "OCR_REQUEST",
+              id,
+              image,
+              metadata,
+              browserZoom,
+              captureCssBounds: {
+                x: 0,
+                y: 0,
+                width: metadata.viewport.width,
+                height: metadata.viewport.height,
+              },
+              stamp: {
+                requestId: session.view.request.id,
+                journeyId: session.view.journey.id,
+                contextRevision: session.view.journey.workflow?.revision || 0,
+                documentId: session.documentId,
+                observationRevision: metadata.observationRevision,
+                viewportRevision: metadata.viewportRevision,
+                captureId,
+              },
+            });
+          });
+          return {
+            metadata,
+            png: image.startsWith("data:image/png;base64,"),
+            leaked: JSON.stringify(result).includes("SENTINEL"),
+          };
+        } finally {
+          worker.terminate();
+        }
+      })().then(
+        (value) => Object.assign(result, { status: "completed", value }),
+        (error) =>
+          Object.assign(result, {
+            status: "failed",
+            error:
+              error instanceof Error ? error.message : "Masked capture failed.",
+          }),
+      );
     }, app.tabId);
+    const staged = await app.waitFor(
+      () =>
+        current.extension(() => (globalThis as any).__tholiConformanceCapture),
+      (result) => ["captured", "failed"].includes(result?.status),
+      "Native pixels are captured and suppression is restored before changing test-tab focus",
+    );
+    expect(staged.status, staged.error).toBe("captured");
+    await app.focusPanel();
+    await app.extension(() => {
+      const result = (globalThis as any).__tholiConformanceCapture;
+      result.status = "processing";
+      result.resume();
+      delete result.resume;
+    });
+    const captured = await app
+      .waitFor(
+        () =>
+          current.extension(
+            () => (globalThis as any).__tholiConformanceCapture,
+          ),
+        (result) => ["completed", "failed"].includes(result?.status),
+        "The existing masked OCR operation settles within its command envelope",
+        35000,
+      )
+      .finally(() =>
+        current.extension(() => {
+          delete (globalThis as any).__tholiConformanceCapture;
+        }),
+      );
+    expect(captured.status, captured.error).toBe("completed");
+    const capture = captured.value;
     expect(capture.png).toBe(true);
     expect(capture.metadata.masks.length).toBeGreaterThan(0);
     expect(JSON.stringify(capture)).not.toContain("SENTINEL");
     expect(capture.leaked).toBe(false);
+    await app.site(() => document.title);
     await info.attach("firefox-masked-capture", {
       body: Buffer.from(
         JSON.stringify({
           maskedRegions: capture.metadata.masks.length,
           png: true,
           noPrivateOcrText: true,
+          workerHost: "foreground packaged extension test tab",
+          backgroundWorkerHostCertified: false,
         }),
       ),
       contentType: "application/json",

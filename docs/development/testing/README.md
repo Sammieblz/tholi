@@ -29,6 +29,9 @@ enrollment and separate processing consent. Paid intent never establishes checko
 or entitlement, and account setup never imports device knowledge automatically.
 
 Use Node 24.19.x. Install once with `npm ci` and `npx playwright install chromium firefox`.
+The [security-hardening validation record](security-hardening-validation.md) tracks
+adversarial boundaries, idle identity cleanup, dependency/image/license review and
+remaining deployment gates. Synthetic checks are distinct from a security audit.
 Windows retains the existing complete validation owners. Native macOS coverage
 uses the same built extension targets through the shared browser harness, as
 described in the [macOS and provider feature record](macos-byok-learning-validation.md).

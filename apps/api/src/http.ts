@@ -34,6 +34,41 @@ export class ApiError extends Error {
 }
 
 const requestContexts = new WeakMap<FastifyRequest, ServiceRequestContext>();
+/** A byte cap alone does not bound recursive validator work or issue allocation. */
+export const SERVICE_JSON_BUDGET = Object.freeze({
+  depth: 64,
+  nodes: 32768,
+  collection: 4096,
+});
+function assertJsonBudget(body: unknown) {
+  const pending = [{ value: body, depth: 0 }];
+  let nodes = 0;
+  while (pending.length) {
+    const { value, depth } = pending.pop()!;
+    if (
+      ++nodes > SERVICE_JSON_BUDGET.nodes ||
+      depth > SERVICE_JSON_BUDGET.depth
+    )
+      throw new ApiError(
+        413,
+        "PAYLOAD_TOO_LARGE",
+        "Request structure exceeds the size limit.",
+      );
+    if (value === null || typeof value !== "object") continue;
+    const values = Array.isArray(value) ? value : Object.values(value);
+    if (
+      values.length > SERVICE_JSON_BUDGET.collection ||
+      nodes + pending.length + values.length > SERVICE_JSON_BUDGET.nodes
+    )
+      throw new ApiError(
+        413,
+        "PAYLOAD_TOO_LARGE",
+        "Request structure exceeds the size limit.",
+      );
+    for (const child of values)
+      pending.push({ value: child, depth: depth + 1 });
+  }
+}
 const transportRequestIds = new WeakMap<IncomingMessage, string>();
 const requestObservations = new WeakMap<
   FastifyRequest,
@@ -280,6 +315,9 @@ export async function createHttpApi(
     return reply.code(safe.statusCode).send(serviceError(request, safe));
   });
   if (profile === "service") {
+    app.addHook("preValidation", async (request) =>
+      assertJsonBudget(request.body),
+    );
     const buckets = new Map<string, { count: number; expiresAt: number }>();
     let nextSweepAt = 0;
     let nextExpiry = 0;

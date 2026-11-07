@@ -9,7 +9,11 @@ import { connect as openSocket, type Socket } from "node:net";
 import { afterEach, expect, test, vi } from "vitest";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import apiPackage from "../../../apps/api/package.json";
-import { ApiError, duringServiceRequest } from "../../../apps/api/src/http";
+import {
+  ApiError,
+  duringServiceRequest,
+  SERVICE_JSON_BUDGET,
+} from "../../../apps/api/src/http";
 import type { ServiceRequestContext } from "../../../apps/api/src/capabilities";
 import { createServiceApi } from "../../../apps/api/src/server";
 import type { ServiceTransportPolicy } from "../../../apps/api/src/config";
@@ -100,6 +104,48 @@ async function service(
   applications.push(app);
   return app;
 }
+
+test("service structure admission bounds collections, depth and total nodes before schema validation", async () => {
+  const app = await service();
+  const validate = vi.fn(() => ({ value: true }));
+  app.post(
+    "/api/v1/fixture-structure",
+    {
+      preValidation: async () => {
+        validate();
+      },
+    },
+    async () => ({ ok: true }),
+  );
+  let deep: unknown = "synthetic";
+  for (let i = 0; i <= SERVICE_JSON_BUDGET.depth; i++) deep = [deep];
+  for (const payload of [
+    Array(SERVICE_JSON_BUDGET.collection + 1).fill(null),
+    deep,
+    Array.from({ length: 512 }, () => Array(100).fill(0)),
+  ]) {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/fixture-structure",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify(payload),
+    });
+    expect(response.statusCode).toBe(413);
+    expect(response.json().error.code).toBe("PAYLOAD_TOO_LARGE");
+    expectCorrelation(response);
+  }
+  expect(validate).not.toHaveBeenCalled();
+  expect(
+    (
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/fixture-structure",
+        payload: { items: [1, 2, 3] },
+      })
+    ).statusCode,
+  ).toBe(200);
+  expect(validate).toHaveBeenCalledOnce();
+});
 
 test("direct service admission ignores forged forwarding and correlation headers", async () => {
   const app = await service([], { rateLimitMax: 2 });

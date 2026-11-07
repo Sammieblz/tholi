@@ -442,6 +442,17 @@ export function privacySections(): LegalSection[] {
             not send a deletion request.
           </p>
           <p>
+            Where account services are configured, Account security provides
+            private exports and account deletion. Deletion immediately disables
+            the account, sessions and stored provider connections, then queues
+            cleanup. A pending receipt does not confirm physical erasure.
+            Limited identity and abuse-prevention markers, outstanding financial
+            records, security audit metadata and deletion tombstones remain for
+            their stated purposes. Backups, delivered mail, provider copies,
+            downloaded exports and your device data have separate lifecycles.
+            Restored service data must respect prior deletion requests.
+          </p>
+          <p>
             For questions, access, correction or deletion requests, email{" "}
             <Contact />. Include only what is needed to explain your request. We
             cannot retrieve or erase device-only extension data remotely.
@@ -672,6 +683,16 @@ export function termsSections(): LegalSection[] {
             cancelled response is not a guarantee of no provider charge. Saving
             a key makes no model request. Future paid Tholi services require
             their own accurate terms and disclosures before activation.
+          </p>
+          <p>
+            Local guidance needs no Tholi account. A development Free Cloud
+            allowance, where offered, is limited and confirmed by the service;
+            sign-in or a plan selection alone grants no credits or permission to
+            transmit page data. Paid Tholi checkout is unavailable in this
+            preparation. Future prices, renewals and payment terms must be
+            disclosed before you agree to a purchase. Exhausted processing
+            allowances do not remove authorized access to saved data, exports or
+            deletion controls.
           </p>
           <p>
             If you connect a backend, choose an operator you trust, protect its

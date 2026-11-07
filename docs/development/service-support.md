@@ -109,7 +109,8 @@ copies until their documented rotation deadline; restoring a backup must replay
 deletion and expiry records before serving account data. Financial records, when
 billing is implemented, have their own documented legal retention and must not
 retain support bodies or diagnostics as billing evidence. These obligations do
-not make the future account-deletion endpoint available in this milestone.
+not establish physical erasure. The [account deletion owner](account-dashboard.md#account-deletion)
+now coordinates this cleanup through the existing durable worker.
 
 ## Configuration and local development
 
@@ -176,6 +177,6 @@ does not certify a release, external email delivery, a hosted deployment or
 screen-reader speech. Packaging still requires the existing full certification.
 
 General cloud saved-data export remains [#59](https://github.com/Sammieblz/tholi/issues/59),
-account deletion remains [#45](https://github.com/Sammieblz/tholi/issues/45), and
+account deletion is described in [the account workspace](account-dashboard.md#account-deletion), and
 billing remains [#50](https://github.com/Sammieblz/tholi/issues/50). This bounded
 diagnostic and its expiry are not substitutes for those milestones.

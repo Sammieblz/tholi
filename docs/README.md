@@ -18,6 +18,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Optional accounts, OIDC and cross-client session security](development/service-identity.md)
 - [Shared account entry, illustrated onboarding and extension first-run setup](development/account-onboarding.md)
 - [Workspace authorization, tenant isolation and cloud consent](development/service-authorization.md)
+- [Service threat model, retention and incident/restore procedures](development/service-security.md)
 - [Durable jobs, worker isolation, scheduling and recovery](development/service-jobs.md)
 - [Account support, notification mail and private diagnostic files](development/service-support.md)
 - [Gateway, CDN, TLS and optional edge delivery](development/service-delivery.md)

@@ -336,6 +336,35 @@ describe("trusted OIDC provider verification", () => {
       network.fetcher.mock.calls.filter(([url]) => url === options.jwksUri),
     ).toHaveLength(2);
   });
+  it("keeps key discovery at the configured destination and rejects redirects, non-JSON and invalid UTF-8", async () => {
+    const token = await signed();
+    for (const response of [
+      new Response(null, {
+        status: 302,
+        headers: { location: "http://169.254.169.254/metadata" },
+      }),
+      new Response('{"keys":[]}', { headers: { "content-type": "text/html" } }),
+      new Response(new Uint8Array([0xff]), {
+        headers: { "content-type": "application/json" },
+      }),
+    ]) {
+      const network = await transport(token);
+      const original = network.fetcher.getMockImplementation()!;
+      network.fetcher.mockImplementation(async (url, init) =>
+        String(url) === options.jwksUri ? response : original(url, init),
+      );
+      await expect(
+        network.provider.exchange(exchangeInput()),
+      ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+      expect(network.fetcher.mock.calls.map(([url]) => String(url))).toEqual([
+        options.tokenEndpoint,
+        options.jwksUri,
+      ]);
+      const init = network.fetcher.mock.calls[1][1]!;
+      expect(init).toMatchObject({ redirect: "manual", credentials: "omit" });
+      expect(new Headers(init.headers).has("authorization")).toBe(false);
+    }
+  });
   it("validates signed logout events and rejects login tokens, nonce and missing target", async () => {
     const event = { "http://schemas.openid.net/event/backchannel-logout": {} };
     for (const [claims, valid] of [

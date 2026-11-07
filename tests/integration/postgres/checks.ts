@@ -1632,7 +1632,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     await runPlanChecks(runtime, migration, record, worker);
     await runSavedDataChecks(runtime, migration, record, worker);
     await runAccountChecks(runtime, migration, record, worker);
-    await runIdentityChecks(runtime, migration, record);
+    await runIdentityChecks(runtime, migration, record, worker);
     await runAuthorizationChecks(runtime, migration, record);
     if (worker) {
       await runJobChecks(runtime, migration, worker, record);

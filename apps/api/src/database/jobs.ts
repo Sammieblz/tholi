@@ -159,6 +159,7 @@ export class PostgresJobs implements JobStore {
     intervalMs: number;
   }): Promise<number> {
     input = structuredClone(input);
+    await this.pruneIdentityMetadata(input.limit);
     await this.pruneObservability(input.limit);
     const scopes = await this.pool.query<{
       account_id: string;
@@ -194,6 +195,20 @@ export class PostgresJobs implements JobStore {
   }
 
   /** The existing worker scheduling tick also enforces metadata retention. */
+  async pruneIdentityMetadata(batch = 100) {
+    return (
+      await this.pool.query<{
+        flows_deleted: number;
+        logout_deleted: number;
+        refresh_deleted: number;
+        sessions_deleted: number;
+      }>("SELECT * FROM tholi.prune_identity_metadata($1)", [
+        bounded(batch, 1, 1000),
+      ])
+    ).rows[0];
+  }
+
+  /** Operational and consented analytics keep their separate expiry policies. */
   async pruneObservability(batch = 100) {
     return (
       await this.pool.query<{ audit_deleted: number; product_deleted: number }>(

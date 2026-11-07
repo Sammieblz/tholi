@@ -30,7 +30,17 @@ const invalid = () =>
     "The identity provider response could not be verified.",
   );
 async function boundedJson(response: Response) {
-  if (!response.ok || !response.body) throw invalid();
+  if (
+    !response.ok ||
+    response.redirected ||
+    !response.body ||
+    !/^application\/(?:json|jwk-set\+json)(?:\s*;|$)/i.test(
+      response.headers.get("content-type") || "",
+    )
+  ) {
+    void response.body?.cancel().catch(() => {});
+    throw invalid();
+  }
   const reader = response.body.getReader(),
     chunks: Uint8Array[] = [];
   let size = 0;
@@ -45,10 +55,9 @@ async function boundedJson(response: Response) {
       }
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
-      string,
-      unknown
-    >;
+    return JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
+    ) as Record<string, unknown>;
   } finally {
     reader.releaseLock();
   }
@@ -73,7 +82,8 @@ export function createOidcProvider(
   const verificationAvailable = authorizationPath.includes(
     "/protocol/openid-connect/",
   );
-  const keys = createRemoteJWKSet(new URL(options.jwksUri), {
+  const jwksUrl = new URL(options.jwksUri);
+  const keys = createRemoteJWKSet(jwksUrl, {
     timeoutDuration: 5000,
     cooldownDuration: 5000,
     cacheMaxAge: 5 * 60_000,
@@ -83,7 +93,12 @@ export function createOidcProvider(
         "identity.keys",
         { provider: "oidc" },
         async () => {
-          const response = await fetcher(url, { ...init, credentials: "omit" });
+          if (String(url) !== jwksUrl.href) throw invalid();
+          const response = await fetcher(url, {
+            ...init,
+            redirect: "manual",
+            credentials: "omit",
+          });
           const data = await boundedJson(response);
           return Response.json(data);
         },

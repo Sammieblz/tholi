@@ -19,6 +19,7 @@ export async function runIdentityChecks(
   runtime: Pool,
   migration: Pool,
   record: (name: string, work: () => Promise<void>) => Promise<void>,
+  worker?: Pool,
 ) {
   const store = new PostgresIdentityRepository(runtime);
   const digest = () => createHash("sha256").update(randomUUID()).digest("hex");
@@ -680,6 +681,148 @@ export async function runIdentityChecks(
           )
         ).rows[0].count,
         5,
+      );
+    },
+  );
+
+  await record(
+    "idle identity retention is bounded, worker-only and preserves live replay families",
+    async () => {
+      const cleaner = worker ?? migration;
+      for (let i = 0; i < 20; i++) {
+        const result = (
+          await cleaner.query(
+            "SELECT * FROM tholi.prune_identity_metadata(1000)",
+          )
+        ).rows[0];
+        if (Object.values(result).every((count) => count === 0)) break;
+      }
+      await assert.rejects(
+        () => runtime.query("SELECT * FROM tholi.prune_identity_metadata(1)"),
+        { code: "42501" },
+      );
+      for (const batch of [null, 0, 1001])
+        await assert.rejects(
+          () =>
+            cleaner.query("SELECT * FROM tholi.prune_identity_metadata($1)", [
+              batch,
+            ]),
+          { code: "22023" },
+        );
+      const identity = provider(),
+        account = await store.resolveIdentity(identity);
+      const active = session(account, identity),
+        revoked = session(account, identity);
+      await store.createSession(active);
+      await store.createSession(revoked);
+      assert.equal((await rotate(revoked)).status, "rotated");
+      await store.revokeSession(account.accountId, revoked.id, new Date());
+      const expired = Array.from({ length: 3 }, () =>
+        session(account, identity, {
+          createdAt: new Date(Date.now() - 180000),
+          lastUsedAt: new Date(Date.now() - 180000),
+          accessExpiresAt: new Date(Date.now() - 120000),
+          expiresAt: new Date(Date.now() - 60000),
+        }),
+      );
+      for (const value of expired) {
+        await store.createSession(value);
+        for (let i = 0; i < 2; i++)
+          await migration.query(
+            "INSERT INTO tholi.session_refresh_tokens(token_hash,session_id,created_at,consumed_at,expires_at) VALUES($1,$2,$3,$4,$5)",
+            [
+              Buffer.from(digest(), "hex"),
+              value.id,
+              value.createdAt,
+              value.lastUsedAt,
+              value.expiresAt,
+            ],
+          );
+      }
+      const proofs = Array.from({ length: 6 }, flow);
+      for (const value of proofs) await store.createFlow(value);
+      await migration.query(
+        "UPDATE tholi.identity_flows SET created_at=now()-interval '3 minutes',expires_at=now()-interval '1 minute' WHERE state_hash=ANY($1::bytea[])",
+        [proofs.map((value) => Buffer.from(value.stateHash, "hex"))],
+      );
+      const liveProof = flow();
+      // Direct insert avoids the identity write owner's intentional opportunistic prune.
+      await migration.query(
+        `INSERT INTO tholi.identity_flows(state_hash,browser_binding_hash,nonce_hash,sealed_verifier,client_id,redirect_uri,destination,expires_at)
+      SELECT $1,$2,$3,$4,$5,$6,$7,$8`,
+        [
+          Buffer.from(liveProof.stateHash, "hex"),
+          Buffer.from(liveProof.browserBindingHash, "hex"),
+          Buffer.from(liveProof.nonceHash, "hex"),
+          liveProof.sealedVerifier,
+          liveProof.clientId,
+          liveProof.redirectUri,
+          liveProof.destination,
+          liveProof.expiresAt,
+        ],
+      );
+      // Seed logout expiry after identity writes, whose opportunistic cleanup
+      // would otherwise remove the worker's expired logout fixture first.
+      const logoutIds = [randomUUID(), randomUUID()];
+      for (const [index, id] of logoutIds.entries())
+        await migration.query(
+          "INSERT INTO tholi.identity_logout_events(issuer,event_id,subject,issued_at,expires_at) VALUES($1,$2,$3,now()-interval '3 minutes',now()+$4::interval)",
+          [
+            identity.issuer,
+            id,
+            "synthetic-retention-subject",
+            index === 0 ? "-1 minute" : "10 minutes",
+          ],
+        );
+      const first = (
+        await cleaner.query("SELECT * FROM tholi.prune_identity_metadata(2)")
+      ).rows[0];
+      assert.equal(first.flows_deleted, 2);
+      assert.equal(first.logout_deleted, 1);
+      assert.equal(first.refresh_deleted, 2);
+      for (const count of Object.values(first)) assert.ok(Number(count) <= 2);
+      for (let i = 0; i < 4; i++)
+        await cleaner.query("SELECT * FROM tholi.prune_identity_metadata(2)");
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM tholi.sessions WHERE id=ANY($1::uuid[])",
+            [expired.map((value) => value.id)],
+          )
+        ).rows[0].n,
+        0,
+      );
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM tholi.session_refresh_tokens WHERE session_id=$1",
+            [revoked.id],
+          )
+        ).rows[0].n,
+        2,
+      );
+      assert.equal(
+        (
+          await migration.query(
+            "SELECT count(*)::int AS n FROM tholi.identity_flows WHERE state_hash=$1",
+            [Buffer.from(liveProof.stateHash, "hex")],
+          )
+        ).rows[0].n,
+        1,
+      );
+      assert.ok(await store.authenticateSession(active.accessHash, new Date()));
+      assert.deepEqual(
+        (
+          await migration.query(
+            "SELECT event_id FROM tholi.identity_logout_events WHERE issuer=$1 AND event_id=ANY($2::text[]) ORDER BY event_id",
+            [identity.issuer, logoutIds],
+          )
+        ).rows.map((row) => row.event_id),
+        [logoutIds[1]],
+      );
+      assert.equal(
+        await store.authenticateSession(revoked.accessHash, new Date()),
+        null,
       );
     },
   );

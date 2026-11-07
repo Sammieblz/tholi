@@ -23,3 +23,9 @@ Native closed-shadow access is restricted to the privacy traversal; it does not 
 The optional API binds loopback by default, requires a bearer token and explicit extension-origin CORS, and executes inference outside the API event loop. Self-hosted remote connections require HTTPS. Credentials stay in trusted extension contexts; private entities, input values and OCR payloads are not persisted or included in payload logs. See [privacy](privacy.md) and [API setup](../guides/backend.md).
 
 Synthetic tests and Wikipedia checks do not constitute a security audit of arbitrary websites. Native browser access recovery and signed-in workflow verification remain separate pending checks.
+
+The portable service's [threat model, retention inventory and operator runbooks](../development/service-security.md)
+cover account, provider, gateway, export and backup boundaries. HTTP requests have
+byte and structural budgets before recursive validation; expiry-only worker
+maintenance removes idle authentication proofs and expired refresh families.
+These controls do not certify a hosted environment or make model output trusted.
