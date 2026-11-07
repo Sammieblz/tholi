@@ -15,6 +15,11 @@ Use Compose 2.24.4 or newer from the repository root. Keep credentials outside t
 checkout, with an operator-only parent directory and files readable only by their
 owner. Do not print resolved environment values in logs.
 
+Use a separate TLS directory, never the credentials directory. Its mount root must
+be traversable by gateway UID/GID 101, with the key readable by that identity through
+ownership or a restrictive ACL. Keep its host parent private. A host-only 0700 mount
+root denies the nonroot gateway on Linux even when the key itself is readable.
+
 The operator deployment env file selects these inputs:
 
 | Input                    | Purpose                                               |

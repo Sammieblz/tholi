@@ -69,6 +69,13 @@ checks remain required before merge. Final evidence belongs
 with the implementation PR and issue acceptance record; focused and failed cohorts
 must not be combined or relabeled as that result.
 
+The first hosted cohort rejected the VM gateway on Linux. Its QA TLS mount used
+the host-private 0700 environment directory as the container mount root, denying
+the nonroot gateway traversal. QA now mounts a separate traversable TLS child;
+environment files stay outside that mount. Windows bind-mount behavior had hidden
+this fixture permission failure. The hosted failure is retained, and a new complete
+matching-head cohort is required.
+
 Production DNS/certificates, external identity/native callbacks, Google IAM/SQL,
 managed backups, configured mail/object transports, hosted alerting and production
 restore remain unperformed. The prepared Google profile cannot yet admit production

@@ -163,6 +163,7 @@ export async function runVmChecks({
   const project = sourceProject.replace("tholi-smoke-", "tholi-smoke-vm");
   assertOwnedSmokeProject(project, project);
   const temporary = resolve(directory, "vm-profile");
+  const tlsDirectory = resolve(temporary, "tls");
   assert.equal(
     temporary,
     resolve(root, "output/qa/local-stack", sourceProject, "vm-profile"),
@@ -174,9 +175,9 @@ export async function runVmChecks({
     "postgres.env",
     "compose.env",
     "qa.yaml",
-    "openssl.cnf",
-    "privkey.pem",
-    "fullchain.pem",
+    "tls/openssl.cnf",
+    "tls/privkey.pem",
+    "tls/fullchain.pem",
   ];
   const envFile = resolve(temporary, "compose.env");
   const base = [
@@ -217,7 +218,10 @@ export async function runVmChecks({
     }
     await mkdir(temporary, { recursive: false, mode: 0o700 });
     created = true;
-    const ca = await syntheticCertificate(temporary);
+    // The host-private parent protects QA env files. Only this traversable TLS
+    // child is bind-mounted for UID 101; mounting the 0700 parent fails on Linux.
+    await mkdir(tlsDirectory, { mode: 0o755 });
+    const ca = await syntheticCertificate(tlsDirectory);
     const connection = (role, password) =>
       `postgresql://${role}:${encodeURIComponent(password)}@postgres:5432/tholi`;
     const environments = {
@@ -263,7 +267,7 @@ export async function runVmChecks({
       },
       "compose.env": {
         THOLI_SERVICE_IMAGE: image,
-        THOLI_TLS_DIRECTORY: temporary.replaceAll("\\", "/"),
+        THOLI_TLS_DIRECTORY: tlsDirectory.replaceAll("\\", "/"),
         ...Object.fromEntries(
           ["API", "WORKER", "MIGRATION", "POSTGRES"].map((role) => [
             `THOLI_VM_${role}_ENV`,
@@ -549,6 +553,7 @@ export async function runVmChecks({
     if (created) {
       for (const file of files)
         await rm(resolve(temporary, file), { force: true });
+      await rmdir(tlsDirectory);
       await rmdir(temporary);
     }
   }
