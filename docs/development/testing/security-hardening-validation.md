@@ -55,6 +55,11 @@ separately retained copies and server-authoritative development allowances.
   is required; these partial/focused results are not combined into a full pass.
 - The complete deterministic PR gate and matching-head hosted result are required
   before merge; final hosted evidence belongs with the implementation PR.
+- The first hosted container run (42418020357) caught a fixture-order error:
+  creating identity flows pruned the expired logout fixture before worker cleanup.
+  The fixture now seeds logout expiry after those writes. All assertions remain;
+  the corrected real PostgreSQL cohort passes locally. The earlier failure remains
+  separate from the required final matching-head result.
 
 The frozen hardened-image stack subsequently passed all local-stack checks in
 `tholi-smoke-mw6xe9sa-ef53d1be`, with the API and worker on runtime image

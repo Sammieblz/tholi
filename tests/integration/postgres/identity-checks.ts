@@ -739,17 +739,6 @@ export async function runIdentityChecks(
             ],
           );
       }
-      const logoutIds = [randomUUID(), randomUUID()];
-      for (const [index, id] of logoutIds.entries())
-        await migration.query(
-          "INSERT INTO tholi.identity_logout_events(issuer,event_id,subject,issued_at,expires_at) VALUES($1,$2,$3,now()-interval '3 minutes',now()+$4::interval)",
-          [
-            identity.issuer,
-            id,
-            "synthetic-retention-subject",
-            index === 0 ? "-1 minute" : "10 minutes",
-          ],
-        );
       const proofs = Array.from({ length: 6 }, flow);
       for (const value of proofs) await store.createFlow(value);
       await migration.query(
@@ -772,6 +761,19 @@ export async function runIdentityChecks(
           liveProof.expiresAt,
         ],
       );
+      // Seed logout expiry after identity writes, whose opportunistic cleanup
+      // would otherwise remove the worker's expired logout fixture first.
+      const logoutIds = [randomUUID(), randomUUID()];
+      for (const [index, id] of logoutIds.entries())
+        await migration.query(
+          "INSERT INTO tholi.identity_logout_events(issuer,event_id,subject,issued_at,expires_at) VALUES($1,$2,$3,now()-interval '3 minutes',now()+$4::interval)",
+          [
+            identity.issuer,
+            id,
+            "synthetic-retention-subject",
+            index === 0 ? "-1 minute" : "10 minutes",
+          ],
+        );
       const first = (
         await cleaner.query("SELECT * FROM tholi.prune_identity_metadata(2)")
       ).rows[0];
