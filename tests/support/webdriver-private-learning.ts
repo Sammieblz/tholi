@@ -17,6 +17,7 @@ import {
 } from "./navigation-service-fixture";
 import backendDataPermissions from "../../config/backend-data-permissions.json" with { type: "json" };
 import { luminance, parseColor } from "../../packages/ui/page-theme";
+import { openAccountSettings } from "./webdriver-auth";
 
 /** One native-browser flow. Every service response is loopback and the model is fake. */
 export async function verifyWebDriverPrivateLearning(
@@ -98,47 +99,12 @@ export async function verifyWebDriverPrivateLearning(
     const named = (name: string) =>
       visible(By.xpath(`//button[normalize-space(.)="${name}"]`));
     const openSettings = async (phase: string) => {
-      const trigger = await visible(
-        By.css('button[aria-label="Tholi settings"]'),
-      );
-      // Base UI retains its popup during exit motion. Its trigger's expanded
-      // state distinguishes an open popup from the still-mounted closing DOM.
-      const expanded = await trigger.getDomAttribute("aria-expanded");
-      if (expanded === "false") await trigger.sendKeys(Key.ENTER);
-      else if (expanded !== "true")
-        throw Error("The native settings trigger has no expanded state.");
+      await openAccountSettings(current, { keyboard: true });
       let readiness = "not-observed";
       try {
         await current.waitFor(
           async () =>
             (readiness = await current.extension(() => {
-              const popup = document.querySelector<HTMLElement>(
-                ".tholi-settings-popup",
-              );
-              const popupVisible =
-                popup &&
-                popup.getClientRects().length > 0 &&
-                getComputedStyle(popup).visibility !== "hidden";
-              if (
-                document
-                  .querySelector('button[aria-label="Tholi settings"]')
-                  ?.getAttribute("aria-expanded") !== "true"
-              )
-                return popupVisible ? "settings-closing" : "settings-closed";
-              if (!popupVisible) return "settings-closed";
-              if (
-                popup.hasAttribute("data-starting-style") ||
-                popup.hasAttribute("data-ending-style")
-              )
-                return "settings-transitioning";
-              // Acknowledged service writes can precede modal teardown and
-              // focus restoration. Do not send keys behind that focus trap.
-              if (
-                document.querySelector(
-                  ".tholi-private-learning-dialog, .tholi-private-learning-backdrop",
-                )
-              )
-                return "confirmation-closing";
               const field = document.querySelector<HTMLFieldSetElement>(
                 ".tholi-private-learning fieldset",
               );

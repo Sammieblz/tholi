@@ -323,15 +323,47 @@ export async function accountControl(
   if (!control) throw Error("The native account control is unavailable.");
   return control;
 }
-export async function openAccountSettings(app: App) {
-  await app.driver.switchTo().window(app.panel);
-  if (!(await app.driver.findElements(By.id("tholi-service-origin"))).length)
-    await app.driver
-      .findElement(By.css('button[aria-label="Tholi settings"]'))
-      .click();
+export async function openAccountSettings(
+  app: App,
+  options: { keyboard?: boolean } = {},
+) {
+  await app.focusPanel();
+  const trigger = await app.driver.findElement(
+    By.css('button[aria-label="Tholi settings"]'),
+  );
+  const expanded = await trigger.getDomAttribute("aria-expanded");
+  if (expanded === "false") {
+    if (options.keyboard) await trigger.sendKeys(Key.ENTER);
+    else await trigger.click();
+  } else if (expanded !== "true") {
+    throw Error("The native settings trigger has no expanded state.");
+  }
   await app.driver.wait(
-    until.elementLocated(By.id("tholi-service-origin")),
+    () =>
+      app.extension(() => {
+        const popup = document.querySelector<HTMLElement>(
+          ".tholi-settings-popup",
+        );
+        const origin = popup?.querySelector<HTMLInputElement>(
+          "#tholi-service-origin",
+        );
+        return !!(
+          document
+            .querySelector('button[aria-label="Tholi settings"]')
+            ?.getAttribute("aria-expanded") === "true" &&
+          popup?.getClientRects().length &&
+          getComputedStyle(popup).visibility !== "hidden" &&
+          !popup.hasAttribute("data-starting-style") &&
+          !popup.hasAttribute("data-ending-style") &&
+          !document.querySelector(
+            '[role="alertdialog"], .tholi-private-learning-backdrop',
+          ) &&
+          origin &&
+          !origin.disabled
+        );
+      }),
     10_000,
+    "The native account popover is settled and its processing choices are loaded",
   );
 }
 export async function configureNativeAccount(

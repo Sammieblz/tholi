@@ -213,3 +213,12 @@ Failures retain only Boolean UI readiness diagnostics, with no private contents.
 After these readiness corrections, TypeScript/version checks and all nine native
 Chrome/Firefox platform cases passed locally at 2x scale. This Windows evidence
 remains separate from the required hosted macOS reports.
+
+The next hosted run passed Windows Firefox and the macOS 26 geometry checks,
+but Intel Firefox missed the settings popup in a second keyboard-recovery case.
+That case still switched windows and pressed Enter without waiting for native
+focus, and did not inspect the trigger's expanded state. Native identity,
+private-learning and recovery checks now reuse the existing account-settings
+opener. It verifies native focus, exact popup state, modal teardown and loaded
+account controls; keyboard callers retain Enter/Space/Escape interactions.
+The duplicate popup-opening implementation was removed from private learning.

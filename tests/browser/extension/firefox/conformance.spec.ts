@@ -22,6 +22,7 @@ import {
 } from "../../../support/navigation-service-fixture";
 import { verifyWebDriverPrivateLearning } from "../../../support/webdriver-private-learning";
 import { verifyFreshWelcomeSetup } from "../../../support/webdriver-welcome";
+import { openAccountSettings } from "../../../support/webdriver-auth";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
@@ -229,7 +230,7 @@ test("Firefox announces connected processing and supports keyboard Local recover
     expect(view.verifiedSteps).toBe(0);
     expect(view.goalPlan.status).not.toBe("completed");
     expect(service.decisions).toHaveLength(1);
-    await app.driver.switchTo().window(app.panel);
+    await app.focusPanel();
     expect(
       await app.driver.findElements({
         xpath: '//button[normalize-space(.)="Try again"]',
@@ -239,10 +240,7 @@ test("Firefox announces connected processing and supports keyboard Local recover
       body: Buffer.from(await app.driver.takeScreenshot(), "base64"),
       contentType: "image/png",
     });
-    const settings = await app.driver.findElement({
-      css: 'button[aria-label="Tholi settings"]',
-    });
-    await settings.sendKeys(Key.ENTER);
+    await openAccountSettings(app, { keyboard: true });
     const local = await app.driver.wait(
       async () => {
         const elements = await app.driver.findElements({
