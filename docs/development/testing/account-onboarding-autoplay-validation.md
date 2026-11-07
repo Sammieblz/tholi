@@ -146,3 +146,12 @@ color transitions and still rejects other running effects, loops and spatial
 motion. No animation style, timeout or product budget changed. The earlier local
 failures, including an authorization timeout while the container smoke was also
 running, remain separate logs under `output/qa/pr90-ci/`.
+
+The following run exposed an additional Firefox settings interaction on macOS
+15 Apple Silicon: Local processing was not acknowledged immediately after the
+cloud-forgetting confirmation. The native helper now waits for settings entrance
+and confirmation teardown before sending keys, then independently checks the
+radio selection and background acknowledgement. Cancellation follows the same
+readiness owner. This retains the real keyboard interaction, explicit Local
+choice, privacy checks and existing request deadlines. The failed run remains
+separate from the final PR checks.

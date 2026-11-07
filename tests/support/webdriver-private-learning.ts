@@ -126,6 +126,19 @@ export async function verifyWebDriverPrivateLearning(
               )
                 return popupVisible ? "settings-closing" : "settings-closed";
               if (!popupVisible) return "settings-closed";
+              if (
+                popup.hasAttribute("data-starting-style") ||
+                popup.hasAttribute("data-ending-style")
+              )
+                return "settings-transitioning";
+              // Acknowledged service writes can precede modal teardown and
+              // focus restoration. Do not send keys behind that focus trap.
+              if (
+                document.querySelector(
+                  ".tholi-private-learning-dialog, .tholi-private-learning-backdrop",
+                )
+              )
+                return "confirmation-closing";
               const field = document.querySelector<HTMLFieldSetElement>(
                 ".tholi-private-learning fieldset",
               );
@@ -481,6 +494,7 @@ export async function verifyWebDriverPrivateLearning(
     await dialog
       .findElement(By.xpath('.//button[normalize-space(.)="Cancel"]'))
       .sendKeys(Key.ENTER);
+    await openSettings("after cancelled cloud forgetting");
     expect(service.siteWrites.some((write) => write.method === "DELETE")).toBe(
       false,
     );
@@ -499,6 +513,11 @@ export async function verifyWebDriverPrivateLearning(
     await openSettings("after confirmed cloud forgetting");
     const local = await visible(By.css('input[type="radio"][value="local"]'));
     await local.sendKeys(Key.SPACE);
+    await current.driver.wait(
+      until.elementIsSelected(local),
+      10_000,
+      "The native Local radio acknowledges the keyboard choice",
+    );
     await current.waitFor(
       () => current.message({ type: "AUTH_INFERENCE_STATUS" }),
       (value) => !value.enabled,
