@@ -34,6 +34,17 @@ export class ApiError extends Error {
 }
 
 const requestContexts = new WeakMap<FastifyRequest, ServiceRequestContext>();
+const accountAdmissions = new WeakMap<
+  FastifyRequest,
+  (accountId: string) => void
+>();
+/** Called only after the existing identity owner verifies proof and account binding. */
+export function admitServiceAccount(
+  request: FastifyRequest,
+  accountId: string,
+) {
+  accountAdmissions.get(request)?.(accountId);
+}
 /** A byte cap alone does not bound recursive validator work or issue allocation. */
 export const SERVICE_JSON_BUDGET = Object.freeze({
   depth: 64,
@@ -284,6 +295,7 @@ export async function createHttpApi(
     const caught = error as Error & {
       validation?: unknown;
       statusCode?: number;
+      code?: unknown;
     };
     const invalid = caught.validation || error instanceof z.ZodError;
     if (profile === "legacy-private") {
@@ -297,28 +309,42 @@ export async function createHttpApi(
     const status = Number(caught.statusCode);
     const safe =
       known ??
-      (invalid || status === 400
-        ? new ApiError(400, "INVALID_REQUEST", "Invalid API request.")
-        : status === 413
-          ? new ApiError(
-              413,
-              "PAYLOAD_TOO_LARGE",
-              "Request exceeds the size limit.",
-            )
-          : status === 415
+      (caught.code === "53300"
+        ? new ApiError(
+            503,
+            "UNAVAILABLE",
+            "Database request capacity reached. Try again later.",
+            true,
+          )
+        : invalid || status === 400
+          ? new ApiError(400, "INVALID_REQUEST", "Invalid API request.")
+          : status === 413
             ? new ApiError(
-                415,
-                "UNSUPPORTED_MEDIA_TYPE",
-                "Unsupported content type.",
+                413,
+                "PAYLOAD_TOO_LARGE",
+                "Request exceeds the size limit.",
               )
-            : new ApiError(500, "INTERNAL_ERROR", "Request failed."));
+            : status === 415
+              ? new ApiError(
+                  415,
+                  "UNSUPPORTED_MEDIA_TYPE",
+                  "Unsupported content type.",
+                )
+              : new ApiError(500, "INTERNAL_ERROR", "Request failed."));
+    if (caught.code === "53300") reply.header("Retry-After", "1");
     return reply.code(safe.statusCode).send(serviceError(request, safe));
   });
   if (profile === "service") {
     app.addHook("preValidation", async (request) =>
       assertJsonBudget(request.body),
     );
-    const buckets = new Map<string, { count: number; expiresAt: number }>();
+    const buckets = new Map<
+      string,
+      { count: number; control: number; expiresAt: number }
+    >();
+    const accounts = new Map<string, number>();
+    let normalActive = 0,
+      controlActive = 0;
     let nextSweepAt = 0;
     let nextExpiry = 0;
     app.addHook("onClose", async () => buckets.clear());
@@ -327,6 +353,16 @@ export async function createHttpApi(
       reply.header("Cache-Control", "no-store");
       if (draining)
         throw new ApiError(503, "UNAVAILABLE", "Service is stopping.", true);
+      const operation = (
+        request.routeOptions.schema as { operationId?: string } | undefined
+      )?.operationId;
+      const control =
+        operation !== undefined &&
+        [
+          "cancelNavigationDecision",
+          "serviceLiveness",
+          "serviceReadiness",
+        ].includes(operation);
       // Fastify resolves the first untrusted hop only when explicitly configured.
       // Never use a raw forwarding header as an admission or account identity.
       const address = request.ip;
@@ -364,14 +400,24 @@ export async function createHttpApi(
         nextSweepAt = now + 1000;
       }
       if (!bucket && buckets.size < policy!.rateLimitMaxClients) {
-        bucket = { count: 0, expiresAt: now + policy!.rateLimitWindowMs };
+        bucket = {
+          count: 0,
+          control: 0,
+          expiresAt: now + policy!.rateLimitWindowMs,
+        };
         buckets.set(client, bucket);
       }
       if (bucket && bucket.expiresAt <= now) {
         bucket.count = 0;
+        bucket.control = 0;
         bucket.expiresAt = now + policy!.rateLimitWindowMs;
       }
-      if (!bucket || bucket.count >= policy!.rateLimitMax) {
+      const counter = control ? "control" : "count";
+      if (
+        !bucket ||
+        bucket[counter] >=
+          (control ? Math.min(60, policy!.rateLimitMax) : policy!.rateLimitMax)
+      ) {
         reply.header(
           "Retry-After",
           String(
@@ -388,7 +434,7 @@ export async function createHttpApi(
           true,
         );
       }
-      bucket.count++;
+      bucket[counter]++;
       const timeoutHeader = request.headers[SERVICE_TIMEOUT_HEADER];
       if (
         timeoutHeader !== undefined &&
@@ -404,6 +450,45 @@ export async function createHttpApi(
         SERVICE_LIMITS.defaultDeadlineMs,
       );
       const controller = new AbortController();
+      if (
+        (control ? controlActive : normalActive) >=
+        (control ? policy!.controlReserve : policy!.maxConcurrentRequests)
+      ) {
+        reply.header("Retry-After", "1");
+        throw new ApiError(
+          503,
+          "UNAVAILABLE",
+          "Service capacity reached. Try again later.",
+          true,
+        );
+      }
+      if (control) controlActive++;
+      else normalActive++;
+      let admittedAccount: string | undefined;
+      let cleaned = false;
+      accountAdmissions.set(request, (accountId) => {
+        if (cleaned || admittedAccount === accountId) return;
+        if (admittedAccount !== undefined)
+          throw new ApiError(
+            401,
+            "UNAUTHENTICATED",
+            "The account changed. Refresh before continuing.",
+          );
+        // Stop and health have a separate finite reserve, without weakening their authorization.
+        if (control) return;
+        const active = accounts.get(accountId) ?? 0;
+        if (active >= policy!.maxConcurrentPerAccount) {
+          reply.header("Retry-After", "1");
+          throw new ApiError(
+            429,
+            "RATE_LIMITED",
+            "Account request capacity reached. Try again later.",
+            true,
+          );
+        }
+        accounts.set(accountId, active + 1);
+        admittedAccount = accountId;
+      });
       const context: ServiceRequestContext = Object.freeze({
         requestId: request.id,
         deadlineAt: Date.now() + timeout,
@@ -428,6 +513,16 @@ export async function createHttpApi(
         cleanup();
       };
       const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (control) controlActive--;
+        else normalActive--;
+        if (admittedAccount !== undefined) {
+          const remaining = accounts.get(admittedAccount)! - 1;
+          if (remaining) accounts.set(admittedAccount, remaining);
+          else accounts.delete(admittedAccount);
+        }
+        accountAdmissions.delete(request);
         clearTimeout(timer);
         requests.delete(controller);
         request.raw.removeListener("aborted", disconnect);
@@ -507,19 +602,27 @@ export function registerHealth(
   lifecycle: { ready(): Promise<boolean> },
 ) {
   const metadata = { profile, version: apiPackage.version };
-  app.get("/health/live", async (_request, reply) => {
-    reply.header("Cache-Control", "no-store");
-    return { ...metadata, status: "ok", capabilities: [] };
-  });
-  app.get("/health/ready", async (_request, reply) => {
-    const ready =
-      profile === "service"
-        ? await duringServiceRequest(_request, () => lifecycle.ready())
-        : await lifecycle.ready();
-    reply.header("Cache-Control", "no-store");
-    return reply.code(ready ? 200 : 503).send({
-      ...metadata,
-      status: ready ? "ready" : "not-ready",
-    });
-  });
+  app.get(
+    "/health/live",
+    { schema: { operationId: "serviceLiveness" } },
+    async (_request, reply) => {
+      reply.header("Cache-Control", "no-store");
+      return { ...metadata, status: "ok", capabilities: [] };
+    },
+  );
+  app.get(
+    "/health/ready",
+    { schema: { operationId: "serviceReadiness" } },
+    async (_request, reply) => {
+      const ready =
+        profile === "service"
+          ? await duringServiceRequest(_request, () => lifecycle.ready())
+          : await lifecycle.ready();
+      reply.header("Cache-Control", "no-store");
+      return reply.code(ready ? 200 : 503).send({
+        ...metadata,
+        status: ready ? "ready" : "not-ready",
+      });
+    },
+  );
 }

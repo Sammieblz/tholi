@@ -17,6 +17,7 @@ import {
 } from "./lib/local-stack-policy.mjs";
 import { verifyDatabaseRestore } from "./lib/database-validation.mjs";
 import { runVmChecks } from "./lib/vm-validation.mjs";
+import { runResilienceChecks } from "./lib/resilience-validation.mjs";
 import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 import { runObservabilityChecks } from "./lib/observability-validation.mjs";
 import { buildIdentityTheme } from "./build-identity-theme.mjs";
@@ -916,6 +917,19 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     });
     check("same-image-production-vm-portability", {
       checks: report.vm.checks.length,
+    });
+    stage = "two-replica load and resilience";
+    report.resilience = await runResilienceChecks({
+      docker,
+      base: base(),
+      project,
+      config,
+      image: runtimeApi.Image,
+      testImage,
+      settings,
+    });
+    check("two-api-two-worker-resilience", {
+      checks: report.resilience.checks.length,
     });
     report.status = "passed";
   } catch (error) {

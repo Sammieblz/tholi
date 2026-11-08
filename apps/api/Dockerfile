@@ -29,6 +29,7 @@ RUN npm ci --omit=dev --workspace=apps/api --include-workspace-root=false --no-a
 FROM build AS postgres-tests
 COPY tests/integration/postgres/ ./tests/integration/postgres/
 COPY tests/support/saved-data-fixture.ts ./tests/support/saved-data-fixture.ts
+COPY tests/support/navigation-model-fixture.ts ./tests/support/navigation-model-fixture.ts
 RUN ./node_modules/.bin/esbuild tests/integration/postgres/run.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=/app/postgres-check.mjs
 USER node
 CMD ["node", "/app/postgres-check.mjs"]

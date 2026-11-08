@@ -85,6 +85,21 @@ function instrumented() {
 }
 
 describe("PostgreSQL observability boundary", () => {
+  test("pool acquisition bounds late pending work in promise and callback paths and recovers", async () => {
+    const pool = createDatabasePool({ connectionString, max: 1 }) as FakePool;
+    Object.defineProperty(pool, "waitingCount", { value: 4, writable: true });
+    await expect(pool.connect()).rejects.toMatchObject({ code: "53300" });
+    await new Promise<void>((resolve) =>
+      pool.connect((error, client) => {
+        expect(error).toMatchObject({ code: "53300" });
+        expect(client).toBeUndefined();
+        expect(error?.message).not.toContain("PRIVATE_SENTINEL");
+        resolve();
+      }),
+    );
+    Object.defineProperty(pool, "waitingCount", { value: 0 });
+    expect(await pool.connect()).toBe(pool.client);
+  });
   test("preserves promise and callback pool acquisition and emits only safe waits counts and idle failures", async () => {
     const { pool, observations } = instrumented();
     expect(await pool.connect()).toBe(pool.client);

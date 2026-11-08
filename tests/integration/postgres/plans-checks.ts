@@ -12,7 +12,7 @@ import {
   saveTask,
 } from "../../../packages/goal-planner/task-journey";
 import { inferenceFixture } from "./inference-fixture";
-import { planFixture } from "./plan-fixture";
+import { planFixture, expireFreePeriod } from "./plan-fixture";
 
 /** Product plans share the existing database harness, scoped ports and ledger. */
 export async function runPlanChecks(
@@ -188,32 +188,11 @@ export async function runPlanChecks(
       async () => {
         const scope = await repositories.provisionAccount();
         const first = await enroll(scope);
-        const previousStart = new Date(
-          Date.parse(first.effective.periodStart) -
-            allowance.periodSeconds * 1000,
-        );
-        const previousEnd = new Date(first.effective.periodStart);
-        await migration.query(
-          `UPDATE tholi.free_program_grants SET period_start=$1,period_end=$2
-           WHERE account_id=$3 AND grant_id=$4`,
-          [previousStart, previousEnd, scope.accountId, first.grant.id],
-        );
-        await migration.query(
-          `UPDATE tholi.credit_grants SET created_at=$1,expires_at=$2,
-             period_start=$1,period_end=$2,idempotency_key=$3
-           WHERE workspace_id=$4 AND id=$5`,
-          [
-            previousStart,
-            previousEnd,
-            `historical-free-${randomUUID()}`,
-            scope.workspaceId,
-            first.grant.id,
-          ],
-        );
-        await migration.query(
-          `UPDATE tholi.entitlements SET starts_at=$1,ends_at=$2
-           WHERE workspace_id=$3 AND id=(SELECT entitlement_id FROM tholi.free_program_enrollments WHERE account_id=$4)`,
-          [previousStart, previousEnd, scope.workspaceId, scope.accountId],
+        await expireFreePeriod(
+          migration,
+          scope,
+          first,
+          allowance.periodSeconds,
         );
         assert.equal((await effective(scope))?.status, "inactive");
         assert.equal((await balance(scope)).available, 0n);

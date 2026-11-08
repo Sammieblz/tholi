@@ -56,6 +56,9 @@ export interface ServiceTransportPolicy {
   rateLimitMax: number;
   rateLimitWindowMs: number;
   rateLimitMaxClients: number;
+  maxConcurrentRequests: number;
+  maxConcurrentPerAccount: number;
+  controlReserve: number;
   headersTimeoutMs: number;
   requestTimeoutMs: number;
   connectionTimeoutMs: number;
@@ -70,6 +73,9 @@ export const SERVICE_TRANSPORT_DEFAULTS: Readonly<ServiceTransportPolicy> =
     rateLimitMax: 300,
     rateLimitWindowMs: 60000,
     rateLimitMaxClients: 4096,
+    maxConcurrentRequests: 32,
+    maxConcurrentPerAccount: 8,
+    controlReserve: 4,
     headersTimeoutMs: 10000,
     requestTimeoutMs: 30000,
     connectionTimeoutMs: 35000,
@@ -89,6 +95,9 @@ export function validateServiceTransportPolicy(
       rateLimitMax: z.number().int().min(1).max(6000),
       rateLimitWindowMs: z.number().int().min(1000).max(60000),
       rateLimitMaxClients: z.number().int().min(1).max(65536),
+      maxConcurrentRequests: z.number().int().min(1).max(256),
+      maxConcurrentPerAccount: z.number().int().min(1).max(64),
+      controlReserve: z.number().int().min(1).max(16),
       headersTimeoutMs: z
         .number()
         .int()
@@ -108,6 +117,8 @@ export function validateServiceTransportPolicy(
     .safeParse({ ...SERVICE_TRANSPORT_DEFAULTS, ...input });
   if (!parsed.success) throw new Error("Invalid service transport policy.");
   const policy = parsed.data;
+  if (policy.maxConcurrentPerAccount > policy.maxConcurrentRequests)
+    throw new Error("Account admission exceeds replica capacity.");
   for (const entry of policy.trustedProxies) {
     const [address, prefix, ...extra] = entry.split("/");
     const family = isIP(address);
@@ -1098,6 +1109,9 @@ export function parseServiceConfig(env: Environment) {
             rateLimitMax: "RATE_LIMIT_MAX",
             rateLimitWindowMs: "RATE_LIMIT_WINDOW_MS",
             rateLimitMaxClients: "RATE_LIMIT_MAX_CLIENTS",
+            maxConcurrentRequests: "MAX_CONCURRENT_REQUESTS",
+            maxConcurrentPerAccount: "MAX_CONCURRENT_PER_ACCOUNT",
+            controlReserve: "CONTROL_RESERVE",
             headersTimeoutMs: "HEADERS_TIMEOUT_MS",
             requestTimeoutMs: "REQUEST_TIMEOUT_MS",
             connectionTimeoutMs: "CONNECTION_TIMEOUT_MS",

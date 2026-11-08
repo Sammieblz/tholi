@@ -1,0 +1,16 @@
+# Local-only resilience profile. Same image and private networks; no sticky sessions.
+services:
+  api:
+    deploy:
+      replicas: 2
+    environment:
+      THOLI_DATABASE_POOL_MAX: "4"
+      THOLI_NAVIGATION_TRANSPORT_ENABLED: "true"
+  worker:
+    deploy:
+      replicas: 2
+    environment:
+      THOLI_DATABASE_POOL_MAX: "2"
+      # Accelerated maintenance ticks, inside the existing validated bounds.
+      THOLI_WORKER_POLL_MS: "100"
+      THOLI_WORKER_SCHEDULE_MS: "1000"

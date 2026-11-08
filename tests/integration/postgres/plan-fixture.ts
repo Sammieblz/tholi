@@ -71,3 +71,34 @@ export async function planFixture(runtime: Pool, migration: Pool) {
     );
   return { catalog, free, allowance, selectFree, restore };
 }
+
+/** Move a synthetic Free period backward consistently; no production clock or allowance changes. */
+export async function expireFreePeriod(
+  migration: Pool,
+  scope: { accountId: string; workspaceId: string },
+  first: { effective: { periodStart: string }; grant: { id: string } },
+  periodSeconds: number,
+) {
+  const previousStart = new Date(
+    Date.parse(first.effective.periodStart) - periodSeconds * 1000,
+  );
+  const previousEnd = new Date(first.effective.periodStart);
+  await migration.query(
+    `UPDATE tholi.free_program_grants SET period_start=$1,period_end=$2 WHERE account_id=$3 AND grant_id=$4`,
+    [previousStart, previousEnd, scope.accountId, first.grant.id],
+  );
+  await migration.query(
+    `UPDATE tholi.credit_grants SET created_at=$1,expires_at=$2,period_start=$1,period_end=$2,idempotency_key=$3 WHERE workspace_id=$4 AND id=$5`,
+    [
+      previousStart,
+      previousEnd,
+      `historical-free-${randomUUID()}`,
+      scope.workspaceId,
+      first.grant.id,
+    ],
+  );
+  await migration.query(
+    `UPDATE tholi.entitlements SET starts_at=$1,ends_at=$2 WHERE workspace_id=$3 AND id=(SELECT entitlement_id FROM tholi.free_program_enrollments WHERE account_id=$4)`,
+    [previousStart, previousEnd, scope.workspaceId, scope.accountId],
+  );
+}

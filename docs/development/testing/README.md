@@ -154,6 +154,11 @@ Retain permanent tests for distinct contracts or regressions. Search existing ow
 
 ## Browser targets
 
+The [service resilience record](service-resilience-validation.md) describes the
+local two-API/two-worker drill, shared quotas and backlog limits, rolling recovery
+and measured load. Container and injected-provider evidence remain separate from
+native browser, real identity, production-cloud and live-model certification.
+
 The normal build creates both targets. `node scripts/test.mjs firefox` uses Selenium/geckodriver to execute installed Firefox. Resolution checks Windows App Paths, including Microsoft Store registration, and macOS application bundles. `THOLI_FIREFOX_BINARY` and `THOLI_CHROME_BINARY` select explicit isolated binaries or macOS app bundles; existing driver overrides remain available. Selenium Manager selects platform-correct drivers. Playwright Firefox projects test the website. Branded checks use installed Chrome/Edge and pinned official Brave portable (`npm run fetch:browser-tools`, or `THOLI_BRAVE_BINARY`). Disposable profiles never alter a user profile.
 
 The public-repository native matrix uses the standard `macos-15`,
