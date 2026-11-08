@@ -218,6 +218,7 @@ export function accountingError(error: unknown): never {
     P4403: "CONFLICT",
     P4404: "IDEMPOTENCY_CONFLICT",
     P4405: "INFERENCE_DISABLED",
+    P4406: "RATE_LIMITED",
     "42501": "FORBIDDEN",
     "22023": "INVALID_INPUT",
   };
@@ -605,6 +606,7 @@ export class PostgresRepositories {
     } catch (error) {
       if ((error as { code?: string }).code === "42501")
         throw new RepositoryError("FORBIDDEN", "The workspace is unavailable.");
+      if ((error as { code?: string }).code === "P4406") accountingError(error);
       throw error;
     }
   }

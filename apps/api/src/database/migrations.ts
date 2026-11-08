@@ -15,6 +15,7 @@ import { providerConnections } from "./migrations/012-provider-connections";
 import { customerInference } from "./migrations/013-customer-inference";
 import { navigationKnowledge } from "./migrations/014-navigation-knowledge";
 import { identityRetention } from "./migrations/015-identity-retention";
+import { jobAdmission } from "./migrations/016-job-admission";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -53,6 +54,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(13, "customer-inference", customerInference),
   migration(14, "navigation-knowledge", navigationKnowledge),
   migration(15, "identity-retention", identityRetention),
+  migration(16, "job-admission", jobAdmission),
 ]);
 
 export interface MigrationOptions {

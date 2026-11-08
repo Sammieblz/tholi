@@ -5,7 +5,7 @@ import { AuthorizationError } from "../application/authorization";
 import { IdentityError, type IdentityService } from "../application/identity";
 import type { IdentitySession } from "../application/identity-contracts";
 import type { ServiceRequestContext } from "../capabilities";
-import { ApiError, duringServiceRequest } from "../http";
+import { ApiError, duringServiceRequest, admitServiceAccount } from "../http";
 import { identityCookieNames } from "./identity-cookies";
 import { SERVICE_ACCOUNT_BINDING_HEADER } from "../../../../packages/navigation-core/contracts-service";
 
@@ -70,6 +70,7 @@ export function createIdentityAccess(service: IdentityService) {
         "UNAUTHENTICATED",
         "The account changed. Refresh before continuing.",
       );
+    admitServiceAccount(request, session.accountId);
     return { session, bearer };
   }
   function mutation(

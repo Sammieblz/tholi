@@ -120,10 +120,11 @@ export function createDatabasePool(
   } catch {
     throw new Error("Invalid PostgreSQL connection configuration.");
   }
+  const maxConnections = bounded(options.max, 8, 32);
   const pool = new Pool({
     ...connection,
     port: bounded(url.port ? Number(url.port) : undefined, 5432, 65535),
-    max: bounded(options.max, 8, 32),
+    max: maxConnections,
     connectionTimeoutMillis: bounded(
       options.connectionTimeoutMillis,
       3000,
@@ -146,9 +147,26 @@ export function createDatabasePool(
   // An idle connection failure must not crash the process or print its connection
   // string. pg removes the broken client; the next operation checks connectivity.
   observers.set(pool, observer);
+  // Deadlined callers may finish before a SQL adapter releases its connection.
+  // Bound pg's acquisition queue independently of HTTP response lifetime.
+  type Callback = Parameters<Pool["connect"]>[0];
+  const connect = pool.connect.bind(pool);
+  pool.connect = ((callback?: Callback) => {
+    if (pool.waitingCount >= maxConnections * 4) {
+      const error = Object.assign(
+        new Error("Database request capacity reached."),
+        { code: "53300" },
+      );
+      if (callback) {
+        queueMicrotask(() => callback(error, undefined!, () => {}));
+        return;
+      }
+      return Promise.reject(error);
+    }
+    return callback ? connect(callback) : connect();
+  }) as Pool["connect"];
   if (observer.enabled) {
     const acquire = pool.connect.bind(pool);
-    type Callback = Parameters<Pool["connect"]>[0];
     pool.connect = ((callback?: Callback) => {
       const span = observer.start("database.connect");
       const started = performance.now();

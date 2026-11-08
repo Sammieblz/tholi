@@ -92,8 +92,10 @@ export function navigationModelValidation(
   };
 }
 
-const png = readFileSync("tests/fixtures/vision/light.png").toString("base64");
 export function navigationModelCapture(observed: NavigationObservation) {
+  const png = readFileSync("tests/fixtures/vision/light.png").toString(
+    "base64",
+  );
   observed.images = [
     {
       captureId: "10000000-0000-4000-8000-000000000004",

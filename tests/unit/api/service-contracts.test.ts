@@ -12,6 +12,7 @@ import apiPackage from "../../../apps/api/package.json";
 import {
   ApiError,
   duringServiceRequest,
+  admitServiceAccount,
   SERVICE_JSON_BUDGET,
 } from "../../../apps/api/src/http";
 import type { ServiceRequestContext } from "../../../apps/api/src/capabilities";
@@ -104,6 +105,100 @@ async function service(
   applications.push(app);
   return app;
 }
+
+test("bounded replica/account admission reserves cancellation and health capacity and releases once", async () => {
+  const app = await service([], {
+    maxConcurrentRequests: 2,
+    maxConcurrentPerAccount: 1,
+    controlReserve: 1,
+  });
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  releaseOperations.push(release);
+  let entered = 0;
+  app.get(
+    "/held/:actor",
+    {
+      onRequest: async (request) => {
+        // Controlled verified identity stand-in; production calls this only after proof validation.
+        admitServiceAccount(
+          request,
+          (request.params as { actor: string }).actor,
+        );
+        admitServiceAccount(
+          request,
+          (request.params as { actor: string }).actor,
+        );
+      },
+    },
+    (request) =>
+      duringServiceRequest(request, async () => {
+        entered++;
+        await held;
+        return { ok: true };
+      }),
+  );
+  let controlEntered = false;
+  app.post(
+    "/fixture/cancel",
+    { schema: { operationId: "cancelNavigationDecision" } },
+    (request) =>
+      duringServiceRequest(request, async () => {
+        controlEntered = true;
+        await held;
+        return { ok: true };
+      }),
+  );
+  const a = app.inject("/held/a").then((v) => v);
+  await vi.waitFor(() => expect(entered).toBe(1));
+  const same = await app.inject("/held/a");
+  expect(same.statusCode).toBe(429);
+  expect(same.headers["retry-after"]).toBe("1");
+  const b = app.inject("/held/b").then((v) => v);
+  await vi.waitFor(() => expect(entered).toBe(2));
+  const full = await app.inject({
+    url: "/held/c",
+    headers: { "x-tholi-account": "forged" },
+  });
+  expect(full.statusCode).toBe(503);
+  expect((await app.inject("/health/live")).statusCode).toBe(200);
+  // A route's static operation identity, never a client header or URL prefix, selects the reserve.
+  const cancel = app
+    .inject({ method: "POST", url: "/fixture/cancel" })
+    .then((v) => v);
+  await vi.waitFor(() => expect(controlEntered).toBe(true));
+  expect((await app.inject("/health/live")).statusCode).toBe(503);
+  release();
+  expect((await Promise.all([a, b, cancel])).map((v) => v.statusCode)).toEqual([
+    200, 200, 200,
+  ]);
+  expect((await app.inject("/held/a")).statusCode).toBe(200);
+});
+
+test("ordinary peer exhaustion leaves a separate bounded control allowance", async () => {
+  const app = await service([], { rateLimitMax: 1 });
+  expect((await app.inject("/api/v1/capabilities")).statusCode).toBe(200);
+  expect((await app.inject("/api/v1/capabilities")).statusCode).toBe(429);
+  expect((await app.inject("/health/live")).statusCode).toBe(200);
+  expect((await app.inject("/health/live")).statusCode).toBe(429);
+});
+
+test("database admission rejects safely with retry metadata and no raw adapter detail", async () => {
+  const app = await service();
+  app.get("/fixture/database-capacity", async () => {
+    throw Object.assign(new Error("PRIVATE_SQL_CONNECTION"), { code: "53300" });
+  });
+  const response = await app.inject("/fixture/database-capacity");
+  expect(response.statusCode).toBe(503);
+  expect(response.headers["retry-after"]).toBe("1");
+  expect(response.json().error).toMatchObject({
+    code: "UNAVAILABLE",
+    retryable: true,
+  });
+  expect(response.body).not.toContain("PRIVATE_SQL_CONNECTION");
+});
 
 test("service structure admission bounds collections, depth and total nodes before schema validation", async () => {
   const app = await service();

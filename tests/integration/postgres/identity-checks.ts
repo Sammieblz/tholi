@@ -661,13 +661,13 @@ export async function runIdentityChecks(
           ).rows[0].allowed,
           true,
         );
-      const values = await Promise.all(
-        Array.from({ length: 105 }, async () => {
-          const value = flow();
-          await store.createFlow(value);
-          return value;
-        }),
-      );
+      // Populate the same retention boundary without overfilling the SQL queue.
+      const values = [];
+      for (let index = 0; index < 105; index++) {
+        const value = flow();
+        await store.createFlow(value);
+        values.push(value);
+      }
       await migration.query(
         "UPDATE tholi.identity_flows SET created_at = now() - interval '2 minutes',expires_at = now() - interval '1 minute' WHERE state_hash = ANY($1::bytea[])",
         [values.map((x) => Buffer.from(x.stateHash, "hex"))],

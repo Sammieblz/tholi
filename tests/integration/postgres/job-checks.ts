@@ -95,6 +95,120 @@ export async function runJobChecks(
     version: 1,
     replaySafe,
   });
+  await record(
+    "real SQL acquisition sheds finite backlog and recovers after checked-out clients release",
+    async () => {
+      const maximum = runtime.options.max ?? 4;
+      const held = await Promise.all(
+        Array.from({ length: maximum }, () => runtime.connect()),
+      );
+      const waiting = Array.from({ length: maximum * 4 }, () =>
+        runtime.connect().then((client) => client.release()),
+      );
+      try {
+        assert.equal(runtime.waitingCount, maximum * 4);
+        await assert.rejects(() => runtime.connect(), { code: "53300" });
+      } finally {
+        for (const client of held) client.release();
+        await Promise.all(waiting);
+      }
+      assert.equal(runtime.waitingCount, 0);
+      const recovered = await runtime.connect();
+      recovered.release();
+    },
+  );
+  await record(
+    "durable backlog serializes concurrent admission, preserves replay and reserves recovery",
+    async () => {
+      const policy = (
+        await migration.query(
+          "SELECT * FROM tholi.job_admission WHERE singleton",
+        )
+      ).rows[0];
+      const jobKind = kind(),
+        key = randomUUID();
+      const submit = (
+        idempotencyKey = key,
+        registered = jobKind,
+        target = scope,
+      ) =>
+        repositories.transaction(target, (tx) =>
+          tx.enqueueJob({
+            ...registered,
+            idempotencyKey,
+            recordReferences: { accountId: target.accountId },
+          }),
+        );
+      const ids: string[] = [];
+      try {
+        for (const pool of [runtime, worker])
+          await assert.rejects(
+            () =>
+              pool.query("UPDATE tholi.job_admission SET normal_limit=8192"),
+            { code: "42501" },
+          );
+        await migration.query(
+          "UPDATE tholi.job_admission SET normal_limit=normal_count+1 WHERE singleton",
+        );
+        const same = await Promise.all([submit(), submit()]);
+        assert.equal(same[0].id, same[1].id);
+        ids.push(same[0].id);
+        await assert.rejects(() => submit(randomUUID()), {
+          code: "RATE_LIMITED",
+        });
+        const recovery = await submit(randomUUID(), {
+          kind: "inference.reconcile",
+          version: 1,
+          replaySafe: true,
+        });
+        ids.push(recovery.id);
+        await migration.query("DELETE FROM tholi.jobs WHERE id=$1", [
+          same[0].id,
+        ]);
+        const results = await Promise.allSettled([
+          submit(randomUUID()),
+          submit(randomUUID()),
+        ]);
+        const accepted = results.filter(
+          (
+            value,
+          ): value is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof submit>>
+          > => value.status === "fulfilled",
+        );
+        const denied = results.filter((value) => value.status === "rejected");
+        assert.equal(accepted.length, 1);
+        assert.equal(denied.length, 1);
+        assert.equal(denied[0].reason.code, "RATE_LIMITED");
+        ids.push(accepted[0].value.id);
+        await migration.query(
+          "UPDATE tholi.job_admission SET normal_limit=$1,workspace_limit=1 WHERE singleton",
+          [policy.normal_limit],
+        );
+        await assert.rejects(() => submit(randomUUID()), {
+          code: "RATE_LIMITED",
+        });
+        const neighbor = await repositories.provisionAccount();
+        ids.push((await submit(randomUUID(), jobKind, neighbor)).id);
+      } finally {
+        await migration.query(
+          "DELETE FROM tholi.jobs WHERE id=ANY($1::uuid[])",
+          [ids],
+        );
+        await migration.query(
+          "UPDATE tholi.job_admission SET normal_limit=$1,recovery_limit=$2,workspace_limit=$3 WHERE singleton",
+          [policy.normal_limit, policy.recovery_limit, policy.workspace_limit],
+        );
+        const counts = (
+          await migration.query(`SELECT
+          normal_count=(SELECT count(*) FROM tholi.jobs WHERE status IN('queued','running','uncertain') AND kind NOT IN('account.delete','file.expire','inference.reconcile'))
+          AND recovery_count=(SELECT count(*) FROM tholi.jobs WHERE status IN('queued','running','uncertain') AND kind IN('account.delete','file.expire','inference.reconcile')) AS correct
+          FROM tholi.job_admission WHERE singleton`)
+        ).rows[0];
+        assert.equal(counts.correct, true);
+      }
+    },
+  );
   const enqueue = (
     registered: JobKind,
     options: { maxAttempts?: number; availableAt?: Date } = {},

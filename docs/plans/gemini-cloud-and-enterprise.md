@@ -363,6 +363,15 @@ The following are **initial design envelopes for later implementation and load t
 
 Use checked units and encoded/decoded image validation. Reject over-limit inputs before model billing. Large export transfers use private storage rather than raising inference limits. Legacy v1/v2 limits and timeouts remain unchanged; do not accidentally certify them against this new envelope.
 
+The current #47 implementation adds a separate transport envelope of 32 ordinary
+requests per replica, eight per verified account and four reserved cancellation/health
+requests. SQL acquisition waiting is bounded at four times each pool size. Existing
+adapter defaults remain three seconds for acquisition, two for locks and five for
+ordinary statements. Migration 16 adds finite shared ordinary/workspace/recovery job
+backlogs. See the [service resilience record](../development/testing/service-resilience-validation.md)
+for exact implemented limits, controlled local load measurements and validation
+status. These controls do not establish hosted sizing or live-provider capacity.
+
 For a design example with database `max_connections = 100`, allocate API `4 × 8 = 32`, workers `2 × 4 = 8`, OIDC `10`, migrations `2`, and operations/monitoring `8`: **60 steady connections**. Reserve **16** for deployment overlap and **24** for database/emergency headroom. The bound is `32 + 8 + 10 + 2 + 8 + 16 + 24 = 100`. If the identity provider uses another database instance, budget that instance separately; it does not grant permission to consume this reserve elsewhere.
 
 Deployment validation must account for every consumer, extra API/worker pools, blue/green overlap and database-reserved slots before scaling. During overlap, admission remains shared and the combined provider/model cap remains 16. If a rollout exceeds the connection allocation, reduce surge or steady replicas first. Configure pool acquisition/idle/lifetime limits and observe actual usage. A connection pooler is optional when measured need appears; transaction-local scope and prepared-statement compatibility must be verified before enabling it. Do not estimate safe capacity from a generic per-connection RAM formula.
