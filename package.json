@@ -52,6 +52,7 @@
     "local:seed": "node scripts/local-stack.mjs seed",
     "local:reset": "node scripts/local-stack.mjs reset",
     "test:local-stack": "node scripts/local-stack-smoke.mjs",
+    "test:deployment": "node scripts/check-deployment-profile.mjs",
     "test:identity": "node scripts/test.mjs identity",
     "test:identity:web": "node scripts/test.mjs identity-web",
     "test:nlp": "node scripts/test.mjs nlp",

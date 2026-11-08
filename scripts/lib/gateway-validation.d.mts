@@ -6,6 +6,7 @@ export function inspectVmGateway(
   resolved: unknown,
   base: unknown,
 ): { image: string; apiImage: string; targets: number[] };
+export function syntheticCertificate(directory: string): Promise<string>;
 export function runGatewayChecks(options: {
   docker(args: string[], timeout?: number): Promise<string>;
   compose(args: string[], timeout?: number): Promise<string>;
@@ -19,5 +20,4 @@ export function runGatewayChecks(options: {
   };
   project: string;
   directory: string;
-  envFile: string;
 }): Promise<GatewayChecksResult>;

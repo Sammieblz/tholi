@@ -32,6 +32,9 @@ Use Node 24.19.x. Install once with `npm ci` and `npx playwright install chromiu
 The [security-hardening validation record](security-hardening-validation.md) tracks
 adversarial boundaries, idle identity cleanup, dependency/image/license review and
 remaining deployment gates. Synthetic checks are distinct from a security audit.
+The [deployment-portability record](deployment-portability-validation.md) covers
+the same-image local/VM drill and offline mocked Google infrastructure. Use
+`npm run test:deployment` for locked IaC checks; it provisions no cloud resources.
 Windows retains the existing complete validation owners. Native macOS coverage
 uses the same built extension targets through the shared browser harness, as
 described in the [macOS and provider feature record](macos-byok-learning-validation.md).

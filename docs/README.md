@@ -22,6 +22,7 @@ Current setup and behavior are described in [the project README](../README.md). 
 - [Durable jobs, worker isolation, scheduling and recovery](development/service-jobs.md)
 - [Account support, notification mail and private diagnostic files](development/service-support.md)
 - [Gateway, CDN, TLS and optional edge delivery](development/service-delivery.md)
+- [Standalone VM deployment profile](../infra/vm/README.md) and [prepared Google infrastructure](../infra/google/README.md)
 - [Redacted operational telemetry, audit metadata and consented analytics](development/service-observability.md)
 - [Durable inference quotas and credits](development/service-credits.md)
 - [Product catalog and development Free allowances](development/service-plans.md)

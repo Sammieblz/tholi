@@ -15,6 +15,8 @@ import {
   assertOwnedSmokeProject,
   inspectLocalStack,
 } from "./lib/local-stack-policy.mjs";
+import { verifyDatabaseRestore } from "./lib/database-validation.mjs";
+import { runVmChecks } from "./lib/vm-validation.mjs";
 import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 import { runObservabilityChecks } from "./lib/observability-validation.mjs";
 import { buildIdentityTheme } from "./build-identity-theme.mjs";
@@ -475,7 +477,6 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       config,
       project,
       directory,
-      envFile,
     });
     requireCheck(
       gatewayChecks.checks.length > 0 &&
@@ -550,68 +551,14 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     stage = "PostgreSQL application backup and restore";
     // Quiesce the only autonomous writer while comparing the restored snapshot.
     await compose(["stop", "worker"], 30000);
-    const backup = await compose(
-      [
-        "exec",
-        "-T",
-        "postgres",
-        "sh",
-        "-ec",
-        'PGPASSWORD="$THOLI_MIGRATION_PASSWORD" pg_dump --host=127.0.0.1 --username=tholi_migrator --dbname=tholi --format=custom --file=/tmp/tholi-smoke.dump; psql --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 --command="CREATE DATABASE tholi_restore OWNER tholi_migrator TEMPLATE template0"; PGPASSWORD="$THOLI_MIGRATION_PASSWORD" pg_restore --host=127.0.0.1 --username=tholi_migrator --dbname=tholi_restore --single-transaction --exit-on-error /tmp/tholi-smoke.dump; rm /tmp/tholi-smoke.dump',
-      ],
-      90000,
-    );
-    requireCheck(backup.includes("CREATE DATABASE"));
-    const applicationDigest = `DO $check$ DECLARE entry record; content text; BEGIN
-      CREATE TEMP TABLE restore_digests (name text, digest text);
-      FOR entry IN SELECT tablename FROM pg_tables WHERE schemaname = 'tholi' ORDER BY tablename LOOP
-        EXECUTE format('SELECT md5(COALESCE(jsonb_agg(document ORDER BY document::text)::text, ''[]'')) FROM (SELECT to_jsonb(source_record) AS document FROM tholi.%I source_record) records', entry.tablename) INTO content;
-        INSERT INTO restore_digests VALUES (entry.tablename, content);
-      END LOOP;
-    END $check$;
-    SELECT md5(jsonb_agg(to_jsonb(d) ORDER BY name)::text) FROM restore_digests d;`;
-    const digests = [];
-    for (const database of ["tholi", "tholi_restore"]) {
-      digests.push(
-        (
-          await compose([
-            "exec",
-            "-T",
-            "postgres",
-            "sh",
-            "-ec",
-            'PGPASSWORD="$THOLI_MIGRATION_PASSWORD" psql --host=127.0.0.1 --username=tholi_migrator --dbname="$1" --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$2"',
-            "tholi-restore-check",
-            database,
-            applicationDigest,
-          ])
-        ).trim(),
-      );
-    }
-    requireCheck(
-      /^[a-f0-9]{32}$/.test(digests[0].split(/\r?\n/).at(-1)) &&
-        digests[0] === digests[1],
-      "Restored application records differ from the source database.",
-    );
-    const restored = await compose([
-      "exec",
-      "-T",
-      "postgres",
-      "sh",
-      "-ec",
-      'PGPASSWORD="$THOLI_DB_PASSWORD" psql --host=127.0.0.1 --username=tholi_runtime --dbname=tholi_restore --set=ON_ERROR_STOP=1 --quiet --tuples-only --no-align --command="$1"',
-      "tholi-runtime-restore-check",
-      `BEGIN;
-       SET LOCAL tholi.account_id = '00000000-0000-4000-8000-000000000028';
-       SET LOCAL tholi.workspace_id = '00000000-0000-4000-8000-000000000029';
-       SELECT count(*) = 1 FROM tholi.accounts
-        WHERE id = '00000000-0000-4000-8000-000000000028'::uuid;
-       COMMIT;`,
-    ]);
-    requireCheck(
-      restored.trim() === "t",
-      "The actual runtime role cannot read restored application records.",
-    );
+    await verifyDatabaseRestore({
+      compose,
+      project,
+      scope: {
+        accountId: "00000000-0000-4000-8000-000000000028",
+        workspaceId: "00000000-0000-4000-8000-000000000029",
+      },
+    });
     check("application-backup-restore-with-runtime-readback");
     stage = "worker restart after backup verification";
     await compose(
@@ -958,6 +905,18 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       "The reset application seed is not the single synthetic account.",
     );
     check("explicit-volume-reset-and-fresh-application-seed");
+    stage = "standalone production-style VM portability";
+    report.vm = await runVmChecks({
+      docker,
+      project,
+      directory,
+      image: runtimeApi.Image,
+      testImage,
+      settings,
+    });
+    check("same-image-production-vm-portability", {
+      checks: report.vm.checks.length,
+    });
     report.status = "passed";
   } catch (error) {
     report.status = "failed";

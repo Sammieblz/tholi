@@ -111,7 +111,6 @@ it("refuses gateway QA mutation outside its disposable project network", async (
       },
       project: "tholi-smoke-example-1234abcd",
       directory: "/unused",
-      envFile: "/unused",
     }),
   ).rejects.toThrow();
   expect(docker).not.toHaveBeenCalled();
@@ -138,7 +137,6 @@ it("never reuses or removes a pre-existing standalone gateway check container", 
       },
       project,
       directory: "/unused",
-      envFile: "/unused",
     }),
   ).rejects.toThrow("already in use");
   expect(docker).toHaveBeenCalledTimes(1);

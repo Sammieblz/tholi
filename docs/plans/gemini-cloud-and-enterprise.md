@@ -296,6 +296,15 @@ Payloads contain a versioned job kind and authorized record references, not acce
 
 ## Deployment profiles and edge responsibilities
 
+Implementation for #46 keeps the [standalone VM profile](../../infra/vm/README.md),
+[prepared Google infrastructure](../../infra/google/README.md) and shared
+[capacity allocation](../../infra/capacity.json) outside application services.
+The [portability validation record](../development/testing/deployment-portability-validation.md)
+distinguishes actual local/VM image, migration and restore checks from mocked
+Google planning. Google provisioning and workload startup default off. Real
+cloud identity, support transports, DNS/TLS and managed recovery still require
+their separate execution and release gates.
+
 All service profiles use the same OCI API/worker artifacts and domain contracts, immutable image references, validated configuration and a one-shot migration command. Production migrations are serialized through the deployment process, never raced by every replica. The legacy profile remains a separate launch selection; a service deployment cannot silently open its endpoints with a shared bearer.
 
 | Concern                 | Local Compose                                     | VM/self-hosted                                                        | Google managed profile                                                  |

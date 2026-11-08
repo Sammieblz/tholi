@@ -896,6 +896,10 @@ export function parseWorkerConfig(env: Environment) {
       ),
     },
     healthFile: environmentValue(env, "THOLI_WORKER_HEALTH_FILE"),
+    healthPort:
+      environmentValue(env, "THOLI_WORKER_HEALTH_PORT") === undefined
+        ? undefined
+        : budget("THOLI_WORKER_HEALTH_PORT", 8081, 1024, 65535),
     ...(supportEnabled(env)
       ? {
           support: {

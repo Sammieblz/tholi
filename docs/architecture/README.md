@@ -15,6 +15,7 @@
 - [Durable worker, PostgreSQL leases and scheduling](../development/service-jobs.md)
 - [Account support, notification mail and private files](../development/service-support.md)
 - [Gateway, CDN, TLS and optional edge delivery](../development/service-delivery.md)
+- [Standalone VM deployment](../../infra/vm/README.md) and [prepared Google infrastructure](../../infra/google/README.md)
 - [Portable observability, audit metadata and consented analytics](../development/service-observability.md)
 - [Fake and Vertex model adapters, operator approval and budgets](../development/service-models.md)
 - [Durable quota reservations, credit expiry and accounting reads](../development/service-credits.md)

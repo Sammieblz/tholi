@@ -48,7 +48,7 @@ export function inspectVmGateway(resolved, base) {
     )
   )
     throw new Error(
-      "The VM overlay must preserve private services and expose only HTTP/HTTPS ingress.",
+      "The VM profile must preserve private services and expose only HTTP/HTTPS ingress.",
     );
   return {
     image: gateway.image,
@@ -57,7 +57,7 @@ export function inspectVmGateway(resolved, base) {
   };
 }
 
-async function syntheticCertificate(directory) {
+export async function syntheticCertificate(directory) {
   // The native MinGW build works under Windows without MSYS process emulation.
   const candidates =
     process.platform === "win32"
@@ -675,7 +675,6 @@ export async function runGatewayChecks({
   config,
   project,
   directory,
-  envFile,
 }) {
   assertOwnedSmokeProject(project, project);
   const network = config.networks?.application?.name;
@@ -718,7 +717,6 @@ export async function runGatewayChecks({
       "nginx.conf",
       "privkey.pem",
       "fullchain.pem",
-      "tls.env",
       "openssl.cnf",
       "website.conf",
       "static/index.html",
@@ -761,34 +759,6 @@ export async function runGatewayChecks({
       }).nginxLocations(),
       { mode: 0o644 },
     );
-    if (!envFile || /[\r\n$#"]/.test(temporary))
-      throw new Error(
-        "Gateway checks require a safe owned TLS directory and local environment.",
-      );
-    await writeFile(
-      join(temporary, "tls.env"),
-      `THOLI_TLS_DIRECTORY=${temporary.replaceAll("\\", "/")}\n`,
-      { mode: 0o600 },
-    );
-    const vmResolved = JSON.parse(
-      await docker([
-        "compose",
-        "--env-file",
-        resolve(envFile),
-        "--env-file",
-        join(temporary, "tls.env"),
-        "--project-name",
-        project,
-        "--file",
-        resolve(root, "compose.yaml"),
-        "--file",
-        resolve(root, "infra/vm/compose.gateway.yaml"),
-        "config",
-        "--format",
-        "json",
-      ]),
-    );
-    inspectVmGateway(vmResolved, config);
     const vm = await readFile(resolve(root, "infra/vm/nginx.conf"), "utf8");
     const include = "include /etc/nginx/tholi-api.conf;";
     if (vm.split(include).length !== 2)
@@ -879,10 +849,6 @@ export async function runGatewayChecks({
         90000,
       ),
     );
-    result.checks.unshift({
-      name: "resolved VM overlay exposes only HTTP/HTTPS and reuses the nonroot gateway and API image",
-      passed: true,
-    });
     const inspected = JSON.parse(await docker(["inspect", name]))[0];
     if (
       inspected.Config.User !== "101:101" ||
@@ -896,7 +862,6 @@ export async function runGatewayChecks({
       await Promise.all(
         [
           "infra/vm/nginx.conf",
-          "infra/vm/compose.gateway.yaml",
           "infra/local/gateway/nginx.conf",
           "infra/local/gateway/proxy.conf",
           "infra/local/gateway/api.conf",
