@@ -76,23 +76,11 @@ jobs:
             output/reliability/browser.json
             test-results
   containers:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      ONNXRUNTIME_NODE_INSTALL: skip
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: npm run test:local-stack -- --optional
-      - run: npm run test:deployment
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pr-evidence-containers-${{ github.run_attempt }}
-          path: |
-            output/qa/local-stack/**/smoke.json
-            output/qa/deployment-profile/**/validation.json
+    needs: build
+    uses: ./.github/workflows/backend-validation.yml
+    with:
+      artifact_name: ${{ needs.build.outputs.artifact_name }}
+      tier: pr
   native-platform:
     needs: build
     uses: ./.github/workflows/native-platform-validation.yml

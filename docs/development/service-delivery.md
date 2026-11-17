@@ -174,6 +174,10 @@ The server never acquires journey or OS-action authority.
 
 ## Validation and operator review
 
+[Backend delivery](backend-delivery.md) extends these existing local/VM checks
+with one immutable image candidate, security inventory and protected staged
+promotion review. It does not execute a deployment or enable provider traffic.
+
 Focused HTTP tests cover real direct sockets, request IDs, untrusted forwarding,
 explicit trusted peers, CORS/preflight, body/transport bounds and bounded 429
 admission. Website tests verify the generated Cloudflare and Nginx policy,

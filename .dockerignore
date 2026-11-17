@@ -24,6 +24,11 @@
 # Never copy local dependencies, generated output or secrets from allowed trees.
 **/node_modules
 **/dist
+# Explicit prepared-image mode permits only the API artifact tree. Secret
+# exclusions below still win; its Docker COPY selects JS and source maps only.
+!apps/api/dist/
+!apps/api/dist/*.js
+!apps/api/dist/*.js.map
 **/.env*
 **/*.env
 **/.npmrc

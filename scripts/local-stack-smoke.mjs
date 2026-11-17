@@ -21,15 +21,23 @@ import { runResilienceChecks } from "./lib/resilience-validation.mjs";
 import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 import { runObservabilityChecks } from "./lib/observability-validation.mjs";
 import { buildIdentityTheme } from "./build-identity-theme.mjs";
+import { runWebsiteIdentityChecks } from "./lib/website-identity-validation.mjs";
+import { validationIdentity } from "./evidence.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const execute = promisify(execFile);
 
-async function reservePorts() {
+async function reservePorts(identityWeb = false) {
   const servers = [];
   try {
     const ports = {};
-    for (const key of ["API", "OIDC", "MAIL", "STORAGE"]) {
+    for (const key of [
+      "API",
+      "OIDC",
+      "MAIL",
+      "STORAGE",
+      ...(identityWeb ? ["WEB"] : []),
+    ]) {
       const server = createServer();
       servers.push(server);
       await new Promise((resolve, reject) => {
@@ -243,7 +251,13 @@ async function signedS3Request({
 }
 
 /** This smoke owns a fresh project and never deletes the developer's local stack. */
-export async function runLocalStackSmoke({ optional = false } = {}) {
+export async function runLocalStackSmoke({
+  optional = false,
+  preparedImage,
+  identityWeb = false,
+} = {}) {
+  if (preparedImage && !/^sha256:[a-f0-9]{64}$/.test(preparedImage))
+    throw Error("Prepared validation requires an exact loaded image ID.");
   await buildIdentityTheme();
   const project = `tholi-smoke-${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
   const directory = resolve(root, "output/qa/local-stack", project);
@@ -255,8 +269,9 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     project,
     startedAt: new Date().toISOString(),
     optional,
+    validation: validationIdentity(),
     checks: [],
-    liveGemini: "disabled; adapter and billing guard belong to later tickets",
+    liveGemini: "disabled; no external model calls in this cohort",
     status: "running",
   };
   let stage = "initialization";
@@ -283,6 +298,7 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       envFile,
       project,
       selectedProfiles,
+      preparedImage,
     }).slice(0, -1);
   const docker = async (args, timeout = 30000, environment = {}) => {
     try {
@@ -292,7 +308,11 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
           encoding: "utf8",
           maxBuffer: 16 * 1024 * 1024,
           timeout,
-          env: { ...process.env, ...environment },
+          env: {
+            ...process.env,
+            ...(preparedImage ? { THOLI_PREPARED_IMAGE: preparedImage } : {}),
+            ...environment,
+          },
         })
       ).stdout;
     } catch (error) {
@@ -300,7 +320,15 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       throw new Error("Docker operation failed during " + stage + ".");
     }
   };
-  const compose = (args, timeout) => docker([...base(), ...args], timeout);
+  const compose = (args, timeout) =>
+    docker(
+      [
+        ...base(),
+        ...args.filter((arg) => !preparedImage || arg !== "--build"),
+        ...(preparedImage && args[0] === "up" ? ["--no-build"] : []),
+      ],
+      timeout,
+    );
   const nodeProbe = async (input) => {
     const source = `(${privateNetworkProbe.toString()})(${JSON.stringify(input)}).then(result=>process.stdout.write(JSON.stringify(result)),error=>{process.stderr.write((error.message||"Local private-network probe failed.")+"\\n");process.exitCode=1;});`;
     return JSON.parse(
@@ -316,9 +344,24 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     );
   };
   try {
-    const ports = await reservePorts();
-    initializeLocalEnvironment({ envFile, project, ports });
+    const ports = await reservePorts(identityWeb);
+    initializeLocalEnvironment({
+      envFile,
+      project,
+      ports: Object.fromEntries(
+        Object.entries(ports).filter(([key]) => key !== "WEB_HOST_PORT"),
+      ),
+    });
     environmentCreated = true;
+    if (identityWeb)
+      await writeFile(
+        envFile,
+        (await readFile(envFile, "utf8")).replace(
+          /^THOLI_WEB_ORIGIN=.*$/m,
+          `THOLI_WEB_ORIGIN=http://127.0.0.1:${ports.WEB_HOST_PORT}`,
+        ),
+        { mode: 0o600 },
+      );
     if (optional)
       await writeFile(
         envFile,
@@ -360,6 +403,37 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
     requireCheck(config.name === project);
     assertOwnedSmokeProject(config.name, project);
     report.configuration = inspectLocalStack(config);
+    if (preparedImage) {
+      const preparedConfig = JSON.parse(
+        await docker([
+          ...base(),
+          "--profile",
+          "tools",
+          "config",
+          "--format",
+          "json",
+        ]),
+      );
+      for (const name of [
+        "api",
+        "worker",
+        "database-migrate",
+        "database-tools",
+      ]) {
+        requireCheck(
+          preparedConfig.services[name].image === preparedImage,
+          `Prepared ${name} image differs.`,
+        );
+        requireCheck(
+          !preparedConfig.services[name].build,
+          `Prepared ${name} still has a build.`,
+        );
+        requireCheck(
+          preparedConfig.services[name].pull_policy === "never",
+          `Prepared ${name} can pull.`,
+        );
+      }
+    }
     safeProject = true;
     check("resolved-compose-safety");
     // The contract suite must own a fresh schema before the API starts using it.
@@ -446,6 +520,20 @@ export async function runLocalStackSmoke({ optional = false } = {}) {
       600000,
     );
     check("clean-stack-startup");
+    if (identityWeb) {
+      stage = "real local website identity and account workspace";
+      report.websiteIdentity = await runWebsiteIdentityChecks({
+        directory,
+        envFile,
+        project,
+        settings,
+        ports,
+        preparedImage,
+      });
+      check("real-local-website-account-data-credit-onboarding", {
+        reports: report.websiteIdentity.reports.length,
+      });
+    }
     stage = "actual development product catalog";
     const catalog = await jsonResponse(
       `http://127.0.0.1:${ports.API_HOST_PORT}/api/v1/plans`,

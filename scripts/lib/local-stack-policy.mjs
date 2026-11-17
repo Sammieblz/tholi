@@ -128,7 +128,7 @@ export function inspectLocalStack(config) {
       `${name} must keep project-scoped container names.`,
     );
     requirePolicy(
-      service.build || /^.+@sha256:[a-f0-9]{64}$/.test(service.image || ""),
+      service.build || /^(?:.+@)?sha256:[a-f0-9]{64}$/.test(service.image || ""),
       `${name} image must use an immutable digest.`,
     );
     images[name] = service.image || "local-build";

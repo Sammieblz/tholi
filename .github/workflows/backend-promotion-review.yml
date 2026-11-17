@@ -1,0 +1,72 @@
+name: Review backend promotion
+on:
+  workflow_dispatch:
+    inputs:
+      validation_run:
+        description: Successful complete Full validation run on this main commit
+        required: true
+        type: string
+      target:
+        description: Review destination, no deployment is executed
+        type: choice
+        required: true
+        options: [vm-staging, google-staging, vm-production, google-production]
+      approval_record:
+        description: Reviewed nonsecret JSON approval and staging evidence record
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: backend-review-${{ inputs.target }}
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact: ${{ steps.source.outputs.artifact }}
+      image_artifact: ${{ steps.source.outputs.image_artifact }}
+      run_id: ${{ steps.source.outputs.run_id }}
+      environment: ${{ steps.source.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - id: source
+        run: node scripts/backend-promotion-source.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BACKEND_SOURCE_RUN: ${{ inputs.validation_run }}
+          BACKEND_PROMOTION_TARGET: ${{ inputs.target }}
+  review:
+    needs: source
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.source.outputs.environment }}
+      deployment: false
+    env:
+      THOLI_VALIDATION_RUN: ${{ needs.source.outputs.run_id }}
+      BACKEND_APPROVAL_RECORD: ${{ inputs.approval_record }}
+      BACKEND_PROMOTION_TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.source.outputs.artifact }}
+          run-id: ${{ inputs.validation_run }}
+          github-token: ${{ github.token }}
+          path: output/backend-candidate
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.source.outputs.image_artifact }}
+          run-id: ${{ inputs.validation_run }}
+          github-token: ${{ github.token }}
+          path: output/backend-candidate
+      - name: Prepare the reviewed nonsecret request
+        run: |
+          node --input-type=module -e 'import {mkdir,writeFile} from "node:fs/promises"; import assert from "node:assert/strict"; const request=JSON.parse(process.env.BACKEND_APPROVAL_RECORD); assert.equal(request.target,process.env.BACKEND_PROMOTION_TARGET); await mkdir("output/qa",{recursive:true}); await writeFile("output/qa/backend-promotion.json",JSON.stringify(request),{flag:"wx"});'
+      - run: node scripts/backend-delivery.mjs review-promotion output/qa/backend-promotion.json
+      # No registry push, migration, SSH, Terraform apply, cloud credentials or deployment.

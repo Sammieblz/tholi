@@ -78,6 +78,7 @@ function compose(environment: NativeIdentityEnvironment, args: string[]) {
     action: "status",
     envFile: environment.envFile,
     project: environment.project,
+    preparedImage: process.env.THOLI_PREPARED_IMAGE,
   }).slice(0, -1);
   try {
     return execFileSync("docker", [...base, ...args], {

@@ -1,0 +1,72 @@
+name: Immutable backend validation
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        type: string
+        required: true
+      tier:
+        type: string
+        required: true
+      archive:
+        description: Explicitly approved export of the large image archive
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      ONNXRUNTIME_NODE_INSTALL: skip
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      THOLI_TEST_TIER: ${{ inputs.tier }}
+      THOLI_VALIDATION_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+      THOLI_BACKEND_ARCHIVE_EXPORT: ${{ inputs.archive && inputs.tier == 'full' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate workflow contracts
+        run: |
+          curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz --output "$RUNNER_TEMP/actionlint.tar.gz"
+          printf '%s  %s\n' '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+      - run: node scripts/build-manifest.mjs --verify
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run test:backend
+      - run: npm run verify:backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-candidate-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            output/backend-candidate/candidate.json
+            output/backend-candidate/client-build-manifest.json
+            output/backend-candidate/security.json
+            output/backend-candidate/scan-database.json
+            output/backend-candidate/smoke.json
+            output/backend-candidate/profiles.json
+      - uses: actions/upload-artifact@v4
+        if: success() && inputs.archive == true && inputs.tier == 'full'
+        with:
+          name: backend-image-${{ github.run_attempt }}
+          retention-days: 1
+          if-no-files-found: error
+          path: output/backend-candidate/runtime.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-diagnostics-${{ github.run_attempt }}
+          retention-days: 7
+          path: |
+            output/qa/local-stack/**/smoke.json
+            output/qa/local-stack/**/website-identity/*.json
+            output/qa/website-identity/*.json
+            output/qa/deployment-profile/**/validation.json

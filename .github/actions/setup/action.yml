@@ -1,4 +1,5 @@
 name: Set up Tholi validation
+description: Install the pinned Node runtime and locked validation dependencies
 inputs:
   assets:
     description: Restore pinned inference assets
