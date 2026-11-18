@@ -1,7 +1,10 @@
 import { productCatalogSeed } from "../../apps/api/src/database/migrations/009-product-plans";
+import { billingCatalogSeed } from "../../apps/api/src/database/migrations/017-subscription-billing";
 import {
   effectiveProductPlanSchema,
   productCatalogSchema,
+  productCatalogV2Schema,
+  type ProductCatalogV2,
   type EffectiveProductPlan,
   type ProductCatalog,
 } from "../../packages/navigation-core/contracts-plans";
@@ -9,6 +12,22 @@ import {
 /** Test-only reuse of historical migration data, never a runtime catalog source. */
 export function createProductCatalogFixture(): ProductCatalog {
   return productCatalogSchema.parse(structuredClone(productCatalogSeed));
+}
+
+/** Both negotiated views reuse the same frozen plan versions; this is test-only. */
+export function createProductCatalogV2Fixture(): ProductCatalogV2 {
+  const legacy = createProductCatalogFixture();
+  return productCatalogV2Schema.parse({
+    ...legacy,
+    version: 2,
+    catalogVersion: billingCatalogSeed.catalogVersion,
+    plans: [
+      ...legacy.plans
+        .filter((plan) => plan.mode !== "paid")
+        .map((plan) => ({ ...plan, billing: null })),
+      ...structuredClone(billingCatalogSeed.paidPlans),
+    ],
+  });
 }
 
 /** A scoped admission snapshot; account grants and enforcement remain PostgreSQL-owned. */

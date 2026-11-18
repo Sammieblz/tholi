@@ -13,7 +13,7 @@ import { createAdapterHttp, type AdapterHttpErrorCode } from "./adapter-http";
 
 export const STRIPE_API_VERSION = "2026-10-28.endive";
 const reference = (prefix: string) =>
-  z.string().regex(new RegExp(`^${prefix}_[A-Za-z0-9]{1,120}$`));
+  z.string().regex(new RegExp(`^${prefix}_[A-Za-z0-9_]{1,120}$`));
 const seconds = z.number().int().min(0).max(253402300799);
 const minor = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const currency = z.string().regex(/^[a-z]{3}$/);
@@ -36,12 +36,15 @@ function bindReference<T extends { id: string }>(
 }
 const checkout = z.object({
   id: reference("cs"),
-  customer: customerId,
+  livemode: z.boolean(),
+  client_reference_id: z.string().uuid(),
+  customer: customerId.nullable(),
   subscription: subscriptionId.nullable(),
   status: z.enum(["open", "complete", "expired"]),
   url: z.string().nullable(),
   expires_at: seconds,
 });
+const operationMetadata = z.object({ tholi_operation: z.unknown().optional() });
 const event = z.object({
   id: reference("evt"),
   type: z
@@ -51,11 +54,25 @@ const event = z.object({
     .regex(/^[a-z_]+(?:\.[a-z_]+)+$/),
   livemode: z.boolean(),
   data: z.object({
-    object: z.object({ id: z.string().regex(/^[a-z]+_[A-Za-z0-9]{1,120}$/) }),
+    object: z.object({
+      id: z.string().regex(/^[a-z]+_[A-Za-z0-9_]{1,120}$/),
+      client_reference_id: z.unknown().optional(),
+      metadata: operationMetadata.optional(),
+      parent: z
+        .object({
+          subscription_details: z
+            .object({ metadata: operationMetadata.optional() })
+            .nullable()
+            .optional(),
+        })
+        .nullable()
+        .optional(),
+    }),
   }),
 });
 const subscription = z.object({
   id: subscriptionId,
+  livemode: z.boolean(),
   customer: customerId,
   status: z.enum([
     "active",
@@ -85,6 +102,7 @@ const subscription = z.object({
 });
 const invoice = z.object({
   id: invoiceId,
+  livemode: z.boolean(),
   customer: customerId,
   created: seconds,
   status: z.enum(["draft", "open", "paid", "void", "uncollectible"]),
@@ -160,18 +178,23 @@ export interface StripeBillingOptions {
   approvedPriceIds: readonly string[];
 }
 function providerUrl(raw: string, kind: "checkout" | "portal") {
-  const url = new URL(raw);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new BillingProviderError("INVALID_RESPONSE", "unknown");
+  }
   const approved =
     kind === "checkout"
       ? url.origin === "https://checkout.stripe.com" &&
-        /^\/(?:c|pay)\//.test(url.pathname)
+        /^\/(?:c\/pay|pay)\/cs_[A-Za-z0-9_]+$/.test(url.pathname)
       : url.origin === "https://billing.stripe.com" &&
-        url.pathname.startsWith("/p/session/");
+        /^\/p\/session(?:\/|$)/.test(url.pathname);
   if (
     !approved ||
     url.username ||
     url.password ||
-    url.hash ||
+    (kind === "portal" && url.hash) ||
     raw.length > 4096
   )
     throw new BillingProviderError("INVALID_RESPONSE", "unknown");
@@ -191,6 +214,7 @@ export function createStripeBilling(
   const expectedPrefix =
     options.mode === "stripe-live" ? "sk_live_" : "sk_test_";
   if (
+    !["stripe-test", "stripe-live"].includes(options.mode) ||
     !options.secretKey.startsWith(expectedPrefix) ||
     !/^sk_(test|live)_[A-Za-z0-9_]{16,240}$/.test(options.secretKey) ||
     !options.webhookSecrets.length ||
@@ -208,9 +232,19 @@ export function createStripeBilling(
     )
   )
     throw new BillingProviderError("CONFIGURATION");
-  const origin = serviceOrigin(options.serviceOrigin);
+  let origin: string;
+  try {
+    origin = serviceOrigin(options.serviceOrigin);
+  } catch {
+    throw new BillingProviderError("CONFIGURATION");
+  }
   const returnUrl = (raw: string) => {
-    const url = new URL(raw);
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      throw new BillingProviderError("CONFIGURATION");
+    }
     if (
       url.origin !== origin ||
       url.pathname !== "/api/v1/billing/return" ||
@@ -293,12 +327,18 @@ export function createStripeBilling(
     }
   }
   function projectCheckout(value: z.infer<typeof checkout>): BillingCheckout {
+    if (value.livemode !== (options.mode === "stripe-live"))
+      throw new BillingProviderError("INVALID_RESPONSE", "unknown");
+    const url = value.url === null ? null : providerUrl(value.url, "checkout");
+    if (url && !new URL(url).pathname.endsWith("/" + value.id))
+      throw new BillingProviderError("INVALID_RESPONSE", "unknown");
     return {
       id: value.id,
+      operationReference: value.client_reference_id,
       customerId: value.customer,
       subscriptionId: value.subscription,
       status: value.status,
-      url: value.url === null ? null : providerUrl(value.url, "checkout"),
+      url,
       expiresAt: new Date(value.expires_at * 1000),
     };
   }
@@ -338,11 +378,24 @@ export function createStripeBilling(
           );
           if (verified.livemode !== (options.mode === "stripe-live"))
             throw new Error();
+          const object = verified.data.object;
+          const hints = [
+            object.client_reference_id,
+            object.metadata?.tholi_operation,
+            object.parent?.subscription_details?.metadata?.tholi_operation,
+          ].flatMap((value) => {
+            const id = z.string().uuid().safeParse(value);
+            return id.success ? [id.data] : [];
+          });
+          const references = [...new Set(hints)];
           return {
             id: verified.id,
             type: verified.type,
             objectId: verified.data.object.id,
             live: verified.livemode,
+            ...(references.length === 1
+              ? { operationReference: references[0] }
+              : {}),
           };
         } catch {
           /* Try the other explicitly configured rotation key, never another provider. */
@@ -350,19 +403,10 @@ export function createStripeBilling(
       }
       throw new BillingProviderError("INVALID_SIGNATURE");
     },
-    async createCustomer(operationKey, context) {
-      return (
-        await request(
-          "customers",
-          z.object({ id: customerId }),
-          context,
-          new URLSearchParams(),
-          operationKey,
-        )
-      ).id;
-    },
     async createCheckout(input, context) {
-      inputValue(customerId, input.customerId);
+      if (input.customerId !== undefined)
+        inputValue(customerId, input.customerId);
+      inputValue(z.string().uuid(), input.operationReference);
       inputValue(reference("price"), input.priceId);
       if (!options.approvedPriceIds.includes(input.priceId))
         throw new BillingProviderError("CONFIGURATION");
@@ -375,7 +419,11 @@ export function createStripeBilling(
         checkout,
         context,
         new URLSearchParams({
-          customer: input.customerId,
+          ...(input.customerId ? { customer: input.customerId } : {}),
+          client_reference_id: input.operationReference,
+          "subscription_data[metadata][tholi_operation]":
+            input.operationReference,
+          "payment_method_types[0]": "card",
           mode: "subscription",
           "line_items[0][price]": input.priceId,
           "line_items[0][quantity]": "1",
@@ -385,7 +433,10 @@ export function createStripeBilling(
         }),
         input.key,
       );
-      if (value.customer !== input.customerId)
+      if (
+        value.client_reference_id !== input.operationReference ||
+        (input.customerId !== undefined && value.customer !== input.customerId)
+      )
         throw new BillingProviderError("INVALID_RESPONSE", "unknown");
       return projectCheckout(value);
     },
@@ -405,7 +456,10 @@ export function createStripeBilling(
           expected,
         ),
         item = value.items.data[0];
-      if (item.current_period_end <= item.current_period_start)
+      if (
+        value.livemode !== (options.mode === "stripe-live") ||
+        item.current_period_end <= item.current_period_start
+      )
         throw new BillingProviderError("INVALID_RESPONSE", "unknown");
       return {
         id: value.id,
@@ -426,6 +480,7 @@ export function createStripeBilling(
         ),
         line = value.lines.data[0];
       if (
+        value.livemode !== (options.mode === "stripe-live") ||
         line.period.end <= line.period.start ||
         line.parent.subscription_item_details.subscription !==
           value.parent.subscription_details.subscription ||
@@ -457,6 +512,8 @@ export function createStripeBilling(
     },
     async createPortal(input, context) {
       inputValue(customerId, input.customerId);
+      inputValue(key, input.key);
+      const destination = returnUrl(input.returnUrl);
       const configuration = await request(
         "billing_portal/configurations/" + options.portalConfigurationId,
         portalConfiguration,
@@ -472,16 +529,28 @@ export function createStripeBilling(
         throw new BillingProviderError("CONFIGURATION");
       const result = await request(
         "billing_portal/sessions",
-        z.object({ url: z.string() }),
+        z.object({
+          id: reference("bps"),
+          customer: customerId,
+          configuration: reference("bpc"),
+          livemode: z.boolean(),
+          url: z.string(),
+        }),
         context,
         new URLSearchParams({
           customer: input.customerId,
           configuration: options.portalConfigurationId,
-          return_url: returnUrl(input.returnUrl),
+          return_url: destination,
         }),
         input.key,
       );
-      return providerUrl(result.url, "portal");
+      if (
+        result.customer !== input.customerId ||
+        result.configuration !== options.portalConfigurationId ||
+        result.livemode !== (options.mode === "stripe-live")
+      )
+        throw new BillingProviderError("INVALID_RESPONSE", "unknown");
+      return { id: result.id, url: providerUrl(result.url, "portal") };
     },
   };
 }

@@ -14,8 +14,40 @@ import type {
 import {
   createEffectiveProductPlanFixture,
   createProductCatalogFixture,
+  createProductCatalogV2Fixture,
 } from "../../support/product-plan-fixture";
-import { productCatalogSchema } from "../../../packages/navigation-core/contracts-plans";
+import {
+  productCatalogSchema,
+  productCatalogV2Schema,
+} from "../../../packages/navigation-core/contracts-plans";
+
+test("negotiated billing fixtures cannot leak through the legacy view or become production pricing", () => {
+  const legacy = createProductCatalogFixture(),
+    negotiated = createProductCatalogV2Fixture();
+  expect(productCatalogSchema.safeParse(negotiated).success).toBe(false);
+  expect(
+    legacy.plans
+      .filter((plan) => plan.mode === "paid")
+      .every(
+        (plan) =>
+          !plan.availability.available && plan.pricing.status === "unpublished",
+      ),
+  ).toBe(true);
+  expect(
+    negotiated.plans
+      .filter((plan) => plan.mode !== "paid")
+      .map(({ billing, ...plan }) => plan),
+  ).toEqual(legacy.plans.filter((plan) => plan.mode !== "paid"));
+  expect(
+    productCatalogV2Schema.safeParse({
+      ...negotiated,
+      environment: "production",
+    }).success,
+  ).toBe(false);
+  const invalid = structuredClone(negotiated);
+  invalid.plans.find((plan) => plan.mode === "paid")!.billing = null;
+  expect(productCatalogV2Schema.safeParse(invalid).success).toBe(false);
+});
 
 function fixture() {
   const accountId = randomUUID(),
@@ -73,7 +105,10 @@ function fixture() {
     enrollFree: vi.fn<PlanTransaction["enrollFree"]>(async () => enrollment),
   } satisfies PlanTransaction;
   const repositories = {
-    readPlanCatalog: vi.fn(async () => catalog),
+    readPlanCatalog: vi.fn<PlanRepositories["readPlanCatalog"]>(
+      async (version = 1) =>
+        version === 2 ? createProductCatalogV2Fixture() : catalog,
+    ),
     async transaction<T>(
       _scope: RepositoryScope,
       work: (repository: PlanTransaction) => Promise<T>,
@@ -138,6 +173,53 @@ test("deployment-owned catalog availability hides development allowances by defa
       ),
   ).toBe(true);
   expect(f.catalog).toEqual(createProductCatalogFixture());
+  expect(f.transactions).not.toHaveBeenCalled();
+});
+
+test("negotiated billing needs an explicit development capability and never alters legacy availability or creates entitlement", async () => {
+  const f = fixture();
+  const disabled = await f.service.catalog(f.context, 2);
+  expect(
+    disabled.plans
+      .filter((plan) => plan.mode === "paid")
+      .every(
+        (plan) =>
+          !plan.availability.available &&
+          plan.pricing.status === "unpublished" &&
+          plan.billing === null,
+      ),
+  ).toBe(true);
+  const enabled = new PlanService(f.repositories, "development", true);
+  const view = await enabled.catalog(f.context, 2);
+  expect(
+    view.plans
+      .filter((plan) => plan.mode === "paid")
+      .every(
+        (plan) =>
+          plan.availability.available &&
+          plan.pricing.status === "development-fixture",
+      ),
+  ).toBe(true);
+  expect(
+    (await enabled.catalog(f.context)).plans
+      .filter((plan) => plan.mode === "paid")
+      .every((plan) => !plan.availability.available),
+  ).toBe(true);
+  const production = await new PlanService(
+    f.repositories,
+    "production",
+    true,
+  ).catalog(f.context, 2);
+  expect(
+    production.plans
+      .filter((plan) => plan.mode !== "local")
+      .every(
+        (plan) =>
+          !plan.availability.available &&
+          plan.developmentAllowance === null &&
+          plan.billing === null,
+      ),
+  ).toBe(true);
   expect(f.transactions).not.toHaveBeenCalled();
 });
 

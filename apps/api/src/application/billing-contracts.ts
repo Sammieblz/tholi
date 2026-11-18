@@ -26,10 +26,13 @@ export interface BillingEvent {
   type: string;
   objectId: string;
   live: boolean;
+  /** A lookup hint only; current provider records must establish every relation. */
+  operationReference?: string;
 }
 export interface BillingCheckout {
   id: string;
-  customerId: string;
+  operationReference: string;
+  customerId: string | null;
   subscriptionId: string | null;
   status: "open" | "complete" | "expired";
   url: string | null;
@@ -67,16 +70,21 @@ export interface BillingProviderInvoice {
   // Non-prorated, one-item periods only. Ineligible invoices never mint credits.
   eligible: boolean;
 }
+export interface BillingPortal {
+  id: string;
+  /** Short-lived bearer capability; never export or retain it in plaintext. */
+  url: string;
+}
 
 /** Only this adapter knows Stripe serialization. Application services own durable effects. */
 export interface BillingProvider {
   readonly mode: BillingMode;
   verifyEvent(raw: Buffer, signature: string, now: Date): BillingEvent;
-  createCustomer(key: string, context: ServiceRequestContext): Promise<string>;
   createCheckout(
     input: {
       key: string;
-      customerId: string;
+      operationReference: string;
+      customerId?: string;
       priceId: string;
       returnUrl: string;
     },
@@ -101,5 +109,5 @@ export interface BillingProvider {
       returnUrl: string;
     },
     context: ServiceRequestContext,
-  ): Promise<string>;
+  ): Promise<BillingPortal>;
 }

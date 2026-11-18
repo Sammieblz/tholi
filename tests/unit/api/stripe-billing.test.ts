@@ -35,16 +35,27 @@ const now = new Date("2026-11-18T04:00:00Z"),
   end = start + 86400;
 const returnUrl =
   options.serviceOrigin + "/api/v1/billing/return?flow=synthetic";
+const operationReference = randomUUID();
+const checkoutInput = (key = randomUUID()) => ({
+  key,
+  operationReference,
+  customerId: "cus_owner",
+  priceId: "price_approved",
+  returnUrl,
+});
 const session = () => ({
-  id: "cs_checkout",
+  id: "cs_test_checkout",
+  livemode: false,
+  client_reference_id: operationReference,
   customer: "cus_owner",
   subscription: "sub_owner",
   status: "complete",
-  url: "https://checkout.stripe.com/c/pay/synthetic",
+  url: "https://checkout.stripe.com/c/pay/cs_test_checkout#opaqueSyntheticFragment",
   expires_at: end,
 });
 const subscription = () => ({
   id: "sub_owner",
+  livemode: false,
   customer: "cus_owner",
   status: "active",
   cancel_at_period_end: false,
@@ -63,6 +74,7 @@ const subscription = () => ({
 });
 const invoice = () => ({
   id: "in_paid",
+  livemode: false,
   customer: "cus_owner",
   created: start,
   status: "paid",
@@ -184,6 +196,50 @@ test("raw webhook signatures support rotation and multiple v1 signatures while r
       now,
     ).id,
   ).toBe("evt_paid");
+  const referenced = JSON.stringify({
+    ...JSON.parse(payload),
+    data: {
+      object: {
+        id: "in_paid",
+        customer_email: "synthetic-private@example.invalid",
+        parent: {
+          subscription_details: {
+            metadata: { tholi_operation: operationReference },
+          },
+        },
+      },
+    },
+  });
+  expect(
+    adapter.verifyEvent(
+      Buffer.from(referenced),
+      sign(undefined, undefined, referenced),
+      now,
+    ),
+  ).toEqual({
+    id: "evt_paid",
+    type: "invoice.paid",
+    objectId: "in_paid",
+    live: false,
+    operationReference,
+  });
+  const ambiguous = JSON.stringify({
+    ...JSON.parse(payload),
+    data: {
+      object: {
+        id: "in_paid",
+        client_reference_id: operationReference,
+        metadata: { tholi_operation: randomUUID() },
+      },
+    },
+  });
+  expect(
+    adapter.verifyEvent(
+      Buffer.from(ambiguous),
+      sign(undefined, undefined, ambiguous),
+      now,
+    ).operationReference,
+  ).toBeUndefined();
   for (const [body, header] of [
     [payload + " ", sign()],
     [payload, sign(now.getTime() / 1000 - 301)],
@@ -228,17 +284,21 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
       body: Buffer.concat(chunks).toString(),
     });
     const data =
-      req.url === "/v1/customers"
-        ? { id: "cus_owner", email: "synthetic-private@example.invalid" }
-        : req.url === "/v1/checkout/sessions"
-          ? session()
-          : req.url?.startsWith("/v1/subscriptions/")
-            ? subscription()
-            : req.url?.startsWith("/v1/invoices/")
-              ? invoice()
-              : req.url?.startsWith("/v1/billing_portal/configurations/")
-                ? portal()
-                : { url: "https://billing.stripe.com/p/session/synthetic" };
+      req.url === "/v1/checkout/sessions"
+        ? session()
+        : req.url?.startsWith("/v1/subscriptions/")
+          ? subscription()
+          : req.url?.startsWith("/v1/invoices/")
+            ? invoice()
+            : req.url?.startsWith("/v1/billing_portal/configurations/")
+              ? portal()
+              : {
+                  id: "bps_synthetic",
+                  customer: "cus_owner",
+                  configuration: "bpc_approved",
+                  livemode: false,
+                  url: "https://billing.stripe.com/p/session?secret=synthetic",
+                };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
   });
@@ -258,13 +318,9 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
   try {
     const adapter = createStripeBilling(options, dispatch),
       key = randomUUID();
-    expect(await adapter.createCustomer(key, context())).toBe("cus_owner");
     expect(
-      await adapter.createCheckout(
-        { key, customerId: "cus_owner", priceId: "price_approved", returnUrl },
-        context(),
-      ),
-    ).toMatchObject({ id: "cs_checkout", customerId: "cus_owner" });
+      await adapter.createCheckout(checkoutInput(key), context()),
+    ).toMatchObject({ id: "cs_test_checkout", customerId: "cus_owner" });
     expect(
       await adapter.readSubscription("sub_owner", context()),
     ).toMatchObject({
@@ -283,14 +339,19 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
         { key, customerId: "cus_owner", returnUrl },
         context(),
       ),
-    ).toBe("https://billing.stripe.com/p/session/synthetic");
+    ).toEqual({
+      id: "bps_synthetic",
+      url: "https://billing.stripe.com/p/session?secret=synthetic",
+    });
     expect(
       observed.every((request) => request.version === STRIPE_API_VERSION),
     ).toBe(true);
-    expect(observed.filter((request) => request.key === key)).toHaveLength(3);
-    expect(observed[0].body).toBe("");
+    expect(observed.filter((request) => request.key === key)).toHaveLength(2);
     expect(
-      new URLSearchParams(observed[1].body).get("line_items[0][quantity]"),
+      new URLSearchParams(observed[0].body).get("client_reference_id"),
+    ).toBe(operationReference);
+    expect(
+      new URLSearchParams(observed[0].body).get("line_items[0][quantity]"),
     ).toBe("1");
     expect(
       observed.some((request) => request.body.includes("example.invalid")),
@@ -306,7 +367,7 @@ test.each(["checkout", "subscription", "invoice"] as const)(
   async (kind) => {
     const payload =
       kind === "checkout"
-        ? { ...session(), id: "cs_foreign" }
+        ? { ...session(), id: "cs_test_foreign" }
         : kind === "subscription"
           ? { ...subscription(), id: "sub_foreign" }
           : { ...invoice(), id: "in_foreign" };
@@ -316,7 +377,7 @@ test.each(["checkout", "subscription", "invoice"] as const)(
     );
     const result =
       kind === "checkout"
-        ? adapter.readCheckout("cs_checkout", context())
+        ? adapter.readCheckout("cs_test_checkout", context())
         : kind === "subscription"
           ? adapter.readSubscription("sub_owner", context())
           : adapter.readInvoice("in_paid", context());
@@ -327,6 +388,7 @@ test.each(["checkout", "subscription", "invoice"] as const)(
 test("checkout cannot substitute another customer or return a non-Stripe launch URL", async () => {
   for (const payload of [
     { ...session(), customer: "cus_foreign" },
+    { ...session(), client_reference_id: randomUUID() },
     { ...session(), url: "https://attacker.invalid/checkout" },
   ]) {
     const adapter = createStripeBilling(
@@ -337,6 +399,7 @@ test("checkout cannot substitute another customer or return a non-Stripe launch 
       adapter.createCheckout(
         {
           key: randomUUID(),
+          operationReference,
           customerId: "cus_owner",
           priceId: "price_approved",
           returnUrl,
@@ -370,6 +433,82 @@ test("portal configuration changes cannot introduce unapproved prices or immedia
   }
 });
 
+test("first checkout can create its customer inside Stripe without another external mutation", async () => {
+  const dispatch = vi.fn<typeof fetch>().mockResolvedValue(
+    json({
+      ...session(),
+      customer: null,
+      subscription: null,
+      status: "open",
+    }),
+  );
+  const adapter = createStripeBilling(options, dispatch);
+  const { customerId: _customer, ...input } = checkoutInput();
+  expect(await adapter.createCheckout(input, context())).toMatchObject({
+    customerId: null,
+    operationReference,
+    status: "open",
+  });
+  expect(dispatch).toHaveBeenCalledTimes(1);
+  const body = new URLSearchParams(dispatch.mock.calls[0][1]?.body as string);
+  expect(body.has("customer")).toBe(false);
+  expect(body.get("subscription_data[metadata][tholi_operation]")).toBe(
+    operationReference,
+  );
+});
+
+test("invalid return targets and portal operation keys cannot dispatch even a configuration read", async () => {
+  const dispatch = vi.fn<typeof fetch>(),
+    adapter = createStripeBilling(options, dispatch);
+  for (const destination of [
+    "not a URL",
+    "https://attacker.invalid/api/v1/billing/return",
+    options.serviceOrigin + "/api/v1/auth/callback",
+  ])
+    await expect(
+      adapter.createPortal(
+        { key: randomUUID(), customerId: "cus_owner", returnUrl: destination },
+        context(),
+      ),
+    ).rejects.toMatchObject({ code: "CONFIGURATION", outcome: "not-sent" });
+  await expect(
+    adapter.createPortal(
+      { key: "short", customerId: "cus_owner", returnUrl },
+      context(),
+    ),
+  ).rejects.toMatchObject({ code: "CONFIGURATION" });
+  expect(dispatch).not.toHaveBeenCalled();
+});
+
+test("portal replies cannot substitute another customer's session or mode", async () => {
+  for (const changed of [
+    { customer: "cus_foreign" },
+    { livemode: true },
+    { configuration: "bpc_foreign" },
+  ]) {
+    const dispatch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json(portal()))
+      .mockResolvedValueOnce(
+        json({
+          id: "bps_synthetic",
+          customer: "cus_owner",
+          configuration: "bpc_approved",
+          livemode: false,
+          url: "https://billing.stripe.com/p/session?secret=synthetic",
+          ...changed,
+        }),
+      );
+    const adapter = createStripeBilling(options, dispatch);
+    await expect(
+      adapter.createPortal(
+        { key: randomUUID(), customerId: "cus_owner", returnUrl },
+        context(),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  }
+});
+
 test.each([400, 429, 500])(
   "HTTP %s remains a closed classified single dispatch without leaking the provider body",
   async (status) => {
@@ -383,7 +522,7 @@ test.each([400, 429, 500])(
       );
     const adapter = createStripeBilling(options, dispatch);
     await expect(
-      adapter.createCustomer(randomUUID(), context()),
+      adapter.createCheckout(checkoutInput(), context()),
     ).rejects.toMatchObject({
       outcome: status === 500 ? "unknown" : "rejected",
     });
@@ -399,7 +538,7 @@ test("a connection reset after dispatch remains uncertain and is never retried",
   );
   const adapter = createStripeBilling(options, dispatch);
   await expect(
-    adapter.createCustomer(randomUUID(), context()),
+    adapter.createCheckout(checkoutInput(), context()),
   ).rejects.toMatchObject({
     code: "UNAVAILABLE",
     outcome: "unknown",
@@ -414,14 +553,14 @@ test("deadlines fence a transport that ignores cancellation and an already abort
     .mockImplementation(() => new Promise(() => {}));
   const adapter = createStripeBilling(options, dispatch);
   await expect(
-    adapter.createCustomer(randomUUID(), context(undefined, 15)),
+    adapter.createCheckout(checkoutInput(), context(undefined, 15)),
   ).rejects.toMatchObject({ code: "DEADLINE_EXCEEDED", outcome: "unknown" });
   expect(dispatch).toHaveBeenCalledTimes(1);
   const controller = new AbortController();
   controller.abort();
   dispatch.mockClear();
   await expect(
-    adapter.createCustomer(randomUUID(), context(controller.signal)),
+    adapter.createCheckout(checkoutInput(), context(controller.signal)),
   ).rejects.toMatchObject({ code: "CANCELLED", outcome: "not-sent" });
   expect(dispatch).not.toHaveBeenCalled();
 });
@@ -444,7 +583,7 @@ test.each(["oversized", "html", "invalid-json"])(
     const dispatch = vi.fn<typeof fetch>().mockResolvedValue(response),
       adapter = createStripeBilling(options, dispatch);
     await expect(
-      adapter.createCustomer(randomUUID(), context()),
+      adapter.createCheckout(checkoutInput(), context()),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE", outcome: "unknown" });
     expect(dispatch).toHaveBeenCalledTimes(1);
   },

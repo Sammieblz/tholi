@@ -42,9 +42,11 @@ import {
 } from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import {
   productCatalogSchema,
+  productCatalogV2Schema,
   effectiveProductPlanSchema,
   freeEnrollmentSchema,
   type ProductCatalog,
+  type ProductCatalogV2,
   type EffectiveProductPlan,
   type FreeEnrollment,
 } from "../../../../packages/navigation-core/contracts-plans";
@@ -389,11 +391,26 @@ function inferenceUsageDetails(input: FinishInferenceInput) {
 export class PostgresRepositories {
   constructor(private readonly pool: Pool) {}
 
-  async readPlanCatalog(): Promise<ProductCatalog> {
+  readPlanCatalog(): Promise<ProductCatalog>;
+  readPlanCatalog(schemaVersion: 1): Promise<ProductCatalog>;
+  readPlanCatalog(schemaVersion: 2): Promise<ProductCatalogV2>;
+  readPlanCatalog(
+    schemaVersion: 1 | 2,
+  ): Promise<ProductCatalog | ProductCatalogV2>;
+  async readPlanCatalog(
+    schemaVersion: 1 | 2 = 1,
+  ): Promise<ProductCatalog | ProductCatalogV2> {
+    if (schemaVersion !== 1 && schemaVersion !== 2)
+      invalid("Unsupported catalog view.");
     const result = await this.pool.query<{ catalog: unknown }>(
-      "SELECT tholi.read_product_catalog() AS catalog",
+      schemaVersion === 1
+        ? "SELECT tholi.read_product_catalog() AS catalog"
+        : "SELECT tholi.read_product_catalog($1) AS catalog",
+      schemaVersion === 1 ? [] : [schemaVersion],
     );
-    return productCatalogSchema.parse(result.rows[0]?.catalog);
+    return (
+      schemaVersion === 1 ? productCatalogSchema : productCatalogV2Schema
+    ).parse(result.rows[0]?.catalog);
   }
 
   async refillFreePlans(input: { limit: number }): Promise<number> {
