@@ -25,6 +25,8 @@ The [invited beta operating proposal](../development/private-beta.md) owns #49's
 offline preparation: supported task/cohort proposal, separate participant choices,
 hosted walkthrough, support and stop rules. It does not enable admission or supply
 the deferred #43 quality, hosted or customer evidence. Actual beta gates stay open.
+That proposal also owns the audience and application priorities supplied on
+November 18, with exact repeated tasks and cohort selection still to confirm.
 
 The user explicitly authorized offline preparation and testing of later tickets
 on November 17 before beta/customer-evidence dependencies are complete. This

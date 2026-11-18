@@ -29,14 +29,39 @@ synthetic proposal or website animation.
 
 ## Proposed cohort and support
 
-Start with at most five consenting adult technical testers for one week. This is
-a proposal for the maintainer's approval, not a list of invitations. Include
+On November 18, 2026 the maintainer reported access to developers and small
+technical teams, nontechnical staff using business applications, and individuals
+navigating everyday websites. Requested application candidates are GitHub, Jira,
+Confluence, Amazon and Netflix. This is a research inventory, not recruited
+participants or measured site coverage.
+
+| Application | Candidate repeated task for participant confirmation                                            |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| GitHub      | Find a named file or help reference in an existing public repository.                           |
+| Jira        | Find an assigned issue or an existing issue filter without editing it.                          |
+| Confluence  | Find a named page in an authorized space without publishing changes.                            |
+| Amazon      | Find delivery or return information without placing an order or submitting a return.            |
+| Netflix     | Find profile or viewing-preference information without changing membership or payment settings. |
+
+Confirm one exact repeated task, its independent outcome and the
+participant's authorized account before each experiment. Keep outcomes, failed
+attempts, cost and support effort separate by task, application and audience.
+Evaluate willingness to pay through #51's existing protocol. The shared engine
+and existing browser permissions continue to govern website access.
+
+Start with at most five consenting adult testers for one week, after choosing
+the initial audience/task and approving the gates above. This is a proposal for
+the maintainer's approval, not a list of invitations. Include
 supported desktop Chrome and Firefox, Windows and macOS, with each tested
 OS/browser/build recorded separately. Use the minimum browser versions in the
 current [setup guide](../guides/getting-started.md).
 
-Limit navigation to signed-out public Wikipedia reading, public GitHub repository
-browsing and synthetic practice. Select exact supported tasks from the existing
+The initial proposed rehearsal uses signed-out public Wikipedia reading, public
+GitHub repository browsing and synthetic practice, reusing the existing baseline.
+The other requested applications remain explicit expansion candidates. An
+authenticated Jira, Confluence, Amazon or Netflix experiment needs its own exact
+task, participant/data authorization and evidence before it can be included.
+Select exact baseline tasks from the existing
 [comparison declaration](testing/perception-comparison.md) before collection.
 Keep credentials, private repositories, banking/medical tasks, destructive or
 publishing submissions and OS control outside this first cohort. Unsupported
