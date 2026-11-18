@@ -2,7 +2,7 @@ import { expect, test, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 import { once } from "node:events";
-import { withoutExternalModels } from "../../support/provider-network-guard";
+import { withoutExternalProviders } from "../../support/provider-network-guard";
 import { createCustomerNavigationModel } from "../../../apps/api/src/adapters/customer-navigation-model";
 import {
   CUSTOMER_PROVIDER_ENDPOINTS,
@@ -26,7 +26,7 @@ import {
 const providers = ["openai", "anthropic", "openrouter"] as const;
 test("the automated network guard blocks customer and managed model endpoints before DNS or dispatch", async () => {
   const network = vi.fn<typeof fetch>();
-  const guarded = withoutExternalModels(network);
+  const guarded = withoutExternalProviders(network);
   for (const endpoint of [
     ...Object.values(CUSTOMER_PROVIDER_ENDPOINTS),
     ...Object.values(CUSTOMER_PROVIDER_COUNT_ENDPOINTS),

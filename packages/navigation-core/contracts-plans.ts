@@ -9,6 +9,12 @@ export const FREE_DEVELOPMENT_PROGRAM = "tholi-free-development";
 
 const identifier = z.string().min(1).max(100);
 const planIdentity = servicePlanIntentSchema.options[2].shape;
+export const productPlanReferenceSchema = z
+  .object({
+    id: planIdentity.planId,
+    version: planIdentity.planVersion,
+  })
+  .strict();
 const timestamp = z.string().datetime({ offset: true });
 const planMode = z.union([
   servicePlanIntentSchema.options[0].shape.mode,
@@ -50,10 +56,8 @@ const pricingSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("unpublished"), amount: z.null() }).strict(),
 ]);
 
-export const productPlanSchema = z
-  .object({
-    id: planIdentity.planId,
-    version: planIdentity.planVersion,
+export const productPlanSchema = productPlanReferenceSchema
+  .extend({
     name: z.string().min(1).max(100),
     mode: planMode,
     requiresAccount: z.boolean(),
