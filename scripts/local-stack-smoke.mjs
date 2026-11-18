@@ -22,6 +22,7 @@ import { runGatewayChecks } from "./lib/gateway-validation.mjs";
 import { runObservabilityChecks } from "./lib/observability-validation.mjs";
 import { buildIdentityTheme } from "./build-identity-theme.mjs";
 import { runWebsiteIdentityChecks } from "./lib/website-identity-validation.mjs";
+import { findCapturedMail } from "./lib/mail-capture.mjs";
 import { validationIdentity } from "./evidence.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -610,18 +611,16 @@ export async function runLocalStackSmoke({
     check("actual-support-mail-and-private-diagnostics", supportEvidence);
     check("expired-diagnostic-object-physically-absent");
     if (supportProbe.requestId) {
-      const deliveries = await jsonResponse(
-        `http://127.0.0.1:${ports.MAIL_HOST_PORT}/api/v1/messages`,
-      );
-      requireCheck(
-        Array.isArray(deliveries.messages) && deliveries.messages.length <= 20,
-        "Unexpected local capture count.",
+      const deliveries = await findCapturedMail(
+        {
+          origin: `http://127.0.0.1:${ports.MAIL_HOST_PORT}`,
+          needle: supportProbe.requestId,
+          expected: 2,
+        },
+        jsonResponse,
       );
       let correlated = 0;
-      for (const message of deliveries.messages) {
-        requireCheck(
-          typeof message.ID === "string" && /^[a-zA-Z0-9-]+$/.test(message.ID),
-        );
+      for (const message of deliveries) {
         const captured = await jsonResponse(
           `http://127.0.0.1:${ports.MAIL_HOST_PORT}/api/v1/message/${message.ID}`,
         );
@@ -731,10 +730,15 @@ export async function runLocalStackSmoke({
       "nonroot-internal-network-and-smtp",
       await nodeProbe({ issuer, marker }),
     );
-    const captured = await jsonResponse(
-      `http://127.0.0.1:${ports.MAIL_HOST_PORT}/api/v1/messages`,
+    const captured = await findCapturedMail(
+      {
+        origin: `http://127.0.0.1:${ports.MAIL_HOST_PORT}`,
+        needle: marker,
+        expected: 1,
+      },
+      jsonResponse,
     );
-    requireCheck(JSON.stringify(captured).includes(marker));
+    requireCheck(captured[0].Subject === marker);
     check("synthetic-invalid-domain-mail-captured");
     const ids = (await compose(["ps", "--quiet"]))
       .trim()

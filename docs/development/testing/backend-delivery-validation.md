@@ -353,3 +353,43 @@ A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless
 separately recorded.
+
+### Scope mail capture to the phase under verification
+
+[Run 44260221018](https://github.com/Sammieblz/tholi/actions/runs/44260221018)
+passes all five fast groups, all four native Mac targets and their verifier.
+The backend passes PostgreSQL, all fourteen real website account cases, gateway
+and TLS checks, actual worker completion, support delivery and physical diagnostic
+expiry. It then fails `Unexpected local capture count.` The old support check
+listed the entire mailbox and required no more than twenty messages, despite
+the newly combined registration/verification/recovery cohort sharing that inbox.
+Stacked run 44260333739 also passes its account cohort before failing the later
+support stage. Neither run passes the complete backend gate or permits promotion.
+
+The sanitized diagnostic archive `backend-diagnostics-1`, artifact 14410201848,
+is preserved as `output/qa/backend48-diagnostics-14410201848.zip`, SHA-256
+`1b474f1c8ff89dfa96f66a61a5091e06523c05ddeeae897deea22fd1d16c7f3f9`.
+Its smoke report records verified owned-stack and volume cleanup.
+
+The shared QA mail lookup now uses the documented Mailpit search API with an
+exact quoted correlation term and a bounded result count. Support still requires
+two distinct messages whose text contains its request ID. One surplus result
+detects duplicates; missing, repeated or unsafe IDs fail closed. The separate
+synthetic network/SMTP marker uses the same owner and requires its exact subject.
+Unrelated identity messages are not fetched or erased. No mailbox limit, service
+deadline or retry policy is increased.
+
+Thirty-eight focused mail/backend/stack-policy checks pass. The loopback HTTP
+regression includes fifty unrelated identity messages and verifies the scoped
+search, pagination bound and metadata projection. The complete deterministic
+unit group also passes all 1,339 tests with verified prepared artifacts; its
+separate report, timings and non-certification summary are preserved under
+`output/qa/backend48-scoped-mail-unit/`. Type checking passes. This unit-only
+cohort is not a complete PR or backend gate. Native Mailpit execution and
+complete matching-head backend verification remain pending. Local container and
+browser rebuilds are held because C: has approximately 0.3 GiB free; requested
+cleanup approval remains pending. The earlier full PR cohort is preserved as
+earlier evidence, not relabeled for this correction.
+
+Primary protocol references: [Mailpit API](https://mailpit.axllent.org/docs/api-v1/)
+and [search filters](https://mailpit.axllent.org/docs/usage/search-filters/).
