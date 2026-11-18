@@ -262,6 +262,19 @@ test("ingress-only signatures need no payment API credential and reject stale, f
       expect(() => adapter.verifyEvent(Buffer.from(body), header, now)).toThrow(
         BillingProviderError,
       );
+    for (const routing of [
+      { account: "acct_other" },
+      { context: "organization_context" },
+    ]) {
+      const routed = JSON.stringify({ ...JSON.parse(payload), ...routing });
+      expect(() =>
+        adapter.verifyEvent(
+          Buffer.from(routed),
+          sign(undefined, undefined, routed),
+          now,
+        ),
+      ).toThrow(BillingProviderError);
+    }
     expect(() =>
       adapter.verifyEvent(
         Buffer.alloc(BILLING_LIMITS.maxWebhookBytes + 1),

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ScopedBilling } from "./billing-queries";
+import { historyCursor, repositoryPage } from "./history-pages";
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -234,66 +235,6 @@ export function accountingError(error: unknown): never {
   throw error;
 }
 
-function historyCursor(
-  value?: string,
-  usageView?: 1 | 2,
-): [string | null, string | null] {
-  if (!value) return [null, null];
-  try {
-    if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) throw Error();
-    let parsed: unknown = JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8"),
-    );
-    if (usageView !== undefined) {
-      if (
-        Array.isArray(parsed) &&
-        parsed.length === 4 &&
-        parsed[0] === "usage" &&
-        parsed[1] === usageView
-      )
-        parsed = parsed.slice(2);
-      else if (usageView !== 1 || !Array.isArray(parsed) || parsed.length !== 2)
-        throw Error();
-    }
-    if (
-      !Array.isArray(parsed) ||
-      parsed.length !== 2 ||
-      typeof parsed[0] !== "string" ||
-      typeof parsed[1] !== "string" ||
-      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3,6}Z$/.test(parsed[0]) ||
-      !Number.isFinite(Date.parse(parsed[0])) ||
-      !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(parsed[1])
-    )
-      throw Error();
-    return [parsed[0], parsed[1]];
-  } catch {
-    return invalid("Use the opaque history cursor returned by the service.");
-  }
-}
-function repositoryPage<T extends { id: string; createdAt: Date }>(
-  rows: T[],
-  size: number,
-  cursorTime?: string,
-  usageView?: 1 | 2,
-): RepositoryPage<T> {
-  const more = rows.length > size,
-    items = rows.slice(0, size),
-    last = items.at(-1);
-  return {
-    items,
-    ...(more && last
-      ? {
-          nextCursor: Buffer.from(
-            JSON.stringify([
-              ...(usageView === undefined ? [] : ["usage", usageView]),
-              cursorTime ?? last.createdAt.toISOString(),
-              last.id,
-            ]),
-          ).toString("base64url"),
-        }
-      : {}),
-  };
-}
 type InferenceUsageRow = Omit<
   InferenceUsage,
   | "inputUnits"

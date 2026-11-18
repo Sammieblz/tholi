@@ -138,10 +138,15 @@ export async function runBillingChecks(
         "UPDATE tholi.billing_workspaces SET selected_subscription_id=$2 WHERE workspace_id=$1",
         [owner.workspaceId, subscriptionId],
       );
-      const inserted = await migration.query<{ id: string; issuedAt: Date }>(
+      const invoiceIds = Array.from(
+        { length: BILLING_LIMITS.maxInvoices + 3 },
+        () => randomUUID(),
+      );
+      await migration.query(
         `INSERT INTO tholi.billing_invoices(workspace_id,id,mode,merchant_id,provider_invoice_id,subscription_id,plan_id,plan_version,catalog_version,status,amount_paid_minor,currency,period_start,period_end,issued_at)
-      SELECT $1,gen_random_uuid(),'fake','acct_fixture','in_'||$2::text||'_'||n,$3,'paid-cloud',2,$4,'paid',9007199254740993,'usd',$5,$6,clock_timestamp()-n*interval '1 minute'
-      FROM generate_series(1,$7::integer) AS n RETURNING id,issued_at AS "issuedAt"`,
+      SELECT $1,id,'fake','acct_fixture','in_'||$2::text||'_'||n,$3,'paid-cloud',2,$4,'paid',9007199254740993,'usd',$5,$6,
+        date_trunc('second',$8::timestamptz)+interval '0.123456 seconds'-n*interval '1 microsecond'
+      FROM unnest($7::uuid[]) WITH ORDINALITY AS seeded(id,n)`,
         [
           owner.workspaceId,
           providerSuffix,
@@ -149,7 +154,8 @@ export async function runBillingChecks(
           billingCatalogSeed.catalogVersion,
           start,
           end,
-          BILLING_LIMITS.maxInvoices + 3,
+          invoiceIds,
+          start,
         ],
       );
       const result = await read();
@@ -160,12 +166,51 @@ export async function runBillingChecks(
       assert.equal(result.invoices.items.length, BILLING_LIMITS.maxInvoices);
       assert.deepEqual(
         result.invoices.items.map((invoice) => invoice.id),
-        inserted.rows
-          .sort(
-            (left, right) => right.issuedAt.getTime() - left.issuedAt.getTime(),
-          )
-          .slice(0, BILLING_LIMITS.maxInvoices)
-          .map((invoice) => invoice.id),
+        invoiceIds.slice(0, BILLING_LIMITS.maxInvoices),
+      );
+      assert.ok(result.invoices.nextCursor);
+      const rest = await repositories.transaction(owner, (scope) =>
+        scope.withBilling((billing) =>
+          billing.invoices({
+            limit: BILLING_LIMITS.maxInvoices,
+            cursor: result.invoices.nextCursor,
+          }),
+        ),
+      );
+      assert.deepEqual(
+        rest.items.map((invoice) => invoice.id),
+        invoiceIds.slice(BILLING_LIMITS.maxInvoices),
+      );
+      assert.equal(rest.nextCursor, undefined);
+      await assert.rejects(
+        () =>
+          repositories.transaction(stranger, (scope) =>
+            scope.withBilling((billing) =>
+              billing.invoices({
+                limit: 1,
+                cursor: result.invoices.nextCursor,
+              }),
+            ),
+          ),
+        { code: "INVALID_INPUT" },
+      );
+      const walked: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await repositories.transaction(owner, (scope) =>
+          scope.withBilling((billing) =>
+            billing.invoices({ limit: 2, cursor }),
+          ),
+        );
+        walked.push(...page.items.map((invoice) => invoice.id));
+        cursor = page.nextCursor;
+        assert.ok(walked.length <= invoiceIds.length);
+      } while (cursor);
+      assert.deepEqual(walked, invoiceIds);
+      assert.equal(
+        new Set(result.invoices.items.map((invoice) => invoice.issuedAt)).size,
+        1,
+        "Sub-millisecond database ordering cannot be reconstructed from public Dates.",
       );
       assert.ok(
         result.invoices.items.every(

@@ -55,6 +55,9 @@ const event = z.object({
     .max(100)
     .regex(/^[a-z_]+(?:\.[a-z_]+)+$/),
   livemode: z.boolean(),
+  // This profile serves the credential's own merchant, not Connect or organization routing.
+  account: z.never().optional(),
+  context: z.never().optional(),
   data: z.object({
     object: z.object({
       id: z.string().regex(/^[a-z]+_[A-Za-z0-9_]{1,120}$/),

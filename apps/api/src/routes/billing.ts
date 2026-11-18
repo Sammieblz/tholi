@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   billingSubscriptionSchema,
   billingInvoicesSchema,
+  billingInvoicesQuerySchema,
 } from "../../../../packages/navigation-core/contracts-billing";
 import type { BillingService } from "../application/billing";
 import type { IdentityService } from "../application/identity";
@@ -48,6 +49,7 @@ export async function registerBillingApi(
           requireAccountBinding: true,
           params: workspaceParams,
           response,
+          ...(path === "invoices" ? { query: billingInvoicesQuerySchema } : {}),
           tags: ["billing"],
         }),
       },
@@ -56,6 +58,7 @@ export async function registerBillingApi(
           sessions.get(request)!,
           workspaceParams.parse(request.params).workspaceId,
           context,
+          request.query,
         ),
       ),
     );

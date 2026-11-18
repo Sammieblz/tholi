@@ -1,8 +1,10 @@
 import {
   billingSubscriptionSchema,
   billingInvoicesSchema,
+  billingInvoicesQuerySchema,
   type BillingSubscription,
   type BillingInvoices,
+  type BillingInvoicesQuery,
 } from "../../../../packages/navigation-core/contracts-billing";
 import type { ServiceRequestContext } from "../capabilities";
 import type { IdentitySession } from "./identity-contracts";
@@ -15,7 +17,7 @@ import {
 
 export interface BillingReader {
   subscription(): Promise<BillingSubscription>;
-  invoices(): Promise<BillingInvoices>;
+  invoices(query?: BillingInvoicesQuery): Promise<BillingInvoices>;
 }
 export interface BillingTransaction extends AuthorizationContextReader {
   withBilling<T>(work: (billing: BillingReader) => Promise<T>): Promise<T>;
@@ -67,9 +69,11 @@ export class BillingService {
     principal: Pick<IdentitySession, "accountId">,
     workspaceId: string,
     context: ServiceRequestContext,
+    raw: unknown = {},
   ) {
+    const query = billingInvoicesQuerySchema.parse(raw);
     return this.read(principal, workspaceId, context, async (billing) =>
-      billingInvoicesSchema.parse(await billing.invoices()),
+      billingInvoicesSchema.parse(await billing.invoices(query)),
     );
   }
 }

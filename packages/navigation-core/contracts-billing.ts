@@ -4,6 +4,8 @@ import {
   serviceExpectedRevisionSchema,
   serviceQuantitySchema,
   serviceRevisionSchema,
+  servicePageQuerySchema,
+  serviceCursorSchema,
 } from "./contracts-service";
 import { productPlanReferenceSchema } from "./contracts-plans";
 
@@ -106,11 +108,19 @@ export const billingInvoicesSchema = z
   .object({
     version: z.literal(1),
     items: z.array(billingInvoiceSchema).max(BILLING_LIMITS.maxInvoices),
+    nextCursor: serviceCursorSchema.optional(),
   })
   .strict();
+
+export const billingInvoicesQuerySchema = servicePageQuerySchema.extend({
+  limit: servicePageQuerySchema.shape.limit
+    .refine((value) => value <= BILLING_LIMITS.maxInvoices)
+    .default(BILLING_LIMITS.maxInvoices),
+});
 
 export type BillingMode = z.infer<typeof billingModeSchema>;
 export type BillingSubscription = z.infer<typeof billingSubscriptionSchema>;
 export type BillingCheckoutInput = z.infer<typeof billingCheckoutInputSchema>;
 export type BillingOperation = z.infer<typeof billingOperationSchema>;
 export type BillingInvoices = z.infer<typeof billingInvoicesSchema>;
+export type BillingInvoicesQuery = z.infer<typeof billingInvoicesQuerySchema>;

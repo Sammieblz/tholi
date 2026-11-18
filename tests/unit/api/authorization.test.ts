@@ -255,6 +255,10 @@ async function fixture(
     leaseOwner: "PRIVATE_WORKER_SENTINEL",
     leaseToken: "PRIVATE_FENCE_SENTINEL",
   };
+  const invoiceReads = vi.fn<BillingReader["invoices"]>(async () => ({
+    version: 1,
+    items: [],
+  }));
   const scoped = {
     async withBilling<T>(
       work: (billing: BillingReader) => Promise<T>,
@@ -272,7 +276,7 @@ async function fixture(
           managedSpendingHeld: false,
           available: false,
         }),
-        invoices: async () => ({ version: 1, items: [] }),
+        invoices: invoiceReads,
       });
     },
     getSavedArtifact: vi.fn<SavedDataTransaction["getSavedArtifact"]>(
@@ -757,6 +761,7 @@ async function fixture(
     repositories,
     scoped,
     billingAccess,
+    invoiceReads,
     account,
     workspace,
     membership,
@@ -3083,6 +3088,41 @@ describe("product plans", () => {
 });
 
 describe("private billing records", () => {
+  it("bounds invoice pages, forwards valid cursors and rejects client-selected query fields", async () => {
+    const f = await fixture(
+        false,
+        false,
+        undefined,
+        undefined,
+        false,
+        "development",
+      ),
+      path = `/api/v1/workspaces/${f.workspace.id}/invoices`;
+    const result = await f.app.inject({
+      url: path + "?limit=2&cursor=opaque_cursor",
+      headers: bound(f),
+    });
+    expect(result.statusCode).toBe(200);
+    expect(f.invoiceReads).toHaveBeenLastCalledWith({
+      limit: 2,
+      cursor: "opaque_cursor",
+    });
+    const before = f.invoiceReads.mock.calls.length;
+    for (const query of [
+      "limit=0",
+      "limit=21",
+      "limit=1&limit=2",
+      "cursor=padded%3D",
+      "workspaceId=" + randomUUID(),
+      "limit=1000000",
+    ])
+      safeError(
+        await f.app.inject({ url: path + "?" + query, headers: bound(f) }),
+        400,
+        "INVALID_REQUEST",
+      );
+    expect(f.invoiceReads).toHaveBeenCalledTimes(before);
+  });
   it("requires a current bound owner without inference consent or a paid allowance", async () => {
     const f = await fixture(
         false,

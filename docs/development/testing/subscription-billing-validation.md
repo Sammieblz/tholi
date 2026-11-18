@@ -78,3 +78,31 @@ browser cohorts and the complete `test:ci` gate. External payment/model calls,
 real checkout, card collection, beta invitations, production prices, deployment,
 publication and archive replacement remain unapproved. Actual #43 quality and
 #49/#51 customer evidence keep their separate gates.
+
+## Invoice history follow-up
+
+The prepared invoice read API now returns bounded keyset pages with optional
+`nextCursor`. It extends the existing credit/usage history owner instead of
+introducing another cursor implementation. Existing credit and negotiated usage
+wire formats are retained. Invoice cursors bind their view, account and workspace;
+all reads still recheck current authorization and PostgreSQL scope. Cursor
+timestamps retain all six PostgreSQL fractional digits. Public metadata continues
+to use exact integer amount strings and omits provider identifiers and links.
+
+Type checking and 115 focused history, account HTTP, credit and service-contract
+tests pass in `output/qa/billing50-invoice-paging-types.log` and
+`output/qa/billing50-invoice-paging-regressions-approved.log`. The first focused
+attempt stops at the sandbox's `spawn EPERM` restriction before tests start; it is
+retained separately. The PostgreSQL case now walks invoices one microsecond apart,
+checks page termination and rejects another account's cursor. That database case
+has not run. These results do not complete the billing PR gate.
+
+The Stripe verifier also rejects Connect-account and organization-context event
+routing. The initial profile supports the credential's own merchant only; a valid
+signature does not authorize a different merchant or establish an entitlement.
+The final six-file cohort passes 141 checks, including that boundary, account
+authorization, shared history compatibility, exact quantities and encryption, in
+`output/qa/billing50-invoice-paging-final-regressions.log`. Final type checking
+passes in `output/qa/billing50-invoice-paging-final-types.log`. Full PostgreSQL
+and the complete PR gate remain pending; C: has approximately 0.25 GiB free at
+the latest read-only check.

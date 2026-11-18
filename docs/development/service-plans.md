@@ -101,6 +101,13 @@ activation, subscription changes and provider reconciliation belong to #50.
 They must use the same ledger and verified billing evidence. Prices, recurring
 paid quantities and production limits require cost evidence before publication.
 
+The prepared billing-records capability exposes owner/account-bound subscription
+metadata and invoice pages without requiring inference consent or credit balance.
+Invoice pages contain at most 20 records and use the returned `nextCursor` for
+older history. Cursors select a position within the current account/workspace;
+they grant no access. Provider IDs and payment links are excluded. This capability
+does not enable checkout or activate a paid plan.
+
 ## Validation
 
 See [the plan catalog validation record](testing/product-plans-validation.md).

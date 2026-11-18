@@ -1,11 +1,13 @@
 import type { PoolClient } from "pg";
 import {
-  BILLING_LIMITS,
+  billingInvoicesQuerySchema,
   billingSubscriptionSchema,
   billingInvoicesSchema,
   type BillingSubscription,
+  type BillingInvoicesQuery,
 } from "../../../../packages/navigation-core/contracts-billing";
 import type { RepositoryScope } from "./contracts";
+import { historyCursor, repositoryPage } from "./history-pages";
 
 type SubscriptionRow = {
   revision: string;
@@ -68,7 +70,12 @@ export class ScopedBilling {
     });
   }
 
-  async invoices() {
+  async invoices(
+    raw: BillingInvoicesQuery = billingInvoicesQuerySchema.parse({}),
+  ) {
+    const query = billingInvoicesQuerySchema.parse(raw),
+      view = { kind: "invoices" as const, ...this.scope },
+      cursor = historyCursor(query.cursor, view);
     const { rows } = await this.client.query<{
       id: string;
       status: string;
@@ -76,24 +83,42 @@ export class ScopedBilling {
       currency: string;
       startsAt: Date;
       endsAt: Date;
-      issuedAt: Date;
+      createdAt: Date;
+      cursorTime: string;
     }>(
       `SELECT id,status,amount_paid_minor::text AS "amountMinor",currency,
-       period_start AS "startsAt",period_end AS "endsAt",issued_at AS "issuedAt"
+       period_start AS "startsAt",period_end AS "endsAt",issued_at AS "createdAt",
+       to_char(issued_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime"
        FROM tholi.billing_invoices WHERE workspace_id=$1
-       ORDER BY issued_at DESC,id DESC LIMIT $2`,
-      [this.scope.workspaceId, BILLING_LIMITS.maxInvoices],
+       AND ($2::timestamptz IS NULL OR (issued_at,id)<($2::timestamptz,$3::uuid))
+       ORDER BY issued_at DESC,id DESC LIMIT $4`,
+      [this.scope.workspaceId, ...cursor, query.limit + 1],
+    );
+    const page = repositoryPage(
+      rows,
+      query.limit,
+      rows[Math.min(rows.length, query.limit) - 1]?.cursorTime,
+      view,
     );
     return billingInvoicesSchema.parse({
       version: 1,
-      items: rows.map(({ startsAt, endsAt, issuedAt, ...invoice }) => ({
-        ...invoice,
-        period: {
-          startsAt: startsAt.toISOString(),
-          endsAt: endsAt.toISOString(),
-        },
-        issuedAt: issuedAt.toISOString(),
-      })),
+      nextCursor: page.nextCursor,
+      items: page.items.map(
+        ({
+          startsAt,
+          endsAt,
+          createdAt,
+          cursorTime: _cursorTime,
+          ...invoice
+        }) => ({
+          ...invoice,
+          period: {
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+          },
+          issuedAt: createdAt.toISOString(),
+        }),
+      ),
     });
   }
 }
