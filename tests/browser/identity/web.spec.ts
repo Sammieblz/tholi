@@ -1670,17 +1670,21 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             .click();
           const accepted = await deletionResponse;
           expect(accepted.status()).toBe(200);
-          const receipt = accountDeletionResultSchema.parse(
-            await accepted.json(),
-          );
-          expect(receipt.status).toBe("deletion_pending");
-          expect(receipt.signedOut).toBe(true);
+          // The UI must consume and validate its receipt before the inspector
+          // reads that response across account teardown. Keep both assertions.
           await expect(
             page.getByRole("status").filter({
               hasText:
                 "Your account deletion request was accepted. You are signed out while deletion continues.",
             }),
           ).toBeVisible();
+          const receipt = accountDeletionResultSchema.parse(
+            await accepted.json().catch(() => {
+              throw Error("DASHBOARD_DELETION_BODY_UNAVAILABLE");
+            }),
+          );
+          expect(receipt.status).toBe("deletion_pending");
+          expect(receipt.signedOut).toBe(true);
           expect((await accountResponse(page, environment)).status).toBe(401);
           await expect(
             page.getByText("Local extension data remains on your device.", {
