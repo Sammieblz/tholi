@@ -278,6 +278,7 @@ test("ingress-only signatures need no payment API credential and reject stale, f
 test("actual loopback HTTP preserves pinned API and idempotency headers, strips private fields and verifies a paid original invoice period", async () => {
   const observed: {
     path: string;
+    method: string;
     version: string | string[] | undefined;
     key: string | string[] | undefined;
     body: string;
@@ -287,26 +288,38 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
     for await (const part of req) chunks.push(Buffer.from(part));
     observed.push({
       path: req.url!,
+      method: req.method!,
       version: req.headers["stripe-version"],
       key: req.headers["idempotency-key"],
       body: Buffer.concat(chunks).toString(),
     });
     const data =
-      req.url === "/v1/checkout/sessions"
-        ? session()
-        : req.url?.startsWith("/v1/subscriptions/")
-          ? subscription()
-          : req.url?.startsWith("/v1/invoices/")
-            ? invoice()
-            : req.url?.startsWith("/v1/billing_portal/configurations/")
-              ? portal()
-              : {
-                  id: "bps_synthetic",
-                  customer: "cus_owner",
-                  configuration: "bpc_approved",
-                  livemode: false,
-                  url: "https://billing.stripe.com/p/session?secret=synthetic",
-                };
+      req.url === "/v1/account"
+        ? { id: "acct_tholi", email: "synthetic-private@example.invalid" }
+        : req.url === "/v1/checkout/sessions/cs_test_checkout/expire"
+          ? { ...session(), status: "expired", url: null }
+          : req.url === "/v1/checkout/sessions"
+            ? session()
+            : req.url?.startsWith("/v1/subscriptions/")
+              ? {
+                  ...subscription(),
+                  ...(req.method === "DELETE"
+                    ? { status: "canceled" }
+                    : req.method === "POST"
+                      ? { cancel_at_period_end: true }
+                      : {}),
+                }
+              : req.url?.startsWith("/v1/invoices/")
+                ? invoice()
+                : req.url?.startsWith("/v1/billing_portal/configurations/")
+                  ? portal()
+                  : {
+                      id: "bps_synthetic",
+                      customer: "cus_owner",
+                      configuration: "bpc_approved",
+                      livemode: false,
+                      url: "https://billing.stripe.com/p/session?secret=synthetic",
+                    };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
   });
@@ -325,9 +338,12 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
   };
   try {
     const adapter = createStripeBilling(options, dispatch),
-      key = randomUUID();
+      checkoutKey = randomUUID(),
+      portalKey = randomUUID();
+    expect(observed).toHaveLength(0);
+    expect(await adapter.readMerchant(context())).toBe("acct_tholi");
     expect(
-      await adapter.createCheckout(checkoutInput(key), context()),
+      await adapter.createCheckout(checkoutInput(checkoutKey), context()),
     ).toMatchObject({ id: "cs_test_checkout", customerId: "cus_owner" });
     expect(
       await adapter.readSubscription("sub_owner", context()),
@@ -344,26 +360,79 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
     });
     expect(
       await adapter.createPortal(
-        { key, customerId: "cus_owner", returnUrl },
+        { key: portalKey, customerId: "cus_owner", returnUrl },
         context(),
       ),
     ).toEqual({
       id: "bps_synthetic",
       url: "https://billing.stripe.com/p/session?secret=synthetic",
     });
+    const cleanupKeys = [randomUUID(), randomUUID(), randomUUID()];
+    expect(
+      await adapter.expireCheckout(
+        {
+          id: "cs_test_checkout",
+          key: cleanupKeys[0],
+          operationReference,
+          customerId: "cus_owner",
+        },
+        context(),
+      ),
+    ).toMatchObject({ status: "expired", url: null });
+    for (const [index, timing] of (
+      ["period-end", "immediate"] as const
+    ).entries())
+      expect(
+        await adapter.cancelSubscription(
+          {
+            id: "sub_owner",
+            key: cleanupKeys[index + 1],
+            customerId: "cus_owner",
+            timing,
+          },
+          context(),
+        ),
+      ).toMatchObject(
+        timing === "immediate"
+          ? { status: "canceled" }
+          : { cancelAtPeriodEnd: true },
+      );
     expect(
       observed.every((request) => request.version === STRIPE_API_VERSION),
     ).toBe(true);
-    expect(observed.filter((request) => request.key === key)).toHaveLength(2);
+    for (const key of [checkoutKey, portalKey, ...cleanupKeys])
+      expect(observed.filter((request) => request.key === key)).toHaveLength(1);
     expect(
-      new URLSearchParams(observed[0].body).get("client_reference_id"),
+      new URLSearchParams(
+        observed.find((entry) => entry.path === "/v1/checkout/sessions")!.body,
+      ).get("client_reference_id"),
     ).toBe(operationReference);
     expect(
-      new URLSearchParams(observed[0].body).get("line_items[0][quantity]"),
+      new URLSearchParams(
+        observed.find((entry) => entry.path === "/v1/checkout/sessions")!.body,
+      ).get("line_items[0][quantity]"),
     ).toBe("1");
     expect(
       observed.some((request) => request.body.includes("example.invalid")),
     ).toBe(false);
+    expect(
+      observed.filter((entry) => entry.path === "/v1/account"),
+    ).toHaveLength(1);
+    const cleanup = observed.filter(
+      (entry) => entry.key && cleanupKeys.includes(entry.key as string),
+    );
+    expect(cleanup.map((entry) => [entry.method, entry.path])).toEqual([
+      ["POST", "/v1/checkout/sessions/cs_test_checkout/expire"],
+      ["POST", "/v1/subscriptions/sub_owner"],
+      ["DELETE", "/v1/subscriptions/sub_owner"],
+    ]);
+    expect(
+      new URLSearchParams(cleanup[1].body).get("cancel_at_period_end"),
+    ).toBe("true");
+    expect(Object.fromEntries(new URLSearchParams(cleanup[2].body))).toEqual({
+      invoice_now: "false",
+      prorate: "false",
+    });
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -390,6 +459,63 @@ test.each(["checkout", "subscription", "invoice"] as const)(
           ? adapter.readSubscription("sub_owner", context())
           : adapter.readInvoice("in_paid", context());
     await expect(result).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  },
+);
+
+test.each(["expiry", "period-end", "immediate"] as const)(
+  "%s cleanup rejects another customer, object, mode or unconfirmed outcome",
+  async (kind) => {
+    const expired = { ...session(), status: "expired", url: null },
+      cancelled = {
+        ...subscription(),
+        status: kind === "immediate" ? "canceled" : "active",
+        cancel_at_period_end: kind === "period-end",
+      };
+    for (const change of kind === "expiry"
+      ? [
+          { id: "cs_test_foreign" },
+          { customer: "cus_foreign" },
+          { livemode: true },
+          { client_reference_id: randomUUID() },
+          { status: "open" },
+        ]
+      : [
+          { id: "sub_foreign" },
+          { customer: "cus_foreign" },
+          { livemode: true },
+          kind === "immediate"
+            ? { status: "active" }
+            : { cancel_at_period_end: false },
+        ]) {
+      const dispatch = vi
+          .fn<typeof fetch>()
+          .mockResolvedValue(
+            json({ ...(kind === "expiry" ? expired : cancelled), ...change }),
+          ),
+        adapter = createStripeBilling(options, dispatch);
+      await expect(
+        kind === "expiry"
+          ? adapter.expireCheckout(
+              {
+                id: "cs_test_checkout",
+                key: randomUUID(),
+                operationReference,
+                customerId: "cus_owner",
+              },
+              context(),
+            )
+          : adapter.cancelSubscription(
+              {
+                id: "sub_owner",
+                key: randomUUID(),
+                customerId: "cus_owner",
+                timing: kind,
+              },
+              context(),
+            ),
+      ).rejects.toMatchObject({ code: "INVALID_RESPONSE", outcome: "unknown" });
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    }
   },
 );
 

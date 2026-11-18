@@ -103,6 +103,8 @@ export interface BillingEventVerifier {
 
 /** Only this adapter knows Stripe serialization. Application services own durable effects. */
 export interface BillingProvider extends BillingEventVerifier {
+  /** Read the credential's own merchant, never a caller-selected Connect account. */
+  readMerchant(context: ServiceRequestContext): Promise<string>;
   createCheckout(
     input: {
       key: string;
@@ -117,8 +119,27 @@ export interface BillingProvider extends BillingEventVerifier {
     id: string,
     context: ServiceRequestContext,
   ): Promise<BillingCheckout>;
+  /** Invoke only after a current ownership check and a durable dispatch fence. */
+  expireCheckout(
+    input: {
+      id: string;
+      key: string;
+      operationReference: string;
+      customerId: string | null;
+    },
+    context: ServiceRequestContext,
+  ): Promise<BillingCheckout>;
   readSubscription(
     id: string,
+    context: ServiceRequestContext,
+  ): Promise<BillingProviderSubscription>;
+  cancelSubscription(
+    input: {
+      id: string;
+      key: string;
+      customerId: string;
+      timing: "period-end" | "immediate";
+    },
     context: ServiceRequestContext,
   ): Promise<BillingProviderSubscription>;
   readInvoice(

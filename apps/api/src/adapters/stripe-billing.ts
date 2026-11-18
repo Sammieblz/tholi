@@ -9,6 +9,7 @@ import {
   type BillingEventVerifier,
   type BillingCheckout,
   type BillingEvent,
+  type BillingProviderSubscription,
 } from "../application/billing-contracts";
 import { createAdapterHttp, type AdapterHttpErrorCode } from "./adapter-http";
 
@@ -344,6 +345,7 @@ export function createStripeBilling(
     context: ServiceRequestContext,
     body?: URLSearchParams,
     operationKey?: string,
+    method: "GET" | "POST" | "DELETE" = body ? "POST" : "GET",
   ): Promise<T> {
     let dispatched = false,
       rejected = false;
@@ -364,7 +366,7 @@ export function createStripeBilling(
         if (dispatched) throw fail("UNAVAILABLE");
         dispatched = true;
         return transport("https://api.stripe.com/v1/" + path, {
-          method: body ? "POST" : "GET",
+          method,
           redirect: "error",
           cache: "no-store",
           signal: http.signal,
@@ -419,8 +421,33 @@ export function createStripeBilling(
       expiresAt: new Date(value.expires_at * 1000),
     };
   }
+  function projectSubscription(
+    value: z.infer<typeof subscription>,
+  ): BillingProviderSubscription {
+    const item = value.items.data[0];
+    if (
+      value.livemode !== (options.mode === "stripe-live") ||
+      item.current_period_end <= item.current_period_start
+    )
+      throw new BillingProviderError("INVALID_RESPONSE", "unknown");
+    return {
+      id: value.id,
+      customerId: value.customer,
+      priceId: item.price.id,
+      status: value.status,
+      startsAt: new Date(item.current_period_start * 1000),
+      endsAt: new Date(item.current_period_end * 1000),
+      cancelAtPeriodEnd: value.cancel_at_period_end,
+      invoiceId: value.latest_invoice,
+    };
+  }
   return {
     ...verifier,
+    async readMerchant(context) {
+      return (
+        await request("account", z.object({ id: reference("acct") }), context)
+      ).id;
+    },
     async createCheckout(input, context) {
       if (input.customerId !== undefined)
         inputValue(customerId, input.customerId);
@@ -469,26 +496,62 @@ export function createStripeBilling(
     },
     async readSubscription(id, context) {
       const expected = inputValue(subscriptionId, id);
-      const value = bindReference(
+      return projectSubscription(
+        bindReference(
           await request("subscriptions/" + expected, subscription, context),
           expected,
         ),
-        item = value.items.data[0];
+      );
+    },
+    async expireCheckout(input, context) {
+      const expected = inputValue(reference("cs"), input.id);
+      inputValue(z.string().uuid(), input.operationReference);
+      inputValue(customerId.nullable(), input.customerId);
+      const value = bindReference(
+        await request(
+          "checkout/sessions/" + expected + "/expire",
+          checkout,
+          context,
+          new URLSearchParams(),
+          input.key,
+        ),
+        expected,
+      );
       if (
-        value.livemode !== (options.mode === "stripe-live") ||
-        item.current_period_end <= item.current_period_start
+        value.status !== "expired" ||
+        value.customer !== input.customerId ||
+        value.client_reference_id !== input.operationReference
       )
         throw new BillingProviderError("INVALID_RESPONSE", "unknown");
-      return {
-        id: value.id,
-        customerId: value.customer,
-        priceId: item.price.id,
-        status: value.status,
-        startsAt: new Date(item.current_period_start * 1000),
-        endsAt: new Date(item.current_period_end * 1000),
-        cancelAtPeriodEnd: value.cancel_at_period_end,
-        invoiceId: value.latest_invoice,
-      };
+      return projectCheckout(value);
+    },
+    async cancelSubscription(input, context) {
+      const expected = inputValue(subscriptionId, input.id),
+        customer = inputValue(customerId, input.customerId),
+        timing = inputValue(z.enum(["period-end", "immediate"]), input.timing);
+      const value = bindReference(
+        await request(
+          "subscriptions/" + expected,
+          subscription,
+          context,
+          new URLSearchParams(
+            timing === "immediate"
+              ? { invoice_now: "false", prorate: "false" }
+              : { cancel_at_period_end: "true" },
+          ),
+          input.key,
+          timing === "immediate" ? "DELETE" : "POST",
+        ),
+        expected,
+      );
+      if (
+        value.customer !== customer ||
+        (timing === "immediate"
+          ? value.status !== "canceled"
+          : !value.cancel_at_period_end && value.status !== "canceled")
+      )
+        throw new BillingProviderError("INVALID_RESPONSE", "unknown");
+      return projectSubscription(value);
     },
     async readInvoice(id, context) {
       const expected = inputValue(invoiceId, id);
