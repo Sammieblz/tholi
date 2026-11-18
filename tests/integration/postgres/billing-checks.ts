@@ -50,10 +50,14 @@ export async function runBillingChecks(
           .map(({ billing: _billing, ...plan }) => plan),
         legacy.plans.filter((plan) => plan.mode !== "paid"),
       );
-      await assert.rejects(
-        () => migration.query("SELECT tholi.read_product_catalog(3)"),
-        { code: "22023" },
-      );
+      for (const version of [null, 0, 3])
+        await assert.rejects(
+          () =>
+            migration.query("SELECT tholi.read_product_catalog($1::integer)", [
+              version,
+            ]),
+          { code: "22023" },
+        );
     },
   );
   await record(
@@ -235,6 +239,12 @@ export async function runBillingChecks(
           ).rows[0].count,
           0,
         );
+      // Additional members belong to an organization. Personal workspaces
+      // retain the existing canonical-owner-only membership invariant.
+      await migration.query(
+        "UPDATE tholi.workspaces SET kind='organization' WHERE id=$1",
+        [owner.workspaceId],
+      );
       await migration.query(
         "INSERT INTO tholi.memberships(workspace_id,account_id,role) VALUES($1,$2,'admin')",
         [owner.workspaceId, stranger.accountId],

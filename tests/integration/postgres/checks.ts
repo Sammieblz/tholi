@@ -66,8 +66,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
       checks.push({ name, passed: true });
     } catch (error) {
       const code = (error as { code?: string }).code;
+      const location =
+        error instanceof Error
+          ? /file:\/\/\/app\/postgres-check\.mjs:(\d+):(\d+)/.exec(
+              error.stack ?? "",
+            )
+          : undefined;
       throw new Error(
-        `PostgreSQL check failed: ${name}${code ? ` (${code})` : ""}.`,
+        `PostgreSQL check failed: ${name}${code ? ` (${code})` : ""}${location ? ` [check line ${location[1]}:${location[2]}]` : ""}.`,
       );
     }
   };

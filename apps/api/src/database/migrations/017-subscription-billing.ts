@@ -77,7 +77,7 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE result jsonb;
 BEGIN
   IF schema_version=1 THEN RETURN tholi.read_product_catalog(); END IF;
-  IF schema_version<>2 THEN RAISE EXCEPTION 'Unsupported catalog view.' USING ERRCODE='22023'; END IF;
+  IF schema_version IS NULL OR schema_version<>2 THEN RAISE EXCEPTION 'Unsupported catalog view.' USING ERRCODE='22023'; END IF;
   SELECT jsonb_build_object('version',2,'catalogVersion',r.version,'environment','development',
     'chargingPolicyVersion',r.charging_policy_version,
     'plans',jsonb_agg(p.definition||jsonb_build_object('billing',p.definition->'billing') ORDER BY e.position))
