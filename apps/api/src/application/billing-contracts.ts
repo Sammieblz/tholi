@@ -95,10 +95,14 @@ export interface BillingPortal {
   url: string;
 }
 
-/** Only this adapter knows Stripe serialization. Application services own durable effects. */
-export interface BillingProvider {
+/** The HTTP ingress needs signature verification, never the payment API key. */
+export interface BillingEventVerifier {
   readonly mode: BillingMode;
   verifyEvent(raw: Buffer, signature: string, now: Date): BillingEvent;
+}
+
+/** Only this adapter knows Stripe serialization. Application services own durable effects. */
+export interface BillingProvider extends BillingEventVerifier {
   createCheckout(
     input: {
       key: string;

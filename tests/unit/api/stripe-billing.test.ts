@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { expect, test, vi } from "vitest";
 import {
   createStripeBilling,
+  createStripeWebhookVerifier,
   STRIPE_API_VERSION,
 } from "../../../apps/api/src/adapters/stripe-billing";
 import { BillingProviderError } from "../../../apps/api/src/application/billing-contracts";
@@ -152,119 +153,126 @@ test("automated provider guard blocks all payment destinations before dispatch",
   expect(dispatch).not.toHaveBeenCalled();
 });
 
-test("raw webhook signatures support rotation and multiple v1 signatures while rejecting stale, future, altered and wrong-mode events without requests", () => {
-  const dispatch = vi.fn<typeof fetch>(),
-    adapter = createStripeBilling(options, dispatch);
-  const payload = JSON.stringify({
-    id: "evt_paid",
-    object: "event",
-    type: "invoice.paid",
-    livemode: false,
-    data: {
-      object: {
-        id: "in_paid",
-        customer_email: "synthetic-private@example.invalid",
-      },
-    },
-  });
-  const sign = (
-    timestamp = now.getTime() / 1000,
-    secret = options.webhookSecrets[1],
-    body = payload,
-  ) =>
-    Stripe.webhooks.generateTestHeaderString({
-      payload: body,
-      secret,
-      timestamp,
+test("ingress-only signatures need no payment API credential and reject stale, future, altered and wrong-mode events without requests", () => {
+  const dispatch = vi.spyOn(globalThis, "fetch"),
+    adapter = createStripeWebhookVerifier({
+      mode: options.mode,
+      webhookSecrets: options.webhookSecrets,
     });
-  expect(
-    adapter.verifyEvent(
-      Buffer.from(payload),
-      sign() + ",v1=" + "0".repeat(64),
-      now,
-    ),
-  ).toEqual({
-    id: "evt_paid",
-    type: "invoice.paid",
-    objectId: "in_paid",
-    live: false,
-  });
-  expect(
-    adapter.verifyEvent(
-      Buffer.from(payload),
-      sign(undefined, options.webhookSecrets[0]),
-      now,
-    ).id,
-  ).toBe("evt_paid");
-  const referenced = JSON.stringify({
-    ...JSON.parse(payload),
-    data: {
-      object: {
-        id: "in_paid",
-        customer_email: "synthetic-private@example.invalid",
-        parent: {
-          subscription_details: {
-            metadata: { tholi_operation: operationReference },
+  try {
+    const payload = JSON.stringify({
+      id: "evt_paid",
+      object: "event",
+      type: "invoice.paid",
+      livemode: false,
+      data: {
+        object: {
+          id: "in_paid",
+          customer_email: "synthetic-private@example.invalid",
+        },
+      },
+    });
+    const sign = (
+      timestamp = now.getTime() / 1000,
+      secret = options.webhookSecrets[1],
+      body = payload,
+    ) =>
+      Stripe.webhooks.generateTestHeaderString({
+        payload: body,
+        secret,
+        timestamp,
+      });
+    expect(
+      adapter.verifyEvent(
+        Buffer.from(payload),
+        sign() + ",v1=" + "0".repeat(64),
+        now,
+      ),
+    ).toEqual({
+      id: "evt_paid",
+      type: "invoice.paid",
+      objectId: "in_paid",
+      live: false,
+    });
+    expect(
+      adapter.verifyEvent(
+        Buffer.from(payload),
+        sign(undefined, options.webhookSecrets[0]),
+        now,
+      ).id,
+    ).toBe("evt_paid");
+    const referenced = JSON.stringify({
+      ...JSON.parse(payload),
+      data: {
+        object: {
+          id: "in_paid",
+          customer_email: "synthetic-private@example.invalid",
+          parent: {
+            subscription_details: {
+              metadata: { tholi_operation: operationReference },
+            },
           },
         },
       },
-    },
-  });
-  expect(
-    adapter.verifyEvent(
-      Buffer.from(referenced),
-      sign(undefined, undefined, referenced),
-      now,
-    ),
-  ).toEqual({
-    id: "evt_paid",
-    type: "invoice.paid",
-    objectId: "in_paid",
-    live: false,
-    operationReference,
-  });
-  const ambiguous = JSON.stringify({
-    ...JSON.parse(payload),
-    data: {
-      object: {
-        id: "in_paid",
-        client_reference_id: operationReference,
-        metadata: { tholi_operation: randomUUID() },
-      },
-    },
-  });
-  expect(
-    adapter.verifyEvent(
-      Buffer.from(ambiguous),
-      sign(undefined, undefined, ambiguous),
-      now,
-    ).operationReference,
-  ).toBeUndefined();
-  for (const [body, header] of [
-    [payload + " ", sign()],
-    [payload, sign(now.getTime() / 1000 - 301)],
-    [payload, sign(now.getTime() / 1000 + 301)],
-    [payload, sign() + ",t=1"],
-    [
-      payload.replace('"livemode":false', '"livemode":true'),
-      sign(
-        undefined,
-        undefined,
-        payload.replace('"livemode":false', '"livemode":true'),
+    });
+    expect(
+      adapter.verifyEvent(
+        Buffer.from(referenced),
+        sign(undefined, undefined, referenced),
+        now,
       ),
-    ],
-  ])
-    expect(() => adapter.verifyEvent(Buffer.from(body), header, now)).toThrow(
-      BillingProviderError,
-    );
-  expect(() =>
-    adapter.verifyEvent(
-      Buffer.alloc(BILLING_LIMITS.maxWebhookBytes + 1),
-      sign(),
-      now,
-    ),
-  ).toThrow(BillingProviderError);
-  expect(dispatch).not.toHaveBeenCalled();
+    ).toEqual({
+      id: "evt_paid",
+      type: "invoice.paid",
+      objectId: "in_paid",
+      live: false,
+      operationReference,
+    });
+    const ambiguous = JSON.stringify({
+      ...JSON.parse(payload),
+      data: {
+        object: {
+          id: "in_paid",
+          client_reference_id: operationReference,
+          metadata: { tholi_operation: randomUUID() },
+        },
+      },
+    });
+    expect(
+      adapter.verifyEvent(
+        Buffer.from(ambiguous),
+        sign(undefined, undefined, ambiguous),
+        now,
+      ).operationReference,
+    ).toBeUndefined();
+    for (const [body, header] of [
+      [payload + " ", sign()],
+      [payload, sign(now.getTime() / 1000 - 301)],
+      [payload, sign(now.getTime() / 1000 + 301)],
+      [payload, sign() + ",t=1"],
+      [
+        payload.replace('"livemode":false', '"livemode":true'),
+        sign(
+          undefined,
+          undefined,
+          payload.replace('"livemode":false', '"livemode":true'),
+        ),
+      ],
+    ])
+      expect(() => adapter.verifyEvent(Buffer.from(body), header, now)).toThrow(
+        BillingProviderError,
+      );
+    expect(() =>
+      adapter.verifyEvent(
+        Buffer.alloc(BILLING_LIMITS.maxWebhookBytes + 1),
+        sign(),
+        now,
+      ),
+    ).toThrow(BillingProviderError);
+    expect(dispatch).not.toHaveBeenCalled();
+  } finally {
+    dispatch.mockRestore();
+  }
 });
 
 test("actual loopback HTTP preserves pinned API and idempotency headers, strips private fields and verifies a paid original invoice period", async () => {

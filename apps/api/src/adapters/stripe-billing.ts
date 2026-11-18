@@ -6,6 +6,7 @@ import type { ServiceRequestContext } from "../capabilities";
 import {
   BillingProviderError,
   type BillingProvider,
+  type BillingEventVerifier,
   type BillingCheckout,
   type BillingEvent,
 } from "../application/billing-contracts";
@@ -169,10 +170,12 @@ const portalConfiguration = z.object({
   }),
 });
 
-export interface StripeBillingOptions {
+export interface StripeWebhookOptions {
   mode: "stripe-test" | "stripe-live";
-  secretKey: string;
   webhookSecrets: readonly string[];
+}
+export interface StripeBillingOptions extends StripeWebhookOptions {
+  secretKey: string;
   serviceOrigin: string;
   portalConfigurationId: string;
   approvedPriceIds: readonly string[];
@@ -201,14 +204,93 @@ function providerUrl(raw: string, kind: "checkout" | "portal") {
   return url.href;
 }
 
+/** Ingress verifies signed bytes without holding a payment API credential. */
+export function createStripeWebhookVerifier(
+  raw: StripeWebhookOptions,
+): BillingEventVerifier {
+  const parsed = z
+    .object({
+      mode: z.enum(["stripe-test", "stripe-live"]),
+      webhookSecrets: z
+        .array(z.string().regex(/^whsec_[A-Za-z0-9_]{24,240}$/))
+        .min(1)
+        .max(2),
+    })
+    .safeParse(raw);
+  if (!parsed.success) throw new BillingProviderError("CONFIGURATION");
+  const options = parsed.data;
+  return Object.freeze({
+    mode: options.mode,
+    verifyEvent(raw: Buffer, signature: string, now: Date): BillingEvent {
+      if (
+        !Buffer.isBuffer(raw) ||
+        raw.length > BILLING_LIMITS.maxWebhookBytes ||
+        typeof signature !== "string" ||
+        Buffer.byteLength(signature) > BILLING_LIMITS.maxSignatureBytes ||
+        !Number.isFinite(now.getTime())
+      )
+        throw new BillingProviderError("INVALID_SIGNATURE");
+      const timestamps = signature
+        .split(",")
+        .map((part) => part.trim())
+        .filter((part) => part.startsWith("t="));
+      if (
+        timestamps.length !== 1 ||
+        !/^t=\d{1,12}$/.test(timestamps[0]) ||
+        Math.abs(now.getTime() / 1000 - Number(timestamps[0].slice(2))) >
+          BILLING_LIMITS.signatureToleranceSeconds
+      )
+        throw new BillingProviderError("INVALID_SIGNATURE");
+      for (const secret of options.webhookSecrets) {
+        try {
+          const verified = event.parse(
+            Stripe.webhooks.constructEvent(
+              raw,
+              signature,
+              secret,
+              BILLING_LIMITS.signatureToleranceSeconds,
+              undefined,
+              now.getTime(),
+            ),
+          );
+          if (verified.livemode !== (options.mode === "stripe-live"))
+            throw new Error();
+          const object = verified.data.object;
+          const hints = [
+            object.client_reference_id,
+            object.metadata?.tholi_operation,
+            object.parent?.subscription_details?.metadata?.tholi_operation,
+          ].flatMap((value) => {
+            const id = z.string().uuid().safeParse(value);
+            return id.success ? [id.data] : [];
+          });
+          const references = [...new Set(hints)];
+          return {
+            id: verified.id,
+            type: verified.type,
+            objectId: verified.data.object.id,
+            live: verified.livemode,
+            ...(references.length === 1
+              ? { operationReference: references[0] }
+              : {}),
+          };
+        } catch {
+          /* Try the other explicitly configured rotation key, never another provider. */
+        }
+      }
+      throw new BillingProviderError("INVALID_SIGNATURE");
+    },
+  });
+}
+
 /** SDK verification stays here. HTTP uses the existing bounded, single-send transport. */
 export function createStripeBilling(
   raw: StripeBillingOptions,
   transport: typeof fetch = fetch,
 ): BillingProvider {
+  const verifier = createStripeWebhookVerifier(raw);
   const options = {
     ...raw,
-    webhookSecrets: [...raw.webhookSecrets],
     approvedPriceIds: [...raw.approvedPriceIds],
   };
   const expectedPrefix =
@@ -217,11 +299,6 @@ export function createStripeBilling(
     !["stripe-test", "stripe-live"].includes(options.mode) ||
     !options.secretKey.startsWith(expectedPrefix) ||
     !/^sk_(test|live)_[A-Za-z0-9_]{16,240}$/.test(options.secretKey) ||
-    !options.webhookSecrets.length ||
-    options.webhookSecrets.length > 2 ||
-    options.webhookSecrets.some(
-      (key) => !/^whsec_[A-Za-z0-9_]{24,240}$/.test(key),
-    ) ||
     !reference("bpc").safeParse(options.portalConfigurationId).success ||
     !options.approvedPriceIds.length ||
     options.approvedPriceIds.length > 8 ||
@@ -343,66 +420,7 @@ export function createStripeBilling(
     };
   }
   return {
-    mode: options.mode,
-    verifyEvent(raw: Buffer, signature: string, now: Date): BillingEvent {
-      if (
-        !Buffer.isBuffer(raw) ||
-        raw.length > BILLING_LIMITS.maxWebhookBytes ||
-        typeof signature !== "string" ||
-        Buffer.byteLength(signature) > BILLING_LIMITS.maxSignatureBytes ||
-        !Number.isFinite(now.getTime())
-      )
-        throw new BillingProviderError("INVALID_SIGNATURE");
-      const timestamps = signature
-        .split(",")
-        .map((part) => part.trim())
-        .filter((part) => part.startsWith("t="));
-      if (
-        timestamps.length !== 1 ||
-        !/^t=\d{1,12}$/.test(timestamps[0]) ||
-        Math.abs(now.getTime() / 1000 - Number(timestamps[0].slice(2))) >
-          BILLING_LIMITS.signatureToleranceSeconds
-      )
-        throw new BillingProviderError("INVALID_SIGNATURE");
-      for (const secret of options.webhookSecrets) {
-        try {
-          const verified = event.parse(
-            Stripe.webhooks.constructEvent(
-              raw,
-              signature,
-              secret,
-              BILLING_LIMITS.signatureToleranceSeconds,
-              undefined,
-              now.getTime(),
-            ),
-          );
-          if (verified.livemode !== (options.mode === "stripe-live"))
-            throw new Error();
-          const object = verified.data.object;
-          const hints = [
-            object.client_reference_id,
-            object.metadata?.tholi_operation,
-            object.parent?.subscription_details?.metadata?.tholi_operation,
-          ].flatMap((value) => {
-            const id = z.string().uuid().safeParse(value);
-            return id.success ? [id.data] : [];
-          });
-          const references = [...new Set(hints)];
-          return {
-            id: verified.id,
-            type: verified.type,
-            objectId: verified.data.object.id,
-            live: verified.livemode,
-            ...(references.length === 1
-              ? { operationReference: references[0] }
-              : {}),
-          };
-        } catch {
-          /* Try the other explicitly configured rotation key, never another provider. */
-        }
-      }
-      throw new BillingProviderError("INVALID_SIGNATURE");
-    },
+    ...verifier,
     async createCheckout(input, context) {
       if (input.customerId !== undefined)
         inputValue(customerId, input.customerId);
