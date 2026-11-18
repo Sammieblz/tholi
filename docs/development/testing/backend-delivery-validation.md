@@ -544,3 +544,36 @@ arm64; run 44387888715 fails the Chrome private-learning deadline and Firefox
 masked OCR deadline on macOS 15 Intel. Run 44387718710 passes all four native
 targets and their verifier. These results do not certify the other heads or
 resolve the two failing native cohorts.
+
+### Private-site receipt ordering follow-up
+
+Run 44401116332 at branch head `5686b76fc43271ba657da4cdcac0e3ed7665525a`
+passes all five fast groups, all four native Mac targets and their verifier.
+The scanner, real PostgreSQL checks and stack startup also pass. The website
+identity cohort then fails Chromium's private-site forgetting case at
+`acknowledge confirmed private-site forget`, source line 2130, while reading the
+response JSON. This is not complete backend acceptance. Diagnostic artifact
+14476620046 is retained as `output/qa/backend-14476620046.zip`, SHA-256
+`1f30ffe7664b8d975d667f63ea9bce88dd435049c52dfb6447446608a9fd4c4b`.
+Candidate artifact 14476660004 has GitHub's recorded SHA-256
+`9d114193f1c17a8148e97ae640e3b557c75627115b7f0165ec4b54bf5616a213`.
+Its owned resources were removed. Stacked run 44401214051 passes completely;
+that separate source/run does not replace the failed matching-head report.
+
+An unchanged local Chromium case passes on the repaired Docker engine in
+`output/qa/local-stack/tholi-smoke-forget48-c4381a22/`. The missing original
+exception prevents an exact cause claim. The response promise now consumes and
+validates the receipt as it arrives, concurrently with the confirmation click,
+instead of requesting the body after the action finishes. It still requires
+HTTP 200, the full schema, exact deleted IDs, paused choices, a content-free
+tombstone and preservation of all unrelated saved data. There is no retry or
+deadline increase. Closed failure classifications distinguish a timeout,
+invalid JSON, schema validation and unavailable browser response bodies without
+retaining raw errors or data.
+
+The revised focused cohort passes in Chromium and Firefox in
+`output/qa/local-stack/tholi-smoke-forget48-576462d2/`, with zero model requests
+and successful owned cleanup. Type checking passes in
+`output/qa/backend48-eager-forget-types.log`; formatting passes. These are
+focused dirty-source results above `5686b76f`, not complete current PR,
+native Mac or release certification. A fresh complete hosted run is required.

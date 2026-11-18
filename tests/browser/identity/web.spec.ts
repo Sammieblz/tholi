@@ -1874,6 +1874,7 @@ test("real account privately controls versioned website knowledge without dispat
     modelRequests = 0,
     stage = "real account preparation";
   let failureLine: number | null = null;
+  let failureKind: string | null = null;
   const checks: string[] = [];
   try {
     await blockWebsiteModelRequests(context, () => modelRequests++);
@@ -2119,16 +2120,20 @@ test("real account privately controls versioned website knowledge without dispat
     stage = "open confirmed private-site forget";
     await waitForIdentityGatewayCapacity();
     await forget.click();
-    const forgetting = siteResponse("DELETE");
-    await dialog
-      .getByRole("button", { name: "Forget cloud knowledge", exact: true })
-      .click();
     stage = "acknowledge confirmed private-site forget";
-    const receipt = await forgetting;
-    expect(receipt.status()).toBe(200);
-    const result = navigationKnowledgeForgetSiteResultSchema.parse(
-      await receipt.json(),
-    );
+    // Consume the receipt when it arrives, before the action can close the
+    // detail surface. Keep status, schema and independent readback checks.
+    const [result] = await Promise.all([
+      siteResponse("DELETE").then(async (receipt) => {
+        expect(receipt.status()).toBe(200);
+        return navigationKnowledgeForgetSiteResultSchema.parse(
+          await receipt.json(),
+        );
+      }),
+      dialog
+        .getByRole("button", { name: "Forget cloud knowledge", exact: true })
+        .click(),
+    ]);
     expect(result.deletedIds).toEqual([graph.id]);
     expect(result.hasMore).toBe(false);
     expect(result.siteSettings).toMatchObject({
@@ -2180,8 +2185,21 @@ test("real account privately controls versioned website knowledge without dispat
     passed = true;
   } catch (failure) {
     failureLine = sourceFailureLine(failure);
+    failureKind =
+      failure instanceof errors.TimeoutError
+        ? "browser-timeout"
+        : failure instanceof SyntaxError
+          ? "invalid-json"
+          : failure instanceof Error && failure.name === "ZodError"
+            ? "schema-validation"
+            : failure instanceof Error &&
+                /No (?:data|resource).*?(?:resource|identifier)|getResponseBody|Response body is unavailable/i.test(
+                  failure.message,
+                )
+              ? "response-body-unavailable"
+              : "verification";
     throw Error(
-      `Private website learning verification failed during ${stage}${failureLine ? ` at line ${failureLine}` : ""}.`,
+      `Private website learning verification failed during ${stage}${failureLine ? ` at line ${failureLine}` : ""} (${failureKind}).`,
     );
   } finally {
     const cleanup = await Promise.allSettled([closeIdentityContext(context)]);
@@ -2193,6 +2211,7 @@ test("real account privately controls versioned website knowledge without dispat
       buildDigest,
       stage,
       failureLine,
+      failureKind,
       modelRequests,
       checks,
       cleanupCompleted: disposed,
