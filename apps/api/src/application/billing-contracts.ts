@@ -1,5 +1,24 @@
 import type { ServiceRequestContext } from "../capabilities";
 import type { BillingMode } from "../../../../packages/navigation-core/contracts-billing";
+import type { SealedSecret } from "./sealed-secret";
+
+export class BillingSecretError extends Error {
+  constructor() {
+    super("The billing handoff is unavailable.");
+    this.name = "BillingSecretError";
+  }
+}
+export interface BillingLinkBinding {
+  readonly accountId: string;
+  readonly workspaceId: string;
+  readonly operationId: string;
+  readonly profileRevision: string;
+  readonly expiresAt: string;
+}
+export interface BillingLinkCipher {
+  seal(binding: BillingLinkBinding, url: string): Promise<SealedSecret>;
+  open(binding: BillingLinkBinding, sealed: SealedSecret): Promise<string>;
+}
 
 export type BillingProviderErrorCode =
   | "CONFIGURATION"
