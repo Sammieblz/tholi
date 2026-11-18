@@ -269,105 +269,121 @@ it.each(["metadata-id", "foreign-account", "generation", "digest", "valid"])(
   },
 );
 
-it("deletion is not announced before acceptance and accepted cleanup signs out and clears only cloud state even while the network is offline", async () => {
-  const posted = vi.fn();
-  vi.stubGlobal(
-    "BroadcastChannel",
-    class {
-      onmessage = null;
-      postMessage = posted;
-      close() {}
-    },
-  );
-  let accept!: (result: unknown) => void,
-    offline = false;
-  transport.request.mockImplementation(
-    async (_origin, path, schema, options) => {
-      if (offline) throw new Error("Network offline after server acceptance.");
-      if (path === "/api/v1/account") return schema.parse(session);
-      if (path === "/api/v1/account/sessions")
-        return schema.parse({ items: [] });
-      if (path === "/api/v1/capabilities")
-        return {
-          capabilities: [
-            "account-deletion",
-            "saved-data-write",
-            "account-binding",
-          ],
-        };
-      if (path.endsWith("/artifacts") && options.method === "POST")
-        throw new Error("offline");
-      if (path === "/api/v1/account/deletion")
-        return new Promise((resolve) => {
-          accept = (value) => resolve(schema.parse(value));
-        });
-      throw new Error("Unexpected account lifecycle request.");
-    },
-  );
-  await mount(true);
-  await expect(
-    current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
-  ).rejects.toThrow("offline");
-  expect((await current.savedData.cached()).outbox).toHaveLength(1);
-  const confirmation = container.querySelector<HTMLInputElement>(
-    "#account-delete-confirmation",
-  )!;
-  await act(async () => {
-    Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value",
-    )!.set!.call(confirmation, "DELETE");
-    confirmation.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await click("Delete account");
-  await click("Request account deletion");
-  expect(accept).toBeTypeOf("function");
-  expect(container.textContent).not.toContain(
-    "Your account deletion request was accepted",
-  );
-  const sent = transport.request.mock.calls.length;
-  offline = true;
-  await act(async () =>
-    accept({
-      requestId: crypto.randomUUID(),
-      jobId: crypto.randomUUID(),
-      status: "deletion_pending",
-      signedOut: true,
-      retained: [
-        "identity-and-abuse-prevention",
-        "financial-liabilities",
-        "security-audit",
-        "deletion-tombstones",
-      ],
-    }),
-  );
-  expect(container.textContent).toContain(
-    "Your account deletion request was accepted. You are signed out while deletion continues.",
-  );
-  expect(current.session).toBeUndefined();
-  const store = new IndexedDBCloudDataStore();
-  expect(
-    (
-      await store.read(
-        {
-          serviceOrigin: origin,
-          accountId: session.account.id,
-          workspaceId: session.account.workspaceId,
-        },
-        () => {},
-      )
-    ).outbox,
-  ).toEqual([]);
-  expect(transport.request).toHaveBeenCalledTimes(sent);
-  expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
-    type: "account-change",
-    scope: null,
-  });
-});
-
 it.each([false, true])(
-  "confirmed sign-out preserves its provider link across unmount and a concurrent unauthorized read (%s), without reusing it for a later account",
-  async (concurrentUnauthorized) => {
+  "deletion is announced after acceptance and clears only cloud state, with a read during deletion (%s)",
+  async (concurrentRead) => {
+    const posted = vi.fn();
+    vi.stubGlobal(
+      "BroadcastChannel",
+      class {
+        onmessage = null;
+        postMessage = posted;
+        close() {}
+      },
+    );
+    let accept!: (result: unknown) => void,
+      offline = false,
+      deleting = false;
+    transport.request.mockImplementation(
+      async (_origin, path, schema, options) => {
+        if (offline)
+          throw new Error("Network offline after server acceptance.");
+        if (path === "/api/v1/account") return schema.parse(session);
+        if (path === "/api/v1/account/sessions" && deleting)
+          throw new ServiceClientError("UNAUTHENTICATED", 401, "Sign in");
+        if (path === "/api/v1/account/sessions")
+          return schema.parse({ items: [] });
+        if (path === "/api/v1/capabilities")
+          return {
+            capabilities: [
+              "account-deletion",
+              "saved-data-write",
+              "account-binding",
+            ],
+          };
+        if (path.endsWith("/artifacts") && options.method === "POST")
+          throw new Error("offline");
+        if (path === "/api/v1/account/deletion")
+          return new Promise((resolve) => {
+            deleting = true;
+            accept = (value) => resolve(schema.parse(value));
+          });
+        throw new Error("Unexpected account lifecycle request.");
+      },
+    );
+    await mount(true);
+    await expect(
+      current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
+    ).rejects.toThrow("offline");
+    expect((await current.savedData.cached()).outbox).toHaveLength(1);
+    const confirmation = container.querySelector<HTMLInputElement>(
+      "#account-delete-confirmation",
+    )!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(confirmation, "DELETE");
+      confirmation.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await click("Delete account");
+    await click("Request account deletion");
+    expect(accept).toBeTypeOf("function");
+    expect(container.textContent).not.toContain(
+      "Your account deletion request was accepted",
+    );
+    if (concurrentRead) {
+      let failure: unknown;
+      await act(async () => {
+        failure = await current.sessions().catch((error: unknown) => error);
+      });
+      expect(failure).toMatchObject({ code: "CANCELLED" });
+    }
+    const sent = transport.request.mock.calls.length;
+    offline = true;
+    await act(async () =>
+      accept({
+        requestId: crypto.randomUUID(),
+        jobId: crypto.randomUUID(),
+        status: "deletion_pending",
+        signedOut: true,
+        retained: [
+          "identity-and-abuse-prevention",
+          "financial-liabilities",
+          "security-audit",
+          "deletion-tombstones",
+        ],
+      }),
+    );
+    expect(container.textContent).toContain(
+      "Your account deletion request was accepted. You are signed out while deletion continues.",
+    );
+    expect(current.session).toBeUndefined();
+    const store = new IndexedDBCloudDataStore();
+    expect(
+      (
+        await store.read(
+          {
+            serviceOrigin: origin,
+            accountId: session.account.id,
+            workspaceId: session.account.workspaceId,
+          },
+          () => {},
+        )
+      ).outbox,
+    ).toEqual([]);
+    expect(transport.request).toHaveBeenCalledTimes(sent);
+    expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
+      type: "account-change",
+      scope: null,
+    });
+  },
+);
+
+it.each(["none", "before", "during"] as const)(
+  "confirmed sign-out preserves its provider link across unmount and unauthorized reads (%s), without reusing it for a later account",
+  async (readTiming) => {
+    const concurrentUnauthorized = readTiming !== "none";
     let actor = session;
     let rejectRead: ((reason: unknown) => void) | undefined;
     let acceptLogout: (() => void) | undefined;
@@ -401,20 +417,26 @@ it.each([false, true])(
       (all) => (closing = originalSignOut(all)),
     );
     let read: Promise<unknown> | undefined;
-    if (concurrentUnauthorized) {
+    if (readTiming === "before") {
       rejectRead = () => {};
-      read = current.sessions().catch(() => {});
+      read = current.sessions().catch((error: unknown) => error);
     }
     await act(async () => {
       button("Sign out").click();
       if (concurrentUnauthorized) {
         await Promise.resolve();
+        if (readTiming === "during") {
+          rejectRead = () => {};
+          read = current.sessions().catch((error: unknown) => error);
+        }
         rejectRead!(new ServiceClientError("UNAUTHENTICATED", 401, "Sign in"));
         await read;
         acceptLogout!();
       }
       await closing;
     });
+    if (readTiming === "during")
+      expect(await read).toMatchObject({ code: "CANCELLED" });
     expect(current.session).toBeUndefined();
     const provider = container.querySelector<HTMLAnchorElement>(
       'a[href="https://identity.example.test/logout"]',

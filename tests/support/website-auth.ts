@@ -5,6 +5,7 @@ import {
   type Page,
   type Locator,
   type Response,
+  type Request,
 } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import { waitForIdentityGatewayCapacity } from "./identity-gateway";
@@ -47,6 +48,7 @@ export class WebsiteIdentityError extends Error {
       | "SIGN_OUT_ACTION_FAILED"
       | "SIGN_OUT_ACKNOWLEDGEMENT_FAILED"
       | "SIGN_OUT_NOT_DISPATCHED"
+      | "SIGN_OUT_RESPONSE_UNAVAILABLE"
       | `SIGN_OUT_HTTP_${number}`
       | "SIGN_OUT_SESSION_NOT_REVOKED"
       | "PROVIDER_SIGN_OUT_FAILED",
@@ -614,6 +616,14 @@ export async function signOutWebsite(
   let reason: ConstructorParameters<typeof WebsiteIdentityError>[0] =
     "SIGN_OUT_ACTION_FAILED";
   let logoutStatus: number | undefined;
+  let logoutDispatched = false;
+  const onRequest = (request: Request) => {
+    if (
+      request.url() === environment.serviceOrigin + "/api/v1/auth/logout" &&
+      request.method() === "POST"
+    )
+      logoutDispatched = true;
+  };
   const onResponse = (response: Response) => {
     if (
       response.url() === environment.serviceOrigin + "/api/v1/auth/logout" &&
@@ -621,6 +631,7 @@ export async function signOutWebsite(
     )
       logoutStatus = response.status();
   };
+  page.on("request", onRequest);
   page.on("response", onResponse);
   try {
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -659,12 +670,15 @@ export async function signOutWebsite(
     if (reason === "SIGN_OUT_ACKNOWLEDGEMENT_FAILED")
       reason =
         logoutStatus === undefined
-          ? "SIGN_OUT_NOT_DISPATCHED"
+          ? logoutDispatched
+            ? "SIGN_OUT_RESPONSE_UNAVAILABLE"
+            : "SIGN_OUT_NOT_DISPATCHED"
           : logoutStatus !== 200
             ? `SIGN_OUT_HTTP_${logoutStatus}`
             : reason;
     throw new WebsiteIdentityError(reason);
   } finally {
+    page.off("request", onRequest);
     page.off("response", onResponse);
   }
 }

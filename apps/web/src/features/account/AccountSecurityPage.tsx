@@ -4,10 +4,7 @@ import {
   identityAccountResponseSchema,
   identitySessionsSchema,
 } from "../../../../../packages/navigation-core/contracts-identity";
-import {
-  accountDeletionInputSchema,
-  accountDeletionResultSchema,
-} from "../../../../../packages/navigation-core/contracts-account";
+import { accountDeletionInputSchema } from "../../../../../packages/navigation-core/contracts-account";
 import { serviceCapabilitiesSchema } from "../../../../../packages/navigation-core/contracts-service";
 import { useAccount } from "./session";
 import { AccountConfirmation } from "./AccountConfirmation";
@@ -140,13 +137,7 @@ export function AccountSecurityPage({
           expectedRevision: fresh.account.revision,
           confirmation,
         });
-        const result = await request(
-          "/api/v1/account/deletion",
-          accountDeletionResultSchema,
-          "POST",
-          input,
-          signal,
-        );
+        const result = await account.requestDeletion(input, signal);
         onDeletionAccepted(actor);
         // The accepted service receipt revokes the session. Close only this account's local state.
         await account.completeDeletion();

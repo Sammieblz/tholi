@@ -129,6 +129,33 @@ These focused runs include the working-tree correction and do not certify the
 earlier commit. The prepared-image/account/scan cohort must pass before acceptance
 or merge.
 
+### Accepted account transitions and later reads
+
+The complete local PR cohort at `17d1cccf` passes in run
+`3240ea3e-9cc6-4e89-ba6f-f347a83ded85`: 1,334 unit, 57 core, 20 integration,
+five native Firefox and 95 UI cases. Its eight owner reports match the same run
+and unchanged verified build. The preceding single stale-observation failure and
+two passing focused repetitions remain separate evidence.
+
+Hosted run `44218260023` passes all five fast groups and one complete four-target
+native matrix with aggregate verification. Its account cohort passes the earlier
+collection check but fails later during Chromium deletion response inspection
+and Firefox sign-out acknowledgement. No complete backend acceptance is claimed.
+
+A further deterministic regression confirms the second cancellation window:
+reads started after logout dispatch can still invalidate its receipt. The same
+problem is reproduced during deletion. Both variants fail before correction.
+The existing account boundary now fences new requests as well as existing ones
+while a transition is pending. Deletion uses that boundary before dispatch;
+the existing accepted-receipt and scoped cleanup owners remain authoritative.
+All 24 focused account/lifecycle cases pass after correction.
+
+The sign-out diagnostic now observes request dispatch separately from response
+availability. Absence of a response alone cannot establish that no request was
+sent. A loopback-only browser probe did not reproduce body loss after a fully
+consumed response; it supplies no basis for weakening HTTP or schema assertions.
+The real identity cohort and fresh complete gates remain required.
+
 A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless
