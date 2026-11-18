@@ -35,7 +35,7 @@ interface Context {
 export function registerNavigationEvents(context: Context) {
   const invalidatePinned = (tabId: number) => {
     if (tabId !== context.session?.tabId) return;
-    cancelServiceInference();
+    cancelServiceInference({ preserveConfiguration: true });
     invalidatePagePerception();
     if (context.visionJob) context.cancelVision();
   };
@@ -43,12 +43,12 @@ export function registerNavigationEvents(context: Context) {
     invalidatePinned(tabId);
   });
   api.tabs.onActivated.addListener(({ windowId }) => {
-    cancelServiceInference();
+    cancelServiceInference({ preserveConfiguration: true });
     if (windowId === context.captureWindowId() && context.visionJob)
       context.cancelVision();
   });
   api.windows.onFocusChanged.addListener((windowId) => {
-    cancelServiceInference();
+    cancelServiceInference({ preserveConfiguration: true });
     const captured = context.captureWindowId();
     if (captured !== undefined && windowId !== captured && context.visionJob)
       context.cancelVision();

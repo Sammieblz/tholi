@@ -118,6 +118,8 @@ let signingIn = false;
 let writes: Promise<void> = Promise.resolve();
 let inferencePending = new AbortController();
 let inferenceGeneration = 0;
+let configurationPending = new AbortController();
+let configurationGeneration = 0;
 let configuringInference: number | undefined;
 let inferenceSuppressed = false;
 const accountChangeListeners = new Set<
@@ -226,12 +228,20 @@ function invalidate() {
 export function cancelPendingServiceSignIn() {
   if (signingIn) invalidate();
 }
-/** Revoke a transmission span immediately without signing the account out. */
-export function cancelServiceInference() {
+/** Revoke page-bound transmission immediately. Navigation preserves the separate
+ * account choice; permission/account changes and newer choices supersede both. */
+export function cancelServiceInference({
+  preserveConfiguration = false,
+}: { preserveConfiguration?: boolean } = {}) {
   inferenceGeneration++;
   inferencePending.abort();
   inferencePending = new AbortController();
-  configuringInference = undefined;
+  if (!preserveConfiguration) {
+    configurationGeneration++;
+    configurationPending.abort();
+    configurationPending = new AbortController();
+    configuringInference = undefined;
+  }
 }
 export function serviceInferenceSignal() {
   return AbortSignal.any([pending.signal, inferencePending.signal]);
@@ -1167,14 +1177,17 @@ async function configureInference(
   cancelServiceInference();
   clearEvaluation();
   inferenceSuppressed = true;
-  const operation = inferenceGeneration;
+  // Navigation invalidates page-bound transmissions, not an explicit account
+  // setting. A newer choice, permission revocation or account change still
+  // aborts this separately owned configuration span.
+  const operation = configurationGeneration;
   configuringInference = operation;
   const expected = generation;
-  const signal = serviceInferenceSignal();
+  const signal = AbortSignal.any([pending.signal, configurationPending.signal]);
   const check = () => {
     current(expected);
     signal.throwIfAborted();
-    if (inferenceGeneration !== operation)
+    if (configurationGeneration !== operation)
       throw new Error("Inference transmission choices changed.");
   };
   try {
@@ -1329,7 +1342,7 @@ async function configureInference(
       if (
         !choices.enabled &&
         expected === generation &&
-        operation === inferenceGeneration
+        operation === configurationGeneration
       )
         return {
           configured: true,

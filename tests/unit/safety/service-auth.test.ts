@@ -449,6 +449,61 @@ it("switching the service origin cancels an in-flight account exchange and disca
   ).toBe(true);
 });
 
+it.each([
+  { enabled: false, interruption: "navigation" },
+  { enabled: true, interruption: "navigation" },
+  { enabled: true, interruption: "revocation" },
+])(
+  "$interruption during a pending processing choice with enabled=$enabled",
+  async ({ enabled, interruption }) => {
+    const fixture = inferenceFixture();
+    fixture.stored.inference.enabled = !enabled;
+    const {
+      serviceAuthCommand,
+      cancelServiceInference,
+      serviceInferenceSignal,
+    } = await import("../../../apps/extension/src/platform/service-auth");
+    let release!: (value: unknown) => void;
+    privateStore.getPrivateSetting.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const operation = serviceAuthCommand({
+      type: "AUTH_INFERENCE_CONFIGURE",
+      profile: "fake",
+      enabled,
+      images: false,
+    });
+    const acknowledged =
+      interruption === "revocation"
+        ? expect(operation).rejects.toThrow()
+        : expect(operation).resolves.toMatchObject({
+            enabled,
+            serverConsentUpdated: true,
+          });
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    const span = serviceInferenceSignal();
+    cancelServiceInference({
+      preserveConfiguration: interruption === "navigation",
+    });
+    expect(span.aborted).toBe(true);
+    release(fixture.stored);
+    await acknowledged;
+    await expect(
+      serviceAuthCommand({ type: "AUTH_INFERENCE_STATUS" }),
+    ).resolves.toMatchObject({
+      enabled: interruption === "navigation" && enabled,
+    });
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/decisions")),
+    ).toBe(false);
+    if (!enabled) expect(saved).not.toHaveProperty("inference");
+    if (interruption === "revocation") expect(saved).toEqual(fixture.stored);
+  },
+);
+
 function inferenceFixture(images = false) {
   const stored = {
     origin,

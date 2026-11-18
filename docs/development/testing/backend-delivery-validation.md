@@ -65,6 +65,23 @@ and [header implementation](https://github.com/mozilla-firefox/firefox/blob/main
 This is test-harness compatibility evidence, not a changed production permission
 or a claim that the two other intermittent failures have a known cause.
 
+### Navigation and processing configuration
+
+Hosted run `44202194170` passed the corrected Firefox sidebar case but failed
+the private-learning flow at Local acknowledgement. A separate deterministic
+regression reproduces a concrete lifecycle defect: cancelling a page-bound
+inference span during an asynchronous settings read also aborts the explicit
+account processing choice. Both Local and enable cases fail before correction.
+
+The existing owner now maintains a separate configuration cancellation span.
+Navigation/focus/frame changes still cancel page-bound requests immediately.
+Permission revocation, account changes and newer processing choices retain full
+cancellation. The fresh 118-case authentication/lifecycle cohort passes, including
+both navigation races and explicit revocation fencing; whole-project types pass.
+No provider retry, extra permission, application budget or browser identity rule
+changed. Actual browser verification of this correction and fresh complete gates
+remain pending. Earlier and superseded cohorts cannot certify this source.
+
 Actual final prepared-image/local-account/scan validation, current complete local
 `test:ci` and matching-head hosted checks remain pending. A passing preparation
 record will not relabel an earlier failed or incomplete cohort. Native store
