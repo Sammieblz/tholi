@@ -496,3 +496,51 @@ actual scanner and complete current PR validation remain pending.
 Primary implementation evidence: pinned [OCI staging](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/oci/artifact.go),
 [temporary-directory owner](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/x/os/os.go)
 and [telemetry controls](https://github.com/aquasecurity/trivy/blob/v0.76.2/docs/guide/advanced/telemetry.md).
+
+### November 18 Docker recovery and scanner archive access
+
+After the user approved recreation of only Docker's stuck bootstrap distribution,
+its 119,537,664-byte disk and registration were backed up and hash-verified. The
+separate 129,112,211,456-byte Docker data disk and Ubuntu registration were
+retained. Engine 28.1.1 responds, an isolated existing-image container executes
+with networking disabled, and the prior inventory of 17 containers, 170 images
+and 10 named volumes is visible. The existing Supabase volume is present. This
+does not establish application-level recovery for other projects. Backup and
+repair records remain under `output/qa/docker-wsl-repair-20261118T2042/`.
+
+The abandoned synthetic stack `tholi-smoke-mwltx9qm-50a2c4e1` was subsequently
+removed through the existing project-scoped reset owner. Its cleanup is a fresh
+follow-up, not a passing rewrite of its earlier failed smoke report. No broad
+image, container or volume prune was performed.
+
+Runs 44387554457, 44387718710 and 44387888715 now pass public database download
+and freshness checks, then fail at `offline immutable image scan` with the
+closed condition `permission-denied`. Their candidate artifacts are respectively
+14467396874, 14465169357 and 14465234224. Their SHA-256 digests are
+`512cbb85e6633f906c2fbc67bdbc2fe3b67c5e61c2e169cd34b04033ce5625d1`,
+`5824bc0902f5e5974698340e0d38fd922cf1b1025a959219de29484fa7b08332`
+and `3655c1e686e7e6f4614e3e4f2849e81cb09ed745b2a9d9c31a5e8d3f50c4ac11`.
+The immutable stack, including billing migration 017 on the last branch, was
+not reached in these attempts.
+
+Docker CLI's [save owner](https://github.com/docker/cli/blob/v28.1.1/cli/command/image/save.go)
+creates its output with mode 0600. A local Linux-container reproduction using
+the pinned scanner proves that another UID's 0600 file is unreadable after all
+capabilities are dropped, and the same file is readable at 0644. The temporary
+labeled volume was removed. The synthetic result is recorded separately in
+`scanner-archive-access.json` beside the repair record. The archive handoff now
+sets 0644 explicitly; the scanner's read-only bind, dropped capabilities,
+offline scan and all severity/freshness checks stay intact. Fresh complete
+backend validation is pending.
+
+Forty focused backend, mail-capture and local-stack policy checks pass in
+`output/qa/backend48-archive-handoff-focus.log`. Formatting and script syntax
+checks pass. This small file-permission correction uses the existing complete
+Linux scan as its execution regression; no test mirrors the chmod statement.
+
+All five fast groups pass on each of these three heads. Native evidence stays
+separate: run 44387554457 fails Chromium's current-capture proof on macOS 26
+arm64; run 44387888715 fails the Chrome private-learning deadline and Firefox
+masked OCR deadline on macOS 15 Intel. Run 44387718710 passes all four native
+targets and their verifier. These results do not certify the other heads or
+resolve the two failing native cohorts.

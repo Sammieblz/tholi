@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import {
+  chmod,
   copyFile,
   mkdir,
   readFile,
@@ -112,6 +113,10 @@ async function validate() {
       resolve(directory, "runtime.tar"),
       id,
     ]);
+    // Docker saves with mode 0600. The scanner drops every capability, so
+    // container root cannot read a host-user-owned archive without this
+    // explicit read-only handoff. Keep the owner's write bit for cleanup.
+    await chmod(resolve(directory, "runtime.tar"), 0o644);
     const manifest = JSON.parse(
       await command("tar", [
         "-xOf",
