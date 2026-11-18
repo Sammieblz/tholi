@@ -56,6 +56,10 @@ import { createFakeNavigationModel } from "../../../apps/api/src/adapters/fake-n
 import { ModelError } from "../../../apps/api/src/application/model-contracts";
 import { CreditService } from "../../../apps/api/src/application/quotas";
 import {
+  BillingService,
+  type BillingReader,
+} from "../../../apps/api/src/application/billing";
+import {
   PlanService,
   type PlanRepositories,
 } from "../../../apps/api/src/application/plans";
@@ -65,7 +69,10 @@ import {
   freeEnrollmentSchema,
   type EffectiveProductPlan,
 } from "../../../packages/navigation-core/contracts-plans";
-import { createProductCatalogFixture } from "../../support/product-plan-fixture";
+import {
+  createProductCatalogFixture,
+  createProductCatalogV2Fixture,
+} from "../../support/product-plan-fixture";
 import {
   SavedDataService,
   type SavedDataRepositories,
@@ -160,6 +167,10 @@ const nativeOrigin = "chrome-extension://" + "a".repeat(32);
 const nativeToken = "n".repeat(43);
 const webToken = "w".repeat(43);
 const bearer = { authorization: `Bearer ${nativeToken}` };
+const bound = (f: Awaited<ReturnType<typeof fixture>>) => ({
+  ...bearer,
+  [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
+});
 
 async function fixture(
   supportEnabled = true,
@@ -245,6 +256,25 @@ async function fixture(
     leaseToken: "PRIVATE_FENCE_SENTINEL",
   };
   const scoped = {
+    async withBilling<T>(
+      work: (billing: BillingReader) => Promise<T>,
+    ): Promise<T> {
+      return work({
+        subscription: async () => ({
+          version: 1,
+          workspaceId: workspace.id,
+          revision: "0",
+          mode: null,
+          status: "none",
+          plan: null,
+          period: null,
+          cancelAtPeriodEnd: false,
+          managedSpendingHeld: false,
+          available: false,
+        }),
+        invoices: async () => ({ version: 1, items: [] }),
+      });
+    },
     getSavedArtifact: vi.fn<SavedDataTransaction["getSavedArtifact"]>(
       async (id) => (id === savedArtifact.id ? savedRecord : undefined),
     ),
@@ -460,8 +490,13 @@ async function fixture(
       },
     ),
   };
+  const billingAccess = vi.spyOn(scoped, "withBilling");
   const repositories = {
-    readPlanCatalog: vi.fn(async () => createProductCatalogFixture()),
+    readPlanCatalog: vi.fn(async (version: 1 | 2 = 1) =>
+      version === 2
+        ? createProductCatalogV2Fixture()
+        : createProductCatalogFixture(),
+    ),
     listWorkspaces: vi.fn(async () => [workspace]),
     async transaction<T>(
       scope: RepositoryScope,
@@ -687,7 +722,10 @@ async function fixture(
           }
         : {}),
       ...(plansEnvironment
-        ? { plans: new PlanService(repositories, plansEnvironment) }
+        ? {
+            plans: new PlanService(repositories, plansEnvironment),
+            billing: new BillingService(repositories),
+          }
         : {}),
       ...(savedDataEnvironment
         ? {
@@ -718,6 +756,7 @@ async function fixture(
     store,
     repositories,
     scoped,
+    billingAccess,
     account,
     workspace,
     membership,
@@ -2401,10 +2440,6 @@ describe("account support and private file HTTP contracts", () => {
 });
 
 describe("saved-data HTTP boundary", () => {
-  const bound = (f: Awaited<ReturnType<typeof fixture>>) => ({
-    ...bearer,
-    [SERVICE_ACCOUNT_BINDING_HEADER]: f.account.id,
-  });
   const grant = (f: Awaited<ReturnType<typeof fixture>>) =>
     f.consents.push({
       id: randomUUID(),
@@ -3015,6 +3050,125 @@ describe("product plans", () => {
       availability: { available: true, reason: "development-fixture" },
       pricing: { status: "free", amount: "0" },
     });
+    const negotiated = await f.app.inject({
+      url: "/api/v1/plans?schemaVersion=2",
+    });
+    expect(negotiated.statusCode).toBe(200);
+    expect(negotiated.json()).toMatchObject({
+      version: 2,
+      environment: "development",
+    });
+    expect(productCatalogSchema.safeParse(negotiated.json()).success).toBe(
+      false,
+    );
+    for (const plan of negotiated
+      .json()
+      .plans.filter((plan: { mode: string }) => plan.mode === "paid")) {
+      expect(plan.availability.available).toBe(false);
+      expect(plan.billing).toBeNull();
+      expect(plan.pricing.status).toBe("unpublished");
+    }
+    for (const query of [
+      "schemaVersion=3",
+      "schemaVersion=2&schemaVersion=1",
+      "schemaVersion=2&billingEnabled=true",
+    ])
+      safeError(
+        await f.app.inject({ url: "/api/v1/plans?" + query }),
+        400,
+        "INVALID_REQUEST",
+      );
+    expect(f.repositories.transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("private billing records", () => {
+  it("requires a current bound owner without inference consent or a paid allowance", async () => {
+    const f = await fixture(
+        false,
+        false,
+        undefined,
+        undefined,
+        false,
+        "development",
+      ),
+      base = `/api/v1/workspaces/${f.workspace.id}`;
+    const subscription = await f.app.inject({
+      url: base + "/subscription",
+      headers: bound(f),
+    });
+    expect(subscription.statusCode).toBe(200);
+    expect(subscription.json()).toMatchObject({
+      workspaceId: f.workspace.id,
+      status: "none",
+      revision: "0",
+      available: false,
+    });
+    expect(
+      (
+        await f.app.inject({ url: base + "/invoices", headers: bound(f) })
+      ).json(),
+    ).toEqual({ version: 1, items: [] });
+    const calls = f.billingAccess.mock.calls.length;
+    for (const headers of [
+      bearer,
+      { ...bound(f), [SERVICE_ACCOUNT_BINDING_HEADER]: randomUUID() },
+    ])
+      safeError(
+        await f.app.inject({ url: base + "/subscription", headers }),
+        401,
+        "UNAUTHENTICATED",
+      );
+    safeError(
+      await f.app.inject({
+        url: `/api/v1/workspaces/${randomUUID()}/invoices`,
+        headers: bound(f),
+      }),
+      403,
+      "FORBIDDEN",
+    );
+    f.membership.role = "admin";
+    safeError(
+      await f.app.inject({ url: base + "/invoices", headers: bound(f) }),
+      403,
+      "FORBIDDEN",
+    );
+    expect(f.billingAccess).toHaveBeenCalledTimes(calls);
+    expect(f.scoped.enrollFree).not.toHaveBeenCalled();
+    const capabilities = (
+      await f.app.inject({ url: "/api/v1/capabilities" })
+    ).json();
+    expect(capabilities.capabilities).toContain("billing-records");
+    expect(capabilities.availability.billing).toBe(false);
+    const specification = (
+      await f.app.inject({ url: "/api/v1/openapi.json" })
+    ).json();
+    expect(
+      specification["x-tholi-route-inventory"].find(
+        (entry: { operationId: string }) =>
+          entry.operationId === "getWorkspaceSubscription",
+      ).status,
+    ).toBe("implemented");
+    expect(
+      specification["x-tholi-route-inventory"].find(
+        (entry: { operationId: string }) =>
+          entry.operationId === "startWorkspaceCheckout",
+      ).status,
+    ).toBe("planned");
+  });
+  it("keeps billing record routes absent when their service is not composed", async () => {
+    const f = await fixture(false, false);
+    expect(
+      (
+        await f.app.inject({
+          url: `/api/v1/workspaces/${f.workspace.id}/subscription`,
+          headers: bound(f),
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (await f.app.inject({ url: "/api/v1/capabilities" })).json().capabilities,
+    ).not.toContain("billing-records");
   });
 });
 

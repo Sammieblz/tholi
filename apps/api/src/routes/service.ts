@@ -45,6 +45,7 @@ interface ServiceFeatures {
   evaluation?: OperatorEvaluationMetadata;
   creditsEnabled?: boolean;
   plansEnabled?: boolean;
+  billingRecordsEnabled?: boolean;
   savedDataEnabled?: boolean;
   savedDataWritesEnabled?: boolean;
   savedDataExportsEnabled?: boolean;
@@ -66,6 +67,7 @@ function serviceCapabilities(features: ServiceFeatures) {
     evaluation,
     creditsEnabled = false,
     plansEnabled = false,
+    billingRecordsEnabled = false,
     savedDataEnabled = false,
     savedDataWritesEnabled = false,
     savedDataExportsEnabled = false,
@@ -95,6 +97,7 @@ function serviceCapabilities(features: ServiceFeatures) {
       ...(analyticsEnabled ? ["product-analytics"] : []),
       ...(creditsEnabled ? ["credit-accounting", "usage-schema-2"] : []),
       ...(plansEnabled ? ["product-plans"] : []),
+      ...(billingRecordsEnabled ? ["billing-records"] : []),
       ...(savedDataEnabled ? ["saved-data", "saved-data-schema-2"] : []),
       ...(savedDataWritesEnabled ? ["saved-data-write"] : []),
       ...(savedDataExportsEnabled ? ["saved-data-export"] : []),

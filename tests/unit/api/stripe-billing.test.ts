@@ -367,7 +367,7 @@ test("actual loopback HTTP preserves pinned API and idempotency headers, strips 
       id: "bps_synthetic",
       url: "https://billing.stripe.com/p/session?secret=synthetic",
     });
-    const cleanupKeys = [randomUUID(), randomUUID(), randomUUID()];
+    const cleanupKeys: string[] = [randomUUID(), randomUUID(), randomUUID()];
     expect(
       await adapter.expireCheckout(
         {

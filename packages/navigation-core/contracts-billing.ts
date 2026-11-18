@@ -113,3 +113,4 @@ export type BillingMode = z.infer<typeof billingModeSchema>;
 export type BillingSubscription = z.infer<typeof billingSubscriptionSchema>;
 export type BillingCheckoutInput = z.infer<typeof billingCheckoutInputSchema>;
 export type BillingOperation = z.infer<typeof billingOperationSchema>;
+export type BillingInvoices = z.infer<typeof billingInvoicesSchema>;

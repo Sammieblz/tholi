@@ -683,6 +683,17 @@ export const SERVICE_ROUTES = [
       "Read the server-reconciled subscription, never client-asserted payment success.",
   },
   {
+    method: "GET",
+    path: "/api/v1/workspaces/{workspaceId}/invoices",
+    operationId: "listWorkspaceInvoices",
+    group: "billing",
+    status: "planned",
+    issue: 50,
+    access: "authenticated",
+    summary:
+      "Read bounded private invoice metadata without provider links or payment credentials.",
+  },
+  {
     method: "POST",
     path: "/api/v1/workspaces/{workspaceId}/checkout",
     operationId: "startWorkspaceCheckout",

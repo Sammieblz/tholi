@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { ScopedBilling } from "./billing-queries";
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -691,6 +692,14 @@ class ScopedRepositories {
         (scope) => new ScopedRepositories(this.client, scope, this.observer),
       ),
     );
+  }
+
+  async withBilling<T>(
+    work: (queries: ScopedBilling) => Promise<T>,
+  ): Promise<T> {
+    await this.lockAccount();
+    await this.lockWorkspace(true);
+    return work(new ScopedBilling(this.client, this.scope));
   }
 
   // Credits and sync stamps share this lock order: workspace, then domain row.

@@ -16,6 +16,7 @@ import type { Observability } from "./application/observability";
 import type { NavigationTransportService } from "./application/navigation";
 import type { CreditService } from "./application/quotas";
 import type { PlanService } from "./application/plans";
+import type { BillingService } from "./application/billing";
 import type { SavedDataService } from "./application/saved-data";
 import type { AccountService } from "./application/account";
 import type { ProviderConnectionService } from "./application/provider-connections";
@@ -35,6 +36,7 @@ export interface ServiceApiServices {
   navigation?: NavigationTransportService;
   credits?: CreditService;
   plans?: PlanService;
+  billing?: BillingService;
   savedData?: SavedDataService;
   account?: AccountService;
   providers?: ProviderConnectionService;
@@ -103,6 +105,7 @@ async function createServiceRuntime(
   let navigation = injected.navigation;
   let credits = injected.credits;
   let plans = injected.plans;
+  let billing = injected.billing;
   let savedData = injected.savedData;
   let account = injected.account;
   let providers = injected.providers;
@@ -115,6 +118,7 @@ async function createServiceRuntime(
       navigation ||
       credits ||
       plans ||
+      billing ||
       savedData ||
       account ||
       providers) &&
@@ -172,6 +176,7 @@ async function createServiceRuntime(
     navigation = runtime.navigation;
     credits = runtime.credits;
     plans = runtime.plans;
+    billing = runtime.billing;
     savedData = runtime.savedData;
     account = runtime.account;
     providers = runtime.providers;
@@ -262,6 +267,7 @@ async function createServiceRuntime(
         evaluation: navigation?.evaluationMetadata,
         creditsEnabled: !!credits,
         plansEnabled: !!plans,
+        billingRecordsEnabled: !!billing,
         savedDataEnabled: !!savedData,
         savedDataWritesEnabled: savedData?.writesAvailable,
         savedDataExportsEnabled: savedData?.exportsAvailable,
@@ -313,6 +319,10 @@ async function createServiceRuntime(
         if (plans) {
           const { registerPlansApi } = await import("./routes/plans");
           await registerPlansApi(app, identity, plans);
+        }
+        if (billing) {
+          const { registerBillingApi } = await import("./routes/billing");
+          await registerBillingApi(app, identity, billing);
         }
         if (savedData) {
           const { registerSavedDataApi } = await import("./routes/saved-data");

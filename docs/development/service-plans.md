@@ -22,6 +22,13 @@ also require the exact website Origin and CSRF token. Client plan intent is a
 selection hint; it cannot supply a grant, period, price, environment or limit.
 No checkout is required for Free. There is no public paid activation endpoint.
 
+The additive billing preparation supports explicit catalog negotiation with
+`GET /api/v1/plans?schemaVersion=2`; omitting the query retains the strict version-1
+response. A client cannot enable billing through query flags. The current
+composition keeps fixture prices hidden and payment collection unavailable.
+See the [billing preparation record](testing/subscription-billing-validation.md)
+for the incomplete reconciliation and verification work.
+
 Local requires no account, network enrollment or payment. Selecting Local is a
 client processing choice. It does not cancel an account, cloud entitlement or
 subscription, upload local knowledge, or delete saved data. A null effective plan
