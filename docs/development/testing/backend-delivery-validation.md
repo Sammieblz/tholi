@@ -187,6 +187,35 @@ the temporary coordinator removed after verification. No gateway rate-limit
 rejection was observed in that owned run. It does not establish the hosted
 failure's cause or replace the required complete integrated cohort.
 
+### Final revocation observation and ingress phases
+
+Hosted [run 44230383321](https://github.com/Sammieblz/tholi/actions/runs/44230383321)
+passes all five fast groups, three complete native Mac targets, all six Chromium
+account cases and five of six Firefox account cases. macOS 15 Intel passes eight
+of nine cases; cold masked OCR exceeds its unchanged deadline. Firefox passes
+the final all-session sign-out acknowledgement, then fails the other browser's
+revoked-session status assertion. The observed HTTP status was not recorded, so
+neither a revocation defect nor an ingress rejection is established. VM, replica
+and scan phases were not reached. Failures remain retained separately.
+
+The existing account report now records that final HTTP status. The two fresh
+sign-ins and the security walkthrough use separate ingress phases through the
+existing gateway-derived capacity schedule. This is proactive pacing, not a
+retry after rejection. The exact 401 assertion, five-minute case deadline and
+all service limits remain unchanged. Smoke failure diagnostics retain only
+bounded gateway rejection counts after confirmed startup, with no ingress URLs,
+queries or raw log lines.
+
+The fresh focused Firefox cohort `tholi-smoke-final48-ffab3c8a` passes real
+registration, recovery, retained identity and all-session revocation. The final
+other-browser status is 401. No gateway rate-limit rejection was observed in
+the owned local stack. Its containers, volumes, private environment and temporary
+coordinator were removed after verification. Forty-eight existing delivery,
+local-stack and gateway checks, script syntax and whole-project types pass.
+This focused result does not establish the hosted failure's cause or replace
+complete backend and native validation. #56 records native performance follow-up
+without changing OCR deadlines, masks, inputs or model settings.
+
 A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless

@@ -410,7 +410,12 @@ test("configured website uses real signup email recovery and retained identity w
     providerFormError: "none",
     failureReason: "none",
     failureLine: null as number | null,
-    sessionHttpStatus: { refresh: 0, revocation: 0, revokedSessionRead: 0 },
+    sessionHttpStatus: {
+      refresh: 0,
+      revocation: 0,
+      revokedSessionRead: 0,
+      allRevocationRead: 0,
+    },
     analyticsHttpStatus: {
       capabilities: 0,
       policies: 0,
@@ -437,6 +442,7 @@ test("configured website uses real signup email recovery and retained identity w
       primaryReload: 0,
       afterAnalytics: 0,
       beforeRecovery: 0,
+      beforeRetainedSecurity: 0,
     },
   };
   const saveProgress = () =>
@@ -917,11 +923,18 @@ test("configured website uses real signup email recovery and retained identity w
     );
     expect(retained.account.id).toBe(first.account.id);
     expect(retained.account.workspaceId).toBe(first.account.workspaceId);
+    // The two fresh-browser account entries and the security walkthrough are
+    // separate ingress phases. Drain the real gateway burst, without retrying
+    // a rejected operation or changing its limits.
+    progress.gatewayCapacityWaitMs.beforeRetainedSecurity =
+      await waitForIdentityGatewayCapacity();
+    await saveProgress();
     await retainedPage.goto(environment.webOrigin + "/account/security");
     await signOutWebsite(retainedPage, environment, false, true);
-    expect((await accountResponse(recoveredPage, environment)).status).toBe(
-      401,
-    );
+    const allRevokedAccount = await accountResponse(recoveredPage, environment);
+    progress.sessionHttpStatus.allRevocationRead = allRevokedAccount.status;
+    await saveProgress();
+    expect(allRevokedAccount.status).toBe(401);
     checks.push(
       "retained configuration preserves registered users and account links; sign-out everywhere revokes their sessions",
     );

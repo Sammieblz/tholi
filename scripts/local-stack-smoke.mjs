@@ -1026,6 +1026,38 @@ export async function runLocalStackSmoke({
     report.diagnostic = lastDiagnostic || sanitize(error.message);
     if (safeProject) {
       try {
+        if (!report.checks.some((check) => check.name === "clean-stack-startup"))
+          throw Error("The gateway was not confirmed running.");
+        const gateway = await execute(
+          "docker",
+          [...base(), "logs", "--no-color", "--tail", "5000", "gateway"],
+          {
+            cwd: root,
+            encoding: "utf8",
+            timeout: 15000,
+            maxBuffer: 8 * 1024 * 1024,
+          },
+        );
+        const limited = (gateway.stdout + gateway.stderr)
+          .split("\n")
+          .filter((line) => line.includes("limiting requests"));
+        // Counts only. Never retain request URLs, query strings or raw ingress logs.
+        report.gatewayDiagnostic = {
+          available: true,
+          rateLimitRejections: limited.length,
+          accountReads: limited.filter((line) =>
+            /request: "GET \/api\/v1\/account(?:[ ?])/.test(line),
+          ).length,
+          logoutRequests: limited.filter((line) =>
+            line.includes("/api/v1/auth/logout"),
+          ).length,
+          retainedLogLines: 0,
+          tailLimit: 5000,
+        };
+      } catch {
+        report.gatewayDiagnostic = { available: false };
+      }
+      try {
         const logs = await execute(
           "docker",
           [
