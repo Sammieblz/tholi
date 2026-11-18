@@ -30,6 +30,7 @@ import {
   backendArchiveConfigDigest,
   summarizeBackendScan,
   inspectBackendScanDatabase,
+  classifyBackendFailure,
   assertBackendPromotion,
 } from "./lib/backend-delivery.mjs";
 
@@ -181,21 +182,7 @@ async function validate() {
       resolve(root, "apps/api/src/database/migrations"),
     );
     candidate.schemaDigest = digest(candidate.schemaFiles);
-    stage = "immutable local, VM and replica checks";
-    const smoke = await runLocalStackSmoke({
-      optional: true,
-      preparedImage: id,
-      identityWeb: true,
-    });
-    assert.equal(smoke.status, "passed");
-    assert.equal(smoke.images.api.id, id);
-    assert.equal(smoke.images.worker.id, id);
-    assert.equal(smoke.vm.image, id);
-    assert.equal(smoke.websiteIdentity.passed, true);
-    await write("smoke.json", smoke);
-    stage = "offline deployment configuration";
-    await write("profiles.json", await runDeploymentProfileChecks());
-    stage = "immutable image scan";
+    stage = "scanner cache allocation";
     assert.equal(
       (
         await docker([
@@ -250,7 +237,9 @@ async function validate() {
         600000,
       );
     // The only scanner egress downloads the public vulnerability database.
+    stage = "public scanner database download";
     await scanner(["--download-db-only", "--no-progress"], "bridge");
+    stage = "scanner database metadata read";
     const database = JSON.parse(
       await docker([
         "run",
@@ -270,8 +259,10 @@ async function validate() {
         "/cache/db/metadata.json",
       ]),
     );
+    stage = "scanner database freshness verification";
     const databaseSummary = inspectBackendScanDatabase(database);
     await write("scan-database.json", database);
+    stage = "offline immutable image scan";
     const scan = JSON.parse(
       await scanner(
         [
@@ -290,12 +281,28 @@ async function validate() {
         "none",
       ),
     );
+    stage = "immutable scan evidence verification";
     candidate.security = {
       ...summarizeBackendScan(scan, candidate.image.configDigest),
       scannerImage: policy.scannerImage,
       database: databaseSummary,
     };
     await write("security.json", scan);
+    stage = "immutable local, VM and replica checks";
+    const smoke = await runLocalStackSmoke({
+      optional: true,
+      preparedImage: id,
+      identityWeb: true,
+    });
+    assert.equal(smoke.status, "passed");
+    assert.equal(smoke.images.api.id, id);
+    assert.equal(smoke.images.worker.id, id);
+    assert.equal(smoke.vm.image, id);
+    assert.equal(smoke.websiteIdentity.passed, true);
+    await write("smoke.json", smoke);
+    stage = "offline deployment configuration";
+    await write("profiles.json", await runDeploymentProfileChecks());
+    stage = "verified candidate archive preparation";
     await pipeline(
       createReadStream(resolve(directory, "runtime.tar")),
       createGzip(),
@@ -307,9 +314,10 @@ async function validate() {
     for (const name of BACKEND_CANDIDATE_FILES)
       candidate.files[name] = await fileDigest(resolve(directory, name));
     candidate.validation.status = "passed";
-  } catch {
+  } catch (error) {
     candidate.validation.status = "failed";
     candidate.failedStage = stage;
+    candidate.failure = classifyBackendFailure(error);
     // Docker/provider output is not safe to copy into distributable evidence.
     process.exitCode = 1;
   } finally {
@@ -320,9 +328,13 @@ async function validate() {
         );
         assert.equal(cacheState.Labels?.["io.tholi.qa.owner"], cache);
         await docker(["volume", "rm", cache]);
-      } catch {
+      } catch (error) {
+        if (candidate.validation.status !== "failed") {
+          candidate.failedStage = "owned scanner cache cleanup";
+          candidate.failure = classifyBackendFailure(error);
+        }
         candidate.validation.status = "failed";
-        candidate.failedStage = "owned scanner cache cleanup";
+        candidate.cleanupFailure = classifyBackendFailure(error);
         process.exitCode = 1;
       }
     }

@@ -7,6 +7,16 @@ export const backendDeliveryPolicy: {
   blockedSeverities: string[];
 };
 export function fileDigest(path: string): Promise<string>;
+export function classifyBackendFailure(error: unknown): {
+  kind:
+    | "verification"
+    | "output-limit"
+    | "process-unavailable"
+    | "process-terminated"
+    | "command-exit"
+    | "invalid-json";
+  exitCode?: number;
+};
 export const BACKEND_CANDIDATE_FILES: readonly string[];
 export function verifyBackendCandidateFiles(
   candidate: { files: Record<string, string> },

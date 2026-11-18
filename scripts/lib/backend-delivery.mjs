@@ -14,6 +14,20 @@ export const backendDeliveryPolicy = Object.freeze(
   ),
 );
 
+/** Child-process output can contain credentials. Retain only a closed failure class. */
+export function classifyBackendFailure(error) {
+  if (!(error instanceof Error)) return { kind: "verification" };
+  if (error.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER")
+    return { kind: "output-limit" };
+  if (["ENOENT", "EACCES", "EPERM"].includes(error.code))
+    return { kind: "process-unavailable" };
+  if (error.killed === true) return { kind: "process-terminated" };
+  if (Number.isSafeInteger(error.code) && error.code > 0 && error.code <= 255)
+    return { kind: "command-exit", exitCode: error.code };
+  if (error instanceof SyntaxError) return { kind: "invalid-json" };
+  return { kind: "verification" };
+}
+
 export async function fileDigest(path) {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(path)) hash.update(chunk);

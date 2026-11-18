@@ -393,3 +393,71 @@ earlier evidence, not relabeled for this correction.
 
 Primary protocol references: [Mailpit API](https://mailpit.axllent.org/docs/api-v1/)
 and [search filters](https://mailpit.axllent.org/docs/usage/search-filters/).
+
+### Hosted stack completion, scanner failure and approved local cleanup
+
+Run 44268833557 at `f11033939446a599dbdb418ec8881c5d0296ddc8` passes all five
+fast groups, four native Mac targets and their verifier. The immutable stack
+also passes all fourteen real account cases, scoped support and SMTP capture,
+physical diagnostic expiry, application backup/restore, retained data after
+restart, VM portability and two-API/two-worker resilience. Its complete smoke
+report is passed and records owned project/volume cleanup. The candidate still
+fails at the subsequent `immutable image scan` stage. No security report or
+database metadata was produced, so this does not establish scanner execution,
+freshness, findings or promotion eligibility.
+
+The small archives are retained under `output/qa/`: candidate artifact
+14415010779, SHA-256
+`1507d43a002f35f73a78143f5225e6b4c1750e8f6df6e6bbdd298bbf0182a2e4`,
+and diagnostic artifact 14413464510, SHA-256
+`fe9e0bc4171413a3aebf1546309aabb8b95b8e3602718877ee5c9929db7c2abb`.
+Separately, stacked run 44268958850 fails Chromium's private-site forgetting
+case. Its diagnostic artifact 14413302605 has SHA-256
+`74a9a7f2c210d46dc71b0885cc6a6184739abda8c0ed9854522ed73a354b5e14`.
+That report supplies a broad stage but no failing source line; it is not a
+successful beta or complete backend cohort.
+
+Delivery now retains only closed failure classes and numeric command exit codes,
+with separate checkpoints for cache allocation, public database download,
+metadata/freshness, offline scan and evidence validation. Cleanup failure cannot
+erase the original failure. The same scan owner runs before the long immutable
+stack cohort, so an unavailable scanner fails early. No scan, severity, freshness,
+network, account or outcome check is removed. Private-site learning now retains
+its failing source line and distinguishes confirmation, acknowledgement,
+tombstone and unrelated-data checks without exposing response bodies. Thirty-nine
+focused backend/mail/policy checks, type checking and script syntax checking
+pass. Complete current PR and hosted backend evidence are still pending.
+
+Complete prepared PR attempt `b736f8a7-7f04-4167-8306-178532c95031` stops in
+the unit group: 1,339 pass and one existing provider-account HTTP case exceeds
+its unchanged five-second deadline. Other PR groups are not reached. Its failed
+report, timings, verified build manifest and explicit non-certification summary
+are preserved under `output/qa/backend48-scan-diagnostics-failed-pr/`. No test
+deadline or assertion is relaxed, and no cause is inferred from host load alone.
+The same case passes unchanged in isolation (one pass, 53 skipped), in
+`output/qa/backend48-provider-boundary-diagnostic-focus.log`. That diagnostic
+pass does not convert the failed complete attempt into a passing PR gate.
+Fresh attempt `f32b316d-cb6f-451f-83be-90aa2c75673e` passes all 1,340 unit
+checks, then 56/57 core cases. The delayed proposal/destination replacement case
+receives `Fresh page observation required.` Its report, timings, immutable
+manifest and synthetic trace are preserved separately under
+`output/qa/backend48-scan-followup-failed-pr/`. The case passes unchanged in
+isolation (one case) in `output/qa/backend48-replacement-diagnostic-focus.log`.
+This supplies no root cause and does not clear the failed complete gate. No
+freshness, native-identity, cancellation or safety guard is relaxed.
+
+On November 18 the user approved deleting exactly three generated QA image
+copies and unused Docker build cache if needed. The files `api-image.tar`,
+`api-hardened.tar` and `api-final.tar` in `output/qa/security45/` were checked,
+hashed and deleted, freeing 929,718,272 bytes. Their cleanup record retains
+sizes/checksums. Reports, source, published archives and named volumes were not
+deleted. Cache pruning did not respond within its 45-second client deadline;
+only that owned CLI process was stopped. No cache-reclamation result is claimed.
+The user subsequently approved Docker Desktop restart. Its normal restart and
+graceful shutdown clients time out. Verified Docker processes and only the
+`docker-desktop` WSL distribution were stopped; the other running distribution
+was retained. The installed Docker Desktop application was started again and its
+existing Linux engine selected, with no data or settings reset. It currently
+reports the engine stopped, so engine recovery and owned-stack cleanup remain
+unverified. Later host checks show more than 13 GiB free; the earlier cache
+client's timeout supplies no cache-reclamation result.

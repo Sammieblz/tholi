@@ -12,6 +12,7 @@ import {
   inspectBackendScanDatabase,
   BACKEND_CANDIDATE_FILES,
   fileDigest,
+  classifyBackendFailure,
   verifyBackendCandidateFiles,
 } from "../../../scripts/lib/backend-delivery.mjs";
 
@@ -19,6 +20,37 @@ const sourceSha = "1".repeat(40);
 const imageId = "sha256:" + "a".repeat(64);
 const configDigest = "sha256:" + "d".repeat(64);
 const now = Date.parse("2026-11-17T15:00:00Z");
+test("backend failures retain only closed classes and never child output or exception details", () => {
+  const privateMarker = "PRIVATE_PROVIDER_OUTPUT_SENTINEL";
+  for (const [properties, expected] of [
+    [
+      { code: 125, stdout: privateMarker, stderr: privateMarker },
+      { kind: "command-exit", exitCode: 125 },
+    ],
+    [
+      { code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER", stderr: privateMarker },
+      { kind: "output-limit" },
+    ],
+    [{ code: "ENOENT", path: privateMarker }, { kind: "process-unavailable" }],
+    [
+      { code: "ETIMEDOUT", killed: true, cmd: privateMarker },
+      { kind: "process-terminated" },
+    ],
+    [{ code: -1 }, { kind: "verification" }],
+    [{ code: 999 }, { kind: "verification" }],
+  ] as const) {
+    const failure = Object.assign(new Error(privateMarker), properties),
+      result = classifyBackendFailure(failure);
+    expect(result).toEqual(expected);
+    expect(JSON.stringify(result)).not.toContain(privateMarker);
+  }
+  expect(classifyBackendFailure(new SyntaxError(privateMarker))).toEqual({
+    kind: "invalid-json",
+  });
+  expect(classifyBackendFailure({ message: privateMarker, code: 125 })).toEqual(
+    { kind: "verification" },
+  );
+});
 const scan = () => ({
   SchemaVersion: 2,
   Trivy: { Version: backendDeliveryPolicy.scannerVersion },

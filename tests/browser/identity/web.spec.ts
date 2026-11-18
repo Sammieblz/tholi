@@ -1873,6 +1873,7 @@ test("real account privately controls versioned website knowledge without dispat
     disposed = false,
     modelRequests = 0,
     stage = "real account preparation";
+  let failureLine: number | null = null;
   const checks: string[] = [];
   try {
     await blockWebsiteModelRequests(context, () => modelRequests++);
@@ -2115,13 +2116,14 @@ test("real account privately controls versioned website knowledge without dispat
       "pausing reuse immediately excludes private hints without silently changing collection or local guidance",
     );
 
-    stage = "confirmed private-site forget and preserved legacy data";
+    stage = "open confirmed private-site forget";
     await waitForIdentityGatewayCapacity();
     await forget.click();
     const forgetting = siteResponse("DELETE");
     await dialog
       .getByRole("button", { name: "Forget cloud knowledge", exact: true })
       .click();
+    stage = "acknowledge confirmed private-site forget";
     const receipt = await forgetting;
     expect(receipt.status()).toBe(200);
     const result = navigationKnowledgeForgetSiteResultSchema.parse(
@@ -2134,6 +2136,7 @@ test("real account privately controls versioned website knowledge without dispat
       collect: false,
       use: false,
     });
+    stage = "read the forgotten graph tombstone";
     await expect(detail).toHaveCount(0);
     const tombstone = await websiteAccountRequest(
       page,
@@ -2148,6 +2151,7 @@ test("real account privately controls versioned website knowledge without dispat
       metadata: { label: "Deleted item", folder: null, tags: [] },
     });
     expect(tombstone.deletedAt).not.toBeNull();
+    stage = "verify unrelated saved data after forgetting";
     const remaining = await websiteAccountRequest(
       page,
       environment,
@@ -2175,8 +2179,9 @@ test("real account privately controls versioned website knowledge without dispat
     );
     passed = true;
   } catch (failure) {
+    failureLine = sourceFailureLine(failure);
     throw Error(
-      `Private website learning verification failed during ${stage}${sourceFailureLine(failure) ? ` at line ${sourceFailureLine(failure)}` : ""}.`,
+      `Private website learning verification failed during ${stage}${failureLine ? ` at line ${failureLine}` : ""}.`,
     );
   } finally {
     const cleanup = await Promise.allSettled([closeIdentityContext(context)]);
@@ -2187,6 +2192,7 @@ test("real account privately controls versioned website knowledge without dispat
       version: browser.version(),
       buildDigest,
       stage,
+      failureLine,
       modelRequests,
       checks,
       cleanupCompleted: disposed,
