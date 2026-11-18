@@ -58,8 +58,8 @@ export async function runWebsiteIdentityChecks({
     await execute(process.execPath, ["scripts/test.mjs", "identity-web"], {
       cwd: root,
       env: environment,
-      // Twelve existing cases each retain their own five-minute bound. Allow
-      // those owners to finish rather than terminating their coordinator early.
+      // Twelve cases retain their five-minute bounds; two startup regressions
+      // have ninety seconds each. Keep the coordinator within its existing bound.
       timeout: 65 * 60000,
       maxBuffer: 8 * 1024 * 1024,
     });
@@ -75,6 +75,7 @@ export async function runWebsiteIdentityChecks({
   for (const browser of ["chromium", "firefox"])
     for (const suffix of [
       "",
+      "-account-startup",
       "-provider-settings",
       "-dashboard-data",
       "-dashboard-finance",

@@ -215,6 +215,18 @@ export async function checkAccountLayout(page: Page) {
           () => document.documentElement.scrollWidth <= innerWidth + 1,
         ),
       ).toBe(true);
+      for (const name of ["Sign out", "Sign out everywhere"]) {
+        const access = account.getByRole("button", { name, exact: true });
+        await access.scrollIntoViewIfNeeded();
+        const target = await access.boundingBox();
+        expect(!!target && target.width >= 44 && target.height >= 44).toBe(
+          true,
+        );
+        await access.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await focusVisible(access);
+      }
       const revoke = account.getByRole("button", {
         name: "Revoke this session",
         exact: true,
@@ -613,6 +625,7 @@ export async function signOutWebsite(
   environment: NativeIdentityEnvironment,
   provider = false,
   all = false,
+  activate?: () => Promise<void>,
 ) {
   let reason: ConstructorParameters<typeof WebsiteIdentityError>[0] =
     "SIGN_OUT_ACTION_FAILED";
@@ -635,17 +648,20 @@ export async function signOutWebsite(
   page.on("request", onRequest);
   page.on("response", onResponse);
   try {
-    await page
-      .getByRole("button", {
-        name: all ? "Sign out everywhere" : "Sign out",
-        exact: true,
-      })
-      .click();
-    if (all)
+    if (activate) await activate();
+    else {
       await page
-        .getByRole("alertdialog")
-        .getByRole("button", { name: "Confirm", exact: true })
+        .getByRole("button", {
+          name: all ? "Sign out everywhere" : "Sign out",
+          exact: true,
+        })
         .click();
+      if (all)
+        await page
+          .getByRole("alertdialog")
+          .getByRole("button", { name: "Confirm", exact: true })
+          .click();
+    }
     reason = "SIGN_OUT_ACKNOWLEDGEMENT_FAILED";
     await expect(
       page.getByRole("status").filter({ hasText: "Signed out of Tholi." }),

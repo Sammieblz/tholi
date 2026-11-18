@@ -216,6 +216,58 @@ This focused result does not establish the hosted failure's cause or replace
 complete backend and native validation. #56 records native performance follow-up
 without changing OCR deadlines, masks, inputs or model settings.
 
+### Stable account controls during profile loading
+
+Hosted [run 44236682834](https://github.com/Sammieblz/tholi/actions/runs/44236682834)
+passes all five fast groups, all four complete native macOS targets and their
+verifier. Its PostgreSQL checks pass and eleven of twelve website cases pass.
+Firefox's dashboard account-switching step reports `SIGN_OUT_NOT_DISPATCHED`.
+Both final revocation reads return 401, with zero observed gateway rejections.
+The stacked documentation run 44236739354 also reports a Firefox missed sign-out
+and a separate Chromium inspector-body failure after accepted deletion. Neither
+run completes backend acceptance; VM, replica and scan phases were not reached.
+
+The focused real-identity cohort `tholi-smoke-layout48-6f0cd64a` reproduces the
+Firefox interaction before correction. Holding the real profile response until
+pointer-down, then releasing it before pointer-up, moves the sign-out target and
+produces no logout request. Chromium preserves the target in the same scenario.
+The existing access controls now precede the asynchronous profile and sessions
+content, using one `Account access` section. After correction the same physical
+interaction passes in both browsers, keeps the target in place and confirms
+server logout and a 401 account read. No retry or deadline increase is involved.
+The before and after build hashes and sanitized reports remain separated under
+`output/qa/tholi-smoke-layout48-6f0cd64a/`. Two earlier probe attempts failed in
+the temporary runner's setup, before exercising the application; they are not
+application or acceptance evidence. All three owned stacks and their volumes
+were removed, private environment files deleted and the temporary coordinator
+removed. The completed cohort made zero external model requests.
+
+The existing deletion lifecycle test now covers malformed receipts as well as
+both acceptance/cancellation windows. An invalid `signedOut` value cannot announce
+acceptance, clear the current session, discard its pending data or notify another
+tab of logout. All 25 focused account/lifecycle checks pass. The browser test
+retains the actual HTTP 200, strictly decoded UI acknowledgement, revoked account
+401 and local-data notice. It no longer asks Chromium's inspector to decode a
+second copy of the same deletion response after account teardown. Schema rejection
+remains with the shared client decoder and its lifecycle regression.
+
+UI guidance: the project-local
+[`ui-ux-pro-max`](../../../.codex/skills/ui-ux-pro-max/SKILL.md) targeted UX search identifies
+**Content Jumping** and advises keeping asynchronous content from shifting nearby
+actions. [`fixing-accessibility`](../../../.codex/skills/fixing-accessibility/SKILL.md)
+calls for minimal changes, native controls, named
+sections, visible keyboard focus and adequate targets. The fix reuses the existing
+buttons, confirmation and tokens without new styles. The real account layout owner
+now includes both access controls in its two-theme, four-width target/focus checks.
+
+The fresh complete local `test:ci` cohort
+`fa7e741c-c6be-4cc0-8b5f-9d8837c5341b` passes 1,337 unit, 57 core,
+20 integration, five native Firefox and 95 UI cases on Windows x64. All eight
+reports match one run and the verified immutable build. Its reports, manifest,
+timings and explicit non-certification summary are preserved under
+`output/qa/backend48-stable-access-pr/`. Fresh hosted backend/account/layout and
+native macOS validation remain required before merging this source change.
+
 A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless

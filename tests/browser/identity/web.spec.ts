@@ -50,7 +50,6 @@ import {
   serviceCapabilitiesSchema,
 } from "../../../packages/navigation-core/contracts-service";
 import {
-  accountDeletionResultSchema,
   accountExportManifestFileSchema,
   accountExportPartV2Schema,
 } from "../../../packages/navigation-core/contracts-account";
@@ -90,6 +89,113 @@ async function blockWebsiteModelRequests(
       await route.abort("blockedbyclient");
     });
 }
+
+test("account sign-out remains available while verified profile details arrive", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(90_000);
+  const environment = nativeIdentityEnvironment(),
+    context = await identityContext(browser),
+    page = await context.newPage(),
+    buildDigest = digest(await artifactFiles(websiteArtifactDirectory()));
+  let releaseProfile = () => {},
+    passed = false,
+    modelRequests = 0,
+    stage = "real account sign-in",
+    failureReason = "none";
+  let profileChangedPointerTarget: boolean | null = null;
+  const profileRelease = new Promise<void>((resolve) => {
+    releaseProfile = resolve;
+  });
+  try {
+    await blockWebsiteModelRequests(context, () => modelRequests++);
+    await waitForIdentityGatewayCapacity();
+    await page.goto(environment.webOrigin + "/signin");
+    await page
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    await signInWebsite(
+      page,
+      environment,
+      environment.username,
+      environment.password,
+    );
+    await page.route(
+      environment.serviceOrigin + "/api/v1/account/profile",
+      async (route) => {
+        if (route.request().method() !== "GET") return route.continue();
+        const response = await route.fetch();
+        await profileRelease;
+        await route.fulfill({ response });
+      },
+    );
+    stage = "pending real profile response";
+    await page.goto(environment.webOrigin + "/account/security");
+    await expect(
+      page.getByText("Loading your verified profile.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Revoke this session", exact: true }),
+    ).toBeVisible();
+    stage = "profile arrives during physical pointer activation";
+    await signOutWebsite(page, environment, false, false, async () => {
+      const signOut = page.getByRole("button", {
+        name: "Sign out",
+        exact: true,
+      });
+      await signOut.scrollIntoViewIfNeeded();
+      const bounds = await signOut.boundingBox();
+      if (!bounds) throw Error("SIGN_OUT_TARGET_MISSING");
+      await page.mouse.move(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+      );
+      await page.mouse.down();
+      releaseProfile();
+      await expect(
+        page.getByText("Last verified email", { exact: true }),
+      ).toBeAttached();
+      profileChangedPointerTarget = !(await signOut.evaluate(
+        (button, point) => {
+          const target = document.elementFromPoint(point.x, point.y);
+          return (
+            target === button || (target !== null && button.contains(target))
+          );
+        },
+        { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+      ));
+      await page.mouse.up();
+    });
+    expect(modelRequests).toBe(0);
+    passed = true;
+  } catch (error) {
+    failureReason =
+      error instanceof WebsiteIdentityError
+        ? error.reason
+        : error instanceof errors.TimeoutError
+          ? "BROWSER_TIMEOUT"
+          : "ACCOUNT_STARTUP_ASSERTION_FAILED";
+    throw Error(`Account startup failed during ${stage}: ${failureReason}.`);
+  } finally {
+    releaseProfile();
+    await closeIdentityContext(context);
+    await writeEvidence(
+      `output/qa/website-identity/${browserName}-account-startup.json`,
+      {
+        schemaVersion: 1,
+        browser: browserName,
+        evaluatedAt: new Date().toISOString(),
+        buildDigest,
+        passed,
+        stage,
+        failureReason,
+        modelRequests,
+        profileChangedPointerTarget,
+      },
+    );
+  }
+});
 
 test("real signed-in account manages synthetic AI connection metadata without testing a provider or retaining keys", async ({
   browser,
@@ -1676,21 +1782,15 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             .click();
           const accepted = await deletionResponse;
           expect(accepted.status()).toBe(200);
-          // The UI must consume and validate its receipt before the inspector
-          // reads that response across account teardown. Keep both assertions.
+          // The UI announces acceptance only after the shared strict receipt
+          // decoder succeeds. Its malformed-receipt regression owns rejection;
+          // do not decode a second inspector copy after account teardown.
           await expect(
             page.getByRole("status").filter({
               hasText:
                 "Your account deletion request was accepted. You are signed out while deletion continues.",
             }),
           ).toBeVisible();
-          const receipt = accountDeletionResultSchema.parse(
-            await accepted.json().catch(() => {
-              throw Error("DASHBOARD_DELETION_BODY_UNAVAILABLE");
-            }),
-          );
-          expect(receipt.status).toBe("deletion_pending");
-          expect(receipt.signedOut).toBe(true);
           expect((await accountResponse(page, environment)).status).toBe(401);
           await expect(
             page.getByText("Local extension data remains on your device.", {

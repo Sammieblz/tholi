@@ -269,9 +269,13 @@ it.each(["metadata-id", "foreign-account", "generation", "digest", "valid"])(
   },
 );
 
-it.each([false, true])(
-  "deletion is announced after acceptance and clears only cloud state, with a read during deletion (%s)",
-  async (concurrentRead) => {
+it.each([
+  { concurrentRead: false, accepted: true },
+  { concurrentRead: true, accepted: true },
+  { concurrentRead: false, accepted: false },
+])(
+  "deletion requires a valid receipt before clearing cloud state (accepted: $accepted, concurrent read: $concurrentRead)",
+  async ({ concurrentRead, accepted }) => {
     const posted = vi.fn();
     vi.stubGlobal(
       "BroadcastChannel",
@@ -304,9 +308,15 @@ it.each([false, true])(
         if (path.endsWith("/artifacts") && options.method === "POST")
           throw new Error("offline");
         if (path === "/api/v1/account/deletion")
-          return new Promise((resolve) => {
+          return new Promise((resolve, reject) => {
             deleting = true;
-            accept = (value) => resolve(schema.parse(value));
+            accept = (value) => {
+              try {
+                resolve(schema.parse(value));
+              } catch (error) {
+                reject(error);
+              }
+            };
           });
         throw new Error("Unexpected account lifecycle request.");
       },
@@ -316,6 +326,7 @@ it.each([false, true])(
       current.savedData.save(savedDataArtifactFixture("preferences"), "0"),
     ).rejects.toThrow("offline");
     expect((await current.savedData.cached()).outbox).toHaveLength(1);
+    const notices = posted.mock.calls.length;
     const confirmation = container.querySelector<HTMLInputElement>(
       "#account-delete-confirmation",
     )!;
@@ -346,7 +357,7 @@ it.each([false, true])(
         requestId: crypto.randomUUID(),
         jobId: crypto.randomUUID(),
         status: "deletion_pending",
-        signedOut: true,
+        signedOut: accepted,
         retained: [
           "identity-and-abuse-prevention",
           "financial-liabilities",
@@ -355,6 +366,16 @@ it.each([false, true])(
         ],
       }),
     );
+    if (!accepted) {
+      expect(container.textContent).not.toContain(
+        "Your account deletion request was accepted",
+      );
+      expect(container.querySelector('[role="alert"]')).not.toBeNull();
+      expect(current.session).toEqual(session);
+      expect((await current.savedData.cached()).outbox).toHaveLength(1);
+      expect(posted).toHaveBeenCalledTimes(notices);
+      return;
+    }
     expect(container.textContent).toContain(
       "Your account deletion request was accepted. You are signed out while deletion continues.",
     );
