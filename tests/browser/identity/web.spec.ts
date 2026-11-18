@@ -1179,7 +1179,15 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .click();
         const restoredReply = await restoredCollection;
         expect(restoredReply.status()).toBe(200);
-        const restored = savedDataPageSchema.parse(await restoredReply.json());
+        const restoredBody = await restoredReply.json().catch(() => {
+          throw Error("DASHBOARD_COLLECTION_BODY_UNAVAILABLE");
+        });
+        const restoredResult = savedDataPageSchema.safeParse(restoredBody);
+        if (!restoredResult.success)
+          throw Error(
+            `DASHBOARD_COLLECTION_SCHEMA_${restoredResult.error.issues[0].code.toUpperCase()}`,
+          );
+        const restored = restoredResult.data;
         expect(restored.items.map((item) => item.id).sort()).toEqual(
           records.map((item) => item.id).sort(),
         );
