@@ -16,6 +16,15 @@ export function classifyBackendFailure(error: unknown): {
     | "command-exit"
     | "invalid-json";
   exitCode?: number;
+  diagnostic?:
+    | "filesystem-read-only"
+    | "permission-denied"
+    | "storage-full"
+    | "registry-rate-limit"
+    | "registry-access-denied"
+    | "tls-verification"
+    | "invalid-arguments"
+    | "network-unavailable";
 };
 export const BACKEND_CANDIDATE_FILES: readonly string[];
 export function verifyBackendCandidateFiles(

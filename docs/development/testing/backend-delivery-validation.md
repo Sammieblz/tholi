@@ -461,3 +461,38 @@ existing Linux engine selected, with no data or settings reset. It currently
 reports the engine stopped, so engine recovery and owned-stack cleanup remain
 unverified. Later host checks show more than 13 GiB free; the earlier cache
 client's timeout supplies no cache-reclamation result.
+
+### Scanner database staging correction
+
+Fresh hosted run 44384998139 fails before the long stack cohort at
+`public scanner database download`, with closed class `command-exit`, code 1.
+Candidate artifact 14466076456 is preserved as
+`output/qa/backend-14466076456.zip`, SHA-256
+`50f9735917dc4d8873ec85d523037080c5630f68de740be4a8c9668d82607e99`.
+Its checkout is GitHub's PR merge commit
+`ec65ab40d8aa1a3578ddb6c5ef0eb2acdde8caf2`, for branch head
+`11ef08278e5a7ffde092e6723bbdb90e75d74fd0`. No scan or stack completion
+is claimed for that run.
+
+The pinned Trivy source stages its OCI layer under the operating-system
+temporary directory before unpacking. The public `aquasec/trivy-db:2` manifest
+inspected November 18 contains a 140,544,950-byte compressed layer, larger than
+the scanner's 64 MiB `/tmp` mount. Manifest digest:
+`sha256:ecb6869290f1044c68bae79426706f2087782f0712d912f544fc28f045e5d916`;
+layer digest:
+`sha256:745ef7789784dfa327eef60016f30fa0402056482388255201ed20a50b8ec425`.
+Only public metadata was read; the blob was not downloaded for this inspection.
+This demonstrates a staging-capacity mismatch and is an explanation to verify
+against the actual CLI, not a recovered raw error from the failed run.
+
+`TMPDIR=/cache` now places those temporary bytes in the existing owned cache
+volume, which the same cleanup owner removes. The read-only root, 64 MiB `/tmp`,
+CPU/memory/process limits, pinned image and scan/freshness policies remain intact.
+Scanner telemetry and version checks are explicitly disabled. Command failures
+can additionally report eight recognized conditions as closed literals, with no
+stderr text or endpoint detail. Forty focused checks and type checking pass;
+actual scanner and complete current PR validation remain pending.
+
+Primary implementation evidence: pinned [OCI staging](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/oci/artifact.go),
+[temporary-directory owner](https://github.com/aquasecurity/trivy/blob/v0.76.2/pkg/x/os/os.go)
+and [telemetry controls](https://github.com/aquasecurity/trivy/blob/v0.76.2/docs/guide/advanced/telemetry.md).

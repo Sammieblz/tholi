@@ -22,8 +22,40 @@ export function classifyBackendFailure(error) {
   if (["ENOENT", "EACCES", "EPERM"].includes(error.code))
     return { kind: "process-unavailable" };
   if (error.killed === true) return { kind: "process-terminated" };
-  if (Number.isSafeInteger(error.code) && error.code > 0 && error.code <= 255)
-    return { kind: "command-exit", exitCode: error.code };
+  if (Number.isSafeInteger(error.code) && error.code > 0 && error.code <= 255) {
+    const stderr =
+      typeof error.stderr === "string" ? error.stderr.slice(-64000) : "";
+    const diagnostic = [
+      [/read-only file system/i, "filesystem-read-only"],
+      [/permission denied/i, "permission-denied"],
+      [/no space left on device/i, "storage-full"],
+      [
+        /TOOMANYREQUESTS|too many requests|status(?: code)?:? 429/i,
+        "registry-rate-limit",
+      ],
+      [
+        /UNAUTHORIZED|authentication required|status(?: code)?:? 401|status(?: code)?:? 403/i,
+        "registry-access-denied",
+      ],
+      [
+        /x509:|certificate verify failed|certificate signed by unknown authority/i,
+        "tls-verification",
+      ],
+      [
+        /unknown (?:flag|command)|flag provided but not defined/i,
+        "invalid-arguments",
+      ],
+      [
+        /connection refused|network is unreachable|i\/o timeout|TLS handshake timeout|no such host/i,
+        "network-unavailable",
+      ],
+    ].find(([pattern]) => pattern.test(stderr))?.[1];
+    return {
+      kind: "command-exit",
+      exitCode: error.code,
+      ...(diagnostic ? { diagnostic } : {}),
+    };
+  }
   if (error instanceof SyntaxError) return { kind: "invalid-json" };
   return { kind: "verification" };
 }

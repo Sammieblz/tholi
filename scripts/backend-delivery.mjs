@@ -224,6 +224,10 @@ async function validate() {
           network,
           "--tmpfs",
           "/tmp:rw,noexec,nosuid,size=64m",
+          // OCI downloads exceed /tmp's small scratch limit. Their temporary
+          // files belong to this run's already-owned, cleaned cache volume.
+          "--env",
+          "TMPDIR=/cache",
           "--mount",
           `type=volume,source=${cache},target=/cache`,
           "--mount",
@@ -232,6 +236,8 @@ async function validate() {
           "image",
           "--cache-dir",
           "/cache",
+          "--disable-telemetry",
+          "--skip-version-check",
           ...args,
         ],
         600000,

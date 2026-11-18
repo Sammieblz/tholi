@@ -51,6 +51,32 @@ test("backend failures retain only closed classes and never child output or exce
     { kind: "verification" },
   );
 });
+
+test("backend command diagnostics report recognized conditions without exposing stderr", () => {
+  for (const [message, diagnostic] of [
+    ["mkdir /private: read-only file system", "filesystem-read-only"],
+    ["open /private: permission denied", "permission-denied"],
+    ["cache: no space left on device", "storage-full"],
+    ["GET [private registry] TOOMANYREQUESTS", "registry-rate-limit"],
+    ["GET [private registry] UNAUTHORIZED", "registry-access-denied"],
+    ["x509: certificate signed by unknown authority", "tls-verification"],
+    ["unknown flag: --private", "invalid-arguments"],
+    ["dial [private endpoint]: connection refused", "network-unavailable"],
+  ]) {
+    const error = Object.assign(new Error("PRIVATE_SENTINEL"), {
+      code: 1,
+      stderr: "PRIVATE_SENTINEL " + message,
+    });
+    expect(classifyBackendFailure(error)).toEqual({
+      kind: "command-exit",
+      exitCode: 1,
+      diagnostic,
+    });
+    expect(JSON.stringify(classifyBackendFailure(error))).not.toContain(
+      "PRIVATE_SENTINEL",
+    );
+  }
+});
 const scan = () => ({
   SchemaVersion: 2,
   Trivy: { Version: backendDeliveryPolicy.scannerVersion },
