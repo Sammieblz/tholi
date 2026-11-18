@@ -58,6 +58,7 @@ import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-supp
 import {
   PROVIDER_CATALOG_REVISION,
   getProviderDefinition,
+  providerConnectionsSchema,
   type ProviderConnection,
 } from "../../../packages/navigation-core/contracts-providers";
 import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
@@ -102,7 +103,10 @@ test("real signed-in account manages synthetic AI connection metadata without te
   let passed = false,
     modelRequests = 0,
     row: ProviderConnection | undefined,
-    lostResponse = false;
+    lostResponse = false,
+    stage = "registration",
+    failureReason = "none";
+  let failureLine: number | null = null;
   const mutations: { method: string; body: Record<string, unknown> }[] = [];
   try {
     await blockWebsiteModelRequests(context, () => modelRequests++);
@@ -190,6 +194,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
         await route.fulfill({ headers, json: row });
       },
     );
+    stage = "connection creation";
     await page.goto(environment.webOrigin + "/account/providers");
     await expect(
       page.getByRole("heading", { name: "AI connections", exact: true }),
@@ -215,6 +220,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
     ).toHaveValue("");
     expect(modelRequests).toBe(0);
     expect(mutations).toHaveLength(1);
+    stage = "connection keyboard focus and layout";
     for (const width of [320, 768, 1280, 1600]) {
       await page.setViewportSize({ width, height: 900 });
       for (const theme of ["dark", "light"]) {
@@ -255,6 +261,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
         ).toBe(true);
       }
     }
+    stage = "uncertain key rotation";
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openai
       .getByLabel("Model", { exact: true })
@@ -270,13 +277,31 @@ test("real signed-in account manages synthetic AI connection metadata without te
     await expect(
       openai.getByLabel("Replacement API key", { exact: true }),
     ).toHaveValue("");
+    const refreshedConnections = page.waitForResponse(
+      (response) =>
+        response.url() ===
+          environment.serviceOrigin + "/api/v1/account/provider-connections" &&
+        response.request().method() === "GET",
+    );
     await page
       .getByRole("button", { name: "Refresh connections", exact: true })
       .click();
+    // The old and refreshed cards have the same public status text. Wait for
+    // the acknowledged new revision and settled UI before acting on its card.
+    const refreshed = providerConnectionsSchema.parse(
+      await (await refreshedConnections).json(),
+    );
+    expect(refreshed.items).toContainEqual(
+      expect.objectContaining({ id: row!.id, revision: row!.revision }),
+    );
+    await expect(
+      page.locator('section[aria-labelledby="account-providers-title"]'),
+    ).toHaveAttribute("aria-busy", "false");
     await expect(
       openai.getByText("Saved, unverified.", { exact: true }),
     ).toBeVisible();
     expect(mutations).toHaveLength(2);
+    stage = "connection removal confirmation";
     const remove = openai.getByRole("button", {
       name: "Remove from Tholi",
       exact: true,
@@ -308,6 +333,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
       "DELETE",
     ]);
     expect(modelRequests).toBe(0);
+    stage = "credential-free retained state";
     const retained = await page.evaluate(() =>
       JSON.stringify({
         local: { ...localStorage },
@@ -321,6 +347,17 @@ test("real signed-in account manages synthetic AI connection metadata without te
       buildDigest,
     );
     passed = true;
+  } catch (error) {
+    failureReason =
+      error instanceof WebsiteIdentityError
+        ? error.reason
+        : error instanceof errors.TimeoutError
+          ? "TIMEOUT"
+          : "OPERATION_FAILED";
+    failureLine = sourceFailureLine(error);
+    throw Error(
+      `Provider settings verification failed during ${stage}: ${failureReason}${failureLine ? ` at line ${failureLine}` : ""}`,
+    );
   } finally {
     await closeIdentityContext(context);
     const evidence = {
@@ -329,6 +366,9 @@ test("real signed-in account manages synthetic AI connection metadata without te
       version: browser.version(),
       buildDigest,
       modelRequests,
+      stage,
+      failureReason,
+      failureLine,
       mutationMethods: mutations.map((item) => item.method),
       fixture:
         "real local identity; intercepted synthetic provider metadata; no provider or model calls",
@@ -1043,7 +1083,8 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .getByRole("button", { name: "Save cloud changes", exact: true })
           .click();
         const renamedReply = await renamedRecord;
-        expect(renamedReply.status()).toBe(200);
+        if (renamedReply.status() !== 200)
+          throw Error(`DASHBOARD_SAVE_HTTP_${renamedReply.status()}`);
         expect(
           savedDataRecordSchema.parse(await renamedReply.json()),
         ).toMatchObject({

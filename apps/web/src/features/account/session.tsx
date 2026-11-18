@@ -112,21 +112,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         });
       } catch {}
   }, []);
-  const clear = useCallback((preserveCloud = false) => {
-    const previous = sessionRef.current
-      ? accountScope(sessionRef.current.account)
-      : lastNotice.current;
-    if (preserveCloud) savedData.current?.suspend();
-    else
-      void savedData.current?.reset(cloudConnection(previous)).catch(() => {});
+  const cancelPending = useCallback(() => {
     generation.current++;
     pending.current.abort();
     pending.current = new AbortController();
-    sessionRef.current = undefined;
-    savedDataView.current = 1;
-    setSession(undefined);
-    setLoading(false);
   }, []);
+  const clear = useCallback(
+    (preserveCloud = false) => {
+      const previous = sessionRef.current
+        ? accountScope(sessionRef.current.account)
+        : lastNotice.current;
+      if (preserveCloud) savedData.current?.suspend();
+      else
+        void savedData.current
+          ?.reset(cloudConnection(previous))
+          .catch(() => {});
+      cancelPending();
+      sessionRef.current = undefined;
+      savedDataView.current = 1;
+      setSession(undefined);
+      setLoading(false);
+    },
+    [cancelPending],
+  );
   const request = useCallback(
     async <T,>(
       path: `/api/v1/${string}`,
@@ -359,6 +367,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     signOut: async (all = false) => {
       assertCurrentView();
       accountChanging.current = true;
+      // Revoke old reads before dispatch: a concurrent 401 from the session
+      // being revoked must not cancel this logout's own acceptance receipt.
+      cancelPending();
       const previous = sessionRef.current
         ? accountScope(sessionRef.current.account)
         : lastNotice.current;

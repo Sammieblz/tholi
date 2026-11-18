@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createHash, webcrypto } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
+import { ServiceClientError } from "../../../packages/navigation-core/service-client";
 import { accountExportPartSchema } from "../../../packages/navigation-core/contracts-account";
 import { IndexedDBCloudDataStore } from "../../../packages/site-memory/cloud-data";
 import { savedDataArtifactFixture } from "../../support/saved-data-fixture";
@@ -364,58 +365,96 @@ it("deletion is not announced before acceptance and accepted cleanup signs out a
   });
 });
 
-it("confirmed sign-out preserves its explicit provider link after the security view unmounts and never reuses it for a later account", async () => {
-  let actor = session;
-  transport.request.mockImplementation(async (_origin, path, schema) => {
-    if (path === "/api/v1/account") return schema.parse(actor);
-    if (path === "/api/v1/account/sessions") return schema.parse({ items: [] });
-    if (path === "/api/v1/capabilities") return { capabilities: [] };
-    if (path === "/api/v1/auth/logout")
-      return schema.parse({
-        signedOut: true,
-        providerLogoutUrl: "https://identity.example.test/logout",
-      });
-    throw new Error("Unexpected sign-out request.");
-  });
-  await mount(true);
-  const originalSignOut = current.signOut;
-  let closing!: Promise<string>;
-  vi.spyOn(current, "signOut").mockImplementation(
-    (all) => (closing = originalSignOut(all)),
-  );
-  await act(async () => {
-    button("Sign out").click();
-    await closing;
-  });
-  expect(current.session).toBeUndefined();
-  const provider = container.querySelector<HTMLAnchorElement>(
-    'a[href="https://identity.example.test/logout"]',
-  )!;
-  expect(provider.textContent).toBe(
-    "Review sign-out with your identity provider",
-  );
-  expect(provider.target).toBe("_blank");
-  expect(provider.rel).toContain("noopener");
-  expect(provider.rel).toContain("noreferrer");
-  expect(container.textContent).toContain("Signed out of Tholi.");
-  actor = {
-    ...session,
-    account: {
-      ...session.account,
-      id: "00000000-0000-4000-8000-000000000004",
-      workspaceId: "00000000-0000-4000-8000-000000000005",
-    },
-    session: { ...session.session, id: "00000000-0000-4000-8000-000000000006" },
-  };
-  view.summary = { loading: false, errors: {}, refresh: vi.fn() };
-  await act(async () => current.reload());
-  expect(current.session?.account).toEqual(actor.account);
-  expect(
-    container.querySelector('a[href="https://identity.example.test/logout"]'),
-  ).toBeNull();
-  await act(async () => current.signOut());
-  expect(current.session).toBeUndefined();
-  expect(
-    container.querySelector('a[href="https://identity.example.test/logout"]'),
-  ).toBeNull();
-});
+it.each([false, true])(
+  "confirmed sign-out preserves its provider link across unmount and a concurrent unauthorized read (%s), without reusing it for a later account",
+  async (concurrentUnauthorized) => {
+    let actor = session;
+    let rejectRead: ((reason: unknown) => void) | undefined;
+    let acceptLogout: (() => void) | undefined;
+    transport.request.mockImplementation(async (_origin, path, schema) => {
+      if (path === "/api/v1/account") return schema.parse(actor);
+      if (path === "/api/v1/account/sessions") {
+        if (rejectRead)
+          return new Promise((_resolve, reject) => {
+            rejectRead = reject;
+          });
+        return schema.parse({ items: [] });
+      }
+      if (path === "/api/v1/capabilities") return { capabilities: [] };
+      if (path === "/api/v1/auth/logout") {
+        const response = schema.parse({
+          signedOut: true,
+          providerLogoutUrl: "https://identity.example.test/logout",
+        });
+        if (concurrentUnauthorized)
+          return new Promise((resolve) => {
+            acceptLogout = () => resolve(response);
+          });
+        return response;
+      }
+      throw new Error("Unexpected sign-out request.");
+    });
+    await mount(true);
+    const originalSignOut = current.signOut;
+    let closing!: Promise<string>;
+    vi.spyOn(current, "signOut").mockImplementation(
+      (all) => (closing = originalSignOut(all)),
+    );
+    let read: Promise<unknown> | undefined;
+    if (concurrentUnauthorized) {
+      rejectRead = () => {};
+      read = current.sessions().catch(() => {});
+    }
+    await act(async () => {
+      button("Sign out").click();
+      if (concurrentUnauthorized) {
+        await Promise.resolve();
+        rejectRead!(new ServiceClientError("UNAUTHENTICATED", 401, "Sign in"));
+        await read;
+        acceptLogout!();
+      }
+      await closing;
+    });
+    expect(current.session).toBeUndefined();
+    const provider = container.querySelector<HTMLAnchorElement>(
+      'a[href="https://identity.example.test/logout"]',
+    )!;
+    expect(provider.textContent).toBe(
+      "Review sign-out with your identity provider",
+    );
+    expect(provider.target).toBe("_blank");
+    expect(provider.rel).toContain("noopener");
+    expect(provider.rel).toContain("noreferrer");
+    expect(container.textContent).toContain("Signed out of Tholi.");
+    actor = {
+      ...session,
+      account: {
+        ...session.account,
+        id: "00000000-0000-4000-8000-000000000004",
+        workspaceId: "00000000-0000-4000-8000-000000000005",
+      },
+      session: {
+        ...session.session,
+        id: "00000000-0000-4000-8000-000000000006",
+      },
+    };
+    view.summary = { loading: false, errors: {}, refresh: vi.fn() };
+    await act(async () => current.reload());
+    expect(current.session?.account).toEqual(actor.account);
+    expect(
+      container.querySelector('a[href="https://identity.example.test/logout"]'),
+    ).toBeNull();
+    // The accepted logout already removed the first account. Later direct logout
+    // has no security-view receipt, and cannot reuse its provider URL.
+    await act(async () => {
+      const logout = current.signOut();
+      await Promise.resolve();
+      if (concurrentUnauthorized) acceptLogout!();
+      await logout;
+    });
+    expect(current.session).toBeUndefined();
+    expect(
+      container.querySelector('a[href="https://identity.example.test/logout"]'),
+    ).toBeNull();
+  },
+);
