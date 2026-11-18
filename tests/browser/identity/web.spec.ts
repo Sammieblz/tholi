@@ -918,18 +918,7 @@ test("configured website uses real signup email recovery and retained identity w
     expect(retained.account.id).toBe(first.account.id);
     expect(retained.account.workspaceId).toBe(first.account.workspaceId);
     await retainedPage.goto(environment.webOrigin + "/account/security");
-    await retainedPage
-      .getByRole("button", { name: "Sign out everywhere", exact: true })
-      .click();
-    await retainedPage
-      .getByRole("alertdialog")
-      .getByRole("button", { name: "Confirm", exact: true })
-      .click();
-    await expect(
-      retainedPage
-        .getByRole("status")
-        .filter({ hasText: "Signed out of Tholi." }),
-    ).toBeVisible();
+    await signOutWebsite(retainedPage, environment, false, true);
     expect((await accountResponse(recoveredPage, environment)).status).toBe(
       401,
     );
@@ -1085,8 +1074,18 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
         const renamedReply = await renamedRecord;
         if (renamedReply.status() !== 200)
           throw Error(`DASHBOARD_SAVE_HTTP_${renamedReply.status()}`);
+        await expect(
+          details.getByRole("heading", {
+            name: "Dashboard renamed route",
+            exact: true,
+          }),
+        ).toBeVisible();
         expect(
-          savedDataRecordSchema.parse(await renamedReply.json()),
+          savedDataRecordSchema.parse(
+            await renamedReply.json().catch(() => {
+              throw Error("DASHBOARD_SAVE_BODY_UNAVAILABLE");
+            }),
+          ),
         ).toMatchObject({
           id: records[0].id,
           metadata: {
@@ -1095,12 +1094,6 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             tags: ["review", "work"],
           },
         });
-        await expect(
-          details.getByRole("heading", {
-            name: "Dashboard renamed route",
-            exact: true,
-          }),
-        ).toBeVisible();
         await page
           .getByRole("button", { name: "Close details", exact: true })
           .click();

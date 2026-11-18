@@ -156,6 +156,37 @@ sent. A loopback-only browser probe did not reproduce body loss after a fully
 consumed response; it supplies no basis for weakening HTTP or schema assertions.
 The real identity cohort and fresh complete gates remain required.
 
+### November 18 account-cohort readiness
+
+The fresh complete local `test:ci` cohort, run
+`e582d60b-78f1-4fb4-85b6-5f1081bb7123`, passes 1,336 unit, 57 core,
+20 integration, five native Firefox and 95 UI cases. The eight reports match
+one unchanged verified build, including target-specific artifact hashes.
+Evidence is retained under `output/qa/backend48-transition-complete-pr/`.
+Later edits affect the separately executed identity tests only.
+
+Hosted [run 44224192490](https://github.com/Sammieblz/tholi/actions/runs/44224192490)
+passes all five fast groups and all four macOS targets plus their verifier.
+Its backend account cohort fails Chromium's metadata response inspection and
+the final all-session sign-out acknowledgement in both browsers. Deletion and
+provider-setting cases pass. VM, replica and scan phases were not reached.
+This is failed integrated evidence, not backend acceptance.
+
+The existing all-session test now reuses the shared sign-out helper, preserving
+its UI acknowledgement and revoked-session assertions while distinguishing
+dispatch, response and HTTP failures. Metadata inspection waits for the actual
+updated UI receipt before checking the same HTTP body, schema and metadata.
+No service quota, case deadline or application safety budget changed.
+
+The focused local cohort `tholi-smoke-focus48-904560eb` passes Chromium identity,
+Chromium saved-data editing/export/deletion and Firefox identity. Its reports
+record real synthetic local identity, zero model requests and the working-tree
+test corrections. All-session logout revokes the recovered browser's session.
+The owned stack and volumes were removed, its private environment deleted and
+the temporary coordinator removed after verification. No gateway rate-limit
+rejection was observed in that owned run. It does not establish the hosted
+failure's cause or replace the required complete integrated cohort.
+
 A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless

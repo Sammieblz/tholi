@@ -612,6 +612,7 @@ export async function signOutWebsite(
   page: Page,
   environment: NativeIdentityEnvironment,
   provider = false,
+  all = false,
 ) {
   let reason: ConstructorParameters<typeof WebsiteIdentityError>[0] =
     "SIGN_OUT_ACTION_FAILED";
@@ -634,7 +635,17 @@ export async function signOutWebsite(
   page.on("request", onRequest);
   page.on("response", onResponse);
   try {
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page
+      .getByRole("button", {
+        name: all ? "Sign out everywhere" : "Sign out",
+        exact: true,
+      })
+      .click();
+    if (all)
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Confirm", exact: true })
+        .click();
     reason = "SIGN_OUT_ACKNOWLEDGEMENT_FAILED";
     await expect(
       page.getByRole("status").filter({ hasText: "Signed out of Tholi." }),
