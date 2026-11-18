@@ -1026,7 +1026,9 @@ export async function runLocalStackSmoke({
     report.diagnostic = lastDiagnostic || sanitize(error.message);
     if (safeProject) {
       try {
-        if (!report.checks.some((check) => check.name === "clean-stack-startup"))
+        if (
+          !report.checks.some((check) => check.name === "clean-stack-startup")
+        )
           throw Error("The gateway was not confirmed running.");
         const gateway = await execute(
           "docker",
