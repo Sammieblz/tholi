@@ -21,6 +21,11 @@ evidence, payment policy, production execution and release decisions cannot be
 inferred from local fixtures; retain unmet acceptance as pending. Desktop #54
 remains excluded under the separate desktop plan.
 
+The [invited beta operating proposal](../development/private-beta.md) owns #49's
+offline preparation: supported task/cohort proposal, separate participant choices,
+hosted walkthrough, support and stop rules. It does not enable admission or supply
+the deferred #43 quality, hosted or customer evidence. Actual beta gates stay open.
+
 The user explicitly authorized offline preparation and testing of later tickets
 on November 17 before beta/customer-evidence dependencies are complete. This
 exception permits implementation and review in roadmap order; it does not mark
