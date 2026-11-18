@@ -22,6 +22,7 @@ import {
   signInWebsite,
   setWebsitePassword,
   signOutWebsite,
+  openWebsiteAccountPage,
   syntheticWebsiteIdentity,
   waitForWebsiteAccount,
   waitForIdentityGatewayCapacity,
@@ -1200,10 +1201,12 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           }),
         ).toBeVisible();
         expect(
-          savedDataRecordSchema.parse(
-            await renamedReply.json().catch(() => {
-              throw Error("DASHBOARD_SAVE_BODY_UNAVAILABLE");
-            }),
+          await websiteAccountRequest(
+            page,
+            environment,
+            owner,
+            `${workspace}/artifacts/${records[0].id}`,
+            savedDataRecordSchema,
           ),
         ).toMatchObject({
           id: records[0].id,
@@ -1233,10 +1236,18 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .click();
         const filteredReply = await filteredRecords;
         expect(filteredReply.status()).toBe(200);
+        const filteredTarget = new URL(filteredReply.url());
         expect(
-          savedDataPageV2Schema
-            .parse(await filteredReply.json())
-            .items.map((record) => record.id),
+          (
+            await websiteAccountRequest(
+              page,
+              environment,
+              owner,
+              (filteredTarget.pathname +
+                filteredTarget.search) as `/api/v1/${string}`,
+              savedDataPageV2Schema,
+            )
+          ).items.map((record) => record.id),
         ).toEqual([records[0].id]);
         await expect(items.locator(":scope > li")).toHaveCount(1);
         await expect(items).toContainText("Dashboard renamed route");
@@ -1291,15 +1302,15 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .click();
         const restoredReply = await restoredCollection;
         expect(restoredReply.status()).toBe(200);
-        const restoredBody = await restoredReply.json().catch(() => {
-          throw Error("DASHBOARD_COLLECTION_BODY_UNAVAILABLE");
-        });
-        const restoredResult = savedDataPageSchema.safeParse(restoredBody);
-        if (!restoredResult.success)
-          throw Error(
-            `DASHBOARD_COLLECTION_SCHEMA_${restoredResult.error.issues[0].code.toUpperCase()}`,
-          );
-        const restored = restoredResult.data;
+        const restoredTarget = new URL(restoredReply.url());
+        const restored = await websiteAccountRequest(
+          page,
+          environment,
+          owner,
+          (restoredTarget.pathname +
+            restoredTarget.search) as `/api/v1/${string}`,
+          savedDataPageSchema,
+        );
         expect(restored.items.map((item) => item.id).sort()).toEqual(
           records.map((item) => item.id).sort(),
         );
@@ -1512,7 +1523,6 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
               exact: true,
             }),
           ).toBeVisible();
-          await waitForIdentityGatewayCapacity();
           for (const [path, title, label] of [
             ["/account/data", "Saved data", "Saved data"],
             ["/account/credits", "Credits and usage", "Credits and usage"],
@@ -1520,14 +1530,16 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             ["/account/security", "Account and security", "Security"],
             ["/account", "Your Tholi account", "Overview"],
           ]) {
-            if (path === "/account/security")
-              await waitForIdentityGatewayCapacity();
-            await page.getByRole("link", { name: label, exact: true }).click();
-            await expect(page).toHaveURL(environment.webOrigin + path);
-            await page.reload();
-            await expect(
-              page.getByRole("heading", { name: title, exact: true }),
-            ).toBeVisible();
+            // Both entries remount account reads and can require CORS
+            // preflights. Give each navigation/refresh pair its own existing
+            // gateway allowance, before dispatch rather than retrying a 429.
+            await waitForIdentityGatewayCapacity();
+            stage = `private route navigation ${path}`;
+            await openWebsiteAccountPage(page, environment, path, title, () =>
+              page.getByRole("link", { name: label, exact: true }).click(),
+            );
+            stage = `private route refresh ${path}`;
+            await openWebsiteAccountPage(page, environment, path, title);
           }
           checks.push(
             "exact real credit/storage quantities and all private route refreshes remain available without checkout",
@@ -1574,7 +1586,12 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           ).toBeVisible();
           // Server discovery after reload, rather than retaining a component-only job reference.
           await waitForIdentityGatewayCapacity();
-          await page.reload();
+          await openWebsiteAccountPage(
+            page,
+            environment,
+            "/account/security",
+            "Account and security",
+          );
           await exports
             .getByRole("button", { name: "Review export 1", exact: true })
             .click();
@@ -1720,26 +1737,8 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           await page.goto(environment.webOrigin + "/account/security");
           const offered = await deletionCapabilities;
           expect(offered.status()).toBe(200);
-          stage = "read account deletion capability response body";
-          const capabilityBody = await offered
-            .json()
-            .catch((error: unknown) => {
-              throw Error(
-                error instanceof SyntaxError
-                  ? "DASHBOARD_CAPABILITIES_JSON_INVALID"
-                  : error instanceof Error &&
-                      error.message.includes(
-                        "No resource with given identifier found",
-                      )
-                    ? "DASHBOARD_CAPABILITIES_BODY_UNAVAILABLE"
-                    : "DASHBOARD_CAPABILITIES_BODY_READ_FAILED",
-              );
-            });
-          stage = "validate account deletion capability response schema";
-          const capabilityRecord =
-            serviceCapabilitiesSchema.parse(capabilityBody);
-          stage = "verify account deletion capability availability";
-          expect(capabilityRecord.capabilities).toContain("account-deletion");
+          // The action exists only after the current UI strictly decodes
+          // account-deletion discovery. Avoid a second inspector-body read.
           stage = "accepted account deletion and immediate session revocation";
           await page.setViewportSize({ width: 320, height: 900 });
           await page.emulateMedia({ reducedMotion: "reduce" });

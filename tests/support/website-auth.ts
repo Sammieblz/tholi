@@ -43,6 +43,7 @@ export class WebsiteIdentityError extends Error {
       | "MAIL_RESPONSE_INVALID"
       | "ACCOUNT_RESPONSE_INVALID"
       | "ACCOUNT_SESSION_MISSING"
+      | `ACCOUNT_OPEN_HTTP_${number}`
       | "PROVIDER_FORM_REJECTED"
       | "ACTION_LINK_MISSING"
       | "SIGN_OUT_ACTION_FAILED"
@@ -332,6 +333,31 @@ export async function accountResponse(
         : "UNRECOGNIZED_ACCOUNT_ERROR",
   };
 }
+/** Route entry remounts private state; URL/load alone do not establish account readiness. */
+export async function openWebsiteAccountPage(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  path: string,
+  title: string,
+  activate: () => Promise<unknown> = () => page.reload(),
+) {
+  const opening = page.waitForResponse(
+    (response) =>
+      response.url() === environment.serviceOrigin + "/api/v1/account" &&
+      response.request().method() === "GET",
+  );
+  const [response] = await Promise.all([opening, activate()]);
+  if (response.status() !== 200)
+    throw new WebsiteIdentityError(`ACCOUNT_OPEN_HTTP_${response.status()}`);
+  await expect(
+    page.getByRole("navigation", { name: "Account sections", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(environment.webOrigin + path);
+}
+
 export async function waitForWebsiteAccount(
   page: Page,
   environment: NativeIdentityEnvironment,

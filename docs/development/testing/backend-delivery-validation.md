@@ -268,6 +268,87 @@ timings and explicit non-certification summary are preserved under
 `output/qa/backend48-stable-access-pr/`. Fresh hosted backend/account/layout and
 native macOS validation remain required before merging this source change.
 
+### Account refresh readiness and persisted-state verification
+
+Hosted [run 44246523181](https://github.com/Sammieblz/tholi/actions/runs/44246523181)
+passes all five fast groups, all four complete native Mac targets and their
+verifier. PostgreSQL checks pass; thirteen of fourteen website cases pass,
+including both startup, sign-out and deletion flows. Firefox's finance case
+fails a private-heading assertion after reload. The report does not identify
+which route or its account-readiness state, so the hosted cause is not established.
+Stacked run 44246599996 records a Chromium inspector-body failure when rereading
+deletion capabilities. Both gateways report zero observed rejections. Neither
+cohort reaches VM, replica or scan checks; neither is backend acceptance.
+
+The separate local cohort `tholi-smoke-reload48-a62085e7` models an account
+response arriving after 6.5 seconds, within the unchanged 25-second service
+deadline. The original heading-only assertion fails in Firefox and Chromium
+while the UI still reports opening. The real backend response is already HTTP
+200, but the browser has not received it. The revised waiter observes the actual
+account response, then the mounted account navigation, heading and exact URL.
+Both browsers pass under the same delay with identical website bytes
+(`0cd6ee4623a20abdc1175fea2dbb6cfec144deaa85473893df9c4e826572b6fe`).
+This demonstrates a test-readiness mismatch, not a measured cause of the earlier
+hosted failure. No request retry or application/test deadline increase is used.
+The probe's containers, volumes and private environment were removed, and its
+temporary latency test was removed from the suite.
+
+Private-route checks now verify client navigation before refreshing and record
+the particular route as a bounded stage. A non-200 account-opening response has
+a closed HTTP-status classification. Account-export reload uses the same owner.
+Saved-data assertions retain actual UI HTTP status and visible acknowledgement,
+then use fresh authenticated, account-bound reads to verify persisted metadata,
+the exact search query and restored collection IDs through the existing DTOs.
+This avoids another inspector copy and verifies persistence rather than only a
+mutation echo. Deletion availability still requires HTTP 200 and the actual
+capability-dependent UI control, whose shared decoder and discovery/lifecycle
+tests remain authoritative. The redundant capability-body inspector read is gone.
+
+Complete prepared-build PR cohort `f3cddd3a-8b8f-4f91-ba0b-c58e5cb1218e`
+passes 1,337 unit, 57 core, 20 integration, five native Firefox and 95 UI checks.
+All eight reports match this run, and the immutable build manifest verifies.
+The reports, timings and non-certification summary are preserved separately in
+`output/qa/backend48-dashboard-prepared-pr/`.
+
+The real dashboard cohort `tholi-smoke-dash48-32ecb383` passes saved-data and
+account-deletion cases in both browsers and Chromium finance. Firefox finance
+fails at client navigation to `/account/billing`, before reloading. The new
+bounded stage distinguishes this failure from account opening after refresh;
+the latency reproduction does not explain it. This cohort is failed, not backend
+acceptance. Its owned containers, volumes and private environment were removed.
+Isolated Firefox run `tholi-smoke-route48-5979fbbe` reproduces the same client
+navigation failure. Its sanitized DOM probe records the account gate mounted
+and private navigation absent. `SiteLayout` keys the main subtree by path, so
+client navigation also remounts the account provider and requires its actual
+opening response. URL change alone is insufficient. The shared test waiter now
+observes that response on client navigation as well as refresh; no production
+behavior, request count, retry policy or deadline changes. The temporary DOM
+probe was removed after preserving its failed report. With actual HTTP readiness
+observed, `tholi-smoke-ready48-bebc20aa` identifies a 429 at the same Firefox
+billing navigation. The browser had not established a private workspace; this
+is a failed cohort, not successful account opening. The earlier gateway tail
+diagnostics alone did not establish the response at this transition.
+
+Each client-navigation/refresh pair now starts after the existing gateway
+capacity schedule, including its account/resource reads and possible CORS
+preflights. Previously several pairs shared one phase. This schedules dispatch
+before the bounded allowance is exhausted; it neither retries a rejection nor
+changes service limits or test deadlines. Fresh cohort
+`tholi-smoke-capacity48-ce02ed20` passes the complete finance case in Firefox
+157.0 and Chromium 156.0.8078.4, including all five private route entries and
+refreshes, on website build
+`b2142aadd97c4a10c49e3ed94f739af56218aca8acd9e608c396a9744e18110c`.
+Both cases report zero model requests. Their owned containers, volumes and
+private environment were removed; the temporary coordinator and DOM probe are
+removed after retaining the separate evidence. Final complete prepared PR cohort
+`47154075-ae4a-4717-87d7-c15fd4c31c55` passes 1,337 unit, 57 core, 20 integration,
+five native Firefox and 95 UI checks. Its eight matching reports, verified build
+manifest, timings and explicit non-certification summary are preserved separately
+under `output/qa/backend48-account-entry-pr/`. This run uses the documented
+prepared-build option without changing production artifacts. Fresh matching-head
+hosted integration remains required before merge. No external model or payment
+calls, release, deployment or archive overwrite occurs.
+
 A passing preparation record will not relabel an earlier failed or incomplete
 cohort. Native store permission prompts, screen-reader behavior, production
 identity, actual hosted promotion and #43 live quality remain unperformed unless
