@@ -12,6 +12,7 @@ export interface LocalStackOptions {
   project?: string;
   selectedProfiles?: string[];
   confirmDelete?: string;
+  preparedImage?: string;
 }
 export function localStackArguments(options: LocalStackOptions): string[];
 export function localStackCommands(options: LocalStackOptions): string[][];

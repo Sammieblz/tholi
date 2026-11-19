@@ -108,6 +108,7 @@ export function localStackArguments({
   project,
   selectedProfiles = [],
   confirmDelete,
+  preparedImage,
 }) {
   if (!actions.has(action)) throw new Error("Unknown local stack action.");
   if (selectedProfiles.some((profile) => !profiles.has(profile)))
@@ -127,6 +128,13 @@ export function localStackArguments({
     "-f",
     resolve(root, "compose.yaml"),
   ];
+  if (preparedImage) {
+    if (!/^sha256:[a-f0-9]{64}$/.test(preparedImage))
+      throw Error(
+        "Prepared local execution requires an exact loaded image ID.",
+      );
+    args.push("--file", resolve(root, "infra/local/compose.prepared.yaml"));
+  }
   // Teardown includes optional services even if they were started in a different invocation.
   for (const profile of ["down", "reset"].includes(action)
     ? [...profiles]
@@ -134,7 +142,14 @@ export function localStackArguments({
     args.push("--profile", profile);
   switch (action) {
     case "up":
-      args.push("up", "--build", "--detach", "--wait", "--wait-timeout", "240");
+      args.push(
+        "up",
+        preparedImage ? "--no-build" : "--build",
+        "--detach",
+        "--wait",
+        "--wait-timeout",
+        "240",
+      );
       break;
     case "down":
       args.push("down", "--remove-orphans");

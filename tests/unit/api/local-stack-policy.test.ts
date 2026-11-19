@@ -214,6 +214,27 @@ test("explicit local navigation transport remains fake and needs a boolean setti
   }
 });
 
+test("prepared local runtime images accept only full immutable IDs without a source build", () => {
+  const config = composeModel();
+  const image = "sha256:" + "c".repeat(64);
+  for (const name of ["api", "worker"] as const) {
+    Reflect.deleteProperty(config.services[name], "build");
+    config.services[name].image = image;
+  }
+  expect(inspectLocalStack(config).images.api).toBe(image);
+  const args = localStackArguments({
+    action: "up",
+    envFile: resolve(".env.example"),
+    preparedImage: image,
+  });
+  expect(args).toContain(resolve("infra/local/compose.prepared.yaml"));
+  expect(args).toContain("--no-build");
+  expect(args).not.toContain("--build");
+  config.services.api.image = config.services.worker.image =
+    "unreviewed:latest";
+  expect(() => inspectLocalStack(config)).toThrow("immutable digest");
+});
+
 test.each([
   [
     "enabled telemetry without bounded logs",

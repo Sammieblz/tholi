@@ -41,7 +41,7 @@ const planning = new Set<AbortController>();
 export function cancelBackendPlanning() {
   for (const controller of planning) controller.abort();
   planning.clear();
-  cancelServiceInference();
+  cancelServiceInference({ preserveConfiguration: true });
 }
 export async function backendSettings(): Promise<Settings> {
   return (

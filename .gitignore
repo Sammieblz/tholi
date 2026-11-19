@@ -12,6 +12,7 @@ assets/ocr/
 assets/paddle/
 output/qa/
 output/deploy/
+output/backend-candidate/
 output/releases/
 output/nlp/
 output/multi-app/

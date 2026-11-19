@@ -328,7 +328,8 @@ export function registerMessages(context: Context) {
           const value = frameMessage(raw, sender, context.session);
           if (!value || !context.session)
             return { error: "Stale frame observation" };
-          if (raw.type === "FRAME_OBSERVATION") cancelServiceInference();
+          if (raw.type === "FRAME_OBSERVATION")
+            cancelServiceInference({ preserveConfiguration: true });
           await api.tabs.sendMessage(context.session.tabId, {
             type:
               raw.type === "FRAME_OBSERVATION"
@@ -418,7 +419,7 @@ export function registerMessages(context: Context) {
     ) {
       context.goalGeneration++;
       context.cancelVision();
-      cancelServiceInference();
+      cancelServiceInference({ preserveConfiguration: true });
     }
     if (raw?.type === "VISION_INVALIDATED") {
       if (
@@ -428,7 +429,7 @@ export function registerMessages(context: Context) {
         raw.sessionId === context.session?.sessionId
       ) {
         context.cancelVision();
-        cancelServiceInference();
+        cancelServiceInference({ preserveConfiguration: true });
       }
       respond({ ok: true });
       return;

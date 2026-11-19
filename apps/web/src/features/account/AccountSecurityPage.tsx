@@ -4,10 +4,7 @@ import {
   identityAccountResponseSchema,
   identitySessionsSchema,
 } from "../../../../../packages/navigation-core/contracts-identity";
-import {
-  accountDeletionInputSchema,
-  accountDeletionResultSchema,
-} from "../../../../../packages/navigation-core/contracts-account";
+import { accountDeletionInputSchema } from "../../../../../packages/navigation-core/contracts-account";
 import { serviceCapabilitiesSchema } from "../../../../../packages/navigation-core/contracts-service";
 import { useAccount } from "./session";
 import { AccountConfirmation } from "./AccountConfirmation";
@@ -140,13 +137,7 @@ export function AccountSecurityPage({
           expectedRevision: fresh.account.revision,
           confirmation,
         });
-        const result = await request(
-          "/api/v1/account/deletion",
-          accountDeletionResultSchema,
-          "POST",
-          input,
-          signal,
-        );
+        const result = await account.requestDeletion(input, signal);
         onDeletionAccepted(actor);
         // The accepted service receipt revokes the session. Close only this account's local state.
         await account.completeDeletion();
@@ -171,6 +162,30 @@ export function AccountSecurityPage({
           guidance and local extension data remain separate.
         </p>
       </header>
+      <section aria-labelledby="account-access-title">
+        <h2 id="account-access-title">Account access</h2>
+        <p>
+          Signing out clears this account's pending cloud changes on this
+          browser. Reconcile any work you want to keep first. Your local routes
+          and local guidance stay available.
+        </p>
+        <div className="account-actions">
+          <button
+            type="button"
+            disabled={operation.busy}
+            onClick={() => void signOut(false)}
+          >
+            Sign out
+          </button>
+          <AccountConfirmation
+            title="Sign out of every Tholi session?"
+            description="This revokes access on your other browsers and devices. Pending cloud changes on this browser are cleared; local extension data stays available."
+            label="Sign out everywhere"
+            busy={operation.busy}
+            onConfirm={() => void signOut(true)}
+          />
+        </div>
+      </section>
       <section aria-labelledby="account-profile-title">
         <h2 id="account-profile-title">Your profile</h2>
         {profile ? (
@@ -285,27 +300,6 @@ export function AccountSecurityPage({
             </li>
           ))}
         </ul>
-        <p>
-          Signing out clears this account's pending cloud changes on this
-          browser. Reconcile any work you want to keep first. Your local routes
-          and local guidance stay available.
-        </p>
-        <div className="account-actions">
-          <button
-            type="button"
-            disabled={operation.busy}
-            onClick={() => void signOut(false)}
-          >
-            Sign out
-          </button>
-          <AccountConfirmation
-            title="Sign out of every Tholi session?"
-            description="This revokes access on your other browsers and devices. Pending cloud changes on this browser are cleared; local extension data stays available."
-            label="Sign out everywhere"
-            busy={operation.busy}
-            onConfirm={() => void signOut(true)}
-          />
-        </div>
       </section>
       {visibleAvailability.status === "loading" && (
         <p role="status">Checking account export and deletion availability.</p>

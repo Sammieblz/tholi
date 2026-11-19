@@ -26,6 +26,10 @@ import {
   savedDataScopeSchema,
   type SavedDataScope,
 } from "../../../../../packages/navigation-core/contracts-saved-data";
+import {
+  accountDeletionInputSchema,
+  accountDeletionResultSchema,
+} from "../../../../../packages/navigation-core/contracts-account";
 
 const accountNoticeSchema = z
   .object({
@@ -66,6 +70,10 @@ type AccountContextValue = {
   sessions: () => Promise<z.infer<typeof identitySessionsSchema>>;
   revoke: (id: string) => Promise<void>;
   signOut: (all?: boolean) => Promise<string>;
+  requestDeletion: (
+    input: z.infer<typeof accountDeletionInputSchema>,
+    signal?: AbortSignal,
+  ) => Promise<z.infer<typeof accountDeletionResultSchema>>;
   completeDeletion: () => Promise<void>;
   request: <T>(
     path: `/api/v1/${string}`,
@@ -112,21 +120,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         });
       } catch {}
   }, []);
-  const clear = useCallback((preserveCloud = false) => {
-    const previous = sessionRef.current
-      ? accountScope(sessionRef.current.account)
-      : lastNotice.current;
-    if (preserveCloud) savedData.current?.suspend();
-    else
-      void savedData.current?.reset(cloudConnection(previous)).catch(() => {});
+  const cancelPending = useCallback(() => {
     generation.current++;
     pending.current.abort();
     pending.current = new AbortController();
-    sessionRef.current = undefined;
-    savedDataView.current = 1;
-    setSession(undefined);
-    setLoading(false);
   }, []);
+  const clear = useCallback(
+    (preserveCloud = false) => {
+      const previous = sessionRef.current
+        ? accountScope(sessionRef.current.account)
+        : lastNotice.current;
+      if (preserveCloud) savedData.current?.suspend();
+      else
+        void savedData.current
+          ?.reset(cloudConnection(previous))
+          .catch(() => {});
+      cancelPending();
+      sessionRef.current = undefined;
+      savedDataView.current = 1;
+      setSession(undefined);
+      setLoading(false);
+    },
+    [cancelPending],
+  );
   const request = useCallback(
     async <T,>(
       path: `/api/v1/${string}`,
@@ -187,6 +203,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const assertCurrentView = useCallback(() => {
     const current = sessionRef.current;
     if (
+      accountChanging.current ||
       current?.account.id !== viewedAccount ||
       current?.account.workspaceId !== viewedWorkspace ||
       current?.session.id !== viewedSession
@@ -197,6 +214,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         "The account view changed. Open it again before continuing.",
       );
   }, [viewedAccount, viewedWorkspace, viewedSession]);
+  const beginAccountChange = () => {
+    assertCurrentView();
+    accountChanging.current = true;
+    // Fence existing reads and reject new ones until this transition settles.
+    cancelPending();
+  };
   const clientRequest = useCallback(
     async <T,>(
       path: `/api/v1/${string}`,
@@ -357,14 +380,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (sessionRef.current?.session.id === id) clear();
     },
     signOut: async (all = false) => {
-      assertCurrentView();
-      accountChanging.current = true;
+      beginAccountChange();
       const previous = sessionRef.current
         ? accountScope(sessionRef.current.account)
         : lastNotice.current;
       const cleanup = savedData.current!.reset(cloudConnection(previous));
       try {
-        const result = await clientRequest(
+        const result = await request(
           "/api/v1/auth/logout",
           identityLogoutResponseSchema,
           "POST",
@@ -378,9 +400,23 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         accountChanging.current = false;
       }
     },
+    requestDeletion: async (input, signal) => {
+      const body = accountDeletionInputSchema.parse(input);
+      beginAccountChange();
+      try {
+        return await request(
+          "/api/v1/account/deletion",
+          accountDeletionResultSchema,
+          "POST",
+          body,
+          signal,
+        );
+      } finally {
+        accountChanging.current = false;
+      }
+    },
     completeDeletion: async () => {
-      assertCurrentView();
-      accountChanging.current = true;
+      beginAccountChange();
       const previous = sessionRef.current
         ? accountScope(sessionRef.current.account)
         : lastNotice.current;

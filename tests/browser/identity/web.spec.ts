@@ -22,6 +22,7 @@ import {
   signInWebsite,
   setWebsitePassword,
   signOutWebsite,
+  openWebsiteAccountPage,
   syntheticWebsiteIdentity,
   waitForWebsiteAccount,
   waitForIdentityGatewayCapacity,
@@ -50,7 +51,6 @@ import {
   serviceCapabilitiesSchema,
 } from "../../../packages/navigation-core/contracts-service";
 import {
-  accountDeletionResultSchema,
   accountExportManifestFileSchema,
   accountExportPartV2Schema,
 } from "../../../packages/navigation-core/contracts-account";
@@ -58,6 +58,7 @@ import { SUPPORT_LIMITS } from "../../../packages/navigation-core/contracts-supp
 import {
   PROVIDER_CATALOG_REVISION,
   getProviderDefinition,
+  providerConnectionsSchema,
   type ProviderConnection,
 } from "../../../packages/navigation-core/contracts-providers";
 import { providerConnectionMetadataFixture } from "../../support/provider-connection-fixture";
@@ -90,6 +91,113 @@ async function blockWebsiteModelRequests(
     });
 }
 
+test("account sign-out remains available while verified profile details arrive", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(90_000);
+  const environment = nativeIdentityEnvironment(),
+    context = await identityContext(browser),
+    page = await context.newPage(),
+    buildDigest = digest(await artifactFiles(websiteArtifactDirectory()));
+  let releaseProfile = () => {},
+    passed = false,
+    modelRequests = 0,
+    stage = "real account sign-in",
+    failureReason = "none";
+  let profileChangedPointerTarget: boolean | null = null;
+  const profileRelease = new Promise<void>((resolve) => {
+    releaseProfile = resolve;
+  });
+  try {
+    await blockWebsiteModelRequests(context, () => modelRequests++);
+    await waitForIdentityGatewayCapacity();
+    await page.goto(environment.webOrigin + "/signin");
+    await page
+      .getByRole("button", { name: "Essential only", exact: true })
+      .click();
+    await signInWebsite(
+      page,
+      environment,
+      environment.username,
+      environment.password,
+    );
+    await page.route(
+      environment.serviceOrigin + "/api/v1/account/profile",
+      async (route) => {
+        if (route.request().method() !== "GET") return route.continue();
+        const response = await route.fetch();
+        await profileRelease;
+        await route.fulfill({ response });
+      },
+    );
+    stage = "pending real profile response";
+    await page.goto(environment.webOrigin + "/account/security");
+    await expect(
+      page.getByText("Loading your verified profile.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Revoke this session", exact: true }),
+    ).toBeVisible();
+    stage = "profile arrives during physical pointer activation";
+    await signOutWebsite(page, environment, false, false, async () => {
+      const signOut = page.getByRole("button", {
+        name: "Sign out",
+        exact: true,
+      });
+      await signOut.scrollIntoViewIfNeeded();
+      const bounds = await signOut.boundingBox();
+      if (!bounds) throw Error("SIGN_OUT_TARGET_MISSING");
+      await page.mouse.move(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+      );
+      await page.mouse.down();
+      releaseProfile();
+      await expect(
+        page.getByText("Last verified email", { exact: true }),
+      ).toBeAttached();
+      profileChangedPointerTarget = !(await signOut.evaluate(
+        (button, point) => {
+          const target = document.elementFromPoint(point.x, point.y);
+          return (
+            target === button || (target !== null && button.contains(target))
+          );
+        },
+        { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+      ));
+      await page.mouse.up();
+    });
+    expect(modelRequests).toBe(0);
+    passed = true;
+  } catch (error) {
+    failureReason =
+      error instanceof WebsiteIdentityError
+        ? error.reason
+        : error instanceof errors.TimeoutError
+          ? "BROWSER_TIMEOUT"
+          : "ACCOUNT_STARTUP_ASSERTION_FAILED";
+    throw Error(`Account startup failed during ${stage}: ${failureReason}.`);
+  } finally {
+    releaseProfile();
+    await closeIdentityContext(context);
+    await writeEvidence(
+      `output/qa/website-identity/${browserName}-account-startup.json`,
+      {
+        schemaVersion: 1,
+        browser: browserName,
+        evaluatedAt: new Date().toISOString(),
+        buildDigest,
+        passed,
+        stage,
+        failureReason,
+        modelRequests,
+        profileChangedPointerTarget,
+      },
+    );
+  }
+});
+
 test("real signed-in account manages synthetic AI connection metadata without testing a provider or retaining keys", async ({
   browser,
   browserName,
@@ -102,7 +210,10 @@ test("real signed-in account manages synthetic AI connection metadata without te
   let passed = false,
     modelRequests = 0,
     row: ProviderConnection | undefined,
-    lostResponse = false;
+    lostResponse = false,
+    stage = "registration",
+    failureReason = "none";
+  let failureLine: number | null = null;
   const mutations: { method: string; body: Record<string, unknown> }[] = [];
   try {
     await blockWebsiteModelRequests(context, () => modelRequests++);
@@ -190,6 +301,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
         await route.fulfill({ headers, json: row });
       },
     );
+    stage = "connection creation";
     await page.goto(environment.webOrigin + "/account/providers");
     await expect(
       page.getByRole("heading", { name: "AI connections", exact: true }),
@@ -215,6 +327,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
     ).toHaveValue("");
     expect(modelRequests).toBe(0);
     expect(mutations).toHaveLength(1);
+    stage = "connection keyboard focus and layout";
     for (const width of [320, 768, 1280, 1600]) {
       await page.setViewportSize({ width, height: 900 });
       for (const theme of ["dark", "light"]) {
@@ -255,6 +368,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
         ).toBe(true);
       }
     }
+    stage = "uncertain key rotation";
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openai
       .getByLabel("Model", { exact: true })
@@ -270,13 +384,31 @@ test("real signed-in account manages synthetic AI connection metadata without te
     await expect(
       openai.getByLabel("Replacement API key", { exact: true }),
     ).toHaveValue("");
+    const refreshedConnections = page.waitForResponse(
+      (response) =>
+        response.url() ===
+          environment.serviceOrigin + "/api/v1/account/provider-connections" &&
+        response.request().method() === "GET",
+    );
     await page
       .getByRole("button", { name: "Refresh connections", exact: true })
       .click();
+    // The old and refreshed cards have the same public status text. Wait for
+    // the acknowledged new revision and settled UI before acting on its card.
+    const refreshed = providerConnectionsSchema.parse(
+      await (await refreshedConnections).json(),
+    );
+    expect(refreshed.items).toContainEqual(
+      expect.objectContaining({ id: row!.id, revision: row!.revision }),
+    );
+    await expect(
+      page.locator('section[aria-labelledby="account-providers-title"]'),
+    ).toHaveAttribute("aria-busy", "false");
     await expect(
       openai.getByText("Saved, unverified.", { exact: true }),
     ).toBeVisible();
     expect(mutations).toHaveLength(2);
+    stage = "connection removal confirmation";
     const remove = openai.getByRole("button", {
       name: "Remove from Tholi",
       exact: true,
@@ -308,6 +440,7 @@ test("real signed-in account manages synthetic AI connection metadata without te
       "DELETE",
     ]);
     expect(modelRequests).toBe(0);
+    stage = "credential-free retained state";
     const retained = await page.evaluate(() =>
       JSON.stringify({
         local: { ...localStorage },
@@ -321,6 +454,17 @@ test("real signed-in account manages synthetic AI connection metadata without te
       buildDigest,
     );
     passed = true;
+  } catch (error) {
+    failureReason =
+      error instanceof WebsiteIdentityError
+        ? error.reason
+        : error instanceof errors.TimeoutError
+          ? "TIMEOUT"
+          : "OPERATION_FAILED";
+    failureLine = sourceFailureLine(error);
+    throw Error(
+      `Provider settings verification failed during ${stage}: ${failureReason}${failureLine ? ` at line ${failureLine}` : ""}`,
+    );
   } finally {
     await closeIdentityContext(context);
     const evidence = {
@@ -329,6 +473,9 @@ test("real signed-in account manages synthetic AI connection metadata without te
       version: browser.version(),
       buildDigest,
       modelRequests,
+      stage,
+      failureReason,
+      failureLine,
       mutationMethods: mutations.map((item) => item.method),
       fixture:
         "real local identity; intercepted synthetic provider metadata; no provider or model calls",
@@ -370,7 +517,12 @@ test("configured website uses real signup email recovery and retained identity w
     providerFormError: "none",
     failureReason: "none",
     failureLine: null as number | null,
-    sessionHttpStatus: { refresh: 0, revocation: 0, revokedSessionRead: 0 },
+    sessionHttpStatus: {
+      refresh: 0,
+      revocation: 0,
+      revokedSessionRead: 0,
+      allRevocationRead: 0,
+    },
     analyticsHttpStatus: {
       capabilities: 0,
       policies: 0,
@@ -397,6 +549,7 @@ test("configured website uses real signup email recovery and retained identity w
       primaryReload: 0,
       afterAnalytics: 0,
       beforeRecovery: 0,
+      beforeRetainedSecurity: 0,
     },
   };
   const saveProgress = () =>
@@ -877,22 +1030,18 @@ test("configured website uses real signup email recovery and retained identity w
     );
     expect(retained.account.id).toBe(first.account.id);
     expect(retained.account.workspaceId).toBe(first.account.workspaceId);
+    // The two fresh-browser account entries and the security walkthrough are
+    // separate ingress phases. Drain the real gateway burst, without retrying
+    // a rejected operation or changing its limits.
+    progress.gatewayCapacityWaitMs.beforeRetainedSecurity =
+      await waitForIdentityGatewayCapacity();
+    await saveProgress();
     await retainedPage.goto(environment.webOrigin + "/account/security");
-    await retainedPage
-      .getByRole("button", { name: "Sign out everywhere", exact: true })
-      .click();
-    await retainedPage
-      .getByRole("alertdialog")
-      .getByRole("button", { name: "Confirm", exact: true })
-      .click();
-    await expect(
-      retainedPage
-        .getByRole("status")
-        .filter({ hasText: "Signed out of Tholi." }),
-    ).toBeVisible();
-    expect((await accountResponse(recoveredPage, environment)).status).toBe(
-      401,
-    );
+    await signOutWebsite(retainedPage, environment, false, true);
+    const allRevokedAccount = await accountResponse(recoveredPage, environment);
+    progress.sessionHttpStatus.allRevocationRead = allRevokedAccount.status;
+    await saveProgress();
+    expect(allRevokedAccount.status).toBe(401);
     checks.push(
       "retained configuration preserves registered users and account links; sign-out everywhere revokes their sessions",
     );
@@ -1043,9 +1192,22 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .getByRole("button", { name: "Save cloud changes", exact: true })
           .click();
         const renamedReply = await renamedRecord;
-        expect(renamedReply.status()).toBe(200);
+        if (renamedReply.status() !== 200)
+          throw Error(`DASHBOARD_SAVE_HTTP_${renamedReply.status()}`);
+        await expect(
+          details.getByRole("heading", {
+            name: "Dashboard renamed route",
+            exact: true,
+          }),
+        ).toBeVisible();
         expect(
-          savedDataRecordSchema.parse(await renamedReply.json()),
+          await websiteAccountRequest(
+            page,
+            environment,
+            owner,
+            `${workspace}/artifacts/${records[0].id}`,
+            savedDataRecordSchema,
+          ),
         ).toMatchObject({
           id: records[0].id,
           metadata: {
@@ -1054,12 +1216,6 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             tags: ["review", "work"],
           },
         });
-        await expect(
-          details.getByRole("heading", {
-            name: "Dashboard renamed route",
-            exact: true,
-          }),
-        ).toBeVisible();
         await page
           .getByRole("button", { name: "Close details", exact: true })
           .click();
@@ -1080,10 +1236,18 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .click();
         const filteredReply = await filteredRecords;
         expect(filteredReply.status()).toBe(200);
+        const filteredTarget = new URL(filteredReply.url());
         expect(
-          savedDataPageV2Schema
-            .parse(await filteredReply.json())
-            .items.map((record) => record.id),
+          (
+            await websiteAccountRequest(
+              page,
+              environment,
+              owner,
+              (filteredTarget.pathname +
+                filteredTarget.search) as `/api/v1/${string}`,
+              savedDataPageV2Schema,
+            )
+          ).items.map((record) => record.id),
         ).toEqual([records[0].id]);
         await expect(items.locator(":scope > li")).toHaveCount(1);
         await expect(items).toContainText("Dashboard renamed route");
@@ -1138,7 +1302,15 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           .click();
         const restoredReply = await restoredCollection;
         expect(restoredReply.status()).toBe(200);
-        const restored = savedDataPageSchema.parse(await restoredReply.json());
+        const restoredTarget = new URL(restoredReply.url());
+        const restored = await websiteAccountRequest(
+          page,
+          environment,
+          owner,
+          (restoredTarget.pathname +
+            restoredTarget.search) as `/api/v1/${string}`,
+          savedDataPageSchema,
+        );
         expect(restored.items.map((item) => item.id).sort()).toEqual(
           records.map((item) => item.id).sort(),
         );
@@ -1351,7 +1523,6 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
               exact: true,
             }),
           ).toBeVisible();
-          await waitForIdentityGatewayCapacity();
           for (const [path, title, label] of [
             ["/account/data", "Saved data", "Saved data"],
             ["/account/credits", "Credits and usage", "Credits and usage"],
@@ -1359,14 +1530,16 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             ["/account/security", "Account and security", "Security"],
             ["/account", "Your Tholi account", "Overview"],
           ]) {
-            if (path === "/account/security")
-              await waitForIdentityGatewayCapacity();
-            await page.getByRole("link", { name: label, exact: true }).click();
-            await expect(page).toHaveURL(environment.webOrigin + path);
-            await page.reload();
-            await expect(
-              page.getByRole("heading", { name: title, exact: true }),
-            ).toBeVisible();
+            // Both entries remount account reads and can require CORS
+            // preflights. Give each navigation/refresh pair its own existing
+            // gateway allowance, before dispatch rather than retrying a 429.
+            await waitForIdentityGatewayCapacity();
+            stage = `private route navigation ${path}`;
+            await openWebsiteAccountPage(page, environment, path, title, () =>
+              page.getByRole("link", { name: label, exact: true }).click(),
+            );
+            stage = `private route refresh ${path}`;
+            await openWebsiteAccountPage(page, environment, path, title);
           }
           checks.push(
             "exact real credit/storage quantities and all private route refreshes remain available without checkout",
@@ -1413,7 +1586,12 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           ).toBeVisible();
           // Server discovery after reload, rather than retaining a component-only job reference.
           await waitForIdentityGatewayCapacity();
-          await page.reload();
+          await openWebsiteAccountPage(
+            page,
+            environment,
+            "/account/security",
+            "Account and security",
+          );
           await exports
             .getByRole("button", { name: "Review export 1", exact: true })
             .click();
@@ -1559,26 +1737,8 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
           await page.goto(environment.webOrigin + "/account/security");
           const offered = await deletionCapabilities;
           expect(offered.status()).toBe(200);
-          stage = "read account deletion capability response body";
-          const capabilityBody = await offered
-            .json()
-            .catch((error: unknown) => {
-              throw Error(
-                error instanceof SyntaxError
-                  ? "DASHBOARD_CAPABILITIES_JSON_INVALID"
-                  : error instanceof Error &&
-                      error.message.includes(
-                        "No resource with given identifier found",
-                      )
-                    ? "DASHBOARD_CAPABILITIES_BODY_UNAVAILABLE"
-                    : "DASHBOARD_CAPABILITIES_BODY_READ_FAILED",
-              );
-            });
-          stage = "validate account deletion capability response schema";
-          const capabilityRecord =
-            serviceCapabilitiesSchema.parse(capabilityBody);
-          stage = "verify account deletion capability availability";
-          expect(capabilityRecord.capabilities).toContain("account-deletion");
+          // The action exists only after the current UI strictly decodes
+          // account-deletion discovery. Avoid a second inspector-body read.
           stage = "accepted account deletion and immediate session revocation";
           await page.setViewportSize({ width: 320, height: 900 });
           await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1621,11 +1781,9 @@ for (const scenario of ["data", "finance", "lifecycle"] as const) {
             .click();
           const accepted = await deletionResponse;
           expect(accepted.status()).toBe(200);
-          const receipt = accountDeletionResultSchema.parse(
-            await accepted.json(),
-          );
-          expect(receipt.status).toBe("deletion_pending");
-          expect(receipt.signedOut).toBe(true);
+          // The UI announces acceptance only after the shared strict receipt
+          // decoder succeeds. Its malformed-receipt regression owns rejection;
+          // do not decode a second inspector copy after account teardown.
           await expect(
             page.getByRole("status").filter({
               hasText:
@@ -1715,6 +1873,8 @@ test("real account privately controls versioned website knowledge without dispat
     disposed = false,
     modelRequests = 0,
     stage = "real account preparation";
+  let failureLine: number | null = null;
+  let failureKind: string | null = null;
   const checks: string[] = [];
   try {
     await blockWebsiteModelRequests(context, () => modelRequests++);
@@ -1957,18 +2117,23 @@ test("real account privately controls versioned website knowledge without dispat
       "pausing reuse immediately excludes private hints without silently changing collection or local guidance",
     );
 
-    stage = "confirmed private-site forget and preserved legacy data";
+    stage = "open confirmed private-site forget";
     await waitForIdentityGatewayCapacity();
     await forget.click();
-    const forgetting = siteResponse("DELETE");
-    await dialog
-      .getByRole("button", { name: "Forget cloud knowledge", exact: true })
-      .click();
-    const receipt = await forgetting;
-    expect(receipt.status()).toBe(200);
-    const result = navigationKnowledgeForgetSiteResultSchema.parse(
-      await receipt.json(),
-    );
+    stage = "acknowledge confirmed private-site forget";
+    // Consume the receipt when it arrives, before the action can close the
+    // detail surface. Keep status, schema and independent readback checks.
+    const [result] = await Promise.all([
+      siteResponse("DELETE").then(async (receipt) => {
+        expect(receipt.status()).toBe(200);
+        return navigationKnowledgeForgetSiteResultSchema.parse(
+          await receipt.json(),
+        );
+      }),
+      dialog
+        .getByRole("button", { name: "Forget cloud knowledge", exact: true })
+        .click(),
+    ]);
     expect(result.deletedIds).toEqual([graph.id]);
     expect(result.hasMore).toBe(false);
     expect(result.siteSettings).toMatchObject({
@@ -1976,6 +2141,7 @@ test("real account privately controls versioned website knowledge without dispat
       collect: false,
       use: false,
     });
+    stage = "read the forgotten graph tombstone";
     await expect(detail).toHaveCount(0);
     const tombstone = await websiteAccountRequest(
       page,
@@ -1990,6 +2156,7 @@ test("real account privately controls versioned website knowledge without dispat
       metadata: { label: "Deleted item", folder: null, tags: [] },
     });
     expect(tombstone.deletedAt).not.toBeNull();
+    stage = "verify unrelated saved data after forgetting";
     const remaining = await websiteAccountRequest(
       page,
       environment,
@@ -2017,8 +2184,22 @@ test("real account privately controls versioned website knowledge without dispat
     );
     passed = true;
   } catch (failure) {
+    failureLine = sourceFailureLine(failure);
+    failureKind =
+      failure instanceof errors.TimeoutError
+        ? "browser-timeout"
+        : failure instanceof SyntaxError
+          ? "invalid-json"
+          : failure instanceof Error && failure.name === "ZodError"
+            ? "schema-validation"
+            : failure instanceof Error &&
+                /No (?:data|resource).*?(?:resource|identifier)|getResponseBody|Response body is unavailable/i.test(
+                  failure.message,
+                )
+              ? "response-body-unavailable"
+              : "verification";
     throw Error(
-      `Private website learning verification failed during ${stage}${sourceFailureLine(failure) ? ` at line ${sourceFailureLine(failure)}` : ""}.`,
+      `Private website learning verification failed during ${stage}${failureLine ? ` at line ${failureLine}` : ""} (${failureKind}).`,
     );
   } finally {
     const cleanup = await Promise.allSettled([closeIdentityContext(context)]);
@@ -2029,6 +2210,8 @@ test("real account privately controls versioned website knowledge without dispat
       version: browser.version(),
       buildDigest,
       stage,
+      failureLine,
+      failureKind,
       modelRequests,
       checks,
       cleanupCompleted: disposed,

@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import firefox from "selenium-webdriver/firefox.js";
-import { By, until, type WebDriver } from "selenium-webdriver";
+import { By, until, type WebDriver, type WebElement } from "selenium-webdriver";
 import type { attachWebDriverExtension } from "./webdriver-extension";
 type App = Awaited<ReturnType<typeof attachWebDriverExtension>>;
 async function placeFirefoxToolbarButton(
@@ -46,13 +46,32 @@ export async function closeFirefoxSidebar(driver: WebDriver) {
   const gecko = driver as firefox.Driver;
   await gecko.setContext(firefox.Context.CHROME);
   try {
-    // Revamp hides the legacy sidebar-close header. Its built-in toolbar button
-    // owns the native panel toggle; callers must verify the panel actually closed.
-    await placeFirefoxToolbarButton(gecko, "sidebar-button");
-    const close = await gecko.wait(
-      until.elementLocated(By.id("sidebar-button")),
-      5000,
+    // New Firefox sidebars separate the launcher toggle from panel dismissal.
+    // Prefer the actual header close button; retain the legacy native toggle
+    // only when that version exposes no visible header close control.
+    const headers = await gecko.executeScript<WebElement[]>(() =>
+      [
+        document
+          .querySelector("sidebar-panel-header")
+          ?.shadowRoot?.querySelector(
+            '[data-l10n-id="sidebar-panel-header-close-button"]',
+          ),
+        document.getElementById("sidebar-close"),
+      ].filter(Boolean),
     );
+    let close: WebElement | undefined;
+    for (const header of headers)
+      if (await header.isDisplayed()) {
+        close = header;
+        break;
+      }
+    if (!close) {
+      await placeFirefoxToolbarButton(gecko, "sidebar-button");
+      close = await gecko.wait(
+        until.elementLocated(By.id("sidebar-button")),
+        5000,
+      );
+    }
     await gecko.wait(until.elementIsVisible(close), 5000);
     await gecko.actions().move({ origin: close }).click().perform();
   } finally {

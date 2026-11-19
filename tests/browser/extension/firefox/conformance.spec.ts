@@ -632,8 +632,13 @@ test("Firefox event-page restart protects settings and rebinds native documents 
       await widget.dock("firefox");
       await closeFirefoxSidebar(app!.driver);
       expect(
-        await app!.extension(() =>
-          (globalThis as any).browser.sidebarAction.isOpen({}),
+        await app!.waitFor(
+          () =>
+            app!.extension(() =>
+              (globalThis as any).browser.sidebarAction.isOpen({}),
+            ),
+          (open) => !open,
+          "Firefox acknowledges the native sidebar closing before suspension",
         ),
       ).toBe(false);
     };

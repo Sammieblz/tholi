@@ -457,6 +457,13 @@ it("a retained account view cannot send requests or discard a replacement accoun
     ),
   ).rejects.toMatchObject({ code: "CANCELLED" });
   await expect(previous.signOut()).rejects.toMatchObject({ code: "CANCELLED" });
+  await expect(
+    previous.requestDeletion({
+      operationId: crypto.randomUUID(),
+      expectedRevision: "1",
+      confirmation: "DELETE",
+    }),
+  ).rejects.toMatchObject({ code: "CANCELLED" });
   await expect(previous.completeDeletion()).rejects.toMatchObject({
     code: "CANCELLED",
   });

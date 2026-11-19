@@ -13,6 +13,75 @@ Issue #25 changes documentation only. The profiles, ports and hosted routes desc
 
 ## Current execution scope
 
+On November 17, 2026, the user requested the remaining roadmap work and merges.
+The completed #45, #46 and #47 implementation is on main. Continue with #48's
+immutable backend delivery through the existing owners. The existing zero-spend
+decision and #43 live-quality gate remain in force. Actual beta/customer
+evidence, payment policy, production execution and release decisions cannot be
+inferred from local fixtures; retain unmet acceptance as pending. Desktop #54
+remains excluded under the separate desktop plan.
+
+The user explicitly authorized offline preparation and testing of later tickets
+on November 17 before beta/customer-evidence dependencies are complete. This
+exception permits implementation and review in roadmap order; it does not mark
+unperformed acceptance complete or enable live calls, beta, deployment or release.
+Use Stripe behind the billing port with local fake events. Desktop feasibility
+must cover Windows and macOS; native implementation remains excluded and a
+native application/customer validation remains required. The later supplied POC
+pack provides Settings and VS Code as reference workflows, as recorded below.
+
+### Desktop reference supplied November 17, 2026
+
+The user supplied `Tholi_Desktop_Dual_POC_Documentation_Pack.zip`, version 1.0
+dated October 31, 2026. Archive SHA-256:
+`93fd329f05d0a46aea9880fed990265ed9084459373fd8c707e3b6a1c8fb40a3`.
+The Tauri and Avalonia Markdown specifications, shared scorecard, handoff and
+benchmark template have been read. Their common experiment sections match.
+These are design references and proposed acceptance criteria, not measured
+results or instructions to create another application during backend work.
+
+For #53, consider Candidate B: Tauri 2 with React/TypeScript presentation and a
+separate per-user Rust agent. The agent owns journey state, native observation,
+fresh target binding and outcome verification. The Tauri process forwards only
+allowlisted authenticated IPC commands and renders authoritative snapshots. Keep
+Windows UI Automation on its dedicated MTA thread and macOS AX objects on a
+native runloop thread; exchange owned snapshots rather than unsafe cross-thread
+native handles. Native identities require their own versioned contract and must
+never stand in for browser documents or website origins.
+
+The reference POC is read-only, Local only and cloud/capture disabled by default.
+Its proposed native IPC limits (256 KiB, 200 controls, nesting eight, two-second
+read deadline and 15-second heartbeat) are separate from current browser/API
+contracts and safety budgets. Preserve user/session-scoped ACLs or socket modes,
+peer validation, token handshake, bounded frames and replay/sequence fencing.
+Do not add automatic clicks, typing, elevation, hidden capture or a permissive
+localhost control endpoint. The example desktop proposal endpoint is a design
+placeholder, not an existing Fastify route. Later account/inference/credit reuse
+must verify the actual authenticated native contract first.
+
+Proposed reference workflows are Settings Display(s), Settings Bluetooth without
+toggling it, and VS Code `Editor: Font Size`, on Windows 11 and macOS 14+ where
+supported. A target must come from the real third-party application's accessible
+tree. Rebind on focus/window/display changes, respect secure surfaces, and verify
+arrival independently after manual user interaction. UI closure must preserve
+the agent; overlays either have an independent native host or explicitly suspend
+until shell reconnection. Mixed DPI, Retina, negative monitor origins and macOS
+Spaces require native evidence, not a successful cross-compilation or browser CI.
+
+Apply the repository's stricter privacy projection to native titles and labels:
+potentially user-generated content remains private, not automatic log/cloud data.
+Keep raw values, goals, screenshots and native handles out of diagnostics. The
+shared scorecard requires both operating systems' functional gates before a
+winner or total score, matched hardware/features, five warm-ups, at least 30 timed
+interactions and five-minute idle sampling including all helper/webview processes.
+Missing native runs remain BLOCKED or NOT TESTED, never inferred passes.
+
+The Avalonia implementation already exists in another local repository. The user
+explicitly excluded it from this work: do not inspect, modify, build, migrate or
+merge that checkout. Do not create a Tauri prototype in this repository or mark
+#54 complete. Future desktop implementation remains in its separate plan and
+workspace; the backend roadmap prepares contracts and feasibility only.
+
 On November 7, 2026, the user resumed the roadmap after the merge of #87 and
 PR #90's optional account introduction. #61 is complete through PR #91, including
 retained plan preference, verified development Free enrollment and separate

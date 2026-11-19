@@ -1,0 +1,18 @@
+# Validation and promotion reuse an already loaded immutable image. Ordinary
+# local development keeps the existing source-build profile.
+x-prepared: &prepared
+  image: ${THOLI_PREPARED_IMAGE:?Select the reviewed immutable image first}
+  pull_policy: never
+services:
+  api:
+    <<: *prepared
+    build: !reset null
+  worker:
+    <<: *prepared
+    build: !reset null
+  database-migrate:
+    <<: *prepared
+    build: !reset null
+  database-tools:
+    <<: *prepared
+    build: !reset null

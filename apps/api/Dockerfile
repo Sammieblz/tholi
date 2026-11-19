@@ -1,4 +1,5 @@
 # Pin the multi-platform manifest so API and future worker images share a runtime.
+ARG THOLI_API_ARTIFACT_STAGE=build
 FROM node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS base
 WORKDIR /app
 
@@ -21,6 +22,13 @@ COPY packages/ ./packages/
 COPY scripts/build-api.mjs ./scripts/build-api.mjs
 COPY scripts/artifact-files.mjs ./scripts/artifact-files.mjs
 RUN npm run build:api
+
+# CI selects the already verified common API build. Source-only development
+# retains the normal build stage; both produce the same runtime composition.
+FROM base AS prepared-api
+COPY apps/api/dist/*.js apps/api/dist/*.js.map ./apps/api/dist/
+
+FROM ${THOLI_API_ARTIFACT_STAGE} AS application-artifacts
 
 FROM base AS production-dependencies
 RUN npm ci --omit=dev --workspace=apps/api --include-workspace-root=false --no-audit --no-fund
@@ -45,7 +53,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /opt/yarn-* \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=production-dependencies /app/node_modules/ ./node_modules/
-COPY --from=build /app/apps/api/dist/ ./apps/api/dist/
+COPY --from=application-artifacts /app/apps/api/dist/ ./apps/api/dist/
 COPY LICENSE ./LICENSE
 USER node
 EXPOSE 8788

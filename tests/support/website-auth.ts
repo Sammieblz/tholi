@@ -4,6 +4,8 @@ import {
   type BrowserContext,
   type Page,
   type Locator,
+  type Response,
+  type Request,
 } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import { waitForIdentityGatewayCapacity } from "./identity-gateway";
@@ -41,8 +43,16 @@ export class WebsiteIdentityError extends Error {
       | "MAIL_RESPONSE_INVALID"
       | "ACCOUNT_RESPONSE_INVALID"
       | "ACCOUNT_SESSION_MISSING"
+      | `ACCOUNT_OPEN_HTTP_${number}`
       | "PROVIDER_FORM_REJECTED"
-      | "ACTION_LINK_MISSING",
+      | "ACTION_LINK_MISSING"
+      | "SIGN_OUT_ACTION_FAILED"
+      | "SIGN_OUT_ACKNOWLEDGEMENT_FAILED"
+      | "SIGN_OUT_NOT_DISPATCHED"
+      | "SIGN_OUT_RESPONSE_UNAVAILABLE"
+      | `SIGN_OUT_HTTP_${number}`
+      | "SIGN_OUT_SESSION_NOT_REVOKED"
+      | "PROVIDER_SIGN_OUT_FAILED",
   ) {
     super(reason);
   }
@@ -206,6 +216,18 @@ export async function checkAccountLayout(page: Page) {
           () => document.documentElement.scrollWidth <= innerWidth + 1,
         ),
       ).toBe(true);
+      for (const name of ["Sign out", "Sign out everywhere"]) {
+        const access = account.getByRole("button", { name, exact: true });
+        await access.scrollIntoViewIfNeeded();
+        const target = await access.boundingBox();
+        expect(!!target && target.width >= 44 && target.height >= 44).toBe(
+          true,
+        );
+        await access.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await focusVisible(access);
+      }
       const revoke = account.getByRole("button", {
         name: "Revoke this session",
         exact: true,
@@ -311,6 +333,31 @@ export async function accountResponse(
         : "UNRECOGNIZED_ACCOUNT_ERROR",
   };
 }
+/** Route entry remounts private state; URL/load alone do not establish account readiness. */
+export async function openWebsiteAccountPage(
+  page: Page,
+  environment: NativeIdentityEnvironment,
+  path: string,
+  title: string,
+  activate: () => Promise<unknown> = () => page.reload(),
+) {
+  const opening = page.waitForResponse(
+    (response) =>
+      response.url() === environment.serviceOrigin + "/api/v1/account" &&
+      response.request().method() === "GET",
+  );
+  const [response] = await Promise.all([opening, activate()]);
+  if (response.status() !== 200)
+    throw new WebsiteIdentityError(`ACCOUNT_OPEN_HTTP_${response.status()}`);
+  await expect(
+    page.getByRole("navigation", { name: "Account sections", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(environment.webOrigin + path);
+}
+
 export async function waitForWebsiteAccount(
   page: Page,
   environment: NativeIdentityEnvironment,
@@ -603,34 +650,89 @@ export async function signOutWebsite(
   page: Page,
   environment: NativeIdentityEnvironment,
   provider = false,
+  all = false,
+  activate?: () => Promise<void>,
 ) {
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "Signed out of Tholi." }),
-  ).toBeVisible();
-  if ((await accountResponse(page, environment)).status !== 401)
-    throw Error("The website logout did not revoke its account session.");
-  if (provider) {
-    const popupPromise = page.waitForEvent("popup");
-    await page
-      .getByRole("link", {
-        name: "Review sign-out with your identity provider",
-        exact: true,
-      })
-      .click();
-    const popup = await popupPromise;
-    try {
-      await popup.waitForURL(
-        (url) => url.origin === environment.providerOrigin,
-      );
-      await popup.locator("#kc-logout").click();
-      await popup.waitForURL(
-        (url) =>
-          url.origin === environment.webOrigin && url.pathname === "/download",
-      );
-    } finally {
-      await popup.close();
+  let reason: ConstructorParameters<typeof WebsiteIdentityError>[0] =
+    "SIGN_OUT_ACTION_FAILED";
+  let logoutStatus: number | undefined;
+  let logoutDispatched = false;
+  const onRequest = (request: Request) => {
+    if (
+      request.url() === environment.serviceOrigin + "/api/v1/auth/logout" &&
+      request.method() === "POST"
+    )
+      logoutDispatched = true;
+  };
+  const onResponse = (response: Response) => {
+    if (
+      response.url() === environment.serviceOrigin + "/api/v1/auth/logout" &&
+      response.request().method() === "POST"
+    )
+      logoutStatus = response.status();
+  };
+  page.on("request", onRequest);
+  page.on("response", onResponse);
+  try {
+    if (activate) await activate();
+    else {
+      await page
+        .getByRole("button", {
+          name: all ? "Sign out everywhere" : "Sign out",
+          exact: true,
+        })
+        .click();
+      if (all)
+        await page
+          .getByRole("alertdialog")
+          .getByRole("button", { name: "Confirm", exact: true })
+          .click();
     }
+    reason = "SIGN_OUT_ACKNOWLEDGEMENT_FAILED";
+    await expect(
+      page.getByRole("status").filter({ hasText: "Signed out of Tholi." }),
+    ).toBeVisible();
+    reason = "SIGN_OUT_SESSION_NOT_REVOKED";
+    if ((await accountResponse(page, environment)).status !== 401)
+      throw Error("The website logout did not revoke its account session.");
+    if (provider) {
+      reason = "PROVIDER_SIGN_OUT_FAILED";
+      const popupPromise = page.waitForEvent("popup");
+      await page
+        .getByRole("link", {
+          name: "Review sign-out with your identity provider",
+          exact: true,
+        })
+        .click();
+      const popup = await popupPromise;
+      try {
+        await popup.waitForURL(
+          (url) => url.origin === environment.providerOrigin,
+        );
+        await popup.locator("#kc-logout").click();
+        await popup.waitForURL(
+          (url) =>
+            url.origin === environment.webOrigin &&
+            url.pathname === "/download",
+        );
+      } finally {
+        await popup.close();
+      }
+    }
+  } catch {
+    if (reason === "SIGN_OUT_ACKNOWLEDGEMENT_FAILED")
+      reason =
+        logoutStatus === undefined
+          ? logoutDispatched
+            ? "SIGN_OUT_RESPONSE_UNAVAILABLE"
+            : "SIGN_OUT_NOT_DISPATCHED"
+          : logoutStatus !== 200
+            ? `SIGN_OUT_HTTP_${logoutStatus}`
+            : reason;
+    throw new WebsiteIdentityError(reason);
+  } finally {
+    page.off("request", onRequest);
+    page.off("response", onResponse);
   }
 }
 export async function checkCookieBinding(
