@@ -15,6 +15,7 @@ import {
   type ProviderId,
 } from "../../../../packages/navigation-core/contracts-providers";
 import type { ServiceRequestContext } from "../capabilities";
+import { sealedSecretSchema, type SealedSecret } from "./sealed-secret";
 import {
   AuthorizationError,
   authorizationRepositoryFailure,
@@ -29,26 +30,8 @@ export interface ProviderSecretBinding {
   readonly provider: ProviderId;
   readonly revision: string;
 }
-export interface SealedProviderSecret {
-  readonly version: 1;
-  readonly keyVersion: string;
-  readonly iv: string;
-  readonly ciphertext: string;
-  readonly tag: string;
-}
-export const sealedProviderSecretSchema = z
-  .object({
-    version: z.literal(1),
-    keyVersion: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/),
-    iv: z.string().regex(/^[A-Za-z0-9_-]{16}$/),
-    ciphertext: z
-      .string()
-      .min(2)
-      .max(10923)
-      .regex(/^[A-Za-z0-9_-]+$/),
-    tag: z.string().regex(/^[A-Za-z0-9_-]{22}$/),
-  })
-  .strict();
+export type SealedProviderSecret = SealedSecret;
+export const sealedProviderSecretSchema = sealedSecretSchema;
 export interface ProviderSecretCipher {
   seal(
     binding: ProviderSecretBinding,

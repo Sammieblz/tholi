@@ -1,0 +1,157 @@
+import type { ServiceRequestContext } from "../capabilities";
+import type { BillingMode } from "../../../../packages/navigation-core/contracts-billing";
+import type { SealedSecret } from "./sealed-secret";
+
+export class BillingSecretError extends Error {
+  constructor() {
+    super("The billing handoff is unavailable.");
+    this.name = "BillingSecretError";
+  }
+}
+export interface BillingLinkBinding {
+  readonly accountId: string;
+  readonly workspaceId: string;
+  readonly operationId: string;
+  readonly profileRevision: string;
+  readonly expiresAt: string;
+}
+export interface BillingLinkCipher {
+  seal(binding: BillingLinkBinding, url: string): Promise<SealedSecret>;
+  open(binding: BillingLinkBinding, sealed: SealedSecret): Promise<string>;
+}
+
+export type BillingProviderErrorCode =
+  | "CONFIGURATION"
+  | "CANCELLED"
+  | "DEADLINE_EXCEEDED"
+  | "THROTTLED"
+  | "INVALID_RESPONSE"
+  | "UNAVAILABLE"
+  | "INVALID_SIGNATURE";
+
+/** Closed classifications only. Raw provider messages, bodies and headers stay private. */
+export class BillingProviderError extends Error {
+  constructor(
+    readonly code: BillingProviderErrorCode,
+    readonly outcome: "not-sent" | "rejected" | "unknown" = "not-sent",
+  ) {
+    super("The billing provider operation could not be verified.");
+    this.name = "BillingProviderError";
+  }
+}
+
+export interface BillingEvent {
+  id: string;
+  type: string;
+  objectId: string;
+  live: boolean;
+  /** A lookup hint only; current provider records must establish every relation. */
+  operationReference?: string;
+}
+export interface BillingCheckout {
+  id: string;
+  operationReference: string;
+  customerId: string | null;
+  subscriptionId: string | null;
+  status: "open" | "complete" | "expired";
+  url: string | null;
+  expiresAt: Date;
+}
+export interface BillingProviderSubscription {
+  id: string;
+  customerId: string;
+  priceId: string;
+  status:
+    | "active"
+    | "trialing"
+    | "past_due"
+    | "canceled"
+    | "incomplete"
+    | "incomplete_expired"
+    | "unpaid"
+    | "paused";
+  startsAt: Date;
+  endsAt: Date;
+  cancelAtPeriodEnd: boolean;
+  invoiceId: string | null;
+}
+export interface BillingProviderInvoice {
+  id: string;
+  customerId: string;
+  subscriptionId: string;
+  priceId: string;
+  status: "draft" | "open" | "paid" | "void" | "uncollectible";
+  amountPaidMinor: bigint;
+  currency: string;
+  startsAt: Date;
+  endsAt: Date;
+  issuedAt: Date;
+  // Non-prorated, one-item periods only. Ineligible invoices never mint credits.
+  eligible: boolean;
+}
+export interface BillingPortal {
+  id: string;
+  /** Short-lived bearer capability; never export or retain it in plaintext. */
+  url: string;
+}
+
+/** The HTTP ingress needs signature verification, never the payment API key. */
+export interface BillingEventVerifier {
+  readonly mode: BillingMode;
+  verifyEvent(raw: Buffer, signature: string, now: Date): BillingEvent;
+}
+
+/** Only this adapter knows Stripe serialization. Application services own durable effects. */
+export interface BillingProvider extends BillingEventVerifier {
+  /** Read the credential's own merchant, never a caller-selected Connect account. */
+  readMerchant(context: ServiceRequestContext): Promise<string>;
+  createCheckout(
+    input: {
+      key: string;
+      operationReference: string;
+      customerId?: string;
+      priceId: string;
+      returnUrl: string;
+    },
+    context: ServiceRequestContext,
+  ): Promise<BillingCheckout>;
+  readCheckout(
+    id: string,
+    context: ServiceRequestContext,
+  ): Promise<BillingCheckout>;
+  /** Invoke only after a current ownership check and a durable dispatch fence. */
+  expireCheckout(
+    input: {
+      id: string;
+      key: string;
+      operationReference: string;
+      customerId: string | null;
+    },
+    context: ServiceRequestContext,
+  ): Promise<BillingCheckout>;
+  readSubscription(
+    id: string,
+    context: ServiceRequestContext,
+  ): Promise<BillingProviderSubscription>;
+  cancelSubscription(
+    input: {
+      id: string;
+      key: string;
+      customerId: string;
+      timing: "period-end" | "immediate";
+    },
+    context: ServiceRequestContext,
+  ): Promise<BillingProviderSubscription>;
+  readInvoice(
+    id: string,
+    context: ServiceRequestContext,
+  ): Promise<BillingProviderInvoice>;
+  createPortal(
+    input: {
+      key: string;
+      customerId: string;
+      returnUrl: string;
+    },
+    context: ServiceRequestContext,
+  ): Promise<BillingPortal>;
+}

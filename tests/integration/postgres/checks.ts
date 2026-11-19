@@ -17,6 +17,7 @@ import { runSupportChecks } from "./support-checks";
 import { runObservabilityChecks } from "./observability-checks";
 import { runQuotaChecks } from "./quotas-checks";
 import { runPlanChecks } from "./plans-checks";
+import { runBillingChecks } from "./billing-checks";
 import { runSavedDataChecks } from "./saved-data-checks";
 import { runAccountChecks } from "./account-checks";
 import { runProviderConnectionChecks } from "./provider-connection-checks";
@@ -65,8 +66,14 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
       checks.push({ name, passed: true });
     } catch (error) {
       const code = (error as { code?: string }).code;
+      const location =
+        error instanceof Error
+          ? /file:\/\/\/app\/postgres-check\.mjs:(\d+):(\d+)/.exec(
+              error.stack ?? "",
+            )
+          : undefined;
       throw new Error(
-        `PostgreSQL check failed: ${name}${code ? ` (${code})` : ""}.`,
+        `PostgreSQL check failed: ${name}${code ? ` (${code})` : ""}${location ? ` [check line ${location[1]}:${location[2]}]` : ""}.`,
       );
     }
   };
@@ -1630,6 +1637,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     await runProviderConnectionChecks(runtime, migration, record, worker);
     await runCustomerInferenceChecks(runtime, migration, record, worker);
     await runPlanChecks(runtime, migration, record, worker);
+    await runBillingChecks(runtime, migration, record);
     await runSavedDataChecks(runtime, migration, record, worker);
     await runAccountChecks(runtime, migration, record, worker);
     await runIdentityChecks(runtime, migration, record, worker);

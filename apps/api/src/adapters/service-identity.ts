@@ -20,6 +20,7 @@ import { createFakeNavigationModel } from "./fake-navigation-model";
 import { CreditService } from "../application/quotas";
 import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-core/contracts-credits";
 import { PlanService } from "../application/plans";
+import { BillingService } from "../application/billing";
 import { SavedDataService } from "../application/saved-data";
 import { AccountService } from "../application/account";
 import { PostgresAccount } from "../database/account";
@@ -51,6 +52,7 @@ export async function createIdentityRuntime(
     const jobs = new JobService(repositories);
     const analytics = new ProductAnalyticsService(repositories);
     const plans = new PlanService(repositories, planEnvironment);
+    const billing = new BillingService(repositories);
     const credits = new CreditService(
       repositories,
       fakeDevelopmentChargingPolicy,
@@ -116,6 +118,7 @@ export async function createIdentityRuntime(
       support,
       analytics,
       plans,
+      billing,
       savedData,
       account,
       credits,

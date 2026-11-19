@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { ScopedBilling } from "./billing-queries";
+import { historyCursor, repositoryPage } from "./history-pages";
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import {
@@ -42,9 +44,11 @@ import {
 } from "../../../../packages/navigation-core/contracts-navigation-knowledge";
 import {
   productCatalogSchema,
+  productCatalogV2Schema,
   effectiveProductPlanSchema,
   freeEnrollmentSchema,
   type ProductCatalog,
+  type ProductCatalogV2,
   type EffectiveProductPlan,
   type FreeEnrollment,
 } from "../../../../packages/navigation-core/contracts-plans";
@@ -231,66 +235,6 @@ export function accountingError(error: unknown): never {
   throw error;
 }
 
-function historyCursor(
-  value?: string,
-  usageView?: 1 | 2,
-): [string | null, string | null] {
-  if (!value) return [null, null];
-  try {
-    if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) throw Error();
-    let parsed: unknown = JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8"),
-    );
-    if (usageView !== undefined) {
-      if (
-        Array.isArray(parsed) &&
-        parsed.length === 4 &&
-        parsed[0] === "usage" &&
-        parsed[1] === usageView
-      )
-        parsed = parsed.slice(2);
-      else if (usageView !== 1 || !Array.isArray(parsed) || parsed.length !== 2)
-        throw Error();
-    }
-    if (
-      !Array.isArray(parsed) ||
-      parsed.length !== 2 ||
-      typeof parsed[0] !== "string" ||
-      typeof parsed[1] !== "string" ||
-      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3,6}Z$/.test(parsed[0]) ||
-      !Number.isFinite(Date.parse(parsed[0])) ||
-      !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(parsed[1])
-    )
-      throw Error();
-    return [parsed[0], parsed[1]];
-  } catch {
-    return invalid("Use the opaque history cursor returned by the service.");
-  }
-}
-function repositoryPage<T extends { id: string; createdAt: Date }>(
-  rows: T[],
-  size: number,
-  cursorTime?: string,
-  usageView?: 1 | 2,
-): RepositoryPage<T> {
-  const more = rows.length > size,
-    items = rows.slice(0, size),
-    last = items.at(-1);
-  return {
-    items,
-    ...(more && last
-      ? {
-          nextCursor: Buffer.from(
-            JSON.stringify([
-              ...(usageView === undefined ? [] : ["usage", usageView]),
-              cursorTime ?? last.createdAt.toISOString(),
-              last.id,
-            ]),
-          ).toString("base64url"),
-        }
-      : {}),
-  };
-}
 type InferenceUsageRow = Omit<
   InferenceUsage,
   | "inputUnits"
@@ -389,11 +333,26 @@ function inferenceUsageDetails(input: FinishInferenceInput) {
 export class PostgresRepositories {
   constructor(private readonly pool: Pool) {}
 
-  async readPlanCatalog(): Promise<ProductCatalog> {
+  readPlanCatalog(): Promise<ProductCatalog>;
+  readPlanCatalog(schemaVersion: 1): Promise<ProductCatalog>;
+  readPlanCatalog(schemaVersion: 2): Promise<ProductCatalogV2>;
+  readPlanCatalog(
+    schemaVersion: 1 | 2,
+  ): Promise<ProductCatalog | ProductCatalogV2>;
+  async readPlanCatalog(
+    schemaVersion: 1 | 2 = 1,
+  ): Promise<ProductCatalog | ProductCatalogV2> {
+    if (schemaVersion !== 1 && schemaVersion !== 2)
+      invalid("Unsupported catalog view.");
     const result = await this.pool.query<{ catalog: unknown }>(
-      "SELECT tholi.read_product_catalog() AS catalog",
+      schemaVersion === 1
+        ? "SELECT tholi.read_product_catalog() AS catalog"
+        : "SELECT tholi.read_product_catalog($1) AS catalog",
+      schemaVersion === 1 ? [] : [schemaVersion],
     );
-    return productCatalogSchema.parse(result.rows[0]?.catalog);
+    return (
+      schemaVersion === 1 ? productCatalogSchema : productCatalogV2Schema
+    ).parse(result.rows[0]?.catalog);
   }
 
   async refillFreePlans(input: { limit: number }): Promise<number> {
@@ -674,6 +633,14 @@ class ScopedRepositories {
         (scope) => new ScopedRepositories(this.client, scope, this.observer),
       ),
     );
+  }
+
+  async withBilling<T>(
+    work: (queries: ScopedBilling) => Promise<T>,
+  ): Promise<T> {
+    await this.lockAccount();
+    await this.lockWorkspace(true);
+    return work(new ScopedBilling(this.client, this.scope));
   }
 
   // Credits and sync stamps share this lock order: workspace, then domain row.

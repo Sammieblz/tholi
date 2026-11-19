@@ -27,6 +27,32 @@ const binding = (): ProviderSecretBinding => ({
   revision: "1",
 });
 
+test("retained version-1 provider ciphertext still opens after sharing the envelope owner", async () => {
+  // Captured from the unchanged provider cipher before extraction, using only a synthetic key.
+  const cipher = createProviderSecretCipher({
+    version: 1,
+    activeVersion: "legacy-test-v1",
+    keys: { "legacy-test-v1": Buffer.alloc(32, 73).toString("base64url") },
+  });
+  expect(
+    await cipher.open(
+      {
+        accountId: "00000000-0000-4000-8000-000000000001",
+        connectionId: "00000000-0000-4000-8000-000000000002",
+        provider: "openai",
+        revision: "7",
+      },
+      {
+        version: 1,
+        keyVersion: "legacy-test-v1",
+        iv: "UJ53Grnsr2-UEnIp",
+        ciphertext: "xO_1sPnWWUgLNZqkQZOjzQh4V-boHZ6R7jnEy-Y",
+        tag: "BbAcF9_A88Cvl4Mw7J9nsQ",
+      },
+    ),
+  ).toBe("synthetic-provider-legacy-key");
+});
+
 test("provider credentials use randomized authenticated encryption bound to owner, connection, provider, revision and key version", async () => {
   const cipher = createProviderSecretCipher(ring),
     scope = binding();

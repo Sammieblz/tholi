@@ -16,6 +16,7 @@ import { customerInference } from "./migrations/013-customer-inference";
 import { navigationKnowledge } from "./migrations/014-navigation-knowledge";
 import { identityRetention } from "./migrations/015-identity-retention";
 import { jobAdmission } from "./migrations/016-job-admission";
+import { subscriptionBilling } from "./migrations/017-subscription-billing";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -55,6 +56,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(14, "navigation-knowledge", navigationKnowledge),
   migration(15, "identity-retention", identityRetention),
   migration(16, "job-admission", jobAdmission),
+  migration(17, "subscription-billing-storage", subscriptionBilling),
 ]);
 
 export interface MigrationOptions {
@@ -430,6 +432,15 @@ async function grantRuntime(client: PoolClient, role: string) {
       tholi.enroll_free() TO ${identifier}`);
     await client.query(
       `GRANT SELECT ON tholi.free_program_enrollments,tholi.free_program_grants TO ${identifier}`,
+    );
+  }
+  if (existing.has("billing_workspaces")) {
+    // Metadata reads only. Financial writes and unscoped ingress are not HTTP
+    // table privileges, and payment execution is not enabled by this migration.
+    await client.query(`GRANT SELECT ON tholi.billing_workspaces,tholi.billing_subscriptions,
+      tholi.billing_operations,tholi.billing_invoices TO ${identifier}`);
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.read_product_catalog(integer) TO ${identifier}`,
     );
   }
   if (existing.has("provider_connections")) {

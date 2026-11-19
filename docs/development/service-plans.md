@@ -22,6 +22,13 @@ also require the exact website Origin and CSRF token. Client plan intent is a
 selection hint; it cannot supply a grant, period, price, environment or limit.
 No checkout is required for Free. There is no public paid activation endpoint.
 
+The additive billing preparation supports explicit catalog negotiation with
+`GET /api/v1/plans?schemaVersion=2`; omitting the query retains the strict version-1
+response. A client cannot enable billing through query flags. The current
+composition keeps fixture prices hidden and payment collection unavailable.
+See the [billing preparation record](testing/subscription-billing-validation.md)
+for the incomplete reconciliation and verification work.
+
 Local requires no account, network enrollment or payment. Selecting Local is a
 client processing choice. It does not cancel an account, cloud entitlement or
 subscription, upload local knowledge, or delete saved data. A null effective plan
@@ -93,6 +100,13 @@ independently authorized data reads/export/deletion remain available. Paid
 activation, subscription changes and provider reconciliation belong to #50.
 They must use the same ledger and verified billing evidence. Prices, recurring
 paid quantities and production limits require cost evidence before publication.
+
+The prepared billing-records capability exposes owner/account-bound subscription
+metadata and invoice pages without requiring inference consent or credit balance.
+Invoice pages contain at most 20 records and use the returned `nextCursor` for
+older history. Cursors select a position within the current account/workspace;
+they grant no access. Provider IDs and payment links are excluded. This capability
+does not enable checkout or activate a paid plan.
 
 ## Validation
 

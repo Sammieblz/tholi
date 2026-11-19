@@ -2,10 +2,12 @@ import {
   enrollFreeInputSchema,
   freeEnrollmentSchema,
   productCatalogSchema,
+  productCatalogV2Schema,
   productEntitlementsSchema,
   type EffectiveProductPlan,
   type FreeEnrollment,
   type ProductCatalog,
+  type ProductCatalogV2,
 } from "../../../../packages/navigation-core/contracts-plans";
 import type { ServiceRequestContext } from "../capabilities";
 import type { Entitlement } from "../database/contracts";
@@ -31,7 +33,9 @@ export interface PlanTransaction extends AuthorizationContextReader {
 }
 
 export interface PlanRepositories extends AuthorizedRepositories<PlanTransaction> {
-  readPlanCatalog(): Promise<ProductCatalog>;
+  readPlanCatalog(
+    schemaVersion?: 1 | 2,
+  ): Promise<ProductCatalog | ProductCatalogV2>;
 }
 
 /** Existing worker maintenance may refill only server-selected active Free periods. */
@@ -44,23 +48,52 @@ export class PlanService {
   constructor(
     private readonly repositories: PlanRepositories,
     private readonly environment: "development" | "production" = "production",
+    private readonly fakeBillingEnabled = false,
   ) {}
 
-  async catalog(context: ServiceRequestContext) {
+  catalog(context: ServiceRequestContext): Promise<ProductCatalog>;
+  catalog(
+    context: ServiceRequestContext,
+    schemaVersion: 1,
+  ): Promise<ProductCatalog>;
+  catalog(
+    context: ServiceRequestContext,
+    schemaVersion: 2,
+  ): Promise<ProductCatalogV2>;
+  catalog(
+    context: ServiceRequestContext,
+    schemaVersion: 1 | 2,
+  ): Promise<ProductCatalog | ProductCatalogV2>;
+  async catalog(context: ServiceRequestContext, schemaVersion: 1 | 2 = 1) {
     context.signal.throwIfAborted();
+    if (schemaVersion !== 1 && schemaVersion !== 2)
+      throw new AuthorizationError(
+        400,
+        "INVALID_REQUEST",
+        "The catalog view is unsupported.",
+      );
     try {
-      const catalog = productCatalogSchema.parse(
-        await this.repositories.readPlanCatalog(),
+      const schema =
+        schemaVersion === 1 ? productCatalogSchema : productCatalogV2Schema;
+      const catalog = schema.parse(
+        await this.repositories.readPlanCatalog(schemaVersion),
       );
       context.signal.throwIfAborted();
-      return productCatalogSchema.parse({
+      return schema.parse({
         ...catalog,
         environment: this.environment,
         plans: catalog.plans.map((plan) =>
-          this.environment === "production" && plan.mode !== "local"
+          (this.environment === "production" && plan.mode !== "local") ||
+          (schemaVersion === 2 &&
+            plan.mode === "paid" &&
+            !this.fakeBillingEnabled)
             ? {
                 ...plan,
                 developmentAllowance: null,
+                ...(plan.mode === "paid"
+                  ? { pricing: { status: "unpublished", amount: null } }
+                  : {}),
+                ...("billing" in plan ? { billing: null } : {}),
                 availability: {
                   available: false,
                   reason:

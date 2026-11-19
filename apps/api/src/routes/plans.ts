@@ -4,14 +4,19 @@ import {
   enrollFreeInputSchema,
   freeEnrollmentSchema,
   productCatalogSchema,
+  productCatalogV2Schema,
   productEntitlementsSchema,
 } from "../../../../packages/navigation-core/contracts-plans";
 import type { IdentityService } from "../application/identity";
 import type { IdentitySession } from "../application/identity-contracts";
 import type { PlanService } from "../application/plans";
+import { serviceSchemaVersionQuerySchema } from "../../../../packages/navigation-core/contracts-service";
 import { createIdentityAccess, identityRouteOptions } from "./identity-access";
 
 const workspaceParams = z.object({ workspaceId: z.string().uuid() }).strict();
+const catalogQuery = z
+  .object({ schemaVersion: serviceSchemaVersionQuerySchema.default(1) })
+  .strict();
 
 /** Catalog reads grant no account, entitlement or provider authority. */
 export async function registerPlansApi(
@@ -30,7 +35,11 @@ export async function registerPlansApi(
   const schema = (
     operationId: string,
     response: z.ZodTypeAny,
-    input: { protected?: boolean; body?: z.ZodTypeAny } = {},
+    input: {
+      protected?: boolean;
+      body?: z.ZodTypeAny;
+      query?: z.ZodTypeAny;
+    } = {},
   ) =>
     identityRouteOptions(operationId, {
       ...input,
@@ -45,8 +54,14 @@ export async function registerPlansApi(
     });
   app.get(
     "/api/v1/plans",
-    schema("listPublishedPlans", productCatalogSchema),
-    safe((_request, _reply, context) => plans.catalog(context)),
+    schema(
+      "listPublishedPlans",
+      z.union([productCatalogSchema, productCatalogV2Schema]),
+      { query: catalogQuery },
+    ),
+    safe((request, _reply, context) =>
+      plans.catalog(context, catalogQuery.parse(request.query).schemaVersion),
+    ),
   );
   app.get(
     "/api/v1/workspaces/:workspaceId/entitlements",

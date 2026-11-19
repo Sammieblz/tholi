@@ -6,14 +6,24 @@ const customerHosts = new Set(
   ),
 );
 
-/** Fixture owners can intercept protocols; the real unit fetch cannot call a model. */
-export function withoutExternalModels(fetcher: typeof fetch): typeof fetch {
+/** Fixture owners intercept protocols; the real unit fetch cannot call paid providers. */
+export function withoutExternalProviders(fetcher: typeof fetch): typeof fetch {
   return (input, init) => {
     const url = new URL(
       typeof input === "string" || input instanceof URL
         ? String(input)
         : input.url,
     );
+    if (
+      ["api.stripe.com", "billing.stripe.com", "checkout.stripe.com"].includes(
+        url.hostname,
+      )
+    )
+      return Promise.reject(
+        new Error(
+          "External payment requests are disabled in automated checks.",
+        ),
+      );
     if (
       customerHosts.has(url.hostname) ||
       url.hostname === "generativelanguage.googleapis.com" ||
