@@ -102,7 +102,7 @@ to a provider result. Unrelated or stale processing metadata is ignored.
 All matched client terminals also record canonical `terminalState` and nullable
 `terminalErrorCode`. A client reservation or transport identifier is not proof that
 the provider received anything; the durable journal owns exposure and cost evidence.
-An error terminal ends collection before any oracle action, even when an earlier
+An error terminal ends collection before the next oracle action, even when an earlier
 Local hint remains visible. Retain the terminal and failed readiness measurement;
 never credit fallback Local guidance to a provider arm.
 Executed rows retain measured native and post-start viewport dimensions, without pixels.

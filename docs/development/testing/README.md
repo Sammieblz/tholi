@@ -5,6 +5,11 @@ fixed Local/structured/multimodal experiment for #43. Its fake calibration check
 and explicit live-data/spending gate remain separate from deterministic PR checks
 and release certification.
 
+The [November 22 zero-cost record](perception-comparison-zero-cost-2026-11-22.md)
+retains the current Local failures, nine separate fake-only cohorts and the
+collector error-terminal correction. Real-model quality and the beta gate remain
+unresolved.
+
 The [credit accounting validation record](credit-accounting-validation.md) tracks
 durable reservations, grant expiry, shared budgets and metadata-only reconciliation.
 Its fake and synthetic charged-provider checks remain separate from live billing
