@@ -10,6 +10,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep, basename } from "node:path";
+import type { BrowserContext, Route } from "@playwright/test";
+import { deterministicNetwork } from "../../support/browser-test";
 import {
   buildComparisonPlan,
   comparisonCases,
@@ -18,6 +20,55 @@ import {
   comparisonProviderReadiness,
   readComparisonPlan,
 } from "../../support/perception-comparison";
+
+it("zero-cost public browser profiles block provider requests while retaining public pages and local identity", async () => {
+  try {
+    vi.stubEnv("THOLI_TEST_TIER", "operator-zero-cost");
+    vi.stubEnv("THOLI_BROWSER_NETWORK", "public");
+    for (const group of ["navigation-baseline", "perception-comparison"]) {
+      vi.stubEnv("THOLI_BROWSER_GROUP", group);
+      vi.stubEnv("THOLI_EVALUATION_MODE", "dry-run");
+      let intercept: ((route: Route) => Promise<unknown>) | undefined;
+      const install = vi.fn(
+        async (
+          _pattern: unknown,
+          handler: (route: Route) => Promise<unknown>,
+        ) => {
+          intercept = handler;
+        },
+      );
+      const context = {
+        browser: () => null,
+        route: install,
+      } as unknown as BrowserContext;
+      await deterministicNetwork(context);
+      await deterministicNetwork(context);
+      expect(install).toHaveBeenCalledTimes(1);
+      for (const [url, blocked] of [
+        ["https://github.com/microsoft/vscode", false],
+        ["https://en.wikipedia.org/wiki/Main_Page", false],
+        ["http://127.0.0.1:8788/api/v1/auth/refresh", false],
+        ["https://api.openai.com/v1/responses?credential=synthetic", true],
+        ["https://api.anthropic.com/v1/messages", true],
+        ["https://openrouter.ai/api/v1/chat/completions", true],
+        ["https://aiplatform.us.rep.googleapis.com/v1/test", true],
+        ["https://aiplatform.eu.rep.googleapis.com/v1/test", true],
+        ["https://api.stripe.com/v1/test", true],
+      ] as const) {
+        const route = {
+          request: () => ({ url: () => url }),
+          abort: vi.fn(),
+          continue: vi.fn(),
+        };
+        await intercept!(route as unknown as Route);
+        expect(route.abort).toHaveBeenCalledTimes(blocked ? 1 : 0);
+        expect(route.continue).toHaveBeenCalledTimes(blocked ? 0 : 1);
+      }
+    }
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
 
 it("attributes preflight errors only to the retained request and current trial, while provider terminals require a fresh generation and transport", () => {
   const trial = comparisonTrials.find((item) => item.arm === "multimodal")!;
