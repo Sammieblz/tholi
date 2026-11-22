@@ -102,6 +102,9 @@ to a provider result. Unrelated or stale processing metadata is ignored.
 All matched client terminals also record canonical `terminalState` and nullable
 `terminalErrorCode`. A client reservation or transport identifier is not proof that
 the provider received anything; the durable journal owns exposure and cost evidence.
+An error terminal ends collection before any oracle action, even when an earlier
+Local hint remains visible. Retain the terminal and failed readiness measurement;
+never credit fallback Local guidance to a provider arm.
 Executed rows retain measured native and post-start viewport dimensions, without pixels.
 Fresh binding, consequential review, native document/window identity and independent
 effects remain the product authorities. A proposal, click or animation is never
@@ -243,6 +246,15 @@ never teach the fake an oracle answer. Valid collection, session isolation, fres
 capture, bounded transport and accounting establish readiness only.
 `qualityEvidenceAvailable` must remain false. Keep #43 open and beta closed until
 the separately authorized real-model comparison and quality decision exist.
+
+The first nine cohorts exposed error-terminal fallback scoring. Preserve those
+original reports as affected evidence. After correcting that collector boundary,
+collect a separate three-tuple check using a fresh fake plan and local PKCE session:
+`wiki-search/multimodal/0`, `n43-page-injection/structured/0` and
+`n43-page-injection/multimodal/0`. Keep its new source and closed journal separate.
+The public trial may remain a failed capture/readiness check; its purpose is to
+verify that an error cannot become provider navigation success. Do not retest the
+original matrix, visit the fresh holdout or retry failures.
 
 ## Reporting and decision rules
 

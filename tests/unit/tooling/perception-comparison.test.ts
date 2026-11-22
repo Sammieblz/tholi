@@ -125,6 +125,24 @@ it("attributes preflight errors only to the retained request and current trial, 
   expect(comparisonProviderReadiness(dispatched, expected)?.kind).toBe(
     "terminal",
   );
+  for (const code of [
+    "CANCELLED",
+    "INVALID_REQUEST",
+    "DEADLINE_EXCEEDED",
+    undefined,
+  ]) {
+    const failed = { ...dispatched, state: "error", code };
+    const classified = comparisonProviderReadiness(failed, expected);
+    expect(classified?.kind).toBe("terminal-error");
+    expect(classified?.state.transportRequestId).toBe(
+      dispatched.transportRequestId,
+    );
+    expect(classified?.state.code).toBe(code);
+    expect(
+      comparisonProviderReadiness(failed, { ...expected, lastGeneration: 0 })
+        ?.kind,
+    ).toBe("pending");
+  }
   expect(
     comparisonProviderReadiness(dispatched, { ...expected, lastGeneration: 0 })
       ?.kind,

@@ -13,7 +13,7 @@ import {
 } from "../../packages/navigation-core/contracts-evaluation";
 import { navigationServiceStateSchema } from "../../packages/navigation-core/contracts-navigation";
 
-/** A local preflight error is not a provider response or an intentional refusal. */
+/** Transport identifiers prove neither provider exposure nor usable guidance. */
 export function comparisonProviderReadiness(
   raw: unknown,
   expected: {
@@ -43,14 +43,17 @@ export function comparisonProviderReadiness(
       : binding.generation > expected.lastGeneration;
   if (state.state === "error" && !state.transportRequestId && fresh)
     return { kind: "preflight-error" as const, state };
+  const terminal =
+    fresh &&
+    binding.generation !== undefined &&
+    !!state.transportRequestId &&
+    state.state !== "pending";
   return {
-    kind:
-      fresh &&
-      binding.generation !== undefined &&
-      !!state.transportRequestId &&
-      state.state !== "pending"
-        ? ("terminal" as const)
-        : ("pending" as const),
+    kind: terminal
+      ? state.state === "error"
+        ? ("terminal-error" as const)
+        : ("terminal" as const)
+      : ("pending" as const),
     state,
   };
 }

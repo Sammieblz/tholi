@@ -355,7 +355,10 @@ export function registerPerceptionComparison() {
                     measurement.clientReservations,
                     binding.generation + 1,
                   );
-                return readiness?.kind === "terminal";
+                return (
+                  readiness?.kind === "terminal" ||
+                  readiness?.kind === "terminal-error"
+                );
               },
               { timeout: 25_000 },
             )
@@ -382,6 +385,10 @@ export function registerPerceptionComparison() {
           }
           if (measurement.decisionMs === null)
             measurement.decisionMs = performance.now() - goalStarted;
+          if (classified?.kind === "terminal-error")
+            throw Error(
+              "The operator request ended without a usable provider result.",
+            );
           return current;
         };
         const wrapped = {
