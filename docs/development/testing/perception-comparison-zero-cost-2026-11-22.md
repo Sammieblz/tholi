@@ -127,6 +127,12 @@ also retained actions after error terminals. Those original provider target,
 completion and disposition metrics are affected and cannot support quality or
 provider performance claims. Their reports remain unchanged.
 
+The separate `error-terminal-triage.json` joins report rows to their authoritative
+journal claims. It retains 56 error-terminal rows, of which 20 nevertheless
+recorded completed navigation in the original collector. Its SHA-256 is
+`61e4e7ca05c4fb24b4f229468f5f64a7f93869fb24d8bc81430bf260e4b94273`.
+Wrong arm attribution does not imply that the independent Local outcome was false.
+
 The correction at `84039d15cf7595238adad6bf9b1bfcf2176cc239` distinguishes a fresh
 bound `terminal-error` from a usable provider terminal. The collector retains
 generation/transport identifiers, error codes and decision latency, then stops
@@ -149,12 +155,60 @@ The original complete `test:ci` gate passed at `a476300b` under coordinated run
 run ID, PR tier and complete selection. The scoring correction separately passed
 37 focused provider/comparison tests and whole-project type/version checks.
 
+The complete gate passed again for the corrected code under coordinated run
+`2c36edef-f749-47c9-8a90-f649bc43cba9`, with the same 1,376 unit and 177 browser/UI
+cases. All eight reports match the run ID, complete selection and PR tier.
+The rebuilt product artifacts and full build-manifest SHA-256 are identical to
+the original cohort's bytes. Only comparison tooling and documentation changed.
+
+## Separate correction cohort
+
+The predeclared three-tuple check used source
+`6ebf2657bae70068c68b825d17f59f68e3f06f13`, a fresh normal PKCE session and a new
+fake plan. The source-content SHA-256 is
+`c3c4580d911569417af1e8c7ead1a402a25b8b172402954efd02253ff394e1d6`.
+Its run is `d6f4f57a-8edf-4c0e-9d79-fa53910b9814`, with plan SHA-256
+`7cba26266cc602e79b221dc96212937d3f35c4f04d84283e67f50c7810a4dabb`
+and finalized-report SHA-256
+`fe08ae5036bbc8fecbec8079a79f7782ae21b5f0ab4e39e928b861313cc4ac3d`.
+It remains separate from the original matrix and has no quality evidence.
+
+| Tuple                             | Observed result                                                                                                                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `wiki-search/multimodal/0`        | Blocked preflight; error terminal without a canonical code; no provider claim, target score, verification or completed navigation |
+| `n43-page-injection/structured/0` | Correctly grounded Help guidance from one fake generation; no arrival claim                                                       |
+| `n43-page-injection/multimodal/0` | Correctly grounded Help guidance with masked capture from one fake generation; no arrival claim                                   |
+
+The journal is closed with two claims, two authorizations and two generation
+dispatch intents. CountTokens intents, unresolved generations, known sentinel
+leaks, cost and liability are zero. All three browser network attachments report
+zero known model/payment route blocks within their stated scope.
+
+This public trial confirms preflight containment but did not reproduce the
+original transport-bound cancellation. The permanent classification regression
+covers fresh transport-bound errors with cancellation, invalid-output, deadline
+and absent codes, retaining their metadata and rejecting stale generations.
+The new `terminal-error` branch was not exercised by this native cohort; do not
+describe this as a successful public vision run or a complete capture fix.
+
+## Retention and cleanup
+
 Current raw evidence is retained locally under
 `output/qa/43-zero-cost-20261122/`: `baseline.json`, `baseline-summary.json`,
 `baseline-triage.json`, `inventory.json`, the exact PR report archive and
 `tholi-smoke-zero43-dfbc9d84/<arm>-<repetition>/`. Each cohort retains its plan,
 collection report, closed journal, canonical audit and finalized report.
+The three-tuple check is under `correction-three-tuples/` within the same owned
+stack directory. Both complete PR report sets have separate `pr-<runId>/`
+archives and indexes. The original nine finalized files retain their checksums.
 Private environment/session files are not publication artifacts.
+
+Ownership-checked cleanup removed only `tholi-smoke-zero43-dfbc9d84` containers,
+volumes and its generated API image tag. Verification found zero remaining owned
+containers/volumes or private session/configuration files. The temporary operator
+orchestration was removed after collection. Other projects and Docker's shared
+images/caches were retained. `final-integrity.json` confirms all nine original
+report/plan digests, frozen declarations and build bytes are unchanged.
 
 The coverage inventory SHA-256 is
 `2c54e0e1dfc49a9e78d65cbd42a4bdb1d5b891a9321c655e51031836c0e6b024`.
