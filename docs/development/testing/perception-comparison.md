@@ -102,6 +102,9 @@ to a provider result. Unrelated or stale processing metadata is ignored.
 All matched client terminals also record canonical `terminalState` and nullable
 `terminalErrorCode`. A client reservation or transport identifier is not proof that
 the provider received anything; the durable journal owns exposure and cost evidence.
+An error terminal ends collection before the next oracle action, even when an earlier
+Local hint remains visible. Retain the terminal and failed readiness measurement;
+never credit fallback Local guidance to a provider arm.
 Executed rows retain measured native and post-start viewport dimensions, without pixels.
 Fresh binding, consequential review, native document/window identity and independent
 effects remain the product authorities. A proposal, click or animation is never
@@ -206,6 +209,52 @@ node scripts/finalize-perception-comparison.mjs --report output/qa/perception-co
 
 Finalization reuses the same report and canonical audit owners. It does not resume
 a claim, repeat inference, rewrite the collection report or make a beta decision.
+
+## Zero-cost verification, November 22, 2026
+
+The maintainer retained a USD 0 external-provider budget. Use the existing Local
+baseline and fake-only dry run; create no Vertex plan, approval, ADC session or
+provider-egress profile. Public signed-out browsing remains part of the declared
+experiment. This is zero-cost provider verification, not an internet-free run.
+
+Collect the original 18-case Local baseline once. Separately predeclare nine
+dry-run cohorts: each of `local`, `structured` and `multimodal`, crossed with
+repetitions `0`, `1` and `2`. Select one cohort using the existing test-name filter,
+for example `--grep '/structured/0$'`. Each cohort retains the complete 270-trial
+plan and fixed reporting denominator, while executing its 12 calibration and six
+synthetic cases. Other tuples stay missing or not run. Never visit fresh holdout
+pages, inspect their observations or infer their outcomes from a dry run.
+
+Each collector needs a fresh normal local PKCE session, distinct fake plan and
+closed journal. Prepare its one-hour plan only after stack readiness. The nine
+cohorts are declared before collection; they do not renew a live approval or retry
+a failed tuple. Expiry stops that cohort and its missing rows remain missing.
+Do not combine these distinct journals into a quality study. A coverage inventory
+may list the independently identified dry-run tuples and their source reports.
+
+The existing browser network policy now blocks known model and payment hosts in
+these public-browsing profiles as well as fixture tests. A blocked request fails
+collection and records only its category. The content-free
+`zero-cost-provider-network` attachment covers browser-routable HTTP; it does not
+claim interception of extension service-worker traffic. The fake-only operator
+composition, disabled provider egress and closed zero-cost journal remain the
+server-side evidence. Ordinary admitted live comparison behavior is unchanged.
+
+The deterministic fake chooses an eligible control rather than solving a task.
+Wrong synthetic dispositions or failed fake workflows remain recorded outcomes;
+never teach the fake an oracle answer. Valid collection, session isolation, fresh
+capture, bounded transport and accounting establish readiness only.
+`qualityEvidenceAvailable` must remain false. Keep #43 open and beta closed until
+the separately authorized real-model comparison and quality decision exist.
+
+The first nine cohorts exposed error-terminal fallback scoring. Preserve those
+original reports as affected evidence. After correcting that collector boundary,
+collect a separate three-tuple check using a fresh fake plan and local PKCE session:
+`wiki-search/multimodal/0`, `n43-page-injection/structured/0` and
+`n43-page-injection/multimodal/0`. Keep its new source and closed journal separate.
+The public trial may remain a failed capture/readiness check; its purpose is to
+verify that an error cannot become provider navigation success. Do not retest the
+original matrix, visit the fresh holdout or retry failures.
 
 ## Reporting and decision rules
 

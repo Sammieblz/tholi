@@ -183,6 +183,7 @@ export default class BrowserReporter implements Reporter {
     for (const [name, key] of [
       ["navigation-baseline", "measurement"],
       ["perception-comparison", "comparison"],
+      ["zero-cost-provider-network", "providerNetwork"],
       ["motion-benchmark", "motion"],
       ["native-surfaces", "surfaces"],
       ["welcome-playback", "welcomePlayback"],

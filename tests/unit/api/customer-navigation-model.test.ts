@@ -32,6 +32,10 @@ test("the automated network guard blocks customer and managed model endpoints be
     ...Object.values(CUSTOMER_PROVIDER_COUNT_ENDPOINTS),
     "https://aiplatform.googleapis.com/v1/publishers/google/models/test:generateContent",
     "https://us-central1-aiplatform.googleapis.com/v1/test",
+    "https://aiplatform.us.rep.googleapis.com/v1/test",
+    "https://aiplatform.eu.rep.googleapis.com/v1/test",
+    "https://API.OPENAI.COM./v1/test",
+    "https://aiplatform.googleapis.com./v1/test",
     "https://generativelanguage.googleapis.com/v1/test",
   ])
     await expect(guarded(endpoint)).rejects.toThrow(
