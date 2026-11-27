@@ -479,6 +479,13 @@ export const contentMessageSchema = z.discriminatedUnion("type", [
       type: z.literal("GUIDE_CONTROL"),
       sessionId: z.string().uuid(),
       controlId: z.string().regex(/^w[0-9a-f]{16}-[0-9]+$/),
+      binding: z
+        .object({
+          revision: z.number().int().nonnegative(),
+          signature: z.string().min(1).max(1000),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
 ]);

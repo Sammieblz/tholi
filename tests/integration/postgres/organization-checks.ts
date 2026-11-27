@@ -98,6 +98,26 @@ export async function runOrganizationChecks(
         await service.workflows(author, workspaceId, true, context)
       ).items[0];
       assert.equal(published.revision, workflow.revision);
+      const selection = { id, revision: published.revision, index: 0 };
+      const lookup = { origin: published.origin, selection };
+      assert.deepEqual(
+        await service.publishedGuide(author, workspaceId, lookup, context),
+        {
+          count: published.guide.milestones.length,
+          milestone: published.guide.milestones[0],
+        },
+      );
+      await assert.rejects(() =>
+        service.publishedGuide(outsider, workspaceId, lookup, context),
+      );
+      await assert.rejects(() =>
+        service.publishedGuide(
+          author,
+          workspaceId,
+          { ...lookup, origin: "https://other.example" },
+          context,
+        ),
+      );
       const outcomes = await Promise.allSettled(
         [0, 1].map(() =>
           service.saveWorkflow(
@@ -126,6 +146,33 @@ export async function runOrganizationChecks(
         [workspaceId, id],
       );
       assert.equal(audit.rows[0].count, 5);
+      const history = await service.history(owner, workspaceId, id, context);
+      assert.deepEqual(
+        history.revisions.map((entry) => entry.revision),
+        [published.revision],
+      );
+      await action(owner, "retire");
+      await assert.rejects(() =>
+        service.publishedGuide(author, workspaceId, lookup, context),
+      );
+      workflow = await service.actWorkflow(
+        owner,
+        workspaceId,
+        id,
+        {
+          action: "restore",
+          expectedRevision: workflow.revision,
+          contentHash: workflow.contentHash,
+          publishedRevision: published.revision,
+        },
+        context,
+      );
+      assert.equal(workflow.status, "draft");
+      assert.equal(workflow.contentHash, published.contentHash);
+      assert.equal(workflow.reviewerId, null);
+      await assert.rejects(() =>
+        service.publishedGuide(author, workspaceId, lookup, context),
+      );
       await assert.rejects(() =>
         runtime.query(
           "UPDATE tholi.organization_workflow_versions SET action='publish'",

@@ -9,6 +9,7 @@ import {
 } from "../../../packages/nlp/retrieval";
 import {
   recordWorkflowAction,
+  publishedStepControl,
   continueWorkflow,
 } from "../../../packages/navigation-core/workflows";
 import {
@@ -66,6 +67,33 @@ const input = (
   protocolVersion: 2 as const,
   contextRevision: 0,
   ...extra,
+});
+test("a published guide binds only a unique visible ordinary target on a complete page", () => {
+  const step = {
+    id: "new",
+    purpose: "Open new repository",
+    targets: ["New repository"],
+    kind: "navigate" as const,
+    instruction: "Choose New repository.",
+  };
+  const observed = page("https://github.com", ["New repository"]);
+  expect(publishedStepControl(observed, step)?.id).toBe(
+    observed.controls[0].id,
+  );
+  expect(
+    publishedStepControl({ ...observed, partial: true }, step),
+  ).toBeUndefined();
+  expect(
+    publishedStepControl(
+      page(observed.origin, ["New repository", "New repository"]),
+      step,
+    ),
+  ).toBeUndefined();
+  expect(
+    publishedStepControl(observed, { ...step, kind: "review" }),
+  ).toBeUndefined();
+  observed.controls[0].risk = "consequential";
+  expect(publishedStepControl(observed, step)).toBeUndefined();
 });
 test("a verified reveal retains the choice handoff instead of targeting a popup search field", async () => {
   const c = core(),

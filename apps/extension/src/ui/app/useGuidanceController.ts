@@ -4,6 +4,7 @@ import { api } from "../../platform/api";
 import { useEffect, useRef, useState } from "react";
 import { beginJourney } from "../../../../../packages/goal-planner/task-journey";
 import { liveReport } from "../../../../../packages/live-diagnostics";
+import { downloadJson } from "../../../../../packages/browser-adapter/download";
 import {
   LIVE_ROUTE_ID,
   LIVE_VERSION,
@@ -513,17 +514,7 @@ export function useGuidanceController(widget = false) {
               ? { diagnostics: view?.diagnostics, history: view?.history }
               : {}),
           };
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "tholi-route-report.json";
-    a.hidden = true;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    downloadJson(report, "tholi-route-report.json");
   };
   const presentation = present(
     displayedView,

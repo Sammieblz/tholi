@@ -85,6 +85,36 @@ export const organizationWorkflowSchema = z
   })
   .strict();
 export type OrganizationWorkflow = z.infer<typeof organizationWorkflowSchema>;
+export const publishedGuideQuerySchema = z
+  .object({
+    origin: navigationKnowledgeOriginSchema,
+    selection: z
+      .object({
+        id: z.string().uuid(),
+        revision: serviceRevisionSchema,
+        index: z.number().int().min(0).max(63),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+export const publishedGuideListSchema = z
+  .object({
+    items: z
+      .array(
+        organizationWorkflowSchema.pick({ id: true, revision: true }).extend({
+          title: z.string().max(160),
+        }),
+      )
+      .max(ORGANIZATION_LIMITS.workflows),
+  })
+  .strict();
+export const publishedGuideStepSchema = z
+  .object({
+    milestone: workflowGuideSchema.shape.milestones.element,
+    count: z.number().int().min(1).max(64),
+  })
+  .strict();
 export const organizationWorkflowDraftSchema = z
   .object({
     expectedRevision: serviceExpectedRevisionSchema,
@@ -122,7 +152,22 @@ export const organizationWorkflowActionSchema = z
   .object({
     expectedRevision: serviceRevisionSchema,
     action: z.enum(["submit", "approve", "publish", "retire", "restore"]),
+    publishedRevision: serviceRevisionSchema.optional(),
     contentHash: hash,
+  })
+  .strict();
+export const organizationPublicationHistorySchema = z
+  .object({
+    revisions: z
+      .array(
+        z
+          .object({
+            revision: serviceRevisionSchema,
+            publishedAt: z.string().datetime(),
+          })
+          .strict(),
+      )
+      .max(50),
   })
   .strict();
 export type OrganizationWorkflowAction = z.infer<

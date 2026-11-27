@@ -5,6 +5,7 @@ import {
 } from "../platform/private-settings";
 import { api, type Tabs } from "../platform/api";
 import { isWelcome, setupCommand } from "./setup-service";
+import { publishedGuideCommand } from "./published-guides";
 import {
   hostPermissionPattern,
   websiteHostPermissions,
@@ -113,6 +114,15 @@ interface Context {
 
 export function registerMessages(context: Context) {
   api.runtime.onMessage.addListener((raw, sender, respond) => {
+    if (raw?.type === "TEAM_GUIDE") {
+      if (!isPanel(sender)) {
+        respond({ error: "Open team guides in the Tholi sidebar." });
+        return;
+      }
+      void publishedGuideCommand(raw, context).then(respond).catch(() =>
+        respond({ error: "Reopen your team guides with a current account and an active website." }));
+      return true;
+    }
     if (typeof raw?.type === "string" && raw.type.startsWith("SETUP_")) {
       if (!isPanel(sender) && !isWelcome(sender)) {
         respond({ error: "Open setup from a trusted Tholi interface." });

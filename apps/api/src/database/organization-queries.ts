@@ -120,6 +120,21 @@ export class ScopedOrganization implements OrganizationStore {
       | { record: OrganizationWorkflow; published: OrganizationWorkflow | null }
       | undefined;
   }
+  async history(id: string) {
+    const result = await this.client.query<{
+      revision: string;
+      created_at: Date;
+    }>(
+      "SELECT revision::text,created_at FROM tholi.organization_workflow_versions WHERE workspace_id=$1 AND id=$2 AND action='publish' ORDER BY organization_workflow_versions.revision DESC LIMIT 50",
+      [this.scope.workspaceId, id],
+    );
+    return {
+      revisions: result.rows.map((row) => ({
+        revision: row.revision,
+        publishedAt: row.created_at.toISOString(),
+      })),
+    };
+  }
   private async privileged() {
     const result = await this.client.query(
       "SELECT tholi.current_member_role($1) AS role",
@@ -250,19 +265,24 @@ export class ScopedOrganization implements OrganizationStore {
           record.status = "retired";
           published = null;
           break;
-        case "restore":
-          // Rollback restores the last published content into a new draft. The
-          // current policy and independent review still apply before republishing.
-          if (!published) conflict();
+        case "restore": {
+          const previous = await this.client.query(
+            "SELECT record FROM tholi.organization_workflow_versions WHERE workspace_id=$1 AND id=$2 AND action='publish' AND ($3::bigint IS NULL OR revision=$3) ORDER BY revision DESC LIMIT 1",
+            [this.scope.workspaceId, id, input.publishedRevision ?? null],
+          );
+          const restored = previous.rows[0]?.record;
+          if (!restored) conflict();
+          const prior = organizationWorkflowSchema.parse(restored);
           Object.assign(record, {
-            guide: published.guide,
-            origin: published.origin,
-            contentHash: published.contentHash,
+            guide: prior.guide,
+            origin: prior.origin,
+            contentHash: prior.contentHash,
             authorId: this.scope.accountId,
             reviewerId: null,
             status: "draft",
           });
           break;
+        }
       }
     }
     return this.store(record, published, input.action);
@@ -281,7 +301,13 @@ export class ScopedOrganization implements OrganizationStore {
     const digest = organizationDigest(chunks);
     const previous = await this.client.query(
       "SELECT metadata FROM tholi.organization_knowledge_sources WHERE workspace_id=$1 AND metadata->>'origin'=$2 AND metadata->>'title'=$3 AND metadata->>'sha256'=$4 AND metadata->>'sourceUrl' IS NOT DISTINCT FROM $5 AND deleted_at IS NULL AND expires_at>clock_timestamp() LIMIT 1",
-      [this.scope.workspaceId, input.origin, input.title, digest, input.sourceUrl ?? null],
+      [
+        this.scope.workspaceId,
+        input.origin,
+        input.title,
+        digest,
+        input.sourceUrl ?? null,
+      ],
     );
     if (previous.rows[0])
       return knowledgeSourceSchema.parse(previous.rows[0].metadata);
