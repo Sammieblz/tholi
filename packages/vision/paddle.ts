@@ -11,13 +11,20 @@ export class PaddleEngine {
   constructor(
     private root: string,
     private runtime: string,
+    private variant: "tiny" | "small" = "tiny",
   ) {}
   private open() {
     return (this.pipeline ||= PaddleOCR.create({
-      textDetectionModelName: "PP-OCRv6_tiny_det",
-      textRecognitionModelName: "PP-OCRv6_tiny_rec",
-      textDetectionModelAsset: { url: this.root + "PP-OCRv6_tiny_det.tar" },
-      textRecognitionModelAsset: { url: this.root + "PP-OCRv6_tiny_rec.tar" },
+      textDetectionModelName:
+        this.variant === "tiny" ? "PP-OCRv6_tiny_det" : "PP-OCRv6_small_det",
+      textRecognitionModelName:
+        this.variant === "tiny" ? "PP-OCRv6_tiny_rec" : "PP-OCRv6_small_rec",
+      textDetectionModelAsset: {
+        url: this.root + `PP-OCRv6_${this.variant}_det.tar`,
+      },
+      textRecognitionModelAsset: {
+        url: this.root + `PP-OCRv6_${this.variant}_rec.tar`,
+      },
       worker: false, // Already isolated in Tholi's dedicated worker.
       ortOptions: {
         backend: "wasm",
@@ -58,7 +65,10 @@ export class PaddleEngine {
       } = input;
       return visualObservationSchema.parse({
         ...stamp,
-        engine: "paddle-0.4.2-v6-tiny",
+        engine:
+          this.variant === "tiny"
+            ? "paddle-0.4.2-v6-tiny"
+            : "paddle-0.4.2-v6-small",
         elapsedMs: performance.now() - start,
         regions: result.items
           .slice(0, 300)

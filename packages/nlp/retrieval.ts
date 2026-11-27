@@ -3,6 +3,7 @@ import type { TaskIntent } from "../navigation-core/contracts";
 import { sanitizeText } from "../privacy-redaction";
 import type { Embedder } from "./model";
 import { MODEL_REVISION, DIMENSIONS } from "./constants";
+import { embeddingRevision } from "./profiles";
 import { goalScore } from "../goal-planner";
 import { languageCode } from "../goal-planner/task-journey";
 import { taskWords } from "../goal-planner/task-intent";
@@ -126,6 +127,11 @@ export function bm25(query: string, documents: string[]): number[] {
   );
 }
 export class SemanticIndex {
+  get modelRevision() {
+    return this.embedder.profile
+      ? embeddingRevision(this.embedder.profile)
+      : MODEL_REVISION;
+  }
   activity = { embedded: 0, cacheHits: 0 };
   private hot = new Map<string, number[]>();
   private hashes = new Map<string, string>();
@@ -140,34 +146,45 @@ export class SemanticIndex {
     private embedder: Embedder,
     private storage: DerivedStore,
   ) {}
-  async vector(text: string, signal?: AbortSignal, persist = true) {
+  async vector(
+    text: string,
+    signal?: AbortSignal,
+    persist = true,
+    purpose: "query" | "document" = "document",
+  ) {
     signal?.throwIfAborted();
-    const hot = this.hot.get(text);
+    const profile = this.embedder.profile;
+    const revision = profile ? embeddingRevision(profile) : MODEL_REVISION;
+    const identity =
+      profile && (profile.queryPrefix || profile.documentPrefix)
+        ? `${purpose}:${text}`
+        : text;
+    const hot = this.hot.get(identity);
     if (hot) {
       this.activity.cacheHits++;
       return hot;
     }
-    const key = MODEL_REVISION + ":" + (await semanticHash(text)),
+    const key = revision + ":" + (await semanticHash(identity)),
       cached = persist ? await this.storage.getEmbedding(key) : undefined;
     if (
-      cached?.revision === MODEL_REVISION &&
-      cached.vector.length === DIMENSIONS &&
+      cached?.revision === revision &&
+      cached.vector.length === (profile?.dimensions || DIMENSIONS) &&
       cached.vector.every(Number.isFinite)
     ) {
       this.activity.cacheHits++;
-      this.remember(text, cached.vector);
+      this.remember(identity, cached.vector);
       return cached.vector;
     }
-    const [vector] = await this.embedder.embed([text], signal);
+    const [vector] = await this.embedder.embed([text], signal, purpose);
     this.activity.embedded++;
     if (persist)
       await this.storage.putEmbedding({
         key,
-        revision: MODEL_REVISION,
+        revision,
         vector,
         usedAt: Date.now(),
       });
-    this.remember(text, vector);
+    this.remember(identity, vector);
     return vector;
   }
   async rank(
@@ -230,7 +247,7 @@ export class SemanticIndex {
         (c) => c.reference?.frameId || c.retention === "session",
       );
     const structural = structuralObservation(page).controls;
-    const queryVector = await this.vector(query, signal, !ephemeral);
+    const queryVector = await this.vector(query, signal, !ephemeral, "query");
     const entries: IndexEntry[] = [];
     const candidates = [];
     // Semantic/state cache keys deliberately omit visibility, risk and checked state.
