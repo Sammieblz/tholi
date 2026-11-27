@@ -125,6 +125,13 @@ it("exports bounded evidence without labels, goals, descriptions, paths or forge
     liveDiagnostics: diagnostics,
   };
   const report = liveReport(view, "diagnostics");
+  expect(report.stages?.ranking).toBe(diagnostics.planning.decision);
+  const nextPage = { ...p, revision: p.revision + 1, partial: true };
+  const stale = liveReport({ ...view, page: nextPage }, "target-missing");
+  expect(stale.stages?.discovery).toBe("partial");
+  expect(stale.stages?.ranking).toBeUndefined();
+  expect(stale.stages?.binding).toBeUndefined();
+  expect(stale.stages?.verification).toBeUndefined();
   expect(JSON.stringify(report)).not.toMatch(
     /SENTINEL|secret\.example|"goal":|"page":/,
   );

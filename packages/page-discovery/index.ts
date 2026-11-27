@@ -11,7 +11,7 @@ import {
 } from "../browser-adapter/geometry";
 import { goalScore } from "../goal-planner";
 import { hash, type PageControl, type PageSnapshot } from "../page-model";
-import { StructureIndex } from "./structure";
+import { StructureIndex, structuralLabel } from "./structure";
 import {
   discoveryPerceptionSchema,
   PERCEPTION_LIMITS,
@@ -198,18 +198,21 @@ function contextOf(
 ) {
   const root = element.getRootNode() as Document | ShadowRoot;
   const labelBlock = (e: Element) =>
-    e.matches(headingSelector) ||
-    (e.matches("div,p,span,label") &&
-      e.childElementCount <= 2 &&
-      !e.querySelector("input,select,textarea,a,button,[contenteditable]") &&
-      !!safeName(e) &&
-      safeName(e).length <= 60);
+    !!structuralLabel(e, element) &&
+    (e.matches(headingSelector) ||
+      (e.matches("div,p,span,label") &&
+        e.childElementCount <= 2 &&
+        !e.querySelector("input,select,textarea,a,button,[contenteditable]") &&
+        !!safeName(e) &&
+        safeName(e).length <= 60));
   let parent = element.parentElement;
   const firstHeading = (parent: HTMLElement) => {
     if (!firstHeadings.has(parent))
       firstHeadings.set(
         parent,
-        parent.querySelector<HTMLElement>(headingSelector) || undefined,
+        [...parent.querySelectorAll<HTMLElement>(headingSelector)].find(
+          (e) => !!structuralLabel(e, element),
+        ),
       );
     return firstHeadings.get(parent);
   };
@@ -240,8 +243,8 @@ function contextOf(
     if (!headings)
       headingChildren.set(
         parent,
-        (headings = [...parent.children].filter((e) =>
-          e.matches(headingSelector),
+        (headings = [...parent.children].filter(
+          (e) => e.matches(headingSelector) && !!structuralLabel(e, element),
         )),
       );
     const preceding = headings
@@ -728,71 +731,79 @@ export class PageDiscovery {
         e.matches("a[href]") &&
         !["expand", "choice", "toggle"].includes(kind)
       ) {
-        try {
-          const url = new URL(e.getAttribute("href")!, base);
-          if (!["http:", "https:"].includes(url.protocol)) continue;
-          const path = publicPath(url);
-          navigationKey = hash(url.href);
-          link = {
-            origin: url.origin,
-            path,
-            key: hash(url.origin + url.pathname),
-          };
-          kind = "navigation";
-          if (
-            url.origin === base.origin &&
-            url.pathname === base.pathname &&
-            url.search === base.search &&
-            url.hash
-          ) {
-            const root = e.getRootNode() as Document | ShadowRoot;
-            const anchor = root.getElementById(
-              decodeURIComponent(url.hash.slice(1)),
-            );
-            // A fragment alone does not establish a section. Resolve it to its
-            // real heading/labelled region; broken or unrelated anchors are unusable.
-            const heading =
-              anchor &&
-              (anchor.closest<HTMLElement>(headingSelector) ||
-                anchor.querySelector<HTMLElement>(
-                  ":scope > h1,:scope > h2,:scope > h3,:scope > h4,:scope > h5,:scope > h6,:scope > [role=heading]",
-                ) ||
-                (anchor.nextElementSibling?.matches(headingSelector)
-                  ? (anchor.nextElementSibling as HTMLElement)
-                  : undefined));
-            const label = rawLabel.replace(/^\d+(?:\.\d+)*\s*/, "");
-            const region =
-              anchor?.matches("section,[role=region],main,[role=main]") &&
-              (anchor.hasAttribute("aria-label") ||
-                anchor.hasAttribute("aria-labelledby"))
-                ? anchor
-                : undefined;
-            const target = heading || region;
-            const genericLandmark =
-              /^(?:\(?top\)?|back to top|(?:jump|skip) to (?:main )?content)$/i.test(
-                label,
+        const href = e.getAttribute("href")!;
+        // Legacy ASP.NET and similar sites expose postbacks through executable
+        // anchor URLs. Keep the control visible as an opaque action so the
+        // existing risk policy can require review. Never parse, export or run
+        // the script URL, and never treat it as a destination.
+        if (/^\s*javascript\s*:/i.test(href)) {
+          kind = "action";
+        } else
+          try {
+            const url = new URL(href, base);
+            if (!["http:", "https:"].includes(url.protocol)) continue;
+            const path = publicPath(url);
+            navigationKey = hash(url.href);
+            link = {
+              origin: url.origin,
+              path,
+              key: hash(url.origin + url.pathname),
+            };
+            kind = "navigation";
+            if (
+              url.origin === base.origin &&
+              url.pathname === base.pathname &&
+              url.search === base.search &&
+              url.hash
+            ) {
+              const root = e.getRootNode() as Document | ShadowRoot;
+              const anchor = root.getElementById(
+                decodeURIComponent(url.hash.slice(1)),
               );
-            destinationAvailable =
-              !!target &&
-              (genericLandmark ||
-                goalScore(label, {
-                  label: safeName(target),
-                  context: "",
-                  kind: "section",
-                }) >= 0.6);
-            if (destinationAvailable) {
-              destination = target;
+              // A fragment alone does not establish a section. Resolve it to its
+              // real heading/labelled region; broken or unrelated anchors are unusable.
+              const heading =
+                anchor &&
+                (anchor.closest<HTMLElement>(headingSelector) ||
+                  anchor.querySelector<HTMLElement>(
+                    ":scope > h1,:scope > h2,:scope > h3,:scope > h4,:scope > h5,:scope > h6,:scope > [role=heading]",
+                  ) ||
+                  (anchor.nextElementSibling?.matches(headingSelector)
+                    ? (anchor.nextElementSibling as HTMLElement)
+                    : undefined));
+              const label = rawLabel.replace(/^\d+(?:\.\d+)*\s*/, "");
+              const region =
+                anchor?.matches("section,[role=region],main,[role=main]") &&
+                (anchor.hasAttribute("aria-label") ||
+                  anchor.hasAttribute("aria-labelledby"))
+                  ? anchor
+                  : undefined;
+              const target = heading || region;
+              const genericLandmark =
+                /^(?:\(?top\)?|back to top|(?:jump|skip) to (?:main )?content)$/i.test(
+                  label,
+                );
+              destinationAvailable =
+                !!target &&
+                (genericLandmark ||
+                  goalScore(label, {
+                    label: safeName(target),
+                    context: "",
+                    kind: "section",
+                  }) >= 0.6);
+              if (destinationAvailable) {
+                destination = target;
+                kind = "section";
+              }
+            }
+            if (url.hash === "#" || e.getAttribute("href") === "#") {
+              destination =
+                document.querySelector<HTMLElement>("h1,main") || undefined;
               kind = "section";
             }
+          } catch {
+            continue;
           }
-          if (url.hash === "#" || e.getAttribute("href") === "#") {
-            destination =
-              document.querySelector<HTMLElement>("h1,main") || undefined;
-            kind = "section";
-          }
-        } catch {
-          continue;
-        }
       }
       if (e.matches("summary")) kind = "expand";
       const checked = e.matches("input[type=checkbox],input[type=radio]")

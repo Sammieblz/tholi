@@ -234,10 +234,42 @@ export const liveReportSchema = z
       "completed",
     ]),
     verifiedSteps: count,
+    stages: z
+      .object({
+        discovery: z.enum(["unobserved", "partial", "complete"]),
+        projection: z.enum(["unobserved", "omissions", "complete"]),
+        ranking: planningDiagnosticsSchema.shape.decision.optional(),
+        binding: z.enum(["stale", "current"]).optional(),
+        verification: verificationEventSchema.shape.outcome.optional(),
+        vision: z.literal("requested").optional(),
+        service: z
+          .enum([
+            "pending",
+            "guiding",
+            "clarify",
+            "observation",
+            "unsupported",
+            "error",
+          ])
+          .optional(),
+      })
+      .strict()
+      .optional(),
     diagnostics: liveDiagnosticsSchema.optional(),
   })
   .strict();
 export function liveReport(view: SessionView, category: string) {
+  const page = view.page;
+  const diagnostics = view.liveDiagnostics;
+  const current = !!page && diagnostics?.revision === page.revision;
+  const planning =
+    current && diagnostics?.planning?.revision === page?.revision
+      ? diagnostics?.planning
+      : undefined;
+  const selected = planning?.candidates.find((candidate) =>
+    candidate.reasons.includes("selected"),
+  );
+  const event = current ? diagnostics?.events.at(-1) : undefined;
   // Construct from an allowlist, rather than copying page/goal/model fields.
   return liveReportSchema.parse({
     format: "navigator-live-debug-v1",
@@ -246,6 +278,29 @@ export function liveReport(view: SessionView, category: string) {
     routeVersion: view.routeVersion,
     status: view.status,
     verifiedSteps: view.verifiedSteps,
+    stages: {
+      discovery: !page ? "unobserved" : page.partial ? "partial" : "complete",
+      projection: !page?.coverage?.length
+        ? "unobserved"
+        : page.coverage.some((surface) => surface.omitted || !surface.complete)
+          ? "omissions"
+          : "complete",
+      ranking: planning?.decision,
+      binding: selected
+        ? page?.controls.some(
+            (control) =>
+              control.id === selected.id &&
+              hash(control.signature) === selected.signature,
+          )
+          ? "current"
+          : "stale"
+        : undefined,
+      verification:
+        event && event.revision === page?.revision ? event.outcome : undefined,
+      vision:
+        view.goalPlan?.recoveryStage === "vision" ? "requested" : undefined,
+      service: view.serviceNavigation?.state,
+    },
     diagnostics: view.liveDiagnostics,
   });
 }
