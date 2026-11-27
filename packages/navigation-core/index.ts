@@ -13,7 +13,7 @@ import {
   type PlanResult,
 } from "./contracts";
 import { interpretRequest, canonicalGoal } from "../nlp/interpret";
-import { SemanticIndex, MODEL_REVISION, words } from "../nlp";
+import { SemanticIndex, words } from "../nlp";
 import { beginJourney, planTask } from "../goal-planner/task-journey";
 import { planGoal } from "../goal-planner";
 import type { SiteMemory } from "../page-model";
@@ -127,7 +127,7 @@ export class NavigationCore {
           embedded: this.index.activity.embedded - activityBefore.embedded,
           cacheHits: this.index.activity.cacheHits - activityBefore.cacheHits,
           llmCalls: 0,
-          modelRevision: MODEL_REVISION,
+          modelRevision: this.index.modelRevision,
         },
       });
     };

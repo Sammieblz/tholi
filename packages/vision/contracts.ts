@@ -126,7 +126,11 @@ export const visualObservationSchema = visualStampSchema
       )
       .max(300),
     elapsedMs: z.number().finite().nonnegative(),
-    engine: z.enum(["tesseract-6.0.1-eng-fast", "paddle-0.4.2-v6-tiny"]),
+    engine: z.enum([
+      "tesseract-6.0.1-eng-fast",
+      "paddle-0.4.2-v6-tiny",
+      "paddle-0.4.2-v6-small",
+    ]),
   })
   .strict();
 export type RecognitionInput = z.infer<typeof recognitionInputSchema>;

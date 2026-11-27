@@ -3,14 +3,19 @@ import {
   pipeline,
   type FeatureExtractionPipeline,
 } from "@huggingface/transformers";
-import { MODEL, DIMENSIONS } from "./constants";
+import { LOCAL_RANKING_PROFILES, type LocalRankingProfile } from "./profiles";
 import {
   LocalEngineError,
   modelInitializationFailure,
 } from "./local-engine-error";
 export { MODEL, MODEL_REVISION, DIMENSIONS } from "./constants";
 export interface Embedder {
-  embed(texts: string[], signal?: AbortSignal): Promise<number[][]>;
+  readonly profile?: LocalRankingProfile;
+  embed(
+    texts: string[],
+    signal?: AbortSignal,
+    purpose?: "query" | "document",
+  ): Promise<number[][]>;
   dispose(): Promise<void>;
 }
 export class MiniLM implements Embedder {
@@ -18,8 +23,13 @@ export class MiniLM implements Embedder {
   constructor(
     private root: string,
     private wasmRoot?: string,
+    readonly profile: LocalRankingProfile = LOCAL_RANKING_PROFILES.baseline,
   ) {}
-  async embed(texts: string[], signal?: AbortSignal): Promise<number[][]> {
+  async embed(
+    texts: string[],
+    signal?: AbortSignal,
+    purpose: "query" | "document" = "document",
+  ): Promise<number[][]> {
     signal?.throwIfAborted();
     env.allowRemoteModels = false;
     env.allowLocalModels = true;
@@ -35,7 +45,7 @@ export class MiniLM implements Embedder {
       const pending: Promise<FeatureExtractionPipeline> = Promise.resolve()
         .then(
           () =>
-            pipeline("feature-extraction", MODEL, {
+            pipeline("feature-extraction", this.profile.model, {
               dtype: "q8",
               device: this.wasmRoot ? "wasm" : "cpu",
               local_files_only: true,
@@ -54,10 +64,15 @@ export class MiniLM implements Embedder {
     // Small batches let foreground queries/cancellation run between inference calls.
     for (const text of texts) {
       signal?.throwIfAborted();
-      const output = await extractor(text, {
-        pooling: "mean",
-        normalize: true,
-      });
+      const output = await extractor(
+        (purpose === "query"
+          ? this.profile.queryPrefix
+          : this.profile.documentPrefix) + text,
+        {
+          pooling: this.profile.pooling,
+          normalize: true,
+        },
+      );
       let vector: number[];
       try {
         vector = Array.from(output.data as Float32Array);
@@ -65,7 +80,7 @@ export class MiniLM implements Embedder {
         output.dispose();
       }
       if (
-        vector.length !== DIMENSIONS ||
+        vector.length !== this.profile.dimensions ||
         vector.some((v) => !Number.isFinite(v))
       )
         throw new LocalEngineError("MODEL_OUTPUT_INVALID");

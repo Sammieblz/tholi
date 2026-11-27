@@ -9,11 +9,41 @@ vi.mock("@huggingface/transformers", () => ({
   pipeline: model.pipeline,
 }));
 import { MiniLM, DIMENSIONS } from "../../../packages/nlp/model";
+import { localRankingProfile } from "../../../packages/nlp/profiles";
+import {
+  SemanticIndex,
+  MemoryDerivedStore,
+} from "../../../packages/nlp/retrieval";
+
+it("isolates prefixed query embeddings and requires explicit qualification access for candidate profiles", async () => {
+  expect(() => localRankingProfile("e5-small")).toThrow("not qualified");
+  const ready = extractor();
+  model.pipeline.mockResolvedValue(ready);
+  const profile = localRankingProfile("e5-small", true);
+  const local = new MiniLM("local-models/", "local-runtime/", profile);
+  const store = new MemoryDerivedStore(),
+    index = new SemanticIndex(local, store);
+  await index.vector("Settings", undefined, true, "query");
+  await index.vector("Settings", undefined, true, "document");
+  await index.vector("Settings", undefined, true, "query");
+  expect(ready.mock.calls.map((call) => call[0])).toEqual([
+    "query: Settings",
+    "passage: Settings",
+  ]);
+  expect(store.embeddings.size).toBe(2);
+  expect(index.modelRevision).toContain(profile.revision);
+  expect(
+    [...store.embeddings.values()].every(
+      (e) => e.revision === index.modelRevision,
+    ),
+  ).toBe(true);
+  await local.dispose();
+});
 
 function extractor() {
   const tensor = { data: new Float32Array(DIMENSIONS), dispose: vi.fn() };
   return Object.assign(
-    vi.fn(async () => tensor),
+    vi.fn(async (_text: string) => tensor),
     { dispose: vi.fn() },
   );
 }

@@ -8,6 +8,7 @@ playwright-report/
 __pycache__/
 .navigator-api/
 assets/models/
+assets/local-candidates/
 assets/ocr/
 assets/paddle/
 output/qa/
