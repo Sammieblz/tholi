@@ -9,6 +9,7 @@ import {
 import { NAVIGATION_TRANSPORT_LIMITS } from "./contracts-navigation";
 import { awaitAbortableOperation } from "./abort";
 import { identityAccountSchema } from "./contracts-identity";
+import { ORGANIZATION_LIMITS } from "./organization-limits";
 
 /** One URL policy for the website configuration and trusted native settings. */
 export function serviceOrigin(value: string): string {
@@ -103,12 +104,33 @@ export async function serviceRequest<T>(
       "The service request is invalid.",
     );
   }
+  const organizationWorkspace =
+    "/api/v1/workspaces/" +
+    "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
+  const organizationFileImport = new RegExp(
+      `^${organizationWorkspace}/organization/imports$`,
+      "i",
+    ).test(target.pathname),
+    organizationTextImport = new RegExp(
+      `^${organizationWorkspace}/organization/sources$`,
+      "i",
+    ).test(target.pathname);
   const limits = navigation
     ? NAVIGATION_TRANSPORT_LIMITS
-    : {
-        maxBodyBytes: SERVICE_LIMITS.maxBodyBytes,
-        maxResponseBytes: SERVICE_LIMITS.maxBodyBytes,
-      };
+    : organizationFileImport
+      ? {
+          maxBodyBytes: ORGANIZATION_LIMITS.httpBodyBytes,
+          maxResponseBytes: ORGANIZATION_LIMITS.httpResponseBytes,
+        }
+      : organizationTextImport
+        ? {
+            maxBodyBytes: ORGANIZATION_LIMITS.extractedBytes + 64 * 1024,
+            maxResponseBytes: ORGANIZATION_LIMITS.httpResponseBytes,
+          }
+        : {
+            maxBodyBytes: SERVICE_LIMITS.maxBodyBytes,
+            maxResponseBytes: SERVICE_LIMITS.maxBodyBytes,
+          };
   if (body && new TextEncoder().encode(body).byteLength > limits.maxBodyBytes)
     throw new ServiceClientError(
       "PAYLOAD_TOO_LARGE",

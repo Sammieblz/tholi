@@ -34,6 +34,32 @@ function context(
 }
 
 describe("portable authorization contracts", () => {
+  it("keeps organization authoring, independent publication and owner policy separate from personal data", () => {
+    for (const role of ["owner", "admin", "member"] as const) {
+      const current = context(role);
+      expect(evaluateAuthorization(current, "organization.read").allowed).toBe(
+        true,
+      );
+      expect(evaluateAuthorization(current, "organization.write").allowed).toBe(
+        true,
+      );
+      expect(
+        evaluateAuthorization(current, "organization.publish").allowed,
+      ).toBe(role !== "member");
+      expect(
+        evaluateAuthorization(current, "organization.policy").allowed,
+      ).toBe(role === "owner");
+      current.membership!.status = "revoked";
+      expect(evaluateAuthorization(current, "organization.read").allowed).toBe(
+        false,
+      );
+    }
+    const personal = context("owner");
+    personal.workspace!.kind = "personal";
+    expect(evaluateAuthorization(personal, "organization.write").allowed).toBe(
+      false,
+    );
+  });
   it("uses bounded shared pagination and decimal revisions without scope selectors", () => {
     expect(
       authorizationPageQuerySchema.parse({ after: owner, limit: "50" }),

@@ -17,6 +17,7 @@ import { navigationKnowledge } from "./migrations/014-navigation-knowledge";
 import { identityRetention } from "./migrations/015-identity-retention";
 import { jobAdmission } from "./migrations/016-job-admission";
 import { subscriptionBilling } from "./migrations/017-subscription-billing";
+import { organizationPilot } from "./migrations/018-organization-pilot";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -57,6 +58,7 @@ export const migrations: readonly DatabaseMigration[] = Object.freeze([
   migration(15, "identity-retention", identityRetention),
   migration(16, "job-admission", jobAdmission),
   migration(17, "subscription-billing-storage", subscriptionBilling),
+  migration(18, "organization-pilot", organizationPilot),
 ]);
 
 export interface MigrationOptions {
@@ -225,6 +227,9 @@ const mutableTables = [
   "outbox",
   "provider_connections",
   "navigation_knowledge_sites",
+  "organization_policies",
+  "organization_workflows",
+  "organization_knowledge_sources",
 ] as const;
 
 const appendOnlyTables = [
@@ -233,6 +238,8 @@ const appendOnlyTables = [
   "credit_grants",
   "credit_settlements",
   "usage_records",
+  "organization_workflow_versions",
+  "organization_policy_versions",
 ] as const;
 
 function runtimeIdentifier(role: string): string {
@@ -340,6 +347,10 @@ async function grantRuntime(client: PoolClient, role: string) {
     "SELECT table_name FROM information_schema.tables WHERE table_schema = 'tholi'",
   );
   const existing = new Set(rows.map((row) => row.table_name));
+  if (existing.has("organization_policies"))
+    await client.query(
+      `GRANT EXECUTE ON FUNCTION tholi.organization_access(uuid) TO ${identifier}`,
+    );
   await client.query(`GRANT USAGE ON SCHEMA tholi TO ${identifier}`);
   // Durable application tables get no DELETE, TRUNCATE, DDL or future-table
   // default grant. Saved data is tombstoned; bounded ephemeral identity cleanup

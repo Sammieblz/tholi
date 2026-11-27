@@ -35,6 +35,9 @@ import { SERVICE_ROUTES } from "./service-inventory";
 import { identityCookieNames } from "./identity-cookies";
 
 interface ServiceFeatures {
+  organizationEnabled?: boolean;
+  organizationImportsEnabled?: boolean;
+  organizationPublicCrawlingEnabled?: boolean;
   identityEnabled?: boolean;
   secureCookies?: boolean;
   authorizationEnabled?: boolean;
@@ -58,6 +61,9 @@ interface ServiceFeatures {
 
 function serviceCapabilities(features: ServiceFeatures) {
   const {
+    organizationEnabled = false,
+    organizationImportsEnabled = false,
+    organizationPublicCrawlingEnabled = false,
     identityEnabled = false,
     authorizationEnabled = false,
     jobsEnabled = false,
@@ -83,6 +89,13 @@ function serviceCapabilities(features: ServiceFeatures) {
     implementationVersion: apiPackage.version,
     supportedVersions: [SERVICE_CONTRACT_VERSION],
     capabilities: [
+      ...(organizationEnabled ? ["organization-pilot"] : []),
+      ...(organizationEnabled && organizationImportsEnabled
+        ? ["organization-document-import"]
+        : []),
+      ...(organizationEnabled && organizationPublicCrawlingEnabled
+        ? ["organization-public-document-crawl"]
+        : []),
       "capabilities",
       "handshake",
       "openapi",

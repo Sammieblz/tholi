@@ -586,6 +586,42 @@ function identityEnvironment(local = false): Record<string, string> {
 }
 
 describe("API configuration profiles", () => {
+  it("keeps public documentation fetching behind isolated development services", () => {
+    const enabled = {
+      ...identityEnvironment(true),
+      THOLI_DOCUMENT_CONVERTER_ORIGIN: "http://document-converter:8796",
+      THOLI_PUBLIC_DOCUMENTATION_FETCHER_ORIGIN:
+        "http://public-doc-fetcher:8797",
+      THOLI_PUBLIC_DOCUMENTATION_CRAWLING: "true",
+    };
+    expect(parseServiceConfig(enabled).options).toMatchObject({
+      documentConverterOrigin: "http://document-converter:8796",
+      publicDocumentationFetcherOrigin:
+        "http://public-doc-fetcher:8797",
+      publicDocumentationCrawling: true,
+    });
+    expect(
+      parseServiceConfig({
+        ...identityEnvironment(true),
+        THOLI_PUBLIC_DOCUMENTATION_CRAWLING: "false",
+      }).options.publicDocumentationCrawling,
+    ).toBeUndefined();
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(),
+        ...enabled,
+        NODE_ENV: "production",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseServiceConfig({
+        ...identityEnvironment(true),
+        THOLI_DOCUMENT_CONVERTER_ORIGIN: "http://document-converter:8796",
+        THOLI_PUBLIC_DOCUMENTATION_FETCHER_ORIGIN: "http://127.0.0.1:8797",
+        THOLI_PUBLIC_DOCUMENTATION_CRAWLING: "true",
+      }),
+    ).toThrow("isolated development fetcher");
+  });
   it("enables fixture plan funding only in the explicit development profile", () => {
     expect(parseServiceConfig(identityEnvironment()).options.plans).toEqual({
       environment: "production",

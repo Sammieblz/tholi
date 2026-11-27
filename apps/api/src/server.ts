@@ -18,6 +18,7 @@ import type { CreditService } from "./application/quotas";
 import type { PlanService } from "./application/plans";
 import type { BillingService } from "./application/billing";
 import type { SavedDataService } from "./application/saved-data";
+import type { OrganizationService } from "./application/organization";
 import type { AccountService } from "./application/account";
 import type { ProviderConnectionService } from "./application/provider-connections";
 import { createObservability } from "./adapters/observability";
@@ -38,6 +39,7 @@ export interface ServiceApiServices {
   plans?: PlanService;
   billing?: BillingService;
   savedData?: SavedDataService;
+  organization?: OrganizationService;
   account?: AccountService;
   providers?: ProviderConnectionService;
 }
@@ -107,6 +109,7 @@ async function createServiceRuntime(
   let plans = injected.plans;
   let billing = injected.billing;
   let savedData = injected.savedData;
+  let organization = injected.organization;
   let account = injected.account;
   let providers = injected.providers;
   const ownedResources = [...resources];
@@ -120,6 +123,7 @@ async function createServiceRuntime(
       plans ||
       billing ||
       savedData ||
+      organization ||
       account ||
       providers) &&
     !identity
@@ -164,6 +168,9 @@ async function createServiceRuntime(
       !!options.navigation,
       options.plans?.environment,
       options.providers,
+      options.documentConverterOrigin,
+      options.publicDocumentationCrawling,
+      options.publicDocumentationFetcherOrigin,
     ).catch(async (error) => {
       await observer.close();
       throw error;
@@ -178,6 +185,7 @@ async function createServiceRuntime(
     plans = runtime.plans;
     billing = runtime.billing;
     savedData = runtime.savedData;
+    organization = runtime.organization;
     account = runtime.account;
     providers = runtime.providers;
     ownedResources.push(...runtime.resources);
@@ -269,6 +277,10 @@ async function createServiceRuntime(
         plansEnabled: !!plans,
         billingRecordsEnabled: !!billing,
         savedDataEnabled: !!savedData,
+        organizationEnabled: !!organization?.available,
+        organizationImportsEnabled: !!organization?.importsAvailable,
+        organizationPublicCrawlingEnabled:
+          !!organization?.publicCrawlingAvailable,
         savedDataWritesEnabled: savedData?.writesAvailable,
         savedDataExportsEnabled: savedData?.exportsAvailable,
         accountExportsEnabled: account?.exportsAvailable,
@@ -327,6 +339,11 @@ async function createServiceRuntime(
         if (savedData) {
           const { registerSavedDataApi } = await import("./routes/saved-data");
           await registerSavedDataApi(app, identity, savedData);
+        }
+        if (organization?.available) {
+          const { registerOrganizationApi } =
+            await import("./routes/organization");
+          await registerOrganizationApi(app, identity, organization);
         }
       }
       registerHealth(app, "service", lifecycle);

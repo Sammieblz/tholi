@@ -12,6 +12,7 @@ import {
 import { PostgresRepositories } from "../../../apps/api/src/database/repositories";
 import { runIdentityChecks } from "./identity-checks";
 import { runAuthorizationChecks } from "./authorization-checks";
+import { runOrganizationChecks } from "./organization-checks";
 import { runJobChecks } from "./job-checks";
 import { runSupportChecks } from "./support-checks";
 import { runObservabilityChecks } from "./observability-checks";
@@ -1642,6 +1643,7 @@ export async function runPostgresChecks(options: PostgresCheckOptions) {
     await runAccountChecks(runtime, migration, record, worker);
     await runIdentityChecks(runtime, migration, record, worker);
     await runAuthorizationChecks(runtime, migration, record);
+    await runOrganizationChecks(runtime, migration, record);
     if (worker) {
       await runJobChecks(runtime, migration, worker, record);
       await runSupportChecks(runtime, migration, worker, record);

@@ -39,6 +39,9 @@ export interface ApiOptions {
 }
 
 export interface ServiceApiOptions {
+  documentConverterOrigin?: string;
+  publicDocumentationFetcherOrigin?: string;
+  publicDocumentationCrawling?: boolean;
   origins: string[];
   observability?: ObservabilityOptions;
   transport?: Partial<ServiceTransportPolicy>;
@@ -323,6 +326,43 @@ export function validateServiceOptions(
   if (!options || typeof options !== "object")
     throw new Error("Invalid service configuration.");
   const origins = validateOrigins(options.origins, true);
+  const documentConverterOrigin = options.documentConverterOrigin;
+  const publicDocumentationFetcherOrigin =
+    options.publicDocumentationFetcherOrigin;
+  const publicDocumentationCrawling =
+    options.publicDocumentationCrawling ?? false;
+  if (
+    typeof publicDocumentationCrawling !== "boolean" ||
+    (publicDocumentationCrawling &&
+      (!options.identity ||
+        options.plans?.environment !== "development" ||
+        !documentConverterOrigin ||
+        !publicDocumentationFetcherOrigin))
+  )
+    throw new Error(
+      "Public documentation crawling requires the isolated converter and a development identity profile.",
+    );
+  if (
+    documentConverterOrigin !== undefined &&
+    (!options.identity ||
+      options.plans?.environment !== "development" ||
+      !/^http:\/\/(?:document-converter:8796|127\.0\.0\.1:[1-9]\d{0,4})$/.test(
+        documentConverterOrigin,
+      ) ||
+      Number(new URL(documentConverterOrigin).port) > 65535)
+  )
+    throw new Error(
+      "Document conversion requires an explicit private development identity profile.",
+    );
+  if (
+    publicDocumentationFetcherOrigin !== undefined &&
+    (!options.identity ||
+      options.plans?.environment !== "development" ||
+      publicDocumentationFetcherOrigin !== "http://public-doc-fetcher:8797")
+  )
+    throw new Error(
+      "Public documentation fetching requires the isolated development fetcher.",
+    );
   const transport = validateServiceTransportPolicy(options.transport);
   const observability = options.observability
     ? validateObservabilityOptions(options.observability, "tholi-api")
@@ -358,9 +398,9 @@ export function validateServiceOptions(
   )
     throw new Error("Invalid provider connection configuration.");
   if (!options.identity) {
-    if (options.providers)
+    if (options.providers || publicDocumentationCrawling)
       throw new Error(
-        "Provider connections require the composed identity profile.",
+        "Provider connections and documentation crawling require the composed identity profile.",
       );
     if (plans)
       throw new Error("Product plans require the composed identity profile.");
@@ -408,6 +448,11 @@ export function validateServiceOptions(
     identity,
     ...(observability ? { observability } : {}),
     database: { ...options.database! },
+    ...(documentConverterOrigin ? { documentConverterOrigin } : {}),
+    ...(publicDocumentationFetcherOrigin
+      ? { publicDocumentationFetcherOrigin }
+      : {}),
+    ...(publicDocumentationCrawling ? { publicDocumentationCrawling: true } : {}),
     ...(plans ? { plans } : {}),
     ...(navigation ? { navigation } : {}),
     ...(providers ? { providers } : {}),
@@ -1039,6 +1084,26 @@ function parseIdentityConfig(env: Environment): IdentityOptions | undefined {
 }
 
 export function parseServiceConfig(env: Environment) {
+  const documentConverterOrigin = environmentValue(
+    env,
+    "THOLI_DOCUMENT_CONVERTER_ORIGIN",
+  );
+  const publicDocumentationFetcherOrigin = environmentValue(
+    env,
+    "THOLI_PUBLIC_DOCUMENTATION_FETCHER_ORIGIN",
+  );
+  const publicDocumentationCrawling = environmentValue(
+    env,
+    "THOLI_PUBLIC_DOCUMENTATION_CRAWLING",
+  );
+  if (
+    publicDocumentationCrawling !== undefined &&
+    publicDocumentationCrawling !== "true" &&
+    publicDocumentationCrawling !== "false"
+  )
+    throw new Error(
+      "Invalid public documentation crawling availability configuration.",
+    );
   // The operator experiment is separate. HTTP inference requires the explicit
   // authenticated and consented transport milestone before any live adapter.
   const model = environmentValue(env, "THOLI_MODEL_PROVIDER") ?? "fake";
@@ -1144,6 +1209,13 @@ export function parseServiceConfig(env: Environment) {
                 env.NODE_ENV === "development" ? "development" : "production",
             },
           }
+        : {}),
+      ...(documentConverterOrigin ? { documentConverterOrigin } : {}),
+      ...(publicDocumentationFetcherOrigin
+        ? { publicDocumentationFetcherOrigin }
+        : {}),
+      ...(publicDocumentationCrawling === "true"
+        ? { publicDocumentationCrawling: true }
         : {}),
       ...(navigation === "true"
         ? { navigation: { provider: "fake" as const } }

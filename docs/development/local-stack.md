@@ -362,3 +362,28 @@ commands. Full certification is required separately before release packaging.
 
 See the [dated verification record](testing/local-stack-validation.md) for actual
 host coverage, findings and current evidence status.
+
+## Public documentation import
+
+The normal local stack has no internet egress from the API and does not crawl
+websites. To exercise the explicitly approved public documentation importer, run
+the isolated knowledge profile:
+
+```sh
+npm run local:up -- --profile knowledge
+```
+
+This profile enables document conversion and the public crawler only for the
+local development identity service. The API stays on internal networks. A
+separate, resource-limited fetcher is the only service attached to an outbound
+network; it accepts bounded HTTPS requests and rejects private or special IP
+destinations, cross-origin redirects, paths outside the requested documentation
+section and pages disallowed by `robots.txt`. It does not use browser cookies,
+sign in to applications or fetch authenticated company records. The import
+stores at most eight extracted pages as organization sources. Administrators
+must approve the exact application origin before importing.
+
+Use the same `--profile knowledge` option when checking status or logs. Normal
+teardown removes the optional services while preserving database and storage
+volumes. The profile is development tooling, not a production crawler deployment
+or a substitute for a security review of a hosted worker.

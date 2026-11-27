@@ -7,6 +7,7 @@ import {
 } from "../../../packages/navigation-core/service-client";
 import { NAVIGATION_TRANSPORT_LIMITS } from "../../../packages/navigation-core/contracts-navigation";
 import { SERVICE_LIMITS } from "../../../packages/navigation-core/contracts-service";
+import { ORGANIZATION_LIMITS } from "../../../packages/navigation-core/organization-limits";
 const fetchMock = vi.fn();
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,6 +18,8 @@ afterEach(() => {
 
 const decisions =
   "/api/v1/workspaces/10000000-0000-4000-8000-000000000001/decisions";
+const organization =
+  "/api/v1/workspaces/10000000-0000-4000-8000-000000000001/organization";
 const responseSchema = z.object({ ok: z.literal(true) }).strict();
 
 it("raises only the explicit decision POST upload bound and transmits a shortened deadline", async () => {
@@ -49,6 +52,48 @@ it("raises only the explicit decision POST upload bound and transmits a shortene
   );
   expect(forwardedTimeout).toBeGreaterThan(0);
   expect(forwardedTimeout).toBeLessThanOrEqual(1200);
+});
+
+it("grants the larger organization upload budget only to explicit document imports", async () => {
+  vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockImplementation(async () => Response.json({ ok: true }));
+  const body = { synthetic: "x".repeat(SERVICE_LIMITS.maxBodyBytes + 1) };
+  await expect(
+    serviceRequest(
+      "https://api.example.test",
+      `${organization}/retrieve`,
+      responseSchema,
+      { method: "POST", body },
+    ),
+  ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  await expect(
+    serviceRequest(
+      "https://api.example.test",
+      `${organization}/sources`,
+      responseSchema,
+      { method: "POST", body },
+    ),
+  ).resolves.toEqual({ ok: true });
+  const fileBody = {
+    synthetic: "x".repeat(ORGANIZATION_LIMITS.httpBodyBytes - 32),
+  };
+  await expect(
+    serviceRequest(
+      "https://api.example.test",
+      `${organization}/imports`,
+      responseSchema,
+      { method: "POST", body: fileBody },
+    ),
+  ).resolves.toEqual({ ok: true });
+  await expect(
+    serviceRequest(
+      "https://api.example.test",
+      `${organization}/imports/10000000-0000-4000-8000-000000000002`,
+      responseSchema,
+      { method: "POST", body: fileBody },
+    ),
+  ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 it.each([75, 1200])(

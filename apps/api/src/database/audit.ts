@@ -17,6 +17,18 @@ const securityAuditSchema = z.union([
   z
     .object({
       ...base,
+      kind: z.enum([
+        "organization.policy.changed",
+        "organization.workflow.changed",
+        "organization.source.changed",
+      ]),
+      subjectId: z.string().uuid(),
+      details: z.object({}).strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       kind: z.enum(sessionKinds),
       subjectId: z.string().uuid(),
       details: z.object({}).strict(),

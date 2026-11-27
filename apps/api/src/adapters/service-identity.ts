@@ -22,6 +22,9 @@ import { fakeDevelopmentChargingPolicy } from "../../../../packages/navigation-c
 import { PlanService } from "../application/plans";
 import { BillingService } from "../application/billing";
 import { SavedDataService } from "../application/saved-data";
+import { OrganizationService } from "../application/organization";
+import { createDocumentConverterAdapter } from "./document-converter";
+import { createRemotePublicDocumentationCrawler } from "./public-documentation-fetcher";
 import { AccountService } from "../application/account";
 import { PostgresAccount } from "../database/account";
 import { PostgresProviderConnections } from "../database/provider-connections";
@@ -38,6 +41,9 @@ export async function createIdentityRuntime(
   navigationEnabled = false,
   planEnvironment: "development" | "production" = "production",
   providerOptions?: ServiceApiOptions["providers"],
+  documentConverterOrigin?: string,
+  publicDocumentationCrawling = false,
+  publicDocumentationFetcherOrigin?: string,
 ) {
   const { pool, resource } = await createServiceDatabase(database, observer);
   const resources: RuntimeResource[] = [resource];
@@ -85,6 +91,18 @@ export async function createIdentityRuntime(
       supportStore,
       planEnvironment,
     );
+    const organization = new OrganizationService(
+      repositories,
+      planEnvironment,
+      documentConverterOrigin
+        ? createDocumentConverterAdapter(documentConverterOrigin)
+        : undefined,
+      publicDocumentationCrawling && publicDocumentationFetcherOrigin
+        ? createRemotePublicDocumentationCrawler(
+            publicDocumentationFetcherOrigin,
+          )
+        : undefined,
+    );
     const providers = new ProviderConnectionService(
       new PostgresProviderConnections(pool),
       providerOptions
@@ -121,6 +139,7 @@ export async function createIdentityRuntime(
       billing,
       savedData,
       account,
+      organization,
       credits,
       navigation,
       providers,

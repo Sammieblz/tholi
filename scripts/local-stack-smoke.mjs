@@ -463,55 +463,66 @@ export async function runLocalStackSmoke({
       `postgresql://${user}:${encodeURIComponent(password)}@postgres:5432/tholi`;
     const telemetrySentinel =
       "THOLI_PRIVATE_" + randomBytes(12).toString("hex");
-    const runPostgresImage = async (mode = []) =>
-      JSON.parse(
-        await docker(
-          [
-            "run",
-            "--rm",
-            "--network",
-            config.networks.database.name,
-            "--read-only",
-            "--cap-drop",
-            "ALL",
-            "--security-opt",
-            "no-new-privileges:true",
-            "--memory",
-            "256m",
-            "--pids-limit",
-            "64",
-            "--env",
-            "THOLI_DATABASE_URL",
-            "--env",
-            "THOLI_DATABASE_MIGRATION_URL",
-            "--env",
-            "THOLI_DATABASE_WORKER_URL",
-            "--env",
-            "THOLI_SUPPORT_PROBE_API_URL",
-            "--env",
-            "THOLI_TELEMETRY_SENTINEL",
-            testImage,
-            ...mode,
-          ],
-          120000,
-          {
-            THOLI_DATABASE_URL: databaseConnection(
-              "tholi_runtime",
-              settings.THOLI_DB_PASSWORD,
-            ),
-            THOLI_DATABASE_MIGRATION_URL: databaseConnection(
-              "tholi_migrator",
-              settings.THOLI_MIGRATION_PASSWORD,
-            ),
-            THOLI_DATABASE_WORKER_URL: databaseConnection(
-              "tholi_worker",
-              settings.THOLI_WORKER_PASSWORD,
-            ),
-            THOLI_SUPPORT_PROBE_API_URL: "http://api:8788",
-            THOLI_TELEMETRY_SENTINEL: telemetrySentinel,
-          },
-        ),
-      );
+    const runPostgresImage = async (mode = [], timeout = 300000) => {
+      const container = `${project}-postgres-check`;
+      try {
+        return JSON.parse(
+          await docker(
+            [
+              "run",
+              "--rm",
+              "--name",
+              container,
+              "--network",
+              config.networks.database.name,
+              "--read-only",
+              "--cap-drop",
+              "ALL",
+              "--security-opt",
+              "no-new-privileges:true",
+              "--memory",
+              "256m",
+              "--pids-limit",
+              "64",
+              "--env",
+              "THOLI_DATABASE_URL",
+              "--env",
+              "THOLI_DATABASE_MIGRATION_URL",
+              "--env",
+              "THOLI_DATABASE_WORKER_URL",
+              "--env",
+              "THOLI_SUPPORT_PROBE_API_URL",
+              "--env",
+              "THOLI_TELEMETRY_SENTINEL",
+              testImage,
+              ...mode,
+            ],
+            timeout,
+            {
+              THOLI_DATABASE_URL: databaseConnection(
+                "tholi_runtime",
+                settings.THOLI_DB_PASSWORD,
+              ),
+              THOLI_DATABASE_MIGRATION_URL: databaseConnection(
+                "tholi_migrator",
+                settings.THOLI_MIGRATION_PASSWORD,
+              ),
+              THOLI_DATABASE_WORKER_URL: databaseConnection(
+                "tholi_worker",
+                settings.THOLI_WORKER_PASSWORD,
+              ),
+              THOLI_SUPPORT_PROBE_API_URL: "http://api:8788",
+              THOLI_TELEMETRY_SENTINEL: telemetrySentinel,
+            },
+          ),
+        );
+      } catch (error) {
+        const diagnostic = lastDiagnostic;
+        await docker(["rm", "--force", container]).catch(() => {});
+        lastDiagnostic = diagnostic;
+        throw error;
+      }
+    };
     const postgresChecks = await runPostgresImage();
     requireCheck(postgresChecks.passed && postgresChecks.checks.length > 0);
     check("real-postgres-migrations-and-repositories", postgresChecks);
