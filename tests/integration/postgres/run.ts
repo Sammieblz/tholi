@@ -5,6 +5,13 @@ import { runTelemetryRuntimeProbe } from "./telemetry-runtime-probe";
 import { runProfileRuntimeProbe } from "./profile-runtime-probe";
 import { runResilienceRuntimeProbe } from "./resilience-runtime-probe";
 
+function finish(stream: NodeJS.WriteStream, message: string, status: number) {
+  // This is a one-shot container entrypoint. All probe-owned pools and servers
+  // are closed before it writes a result; exit after the result is flushed so
+  // unrelated imported-library handles cannot strand the Compose smoke job.
+  stream.write(message, () => process.exit(status));
+}
+
 try {
   const migrationConnection = process.env.THOLI_DATABASE_MIGRATION_URL;
   const runtimeConnection = process.env.THOLI_DATABASE_URL;
@@ -32,7 +39,8 @@ try {
     !resilienceProbe
   )
     throw new Error("Unknown PostgreSQL verification mode.");
-  process.stdout.write(
+  finish(
+    process.stdout,
     JSON.stringify(
       resilienceProbe
         ? await runResilienceRuntimeProbe({
@@ -66,6 +74,7 @@ try {
                     workerConnection: process.env.THOLI_DATABASE_WORKER_URL,
                   }),
     ) + "\n",
+    0,
   );
 } catch (error) {
   const message =
@@ -73,6 +82,5 @@ try {
     error.message.startsWith("PostgreSQL check failed:")
       ? error.message
       : "PostgreSQL integration verification failed.";
-  process.stderr.write(message + "\n");
-  process.exitCode = 1;
+  finish(process.stderr, message + "\n", 1);
 }

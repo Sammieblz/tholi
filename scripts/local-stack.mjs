@@ -7,7 +7,7 @@ import { parseEnv } from "node:util";
 import { buildIdentityTheme } from "./build-identity-theme.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const profiles = new Set(["storage", "telemetry"]);
+const profiles = new Set(["storage", "telemetry", "knowledge"]);
 const actions = new Set([
   "up",
   "down",
@@ -112,7 +112,9 @@ export function localStackArguments({
 }) {
   if (!actions.has(action)) throw new Error("Unknown local stack action.");
   if (selectedProfiles.some((profile) => !profiles.has(profile)))
-    throw new Error("Only the storage and telemetry profiles are supported.");
+    throw new Error(
+      "Only the storage, telemetry and knowledge profiles are supported.",
+    );
   const settings = parseEnv(readFileSync(envFile, "utf8"));
   const name = projectName(
     project ?? settings.COMPOSE_PROJECT_NAME ?? "tholi-local",
@@ -128,6 +130,11 @@ export function localStackArguments({
     "-f",
     resolve(root, "compose.yaml"),
   ];
+  if (
+    selectedProfiles.includes("knowledge") ||
+    ["down", "reset"].includes(action)
+  )
+    args.push("--file", resolve(root, "infra/local/compose.knowledge.yaml"));
   if (preparedImage) {
     if (!/^sha256:[a-f0-9]{64}$/.test(preparedImage))
       throw Error(

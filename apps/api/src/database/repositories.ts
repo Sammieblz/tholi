@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ScopedBilling } from "./billing-queries";
+import { ScopedOrganization } from "./organization-queries";
 import { historyCursor, repositoryPage } from "./history-pages";
 import { isDeepStrictEqual } from "node:util";
 import type { Pool, PoolClient } from "pg";
@@ -608,6 +609,14 @@ class ScopedRepositories {
 
   private get parameters() {
     return [this.scope.workspaceId, this.scope.accountId];
+  }
+
+  async withOrganization<T>(
+    work: (store: ScopedOrganization) => Promise<T>,
+  ): Promise<T> {
+    await this.lockAccount();
+    await this.lockWorkspace();
+    return work(new ScopedOrganization(this.client, this.scope));
   }
 
   async withSupport<T>(

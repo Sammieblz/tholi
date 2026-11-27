@@ -418,6 +418,7 @@ test("regular teardown preserves volumes and reset requires an explicit matching
       "--volumes",
     );
     const down = localStackArguments({ ...options, action: "down" });
+    expect(down).toContain(resolve("infra/local/compose.knowledge.yaml"));
     expect(down[down.indexOf("--project-name") + 1]).toBe(project);
     expect(() => localStackArguments({ ...options, action: "reset" })).toThrow(
       "--confirm-delete",
@@ -442,7 +443,14 @@ test("regular teardown preserves volumes and reset requires an explicit matching
         action: "up",
         selectedProfiles: ["live-gemini"],
       }),
-    ).toThrow("Only the storage and telemetry profiles");
+    ).toThrow("Only the storage, telemetry and knowledge profiles");
+    expect(
+      localStackArguments({
+        ...options,
+        action: "up",
+        selectedProfiles: ["knowledge"],
+      }),
+    ).toContain(resolve("infra/local/compose.knowledge.yaml"));
     await writeFile(envFile, "COMPOSE_PROJECT_NAME=../../bad\n");
     expect(() => localStackArguments({ ...options, action: "down" })).toThrow(
       "Compose project name",

@@ -28,6 +28,97 @@ export interface ServiceRouteInventoryEntry {
 }
 
 export const SERVICE_ROUTES = [
+  ...(
+    [
+      [
+        "GET",
+        "policy",
+        "getOrganizationPilotPolicy",
+        "Read current organization policy.",
+      ],
+      [
+        "PATCH",
+        "policy",
+        "updateOrganizationPilotPolicy",
+        "Update owner-controlled application policy at its current revision.",
+      ],
+      [
+        "GET",
+        "workflows",
+        "listOrganizationWorkflowDrafts",
+        "Read shared draft and review metadata.",
+      ],
+      [
+        "GET",
+        "published-workflows",
+        "listPublishedOrganizationWorkflows",
+        "Read approved published content without granting browser authority.",
+      ],
+      [
+        "POST",
+        "workflows/{id}",
+        "saveOrganizationWorkflowDraft",
+        "Save a privacy-reviewed draft using its expected revision.",
+      ],
+      [
+        "POST",
+        "workflows/{id}/actions",
+        "transitionOrganizationWorkflow",
+        "Require independent review before publication and preserve history.",
+      ],
+      [
+        "GET",
+        "sources",
+        "listOrganizationKnowledgeSources",
+        "Read retained current source metadata.",
+      ],
+      [
+        "GET",
+        "sources/{id}",
+        "exportOrganizationKnowledgeSource",
+        "Export authorized retained extracted content without issuing a public file link.",
+      ],
+      [
+        "POST",
+        "sources",
+        "importOrganizationKnowledgeText",
+        "Import explicitly reviewed documentary text.",
+      ],
+      [
+        "POST",
+        "imports",
+        "convertOrganizationKnowledgeFile",
+        "Extract an approved bounded document through the isolated converter.",
+      ],
+      [
+        "POST",
+        "crawl",
+        "crawlApprovedPublicDocumentation",
+        "Discover a small robots-aware set of public same-origin HTTPS pages after explicit administrator selection.",
+      ],
+      [
+        "DELETE",
+        "sources/{id}",
+        "forgetOrganizationKnowledgeSource",
+        "Remove a source from current retrieval using its expected revision.",
+      ],
+      [
+        "POST",
+        "retrieve",
+        "retrieveOrganizationDocumentation",
+        "Retrieve bounded cited documentary hints under current authorization.",
+      ],
+    ] as const
+  ).map(([method, suffix, operationId, summary]) => ({
+    method,
+    path: `/api/v1/workspaces/{workspaceId}/organization/${suffix}` as const,
+    operationId,
+    summary,
+    group: "organizations" as const,
+    status: "planned" as const,
+    issue: 55,
+    access: "authenticated" as const,
+  })),
   {
     method: "GET",
     path: "/api/v1/account/provider-connections",

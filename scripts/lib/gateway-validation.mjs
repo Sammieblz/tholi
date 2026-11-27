@@ -428,6 +428,37 @@ async function gatewayProbe({ proxy, ca, origin, marker }) {
     );
     privateResponse(admittedUpload);
     assert.equal(JSON.parse(admittedUpload.body).bodyBytes, upload.length);
+    const organizationImport =
+      "/api/v1/workspaces/00000000-0000-4000-8000-000000000001/organization/imports";
+    const admittedDocument = await expectResponse(
+      "organization file import ingress allowance",
+      {
+        policyFixture: true,
+        path: organizationImport,
+        method: "POST",
+        body: Buffer.alloc(2 * 1024 * 1024, 0x20),
+        headers: { "Content-Type": "application/json" },
+      },
+      200,
+    );
+    privateResponse(admittedDocument);
+    assert.equal(JSON.parse(admittedDocument.body).bodyBytes, 2 * 1024 * 1024);
+    const ordinaryOrganization = await expectResponse(
+      "organization retrieval retains ordinary ingress allowance",
+      {
+        policyFixture: true,
+        path: organizationImport.replace("/imports", "/retrieve"),
+        method: "POST",
+        dedicated: true,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": 512 * 1024 + 1,
+          Connection: "close",
+        },
+      },
+      413,
+    );
+    privateResponse(ordinaryOrganization);
     const tooLarge = await expectResponse(
       "decision POST ingress upper bound",
       {

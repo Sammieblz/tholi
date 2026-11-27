@@ -1,0 +1,22 @@
+/** Development-pilot resource limits. Existing account and navigation budgets are unchanged. */
+export const ORGANIZATION_LIMITS = Object.freeze({
+  workflows: 100,
+  historyRows: 5000,
+  sources: 100,
+  chunks: 500,
+  chunkBytes: 4096,
+  retrievalBytes: 6144,
+  retrievalBundles: 5,
+  crawlPages: 8,
+  crawlPageBytes: 256 * 1024,
+  crawlRobotsBytes: 96 * 1024,
+  crawlRequestMs: 3500,
+  crawlRedirects: 3,
+  crawlLinks: 400,
+  crawlSitemapUrls: 500,
+  documentBytes: 2 * 1024 * 1024,
+  extractedBytes: 1024 * 1024,
+  pages: 100,
+  httpBodyBytes: 3 * 1024 * 1024,
+  httpResponseBytes: 3 * 1024 * 1024,
+});

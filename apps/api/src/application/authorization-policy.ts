@@ -121,6 +121,18 @@ export function evaluateAuthorization(
     membership.role === "owner";
 
   switch (action) {
+    case "organization.read":
+    case "organization.write":
+      return workspace.kind === "organization" ? allowed : denied;
+    case "organization.publish":
+      return workspace.kind === "organization" &&
+        (canonicalOwner || membership.role === "admin")
+        ? allowed
+        : denied;
+    case "organization.policy":
+      return workspace.kind === "organization" && canonicalOwner
+        ? allowed
+        : denied;
     case "memberships.read":
       return options.targetAccountId === context.account.id ||
         canonicalOwner ||
