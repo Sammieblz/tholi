@@ -30,6 +30,11 @@ export function interactionRisk(
   // A nearby heading, form endpoint, or sibling's label is not this control's effect.
   if (kind === "focus" || kind === "section") return { risk: "ordinary" };
   const purpose = label + " " + description;
+  if (
+    element.matches("a[href]") &&
+    /^\s*javascript\s*:/i.test(element.getAttribute("href") || "")
+  )
+    return { risk: "consequential", riskReason: "unknown-edit-effect" };
   if (hasCommitLanguage(purpose))
     return { risk: "consequential", riskReason: "commit" };
 

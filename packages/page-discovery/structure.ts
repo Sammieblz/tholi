@@ -8,7 +8,7 @@ import { PERCEPTION_LIMITS, type DiscoveryPerception } from "./perception";
 
 const headings = 'h1,h2,h3,h4,h5,h6,[role="heading"]';
 const boundaries =
-  'main,article,nav,header,footer,aside,dialog,form,fieldset,[role="main"],[role="navigation"],[role="banner"],[role="contentinfo"],[role="dialog"],[role="search"],[role="region"],[role="complementary"],[role="toolbar"]';
+  'main,article,nav,header,footer,aside,dialog,form,fieldset,table,[role="table"],[role="grid"],[role="treegrid"],[role="main"],[role="navigation"],[role="banner"],[role="contentinfo"],[role="dialog"],[role="search"],[role="region"],[role="complementary"],[role="toolbar"]';
 const perceptionBoundaries =
   boundaries +
   ',section,[role="menu"],[role="listbox"],[role="tree"],[role="grid"],[popover]';
@@ -30,16 +30,44 @@ function level(element: Element) {
     ),
   );
 }
+/** A hidden template heading is not the purpose of a currently visible control. */
+export function structuralLabel(element: Element, relativeTo?: Element) {
+  if (
+    element.closest(
+      '[contenteditable],[data-sensitive="true"],#internet-navigator-overlay,[data-tholi-ui]',
+    )
+  )
+    return "";
+  for (
+    let current: Element | null = element, depth = 0;
+    current && depth < PERCEPTION_LIMITS.ancestorWalkDepth;
+    current = parent(current), depth++
+  ) {
+    if (current.matches('[data-sensitive="true"],[contenteditable]')) return "";
+    // Hidden sibling templates cannot name a visible control. A control within
+    // the same collapsed surface can retain its label and existing reveal path.
+    if (relativeTo && current.contains(relativeTo)) continue;
+    if (current.matches('[hidden],[aria-hidden="true"],[inert]')) return "";
+    const style = getComputedStyle(current);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.visibility === "collapse"
+    )
+      return "";
+  }
+  return safeName(element);
+}
 function regionName(element: Element) {
   if (
     element.hasAttribute("aria-label") ||
     element.hasAttribute("aria-labelledby")
   )
     return safeName(element);
-  const heading = [...element.children].find((e) =>
-    e.matches(headings + ",legend"),
+  const heading = [...element.children].find(
+    (e) => e.matches(headings + ",legend,caption") && !!structuralLabel(e),
   );
-  return heading ? safeName(heading) : "";
+  return heading ? structuralLabel(heading) : "";
 }
 function regionRole(element: Element) {
   return (
@@ -97,13 +125,7 @@ export class StructureIndex {
             )
         : [...root.querySelectorAll(headings)];
       for (const heading of available) {
-        if (
-          heading.closest(
-            '[contenteditable],[data-sensitive="true"],#internet-navigator-overlay,[data-tholi-ui]',
-          )
-        )
-          continue;
-        const label = safeName(heading);
+        const label = structuralLabel(heading);
         if (!label) continue;
         const boundary = heading.closest(boundaries) || root;
         const stack = (stacks.get(boundary) || []).filter(
@@ -235,17 +257,20 @@ export class StructureIndex {
           children = [...ancestor.children].filter((e) => e.matches(headings));
           this.childHeadings.set(ancestor, children);
         }
-        const heading = children.find(
-          (e) =>
-            e.matches(headings) &&
-            (ancestor.matches("section") || level(e) === 1) &&
-            !!(
-              e.compareDocumentPosition(element) &
-              Node.DOCUMENT_POSITION_FOLLOWING
-            ),
-        );
+        const heading = [...children]
+          .reverse()
+          .find(
+            (e) =>
+              e.matches(headings) &&
+              !!structuralLabel(e) &&
+              (ancestor.matches("section") || level(e) === 1) &&
+              !!(
+                e.compareDocumentPosition(element) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+              ),
+          );
         if (heading) {
-          const label = safeName(heading);
+          const label = structuralLabel(heading);
           if (
             label &&
             !path.some((h) => h.label === label && h.level === level(heading))

@@ -33,6 +33,55 @@ function fixture(html: string) {
   );
 }
 afterEach(() => vi.restoreAllMocks());
+it("does not lend hidden template headings to visible controls", () => {
+  fixture(
+    '<main><h1>Workspace</h1><h2 hidden>Delete account</h2><button>Settings</button><section><h2 style="display:none">Billing</h2><button>Preferences</button></section></main>',
+  );
+  const page = new PageDiscovery().snapshot();
+  for (const control of page.controls.filter((c) => c.kind === "action")) {
+    expect(control.structure?.headings.map((h) => h.label)).not.toContain(
+      "Delete account",
+    );
+    expect(control.structure?.headings.map((h) => h.label)).not.toContain(
+      "Billing",
+    );
+    expect(control.context).not.toBe("Delete account");
+    expect(control.context).not.toBe("Billing");
+  }
+});
+it("keeps repeated legacy table actions scoped to authored table captions", () => {
+  fixture(
+    '<main><h1>Administration</h1><table><caption>Notification preferences</caption><tbody><tr><td><input value="PRIVATE_FIELD_VALUE"></td><td><button>Configure</button></td></tr></tbody></table><table><caption>Appearance preferences</caption><tbody><tr><td><button>Configure</button></td></tr></tbody></table></main>',
+  );
+  const actions = new PageDiscovery()
+    .snapshot()
+    .controls.filter((c) => c.label === "Configure");
+  expect(actions).toHaveLength(2);
+  expect(actions[0].structure?.regions).toContainEqual({
+    role: "table",
+    name: "Notification preferences",
+  });
+  expect(actions[1].structure?.regions).toContainEqual({
+    role: "table",
+    name: "Appearance preferences",
+  });
+  expect(JSON.stringify(actions)).not.toContain("PRIVATE_FIELD_VALUE");
+});
+
+it("keeps legacy postback anchors as opaque consequential actions", () => {
+  fixture(
+    "<main><h1>Project list</h1><a href=\"javascript:__doPostBack('Projects','Open$42')\">Open project</a></main>",
+  );
+  const page = new PageDiscovery().snapshot(),
+    action = page.controls.find((control) => control.label === "Open project");
+  expect(action).toMatchObject({
+    kind: "action",
+    risk: "consequential",
+    riskReason: "unknown-edit-effect",
+  });
+  expect(action?.destination).toBeUndefined();
+  expect(JSON.stringify(action)).not.toContain("__doPostBack");
+});
 it("distinguishes an exact requested section from a section with extra context qualifiers", () => {
   fixture(
     '<main><div><h2>Plot</h2><a title="Edit section: Plot" href="/edit/plot">edit</a></div><div><h2>Plot inspirations</h2><a title="Edit section: Plot inspirations" href="/edit/inspirations">edit</a></div></main>',
