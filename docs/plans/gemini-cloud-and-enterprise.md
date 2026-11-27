@@ -507,3 +507,111 @@ Review uses the existing API/storage/contracts, browser transport and journey ow
 On 2026-10-28, independent agent reviews covered legacy compatibility and contract ownership, tenancy/auth/privacy, job failure behavior, deployment budgets and roadmap scope. Their concrete findings are incorporated in this record; adoption subsequently completed through PR #64. Local validation passed: Markdown formatting, 72 local documentation targets across the five changed files, unchanged extension/API and website version checks, and whitespace checks. No runtime tests or infrastructure experiments are claimed by those checks.
 
 The existing deterministic `npm run test:ci` PR gate remains required through the normal contribution workflow; its actual result belongs in the PR. This document alone is not implementation evidence, human approval or release certification. Full certification is required before packaging under the repository's [testing policy](../development/testing/README.md); no archive or deployment is part of this change.
+
+## Navigation and governed enterprise pilot, November 23, 2026
+
+The approved expansion strengthens the existing Local extension and portable
+backend together. It does not replace the journey owner, browser adapters,
+account workspace, model ports, saved-data service or PostgreSQL queue.
+
+### Adopted product choices
+
+- Pilot GitHub repository creation and Jira work-item creation, with both
+  configured organization workflows and open-ended navigation.
+- Keep account-free personal Local guidance and existing consumer features.
+  Organization content requires current online authorization; it is not an
+  offline company-content cache.
+- Author and administer through the website workspace. Capture workflow steps
+  explicitly through the extension, with privacy preview before sharing.
+- Ingest public documentation and explicitly approved company text, Markdown,
+  HTML, text-bearing PDF and DOCX. Do not independently crawl authenticated apps.
+  Encrypted or image-only PDFs need a visible unsupported/extraction status.
+- Qualify optional stronger language ranking and vision together for 8 GB,
+  CPU-capable computers. Preserve the packaged baseline and opt-in download.
+- Run automated development with zero external model calls. Managed models,
+  production deployment, publication and desktop implementation remain gated.
+
+### Evidence and architecture
+
+Public competitive research distinguishes inspected public code from vendor
+claims and unknown internals. The retained research report is
+`output/qa/rea-public-20261123/report.html`; it is research, not certification.
+WalkMe informs bounded target repair and author feedback; Pendo informs governed
+guides and separate goal metrics; Whatfix informs explicit target precision;
+Userlane informs readiness-aware analytics. No proprietary implementation is
+copied into product source.
+
+Fresh authorized observations, documentary knowledge and verified navigation
+history remain different evidence classes. Documents and imported guides are
+untrusted hints, never native document identity, host permission or proof of
+arrival. Private graph limits and the saved-data version negotiation remain
+unchanged. Shared organization resources must not broaden actor-private saved
+artifact policies.
+
+Use the existing BM25, embeddings, structure discovery and OCR owners. Improve
+bounded regions, incremental refresh, relevance, ambiguity and recovery before
+promoting larger models. Benchmark quantized BGE-small and E5-small against
+MiniLM, and the SDK's Paddle small pair against tiny. Pin actual revisions,
+licenses, preprocessing and hashes before qualification. The verified OCR
+default remains Tesseract. Paddle tiny is experimental and its
+recorded initialization deadline failure remains a promotion blocker; comparing
+Paddle variants cannot relabel that evidence or remove Tesseract's baseline.
+Index identities include
+the model and preprocessing version; changing models never deletes source data.
+A pack is unavailable until both language and vision qualification pass.
+
+Apply extraction, sitemap, deduplication, checkpoint and backpressure concepts
+from the reviewed crawler projects through the existing API/worker. Keep one
+PostgreSQL queue. Use public HTTP first and isolated Playwright rendering as
+needed, with scope, robots, SSRF, size and execution limits. Convert PDF/DOCX in
+an isolated bounded converter without external-resource access or active content.
+No Firecrawl server, Python crawling stack, stealth dependency or proxy pool is
+adopted by this scope. Their algorithms and licensing are research inputs.
+
+Extend the existing Selenium native-browser harness and share scenario contracts
+with Playwright. Test legacy markup and postbacks in current supported browsers.
+Selenium is not an installed-extension dependency or a desktop/mobile adapter.
+
+### Delivery and acceptance ledger
+
+1. Reconcile scope, ownership and baseline evidence.
+2. Improve perception and content-free stage diagnostics.
+3. Improve ranking/recovery and qualify the optional model pack.
+4. Add bounded document ingestion and authorized retrieval.
+5. Add versioned organization workflows, capture, independent approval,
+   publication/retirement and audited rollback.
+6. Extend workspace UI, organization policy and outcome reporting.
+7. Verify compatibility, isolation, lifecycle and pilot readiness.
+
+For each reviewable change, search existing checks, retain distinct permanent
+regressions, run focused checks and complete `test:ci`, then commit locally,
+push and open a PR. Keep release versions unchanged. Full certification and
+separate release authorization precede packaging or distribution.
+
+Qualification compares verified completion, false arrival, stale-target rejection,
+latency, memory, startup, calls and tokens per completed task. Preserve frozen
+corpora and add separate holdouts. Browser/OS/architecture/build evidence stays
+separate. Native permissions, screen readers, actual customer tasks and live
+provider quality remain pending until performed. Neither this ledger nor fake
+provider success closes #43 or authorizes invited beta or production promotion.
+
+### Working baseline and evidence
+
+The pilot starts from commit `6eaae18b`. Windows x64 development checks on
+November 23 exercised the extension in Chrome and Firefox on a legacy widget,
+a full reload, a blocked opaque postback and a granted same-origin frame.
+The separate local stack run `tholi-smoke-mwu5ozms-237b5ea6` passed 28
+checks with live Gemini disabled, including PostgreSQL approval and retrieval
+checks. It tested the working tree and removed its disposable volumes.
+
+The five-prompt Windows language calibration in
+`output/qa/local-candidates/ranking-probe.json` used a 32 GiB host. It leaves
+language and OCR qualification on 8 GB hardware open. The extension inspector
+can export reviewed draft steps and the team workspace can import them. Live
+delivery of approved organization guidance, verified outcome reports, durable
+crawl checkpoints and the rendering fallback each require their own evidence.
+
+The team workspace follows the project baseline UI and accessibility guidance
+with labeled native form controls, status announcements and explicit import
+actions. The new organization views still require focused checks across themes,
+viewport widths and keyboard and assistive technology interactions.
