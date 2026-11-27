@@ -334,6 +334,38 @@ const inMilestoneContext = (
   c: PageControl,
   m: WorkflowGuide["milestones"][number],
 ) => !m.context || m.context.some((ctx) => matches(contextText(c), ctx));
+
+/** A manually selected team step may point to one unambiguous, live top-frame target. */
+export function publishedStepControl(
+  page: PageSnapshot,
+  step: WorkflowGuide["milestones"][number],
+) {
+  if (page.partial || page.busy || ["review", "result"].includes(step.kind))
+    return;
+  const matches = page.controls.filter(
+    (control) =>
+      control.visible &&
+      control.enabled &&
+      !control.occluded &&
+      !control.reference?.frameId &&
+      (!step.context?.length || inMilestoneContext(control, step)) &&
+      step.targets.some((target) => candidateScore(control, target) === 1),
+  );
+  if (matches.length !== 1 || matches[0].risk !== "ordinary") return;
+  const candidate = matches[0];
+  const kinds = {
+    input: ["focus"],
+    reveal: ["expand"],
+    choose: ["choice", "select", "toggle", "range"],
+    navigate: ["navigation", "section"],
+  };
+  if (
+    !(step.kind in kinds) ||
+    !kinds[step.kind as keyof typeof kinds].includes(candidate.kind)
+  )
+    return;
+  return candidate;
+}
 function scopeLive(
   w: WorkflowContext,
   page: PageSnapshot,

@@ -405,7 +405,7 @@ if (!host[marker]) {
       if (message.type === "GUIDE_CONTROL") {
         respond(
           coach
-            ? coach.guide(message.controlId)
+            ? coach.guide(message.controlId, message.binding)
             : { error: "This task has no page control chooser." },
         );
         return;

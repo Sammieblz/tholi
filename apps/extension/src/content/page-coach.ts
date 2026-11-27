@@ -1043,7 +1043,29 @@ export class PageCoach {
   private requestReplan() {
     return requestReplanService(this.serviceContext());
   }
-  guide(id: string) {
+  guide(id: string, binding?: { revision: number; signature: string }) {
+    if (binding) {
+      this.refresh();
+      const page = this.view.page;
+      const control = page?.controls.find((entry) => entry.id === id);
+      if (
+        this.view.status !== "running" ||
+        this.pending ||
+        this.view.journey ||
+        !page ||
+        page.revision !== binding.revision ||
+        page.partial ||
+        !control ||
+        control.signature !== binding.signature ||
+        control.risk !== "ordinary" ||
+        control.occluded ||
+        control.reference?.frameId
+      )
+        return {
+          error: "The current page or task changed. Check the team step again.",
+        };
+      return this.select(id);
+    }
     this.view.serviceNavigation = undefined;
     this.view.request = undefined;
     this.view.clarification = undefined;

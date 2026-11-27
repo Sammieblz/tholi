@@ -1,5 +1,9 @@
 import type { SessionView } from "../../../../../../packages/shared-types";
 import { hash } from "../../../../../../packages/page-model";
+import { platformFor } from "../../../../../../packages/navigation-core/guides";
+import { currentCaptureMilestone } from "../../../../../../packages/navigation-core/workflow-capture";
+import { WorkflowCapture } from "../../../../../../packages/ui/WorkflowCapture";
+import { downloadJson } from "../../../../../../packages/browser-adapter/download";
 
 export function LiveInspector({
   view,
@@ -11,6 +15,7 @@ export function LiveInspector({
   const diagnostics = view.liveDiagnostics;
   if (!diagnostics) return null;
   const planning = diagnostics.planning;
+  const platform = view.page && platformFor(view.page.origin);
   return (
     <>
       <h3>Live observation</h3>
@@ -113,6 +118,15 @@ export function LiveInspector({
         <p>No guided interactions recorded yet.</p>
       )}
       <button onClick={download}>Export diagnostics</button>
+      {view.page && (platform === "github" || platform === "jira") && (
+        <WorkflowCapture
+          key={view.page.origin}
+          origin={view.page.origin}
+          platform={platform}
+          current={currentCaptureMilestone(view)}
+          onExport={(value) => downloadJson(value, "tholi-workflow-draft.json")}
+        />
+      )}
       <p className="small">
         The report contains bounded scores, rejection codes, fingerprints and
         verification evidence. Page text, goals, URLs, model text and field

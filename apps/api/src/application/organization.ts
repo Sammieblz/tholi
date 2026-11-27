@@ -7,6 +7,10 @@ import {
   organizationWorkflowActionSchema,
   organizationWorkflowSchema,
   organizationWorkflowPageSchema,
+  organizationPublicationHistorySchema,
+  publishedGuideQuerySchema,
+  publishedGuideListSchema,
+  publishedGuideStepSchema,
   organizationPolicyInputSchema,
   organizationPolicyRecordSchema,
   knowledgeDocumentSchema,
@@ -43,6 +47,9 @@ export interface OrganizationStore {
     input: z.infer<typeof organizationPolicyInputSchema>,
   ): Promise<z.infer<typeof organizationPolicyRecordSchema>>;
   workflows(publishedOnly: boolean): Promise<OrganizationWorkflow[]>;
+  history(
+    id: string,
+  ): Promise<z.infer<typeof organizationPublicationHistorySchema>>;
   saveWorkflow(
     id: string,
     input: OrganizationWorkflowDraft,
@@ -222,6 +229,64 @@ export class OrganizationService {
         }),
     );
   }
+  history(
+    principal: Principal,
+    workspaceId: string,
+    id: string,
+    context: ServiceRequestContext,
+  ) {
+    z.string().uuid().parse(id);
+    return this.run(
+      principal,
+      workspaceId,
+      "organization.read",
+      context,
+      async (store) =>
+        organizationPublicationHistorySchema.parse(await store.history(id)),
+    );
+  }
+  publishedGuide(
+    principal: Principal,
+    workspaceId: string,
+    raw: unknown,
+    context: ServiceRequestContext,
+  ) {
+    const { origin, selection } = publishedGuideQuerySchema.parse(raw);
+    return this.run(
+      principal,
+      workspaceId,
+      "organization.read",
+      context,
+      async (store) => {
+        const guides = (await store.workflows(true)).filter(
+          (guide) => guide.origin === origin,
+        );
+        if (!selection)
+          return publishedGuideListSchema.parse({
+            items: guides.map((guide) => ({
+              id: guide.id,
+              revision: guide.revision,
+              title: guide.guide.purpose,
+            })),
+          });
+        const published = guides.find(
+          (guide) =>
+            guide.id === selection.id && guide.revision === selection.revision,
+        );
+        const milestone = published?.guide.milestones[selection.index];
+        if (!published || !milestone)
+          throw new AuthorizationError(
+            404,
+            "NOT_FOUND",
+            "Choose a currently published workflow.",
+          );
+        return publishedGuideStepSchema.parse({
+          milestone,
+          count: published.guide.milestones.length,
+        });
+      },
+    );
+  }
   saveWorkflow(
     principal: Principal,
     workspaceId: string,
@@ -386,7 +451,9 @@ export class OrganizationService {
       "organization.publish",
       context,
       async (store) => {
-        if (!(await store.policy()).policy.allowedOrigins.includes(input.origin))
+        if (
+          !(await store.policy()).policy.allowedOrigins.includes(input.origin)
+        )
           throw new AuthorizationError(
             403,
             "FORBIDDEN",

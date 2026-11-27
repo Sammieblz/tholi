@@ -4,6 +4,8 @@ import { api } from "../../platform/api";
 import { JourneyDetails } from "../features/journey/JourneyDetails";
 import { AdvancedTools } from "../features/advanced/AdvancedTools";
 import { WorkflowPanel } from "../features/journey/WorkflowPanel";
+import { TeamGuides } from "../features/journey/TeamGuides";
+import { platformFor } from "../../../../../packages/navigation-core/guides";
 import { AccountSettings } from "../features/account/AccountSettings";
 import { SetupNotice } from "../features/account/SetupNotice";
 import { WebsiteAccess } from "../components/WebsiteAccess";
@@ -162,6 +164,24 @@ export function GuidanceController({ widget = false }: { widget?: boolean }) {
       primary={
         <>
           {!widget && <SetupNotice />}
+          {!widget &&
+            !otherTab &&
+            context?.session?.sessionId &&
+            context.session.documentId &&
+            context.origin &&
+            ["github", "jira"].includes(platformFor(context.origin) || "") &&
+            displayedView?.status === "running" && (
+              <TeamGuides
+                key={[
+                  context.session.sessionId,
+                  context.session.documentId,
+                  context.origin,
+                ].join("/")}
+                sessionId={context.session.sessionId}
+                documentId={context.session.documentId}
+                origin={context.origin}
+              />
+            )}
           {showWebsiteSetup && websiteAccess}
           {context && !context.routes.length && <h2>Open a website</h2>}
           {otherTab && (

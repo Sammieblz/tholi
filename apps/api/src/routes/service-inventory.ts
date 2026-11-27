@@ -50,6 +50,18 @@ export const SERVICE_ROUTES = [
       ],
       [
         "GET",
+        "workflows/{id}/publications",
+        "listOrganizationPublications",
+        "Inspect the most recent fifty publications for a shared workflow.",
+      ],
+      [
+        "POST",
+        "guide-lookup",
+        "lookupPublishedOrganizationGuide",
+        "Read a current published guide step for the approved application origin.",
+      ],
+      [
+        "GET",
         "published-workflows",
         "listPublishedOrganizationWorkflows",
         "Read approved published content without granting browser authority.",

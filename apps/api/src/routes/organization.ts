@@ -2,6 +2,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import {
   organizationWorkflowPageSchema,
+  organizationPublicationHistorySchema,
+  publishedGuideQuerySchema,
+  publishedGuideListSchema,
+  publishedGuideStepSchema,
   organizationWorkflowSchema,
   organizationWorkflowDraftSchema,
   organizationWorkflowActionSchema,
@@ -91,6 +95,46 @@ export async function registerOrganizationApi(
     },
     safe((request, _reply, context) =>
       service.setPolicy(
+        protectedSession(request),
+        params.parse(request.params).workspaceId,
+        request.body,
+        context,
+      ),
+    ),
+  );
+  app.get(
+    `${base}/workflows/:id/publications`,
+    {
+      onRequest: protect(),
+      ...options(
+        "listOrganizationPublications",
+        organizationPublicationHistorySchema,
+        undefined,
+        true,
+      ),
+    },
+    safe((request, _reply, context) => {
+      const { workspaceId, id } = resource.parse(request.params);
+      return service.history(
+        protectedSession(request),
+        workspaceId,
+        id,
+        context,
+      );
+    }),
+  );
+  app.post(
+    `${base}/guide-lookup`,
+    {
+      onRequest: protect(true),
+      ...options(
+        "lookupPublishedOrganizationGuide",
+        z.union([publishedGuideListSchema, publishedGuideStepSchema]),
+        publishedGuideQuerySchema,
+      ),
+    },
+    safe((request, _reply, context) =>
+      service.publishedGuide(
         protectedSession(request),
         params.parse(request.params).workspaceId,
         request.body,
